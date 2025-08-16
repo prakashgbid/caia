@@ -10,6 +10,7 @@ import PQueue from 'p-queue';
 import Bottleneck from 'bottleneck';
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
+import { SystemResourceCalculator } from './SystemResourceCalculator';
 
 export interface CCInstance {
   id: string;
@@ -41,14 +42,15 @@ export interface CCResult {
 }
 
 export interface OrchestratorConfig {
-  maxInstances: number;          // Max CC instances running simultaneously
+  maxInstances?: number;         // Max CC instances (auto-calculated if not provided)
   instancesPerMinute: number;    // Rate limit for spawning new instances
   tasksPerInstance: number;      // Max tasks per CC instance before recycling
-  taskTimeout: number;            // Timeout per task (ms)
+  taskTimeout: number;           // Timeout per task (ms)
   apiRateLimit: number;          // API calls per minute
   retryAttempts: number;         // Retries for failed tasks
   contextPreservation: boolean;  // Maintain context across instances
   debug: boolean;
+  autoCalculateInstances?: boolean; // Auto-calculate max instances based on resources
 }
 
 /**
@@ -62,6 +64,8 @@ export class CCOrchestrator extends EventEmitter {
   private rateLimiter: Bottleneck;
   private results: Map<string, CCResult> = new Map();
   private contextStore: Map<string, any> = new Map();
+  private resourceCalculator: SystemResourceCalculator;
+  private resourceCalculation: any = null;
   private metrics = {
     totalTasks: 0,
     completedTasks: 0,
@@ -74,8 +78,12 @@ export class CCOrchestrator extends EventEmitter {
   constructor(config: Partial<OrchestratorConfig> = {}) {
     super();
     
+    // Initialize resource calculator
+    this.resourceCalculator = new SystemResourceCalculator();
+    
+    // Set default config with auto-calculation enabled by default
     this.config = {
-      maxInstances: 50,
+      maxInstances: undefined, // Will be auto-calculated
       instancesPerMinute: 30,
       tasksPerInstance: 10,
       taskTimeout: 60000,
@@ -83,31 +91,84 @@ export class CCOrchestrator extends EventEmitter {
       retryAttempts: 3,
       contextPreservation: true,
       debug: false,
+      autoCalculateInstances: true,
       ...config
     };
-
-    // Initialize task queue with concurrency limit
-    this.taskQueue = new PQueue({
-      concurrency: this.config.maxInstances,
-      interval: 60000,
-      intervalCap: this.config.apiRateLimit
-    });
-
-    // Initialize rate limiter for API calls
-    this.rateLimiter = new Bottleneck({
-      maxConcurrent: this.config.maxInstances,
-      minTime: 60000 / this.config.apiRateLimit,
-      reservoir: this.config.apiRateLimit,
-      reservoirRefreshAmount: this.config.apiRateLimit,
-      reservoirRefreshInterval: 60000
-    });
 
     this.initialize();
   }
 
-  private initialize(): void {
-    this.log('CC Orchestrator initialized', this.config);
-    this.emit('initialized', this.config);
+  private async initialize(): Promise<void> {
+    this.log('🚀 Initializing CC Orchestrator with dynamic resource calculation');
+    
+    try {
+      // Calculate optimal instances if auto-calculation is enabled
+      if (this.config.autoCalculateInstances && !this.config.maxInstances) {
+        this.resourceCalculation = await this.resourceCalculator.calculateOptimalInstances();
+        this.config.maxInstances = this.resourceCalculation.maxInstances;
+        
+        this.log(`💡 Dynamic calculation: ${this.config.maxInstances} instances (${this.resourceCalculation.bottleneck} limited)`);
+        this.log(`📊 System: ${this.resourceCalculation.systemInfo.allocatedRAM}MB RAM, ${this.resourceCalculation.systemInfo.cpuCores} cores`);
+        this.log(`💭 Reason: ${this.resourceCalculation.reason}`);
+        
+        // Show recommendations
+        if (this.resourceCalculation.recommendations.length > 0) {
+          this.log('📋 Recommendations:');
+          this.resourceCalculation.recommendations.forEach((rec: string) => {
+            this.log(`   ${rec}`);
+          });
+        }
+        
+        this.emit('resource:calculated', this.resourceCalculation);
+      } else if (!this.config.maxInstances) {
+        // Fallback to conservative default
+        this.config.maxInstances = 5;
+        this.log('⚠️  Using fallback: 5 instances (auto-calculation disabled)');
+      }
+
+      // Initialize task queue with calculated concurrency limit
+      this.taskQueue = new PQueue({
+        concurrency: this.config.maxInstances,
+        interval: 60000,
+        intervalCap: this.config.apiRateLimit
+      });
+
+      // Initialize rate limiter for API calls
+      this.rateLimiter = new Bottleneck({
+        maxConcurrent: this.config.maxInstances,
+        minTime: 60000 / this.config.apiRateLimit,
+        reservoir: this.config.apiRateLimit,
+        reservoirRefreshAmount: this.config.apiRateLimit,
+        reservoirRefreshInterval: 60000
+      });
+      
+      this.log(`✅ CC Orchestrator initialized with ${this.config.maxInstances} max instances`);
+      this.emit('initialized', { 
+        config: this.config, 
+        resourceCalculation: this.resourceCalculation 
+      });
+      
+    } catch (error) {
+      this.log('❌ Failed to calculate resources, using fallback settings');
+      this.config.maxInstances = this.config.maxInstances || 5;
+      
+      // Initialize with fallback settings
+      this.taskQueue = new PQueue({
+        concurrency: this.config.maxInstances,
+        interval: 60000,
+        intervalCap: this.config.apiRateLimit
+      });
+
+      this.rateLimiter = new Bottleneck({
+        maxConcurrent: this.config.maxInstances,
+        minTime: 60000 / this.config.apiRateLimit,
+        reservoir: this.config.apiRateLimit,
+        reservoirRefreshAmount: this.config.apiRateLimit,
+        reservoirRefreshInterval: 60000
+      });
+      
+      this.emit('initialized', { config: this.config, error });
+    }
   }
 
   /**
@@ -500,15 +561,151 @@ export class CCOrchestrator extends EventEmitter {
   }
 
   /**
-   * Get current metrics
+   * Get current metrics including resource information
    */
   getMetrics() {
     return {
       ...this.metrics,
       queueSize: this.taskQueue.size,
       pendingTasks: this.taskQueue.pending,
-      instanceUtilization: this.metrics.activeInstances / this.config.maxInstances
+      instanceUtilization: this.metrics.activeInstances / (this.config.maxInstances || 1),
+      maxInstances: this.config.maxInstances,
+      resourceCalculation: this.resourceCalculation
     };
+  }
+
+  /**
+   * Get system resource information
+   */
+  async getSystemInfo() {
+    if (!this.resourceCalculation) {
+      this.resourceCalculation = await this.resourceCalculator.calculateOptimalInstances();
+    }
+    return this.resourceCalculation;
+  }
+
+  /**
+   * Recalculate optimal instances and adjust if needed
+   */
+  async recalculateInstances(): Promise<{ 
+    oldMax: number; 
+    newMax: number; 
+    adjusted: boolean; 
+    reason: string 
+  }> {
+    const oldMax = this.config.maxInstances || 0;
+    
+    try {
+      this.log('🔄 Recalculating optimal instance count');
+      
+      const newCalculation = await this.resourceCalculator.calculateOptimalInstances();
+      const newMax = newCalculation.maxInstances;
+      
+      if (newMax !== oldMax) {
+        this.log(`📊 Adjusting instances: ${oldMax} → ${newMax} (${newCalculation.reason})`);
+        
+        this.config.maxInstances = newMax;
+        this.resourceCalculation = newCalculation;
+        
+        // Update task queue concurrency
+        this.taskQueue.concurrency = newMax;
+        
+        // Update rate limiter
+        this.rateLimiter.updateSettings({
+          maxConcurrent: newMax
+        });
+        
+        // If reducing instances, terminate excess ones
+        if (newMax < oldMax) {
+          await this.terminateExcessInstances(newMax);
+        }
+        
+        this.emit('instances:adjusted', { oldMax, newMax, calculation: newCalculation });
+        
+        return {
+          oldMax,
+          newMax,
+          adjusted: true,
+          reason: newCalculation.reason
+        };
+      }
+      
+      return {
+        oldMax,
+        newMax,
+        adjusted: false,
+        reason: 'No adjustment needed'
+      };
+      
+    } catch (error) {
+      this.log('❌ Failed to recalculate instances', error);
+      return {
+        oldMax,
+        newMax: oldMax,
+        adjusted: false,
+        reason: 'Calculation failed'
+      };
+    }
+  }
+
+  /**
+   * Monitor resource usage and suggest adjustments
+   */
+  async monitorResources(): Promise<{
+    utilization: any;
+    suggestion: any;
+    shouldAdjust: boolean;
+  }> {
+    try {
+      const utilization = await this.resourceCalculator.getCurrentUtilization();
+      const suggestion = await this.resourceCalculator.monitorAndSuggestAdjustments(
+        this.metrics.activeInstances
+      );
+      
+      this.log(`📊 Resource utilization: RAM ${(utilization.ramUsage * 100).toFixed(1)}%, CPU ${(utilization.cpuLoad * 100).toFixed(1)}%`);
+      
+      if (suggestion.shouldAdjust) {
+        this.log(`💡 Suggestion: ${suggestion.reason}`);
+        this.emit('resource:suggestion', { utilization, suggestion });
+      }
+      
+      return {
+        utilization,
+        suggestion,
+        shouldAdjust: suggestion.shouldAdjust
+      };
+      
+    } catch (error) {
+      this.log('❌ Failed to monitor resources', error);
+      return {
+        utilization: null,
+        suggestion: null,
+        shouldAdjust: false
+      };
+    }
+  }
+
+  /**
+   * Terminate excess instances when reducing max count
+   */
+  private async terminateExcessInstances(newMax: number): Promise<void> {
+    const instancesToTerminate = this.instances.size - newMax;
+    
+    if (instancesToTerminate <= 0) return;
+    
+    this.log(`🔄 Terminating ${instancesToTerminate} excess instances`);
+    
+    // Find idle instances to terminate first
+    const idleInstances = Array.from(this.instances.values())
+      .filter(instance => instance.status === 'idle')
+      .slice(0, instancesToTerminate);
+    
+    for (const instance of idleInstances) {
+      instance.process.kill();
+      this.instances.delete(instance.id);
+      this.metrics.activeInstances--;
+      this.emit('instance:terminated', instance);
+    }
   }
 
   /**
