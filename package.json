@@ -1,0 +1,73 @@
+{
+  "name": "@caia/root",
+  "version": "1.0.0",
+  "description": "CAIA - Chief AI Agent: The Orchestrator of Orchestrators",
+  "private": true,
+  "workspaces": [
+    "core",
+    "agents/*",
+    "engines/*",
+    "utils/*",
+    "modules/*",
+    "tools/*",
+    "integrations/*"
+  ],
+  "scripts": {
+    "bootstrap": "lerna bootstrap",
+    "build:all": "lerna run build",
+    "test:all": "lerna run test",
+    "test:coverage": "lerna run test:coverage",
+    "clean": "lerna clean -y && rm -rf node_modules",
+    "publish:all": "lerna publish",
+    "publish:changed": "lerna publish --since HEAD~1",
+    "create:agent": "node scripts/create-component.js agent",
+    "create:engine": "node scripts/create-component.js engine",
+    "create:util": "node scripts/create-component.js util",
+    "create:module": "node scripts/create-component.js module",
+    "dev": "lerna run dev --parallel",
+    "lint": "lerna run lint",
+    "format": "lerna run format",
+    "version:major": "lerna version major",
+    "version:minor": "lerna version minor",
+    "version:patch": "lerna version patch",
+    "graph": "nx graph",
+    "affected:test": "nx affected:test",
+    "affected:build": "nx affected:build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "eslint": "^8.54.0",
+    "jest": "^29.7.0",
+    "lerna": "^8.0.0",
+    "nx": "^17.0.0",
+    "prettier": "^3.1.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caia-ai/caia.git"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "orchestration",
+    "automation",
+    "caia",
+    "chief-ai-agent",
+    "monorepo",
+    "typescript"
+  ],
+  "author": "CAIA AI",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/caia-ai/caia/issues"
+  },
+  "homepage": "https://caia.ai",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
