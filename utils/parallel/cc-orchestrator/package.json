@@ -1,0 +1,37 @@
+{
+  "name": "@caia/util-cc-orchestrator",
+  "version": "1.0.0",
+  "description": "Parallel Claude Code orchestration for massive concurrent AI operations",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "lint": "eslint . --ext .ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "claude",
+    "ai",
+    "orchestration",
+    "parallel",
+    "cc",
+    "caia"
+  ],
+  "author": "CAIA AI",
+  "license": "MIT",
+  "dependencies": {
+    "p-queue": "^7.4.1",
+    "p-limit": "^4.0.0",
+    "bottleneck": "^2.19.5",
+    "eventemitter3": "^5.0.1",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  }
+}
