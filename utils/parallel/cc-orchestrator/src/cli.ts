@@ -8,6 +8,7 @@
 import { Command } from 'commander';
 import { SystemResourceCalculator } from './SystemResourceCalculator';
 import { CCOrchestrator } from './index';
+import { TerminalPoolManager } from './TerminalPoolManager';
 
 const program = new Command();
 
@@ -125,6 +126,141 @@ program
       console.log(`📊 Instance utilization: ${(metrics.instanceUtilization * 100).toFixed(1)}%`);
       
       await orchestrator.cleanup();
+      
+    } catch (error) {
+      console.error('❌ Test failed:', error.message);
+      process.exit(1);
+    }
+  });
+
+// Test terminal pool command
+program
+  .command('test-pool')
+  .description('Test Terminal Pool Manager with safety-first approach')
+  .option('-t, --tasks <number>', 'Number of test tasks', '20')
+  .option('-p, --pool-size <number>', 'Pool size', '5')
+  .action(async (options) => {
+    console.log('🧪 Testing Terminal Pool Manager...\n');
+    
+    try {
+      const poolManager = new TerminalPoolManager({
+        maxTerminals: parseInt(options.poolSize),
+        safetyMode: true,
+        auditLog: true,
+        permissionAutoAccept: true,
+        apiErrorRecovery: true,
+        contextTransfer: true
+      });
+      
+      // Monitor pool events
+      poolManager.on('initialized', (data) => {
+        console.log('✅ Pool initialized with', data.maxTerminals, 'terminals');
+      });
+      
+      poolManager.on('terminal:created', (terminal) => {
+        console.log(`🖥️  Terminal created: ${terminal.id}`);
+      });
+      
+      poolManager.on('task:started', (data) => {
+        console.log(`📋 Task ${data.task.id} started on terminal ${data.terminal.id}`);
+      });
+      
+      poolManager.on('task:completed', (data) => {
+        console.log(`✅ Task ${data.task.id} completed`);
+      });
+      
+      poolManager.on('task:failed', (data) => {
+        console.log(`❌ Task ${data.task.id} failed: ${data.error.message}`);
+      });
+      
+      poolManager.on('task:reassigned', (data) => {
+        console.log(`🔀 Task ${data.task.id} reassigned from terminal ${data.fromTerminal}`);
+      });
+      
+      poolManager.on('task:escalated', (escalation) => {
+        console.log(`🚨 ESCALATION: Task ${escalation.task.id} needs user attention`);
+        console.log(`   Attempts: ${escalation.attempts}`);
+        console.log(`   Recommendation: ${escalation.recommendation}`);
+      });
+      
+      poolManager.on('terminal:replaced', (data) => {
+        console.log(`🔄 Terminal replaced: ${data.old} → ${data.new}`);
+      });
+      
+      poolManager.on('context:transferred', (data) => {
+        console.log(`📦 Context transferred: ${data.from} → ${data.to}`);
+      });
+      
+      // Create test tasks
+      const numTasks = parseInt(options.tasks);
+      const taskIds: string[] = [];
+      
+      console.log(`\n📋 Queuing ${numTasks} test tasks...\n`);
+      
+      for (let i = 0; i < numTasks; i++) {
+        const taskId = poolManager.addTask({
+          type: 'test',
+          input: { taskNumber: i + 1, test: true },
+          priority: Math.floor(Math.random() * 10),
+          maxAttempts: 3,
+          timeout: 30000
+        });
+        taskIds.push(taskId);
+      }
+      
+      // Monitor metrics
+      const metricsInterval = setInterval(() => {
+        const metrics = poolManager.getMetrics();
+        console.log('\n📊 POOL METRICS');
+        console.log('='.repeat(40));
+        console.log(`Pool size: ${metrics.poolSize}/${metrics.maxPoolSize}`);
+        console.log(`Healthy terminals: ${metrics.healthyTerminals}`);
+        console.log(`Repairing terminals: ${metrics.repairingTerminals}`);
+        console.log(`Dead terminals: ${metrics.deadTerminals}`);
+        console.log(`Queue length: ${metrics.queueLength}`);
+        console.log(`Active tasks: ${metrics.activeTasks}`);
+        console.log(`Total processed: ${metrics.totalProcessed}`);
+        console.log(`Total errors: ${metrics.totalErrors}`);
+        console.log(`Avg repair attempts: ${metrics.avgRepairAttempts.toFixed(2)}`);
+      }, 5000);
+      
+      // Wait for tasks to complete or timeout
+      const startTime = Date.now();
+      const maxWaitTime = 120000; // 2 minutes
+      
+      await new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          const metrics = poolManager.getMetrics();
+          
+          if (metrics.queueLength === 0 && metrics.activeTasks === 0) {
+            clearInterval(checkInterval);
+            clearInterval(metricsInterval);
+            resolve();
+          } else if (Date.now() - startTime > maxWaitTime) {
+            clearInterval(checkInterval);
+            clearInterval(metricsInterval);
+            console.log('\n⏱️  Timeout reached');
+            resolve();
+          }
+        }, 1000);
+      });
+      
+      // Final metrics
+      const finalMetrics = poolManager.getMetrics();
+      const duration = Date.now() - startTime;
+      
+      console.log('\n📊 FINAL RESULTS');
+      console.log('='.repeat(50));
+      console.log(`✅ Total processed: ${finalMetrics.totalProcessed}`);
+      console.log(`❌ Total errors: ${finalMetrics.totalErrors}`);
+      console.log(`⏱️  Duration: ${(duration / 1000).toFixed(2)} seconds`);
+      console.log(`🚀 Throughput: ${(finalMetrics.totalProcessed / (duration / 1000)).toFixed(2)} tasks/sec`);
+      console.log(`🔧 Avg repair attempts: ${finalMetrics.avgRepairAttempts.toFixed(2)}`);
+      
+      // Shutdown pool
+      console.log('\n🛑 Shutting down pool...');
+      await poolManager.shutdown();
+      console.log('✅ Pool shutdown complete');
       
     } catch (error) {
       console.error('❌ Test failed:', error.message);

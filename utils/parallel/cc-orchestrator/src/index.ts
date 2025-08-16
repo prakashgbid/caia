@@ -11,6 +11,7 @@ import Bottleneck from 'bottleneck';
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 import { SystemResourceCalculator } from './SystemResourceCalculator';
+import { TerminalPoolManager } from './TerminalPoolManager';
 
 export interface CCInstance {
   id: string;
@@ -51,6 +52,8 @@ export interface OrchestratorConfig {
   contextPreservation: boolean;  // Maintain context across instances
   debug: boolean;
   autoCalculateInstances?: boolean; // Auto-calculate max instances based on resources
+  useTerminalPool?: boolean;     // Use advanced terminal pool management
+  terminalPoolConfig?: any;      // Config for terminal pool manager
 }
 
 /**
@@ -66,6 +69,7 @@ export class CCOrchestrator extends EventEmitter {
   private contextStore: Map<string, any> = new Map();
   private resourceCalculator: SystemResourceCalculator;
   private resourceCalculation: any = null;
+  private terminalPool?: TerminalPoolManager;
   private metrics = {
     totalTasks: 0,
     completedTasks: 0,
@@ -92,6 +96,8 @@ export class CCOrchestrator extends EventEmitter {
       contextPreservation: true,
       debug: false,
       autoCalculateInstances: true,
+      useTerminalPool: true,     // Enable by default for safety
+      terminalPoolConfig: {},
       ...config
     };
 
@@ -143,9 +149,26 @@ export class CCOrchestrator extends EventEmitter {
       });
       
       this.log(`✅ CC Orchestrator initialized with ${this.config.maxInstances} max instances`);
+      // Initialize terminal pool if enabled
+      if (this.config.useTerminalPool) {
+        this.terminalPool = new TerminalPoolManager({
+          maxTerminals: this.config.maxInstances,
+          taskTimeout: this.config.taskTimeout,
+          maxTaskAttempts: this.config.retryAttempts,
+          safetyMode: true,
+          ...this.config.terminalPoolConfig
+        });
+        
+        // Set up pool event handlers
+        this.setupTerminalPoolHandlers();
+        
+        this.log('✅ Terminal Pool Manager initialized for enhanced reliability');
+      }
+      
       this.emit('initialized', { 
         config: this.config, 
-        resourceCalculation: this.resourceCalculation 
+        resourceCalculation: this.resourceCalculation,
+        useTerminalPool: this.config.useTerminalPool
       });
       
     } catch (error) {
@@ -288,6 +311,36 @@ export class CCOrchestrator extends EventEmitter {
   }
 
   /**
+   * Set up terminal pool event handlers
+   */
+  private setupTerminalPoolHandlers(): void {
+    if (!this.terminalPool) return;
+    
+    this.terminalPool.on('task:completed', (data) => {
+      this.metrics.completedTasks++;
+      this.emit('task:complete', data.task);
+    });
+    
+    this.terminalPool.on('task:failed', (data) => {
+      this.metrics.failedTasks++;
+      this.emit('task:error', data);
+    });
+    
+    this.terminalPool.on('task:escalated', (escalation) => {
+      this.log('🚨 Task escalated to user - manual intervention required');
+      this.emit('task:escalated', escalation);
+    });
+    
+    this.terminalPool.on('terminal:replaced', (data) => {
+      this.log(`🔄 Terminal replaced: ${data.old} → ${data.new}`);
+    });
+    
+    this.terminalPool.on('context:transferred', (data) => {
+      this.log(`📦 Context transferred for task ${data.task.id}`);
+    });
+  }
+
+  /**
    * Execute a single task
    */
   private async executeTask(task: CCTask): Promise<CCResult> {
@@ -343,9 +396,75 @@ export class CCOrchestrator extends EventEmitter {
   }
 
   /**
+   * Execute a single task (with terminal pool support)
+   */
+  async executeSingleTask(task: CCTask): Promise<CCResult> {
+    // Use terminal pool if available
+    if (this.terminalPool) {
+      const taskId = this.terminalPool.addTask({
+        type: task.type,
+        input: task.input,
+        context: {
+          taskHistory: [],
+          partialResults: null,
+          checkpoints: new Map(),
+          terminalId: '',
+          workingDirectory: process.cwd(),
+          environmentVars: {},
+          openFiles: [],
+          completedSteps: [],
+          pendingSteps: [],
+          errors: [],
+          previousAttempts: []
+        },
+        priority: task.priority,
+        maxAttempts: this.config.retryAttempts,
+        timeout: task.timeout
+      });
+      
+      // Wait for task completion
+      return new Promise((resolve, reject) => {
+        const handler = (data: any) => {
+          if (data.task && data.task.id === taskId) {
+            this.terminalPool?.removeListener('task:completed', handler);
+            this.terminalPool?.removeListener('task:failed', failHandler);
+            resolve({
+              taskId: task.id,
+              success: true,
+              data: data.result,
+              duration: Date.now() - task.startTime,
+              instanceId: data.terminal?.id || 'pool'
+            });
+          }
+        };
+        
+        const failHandler = (data: any) => {
+          if (data.task && data.task.id === taskId) {
+            this.terminalPool?.removeListener('task:completed', handler);
+            this.terminalPool?.removeListener('task:failed', failHandler);
+            resolve({
+              taskId: task.id,
+              success: false,
+              error: data.error,
+              duration: Date.now() - task.startTime,
+              instanceId: 'pool'
+            });
+          }
+        };
+        
+        this.terminalPool?.on('task:completed', handler);
+        this.terminalPool?.on('task:failed', failHandler);
+      });
+    }
+    
+    // Fallback to original implementation
+    return this.executeTask(task);
+  }
+
+  /**
    * Execute multiple tasks in parallel
    */
-  private async executeParallelTasks(tasks: CCTask[]): Promise<CCResult[]> {
+  async executeParallelTasks(tasks: CCTask[]): Promise<CCResult[]> {
     this.log(`Executing ${tasks.length} tasks in parallel`);
     
     // Sort by priority
@@ -561,10 +680,10 @@ export class CCOrchestrator extends EventEmitter {
   }
 
   /**
-   * Get current metrics including resource information
+   * Get current metrics including resource and pool information
    */
   getMetrics() {
-    return {
+    const baseMetrics = {
       ...this.metrics,
       queueSize: this.taskQueue.size,
       pendingTasks: this.taskQueue.pending,
@@ -572,6 +691,17 @@ export class CCOrchestrator extends EventEmitter {
       maxInstances: this.config.maxInstances,
       resourceCalculation: this.resourceCalculation
     };
+    
+    // Add terminal pool metrics if available
+    if (this.terminalPool) {
+      const poolMetrics = this.terminalPool.getMetrics();
+      return {
+        ...baseMetrics,
+        pool: poolMetrics
+      };
+    }
+    
+    return baseMetrics;
   }
 
   /**
@@ -709,11 +839,17 @@ export class CCOrchestrator extends EventEmitter {
   }
 
   /**
-   * Cleanup all instances
+   * Cleanup all instances and terminal pool
    */
   async cleanup(): Promise<void> {
     this.log('Cleaning up CC instances');
     
+    // Cleanup terminal pool if exists
+    if (this.terminalPool) {
+      await this.terminalPool.shutdown();
+    }
+    
+    // Cleanup regular instances
     for (const [id, instance] of this.instances) {
       instance.process.kill();
       this.instances.delete(id);
