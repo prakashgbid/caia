@@ -1,0 +1,24 @@
+{
+  "version": "independent",
+  "npmClient": "npm",
+  "command": {
+    "publish": {
+      "conventionalCommits": true,
+      "message": "chore(release): publish",
+      "registry": "https://registry.npmjs.org",
+      "access": "public"
+    },
+    "bootstrap": {
+      "npmClientArgs": ["--no-package-lock"]
+    }
+  },
+  "packages": [
+    "core",
+    "agents/*/*",
+    "engines/*/*",
+    "utils/*/*",
+    "modules/*/*",
+    "tools/*/*",
+    "integrations/*"
+  ]
+}

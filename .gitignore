@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Testing
+coverage/
+**/coverage/
+.nyc_output
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Package locks (using Lerna)
+package-lock.json
+**/package-lock.json
+yarn.lock
+
+# Temporary files
+.tmp/
+tmp/
+temp/
+
+# Documentation build
+docs-dist/
+.docusaurus/
+
+# Lerna
+lerna-debug.log
+.changelog/
