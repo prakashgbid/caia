@@ -9,8 +9,7 @@
     "engines/*",
     "utils/*",
     "modules/*",
-    "tools/*",
-    "integrations/*"
+    "tools/*"
   ],
   "scripts": {
     "bootstrap": "lerna bootstrap",
