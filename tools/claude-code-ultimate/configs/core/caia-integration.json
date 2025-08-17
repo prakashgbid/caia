@@ -1,0 +1,65 @@
+{
+  "caia_integration": {
+    "enabled": true,
+    "auto_context_on_session_start": true,
+    "admin_scripts_path": "/Users/MAC/Documents/projects/admin/scripts",
+    "priority": "highest",
+    "config": {
+      "context_awareness": {
+        "enabled": true,
+        "auto_load_latest_context": true,
+        "auto_run_status_check": true,
+        "display_project_summary": true,
+        "show_active_decisions": true,
+        "track_session_decisions": true
+      },
+      "caia_specific": {
+        "auto_run_caia_status": true,
+        "monitor_component_tracking": true,
+        "check_npm_publication_status": true,
+        "roadmap_integration": true,
+        "quality_metrics_display": true
+      },
+      "auto_commands": [
+        {
+          "command": "admin/scripts/quick_status.sh",
+          "when": "session_start",
+          "condition": "always",
+          "display": "condensed"
+        },
+        {
+          "command": "admin/scripts/caia_status.sh",
+          "when": "session_start",
+          "condition": "if_caia_active",
+          "display": "full"
+        },
+        {
+          "command": "python3 admin/scripts/query_context.py --command summary",
+          "when": "session_start",
+          "condition": "if_context_exists",
+          "display": "summary"
+        }
+      ],
+      "session_hooks": {
+        "pre_session": [
+          "check_context_daemon_status",
+          "load_latest_decisions",
+          "validate_admin_system"
+        ],
+        "post_session": [
+          "auto_log_session_summary",
+          "update_context_if_needed",
+          "backup_critical_decisions"
+        ],
+        "decision_hooks": {
+          "auto_log_enabled": true,
+          "trigger_keywords": [
+            "decided", "chose", "implemented", "designed", 
+            "architecture", "approach", "strategy", "solution"
+          ],
+          "auto_categorize": true
+        }
+      }
+    }
+  }
+}
