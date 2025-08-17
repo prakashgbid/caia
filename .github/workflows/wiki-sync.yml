@@ -1,0 +1,223 @@
+name: 📖 Wiki Sync
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'wiki/**'
+      - '*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          
+      - name: Clone or create wiki
+        run: |
+          # Try to clone existing wiki
+          if ! git clone https://github.com/${{ github.repository }}.wiki.git wiki; then
+            echo "Wiki doesn't exist or not enabled. Creating new wiki structure..."
+            mkdir -p wiki
+            cd wiki
+            git init
+            git remote add origin https://github.com/${{ github.repository }}.wiki.git
+            cd ..
+          fi
+          
+      - name: Generate wiki structure
+        run: |
+          # Create comprehensive wiki structure
+          
+          # 1. Convert README to Home page
+          cp README.md wiki/Home.md
+          
+          # 2. Copy all markdown docs
+          if [ -d "docs" ]; then
+            find docs -name "*.md" -exec cp {} wiki/ \; 2>/dev/null || true
+          fi
+          
+          # 3. Generate Table of Contents
+          cat > wiki/_Sidebar.md << 'EOF'
+          # 📚 Documentation
+          
+          ## 🏠 Getting Started
+          * [[Home]]
+          * [[Installation]]
+          * [[Quick Start]]
+          * [[Configuration]]
+          
+          ## 📖 User Guide
+          * [[Features]]
+          * [[Usage]]
+          * [[Examples]]
+          * [[Tutorials]]
+          * [[FAQ]]
+          
+          ## 🔧 Developer Guide
+          * [[Architecture]]
+          * [[API Reference]]
+          * [[Contributing]]
+          * [[Testing]]
+          * [[Deployment]]
+          
+          ## 📋 Reference
+          * [[CLI Reference]]
+          * [[Configuration Options]]
+          * [[Environment Variables]]
+          * [[Troubleshooting]]
+          
+          ## 📊 Project Info
+          * [[Changelog]]
+          * [[Roadmap]]
+          * [[License]]
+          * [[Security]]
+          * [[Support]]
+          
+          ## 🔗 Links
+          * [GitHub Repository](https://github.com/${{ github.repository }})
+          * [Issues](https://github.com/${{ github.repository }}/issues)
+          * [Discussions](https://github.com/${{ github.repository }}/discussions)
+          * [Releases](https://github.com/${{ github.repository }}/releases)
+          EOF
+          
+          # 4. Create footer
+          cat > wiki/_Footer.md << 'EOF'
+          ---
+          📚 Documentation automatically synced from [main repository](https://github.com/${{ github.repository }})
+          
+          Last updated: $(date '+%Y-%m-%d %H:%M:%S')
+          EOF
+          
+          # 5. Create Installation page if missing
+          if [ ! -f "wiki/Installation.md" ]; then
+            cat > wiki/Installation.md << 'EOF'
+          # Installation
+          
+          ## Prerequisites
+          - Node.js 18+ / Python 3.8+ (depending on project)
+          - Git
+          
+          ## Install from Source
+          ```bash
+          git clone https://github.com/${{ github.repository }}.git
+          cd ${{ github.event.repository.name }}
+          npm install  # or pip install -r requirements.txt
+          ```
+          
+          ## Install from Package Manager
+          
+          ### npm
+          ```bash
+          npm install ${{ github.event.repository.name }}
+          ```
+          
+          ### PyPI
+          ```bash
+          pip install ${{ github.event.repository.name }}
+          ```
+          
+          ## Docker
+          ```bash
+          docker pull ghcr.io/${{ github.repository }}:latest
+          ```
+          
+          ## Verify Installation
+          ```bash
+          ${{ github.event.repository.name }} --version
+          ```
+          EOF
+          fi
+          
+          # 6. Create Quick Start page if missing
+          if [ ! -f "wiki/Quick-Start.md" ]; then
+            cat > wiki/Quick-Start.md << 'EOF'
+          # Quick Start
+          
+          Get up and running in less than 5 minutes!
+          
+          ## 1. Installation
+          See [[Installation]] for detailed instructions.
+          
+          ## 2. Basic Usage
+          ```javascript
+          // Example code here
+          const app = require('${{ github.event.repository.name }}');
+          app.init();
+          ```
+          
+          ## 3. Configuration
+          Create a configuration file:
+          ```json
+          {
+            "option1": "value1",
+            "option2": "value2"
+          }
+          ```
+          
+          ## 4. Run Your First Command
+          ```bash
+          ${{ github.event.repository.name }} start
+          ```
+          
+          ## Next Steps
+          - Read the [[User Guide]]
+          - Check out [[Examples]]
+          - Join our [Discussions](https://github.com/${{ github.repository }}/discussions)
+          EOF
+          fi
+          
+          # 7. Generate API docs from code comments
+          if [ -f "package.json" ]; then
+            npm install -g jsdoc-to-markdown 2>/dev/null || true
+            jsdoc2md --files 'src/**/*.js' > wiki/API-Reference.md 2>/dev/null || true
+          fi
+          
+      - name: Commit and push wiki
+        run: |
+          cd wiki
+          git add -A
+          
+          if git diff --staged --quiet; then
+            echo "No changes to wiki"
+          else
+            git commit -m "📖 Auto-sync wiki from main repository
+            
+            - Updated from commit: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Triggered by: ${{ github.event_name }}"
+            
+            # Push to wiki
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git main --force || \
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git master --force || \
+            echo "Note: Wiki may need to be enabled in repository settings"
+          fi
+          
+      - name: Generate summary
+        run: |
+          echo "## 📖 Wiki Sync Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Wiki has been synchronized with the latest documentation." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Synced Files:" >> $GITHUB_STEP_SUMMARY
+          echo "- README.md → Home.md" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation files from /docs" >> $GITHUB_STEP_SUMMARY
+          echo "- Auto-generated API reference" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Wiki](https://github.com/${{ github.repository }}/wiki)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Edit Wiki](https://github.com/${{ github.repository }}/wiki/_new)" >> $GITHUB_STEP_SUMMARY

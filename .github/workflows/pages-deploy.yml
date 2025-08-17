@@ -1,0 +1,316 @@
+name: 🌐 GitHub Pages Deploy
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'package.json'
+      - 'src/**'
+  workflow_dispatch:
+    inputs:
+      theme:
+        description: 'Documentation theme'
+        required: false
+        default: 'default'
+        type: choice
+        options:
+          - default
+          - material
+          - readthedocs
+          - just-the-docs
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Detect project type
+        id: detect
+        run: |
+          if [ -f "package.json" ]; then
+            echo "type=node" >> $GITHUB_OUTPUT
+            echo "📦 Detected Node.js project"
+          elif [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
+            echo "type=python" >> $GITHUB_OUTPUT
+            echo "🐍 Detected Python project"
+          else
+            echo "type=generic" >> $GITHUB_OUTPUT
+            echo "📄 Detected generic project"
+          fi
+          
+      - name: Install dependencies
+        run: |
+          # Install documentation generators
+          npm install -g @microsoft/api-extractor @microsoft/api-documenter
+          npm install -g typedoc vitepress docsify-cli
+          pip install mkdocs mkdocs-material sphinx
+          
+      - name: Build documentation site
+        run: |
+          # Create site directory
+          mkdir -p _site
+          
+          # Copy static files
+          cp README.md _site/
+          [ -f "LICENSE" ] && cp LICENSE _site/
+          [ -f "CONTRIBUTING.md" ] && cp CONTRIBUTING.md _site/
+          [ -d "docs" ] && cp -r docs/* _site/ 2>/dev/null || true
+          
+          # Generate API documentation based on project type
+          if [ "${{ steps.detect.outputs.type }}" == "node" ]; then
+            echo "🔨 Building Node.js documentation..."
+            
+            # Generate TypeDoc if TypeScript project
+            if [ -f "tsconfig.json" ]; then
+              npx typedoc --out _site/api src --theme ${{ inputs.theme || 'default' }}
+            fi
+            
+            # Generate JSDoc for JavaScript
+            if [ -d "src" ]; then
+              npx jsdoc -c .jsdoc.json -d _site/jsdoc src 2>/dev/null || \
+              npx jsdoc -d _site/jsdoc -R README.md src 2>/dev/null || true
+            fi
+            
+          elif [ "${{ steps.detect.outputs.type }}" == "python" ]; then
+            echo "🔨 Building Python documentation..."
+            
+            # Generate Sphinx docs
+            sphinx-quickstart -q -p "${{ github.event.repository.name }}" \
+              -a "${{ github.repository_owner }}" \
+              --ext-autodoc --ext-viewcode --makefile _site/sphinx
+            sphinx-build -b html . _site/sphinx
+            
+          fi
+          
+          # Create main index.html with modern design
+          cat > _site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>${{ github.event.repository.name }} - Documentation</title>
+              <meta name="description" content="${{ github.event.repository.description }}">
+              <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+              <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+              <style>
+                  :root {
+                      --primary: #0969da;
+                      --primary-hover: #0860ca;
+                  }
+                  body { padding: 0; }
+                  .hero {
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white;
+                      padding: 4rem 2rem;
+                      text-align: center;
+                  }
+                  .hero h1 { color: white; margin-bottom: 1rem; }
+                  .hero p { font-size: 1.2rem; opacity: 0.95; }
+                  .features {
+                      display: grid;
+                      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                      gap: 2rem;
+                      padding: 3rem 2rem;
+                      max-width: 1200px;
+                      margin: 0 auto;
+                  }
+                  .feature {
+                      text-align: center;
+                      padding: 2rem;
+                      border-radius: 8px;
+                      background: #f8f9fa;
+                  }
+                  .feature h3 { color: #333; }
+                  .feature-icon {
+                      font-size: 3rem;
+                      margin-bottom: 1rem;
+                  }
+                  .nav-links {
+                      display: flex;
+                      gap: 1rem;
+                      justify-content: center;
+                      margin-top: 2rem;
+                  }
+                  .nav-links a {
+                      padding: 0.75rem 1.5rem;
+                      background: white;
+                      color: #333;
+                      text-decoration: none;
+                      border-radius: 5px;
+                      transition: transform 0.2s;
+                  }
+                  .nav-links a:hover {
+                      transform: translateY(-2px);
+                      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                  }
+                  footer {
+                      text-align: center;
+                      padding: 2rem;
+                      background: #f8f9fa;
+                      margin-top: 4rem;
+                  }
+                  .code-block {
+                      background: #2d2d2d;
+                      color: #f8f8f2;
+                      padding: 1rem;
+                      border-radius: 5px;
+                      overflow-x: auto;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="hero">
+                  <h1>📚 ${{ github.event.repository.name }}</h1>
+                  <p>${{ github.event.repository.description }}</p>
+                  <div class="nav-links">
+                      <a href="https://github.com/${{ github.repository }}">🔗 GitHub</a>
+                      <a href="https://github.com/${{ github.repository }}/wiki">📖 Wiki</a>
+                      <a href="#quick-start">🚀 Quick Start</a>
+                      <a href="api/">📋 API Docs</a>
+                  </div>
+              </div>
+              
+              <div class="features">
+                  <div class="feature">
+                      <div class="feature-icon">🚀</div>
+                      <h3>Quick Start</h3>
+                      <p>Get up and running in minutes with our comprehensive guides</p>
+                      <a href="#quick-start">Learn More →</a>
+                  </div>
+                  
+                  <div class="feature">
+                      <div class="feature-icon">📖</div>
+                      <h3>Documentation</h3>
+                      <p>Detailed documentation covering all features and APIs</p>
+                      <a href="api/">Browse Docs →</a>
+                  </div>
+                  
+                  <div class="feature">
+                      <div class="feature-icon">💡</div>
+                      <h3>Examples</h3>
+                      <p>Real-world examples and tutorials to help you learn</p>
+                      <a href="#examples">View Examples →</a>
+                  </div>
+                  
+                  <div class="feature">
+                      <div class="feature-icon">🤝</div>
+                      <h3>Contributing</h3>
+                      <p>Join our community and help make this project better</p>
+                      <a href="CONTRIBUTING.md">Contribute →</a>
+                  </div>
+              </div>
+              
+              <main class="container">
+                  <section id="quick-start">
+                      <h2>Quick Start</h2>
+                      <h3>Installation</h3>
+                      <div class="code-block">
+                          <pre><code># npm
+          npm install ${{ github.event.repository.name }}
+          
+          # yarn
+          yarn add ${{ github.event.repository.name }}
+          
+          # pnpm
+          pnpm add ${{ github.event.repository.name }}</code></pre>
+                      </div>
+                      
+                      <h3>Basic Usage</h3>
+                      <div class="code-block">
+                          <pre><code class="language-javascript">import { App } from '${{ github.event.repository.name }}';
+          
+          const app = new App();
+          app.start();</code></pre>
+                      </div>
+                  </section>
+                  
+                  <section id="examples">
+                      <h2>Examples</h2>
+                      <p>Check out our <a href="https://github.com/${{ github.repository }}/tree/main/examples">examples directory</a> for more detailed examples.</p>
+                  </section>
+              </main>
+              
+              <footer>
+                  <p>
+                      <strong>${{ github.event.repository.name }}</strong> by 
+                      <a href="https://github.com/${{ github.repository_owner }}">${{ github.repository_owner }}</a>
+                  </p>
+                  <p>
+                      <a href="https://github.com/${{ github.repository }}/blob/main/LICENSE">License</a> |
+                      <a href="https://github.com/${{ github.repository }}/issues">Issues</a> |
+                      <a href="https://github.com/${{ github.repository }}/discussions">Discussions</a>
+                  </p>
+                  <p>
+                      <small>Documentation built with ❤️ by GitHub Actions</small>
+                  </p>
+              </footer>
+              
+              <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+              <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+          </body>
+          </html>
+          EOF
+          
+          # Create 404 page
+          cp _site/index.html _site/404.html
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+          
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        
+      - name: Generate summary
+        run: |
+          echo "## 🌐 GitHub Pages Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation successfully deployed!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Documentation](${{ steps.deployment.outputs.page_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [GitHub Repository](https://github.com/${{ github.repository }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Deployment Info:" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Triggered by: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY

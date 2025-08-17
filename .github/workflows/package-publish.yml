@@ -1,0 +1,352 @@
+name: 📦 Package Publish
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  detect-package-type:
+    runs-on: ubuntu-latest
+    outputs:
+      is_node: ${{ steps.detect.outputs.is_node }}
+      is_python: ${{ steps.detect.outputs.is_python }}
+      is_rust: ${{ steps.detect.outputs.is_rust }}
+      is_go: ${{ steps.detect.outputs.is_go }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Detect package type
+        id: detect
+        run: |
+          echo "is_node=false" >> $GITHUB_OUTPUT
+          echo "is_python=false" >> $GITHUB_OUTPUT
+          echo "is_rust=false" >> $GITHUB_OUTPUT
+          echo "is_go=false" >> $GITHUB_OUTPUT
+          
+          if [ -f "package.json" ]; then
+            echo "is_node=true" >> $GITHUB_OUTPUT
+            echo "📦 Detected Node.js package"
+          fi
+          
+          if [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
+            echo "is_python=true" >> $GITHUB_OUTPUT
+            echo "🐍 Detected Python package"
+          fi
+          
+          if [ -f "Cargo.toml" ]; then
+            echo "is_rust=true" >> $GITHUB_OUTPUT
+            echo "🦀 Detected Rust package"
+          fi
+          
+          if [ -f "go.mod" ]; then
+            echo "is_go=true" >> $GITHUB_OUTPUT
+            echo "🐹 Detected Go module"
+          fi
+
+  publish-npm:
+    needs: detect-package-type
+    if: needs.detect-package-type.outputs.is_node == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Update package version
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          
+      - name: Install dependencies
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
+          
+      - name: Build package
+        run: |
+          npm run build --if-present
+          
+      - name: Run tests
+        run: |
+          npm test --if-present
+          
+      - name: Publish to npm
+        run: |
+          if [ "${{ inputs.prerelease }}" == "true" ]; then
+            npm publish --tag beta --access public
+          else
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          
+      - name: Publish to GitHub Packages
+        run: |
+          # Reconfigure for GitHub Packages
+          npm config set @${{ github.repository_owner }}:registry https://npm.pkg.github.com
+          
+          # Update package name for GitHub
+          node -e "
+          const pkg = require('./package.json');
+          pkg.name = '@${{ github.repository_owner }}/' + pkg.name.replace('@${{ github.repository_owner }}/', '');
+          require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+          
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-pypi:
+    needs: detect-package-type
+    if: needs.detect-package-type.outputs.is_python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine setuptools wheel
+          
+      - name: Update version
+        run: |
+          # Update version in setup.py or pyproject.toml
+          if [ -f "setup.py" ]; then
+            sed -i "s/version=.*/version='${{ steps.version.outputs.version }}',/" setup.py
+          fi
+          
+          if [ -f "pyproject.toml" ]; then
+            sed -i "s/^version = .*/version = \"${{ steps.version.outputs.version }}\"/" pyproject.toml
+          fi
+          
+      - name: Build package
+        run: |
+          python -m build
+          
+      - name: Check distribution
+        run: |
+          twine check dist/*
+          
+      - name: Publish to Test PyPI
+        if: inputs.prerelease == 'true'
+        run: |
+          twine upload --repository testpypi dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+          
+      - name: Publish to PyPI
+        if: inputs.prerelease != 'true'
+        run: |
+          twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+  publish-docker:
+    needs: detect-package-type
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for Dockerfile
+        id: docker_check
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "has_dockerfile=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_dockerfile=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Set up Docker Buildx
+        if: steps.docker_check.outputs.has_dockerfile == 'true'
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to GitHub Container Registry
+        if: steps.docker_check.outputs.has_dockerfile == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Build and push Docker image
+        if: steps.docker_check.outputs.has_dockerfile == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  create-release:
+    needs: [publish-npm, publish-pypi, publish-docker]
+    if: always() && github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Generate release notes
+        id: notes
+        run: |
+          # Generate changelog from commits
+          echo "## What's Changed" > release_notes.md
+          echo "" >> release_notes.md
+          
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            git log --pretty=format:"- %s (%an)" >> release_notes.md
+          else
+            git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%an)" >> release_notes.md
+          fi
+          
+          echo "" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "## Installation" >> release_notes.md
+          echo "" >> release_notes.md
+          
+          if [ -f "package.json" ]; then
+            echo "### npm" >> release_notes.md
+            echo '```bash' >> release_notes.md
+            echo "npm install ${{ github.event.repository.name }}@${{ steps.version.outputs.version }}" >> release_notes.md
+            echo '```' >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+          
+          if [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
+            echo "### PyPI" >> release_notes.md
+            echo '```bash' >> release_notes.md
+            echo "pip install ${{ github.event.repository.name }}==${{ steps.version.outputs.version }}" >> release_notes.md
+            echo '```' >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+          
+          if [ -f "Dockerfile" ]; then
+            echo "### Docker" >> release_notes.md
+            echo '```bash' >> release_notes.md
+            echo "docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}" >> release_notes.md
+            echo '```' >> release_notes.md
+          fi
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ inputs.prerelease == 'true' }}
+          
+  summary:
+    needs: [publish-npm, publish-pypi, publish-docker, create-release]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 📦 Package Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.publish-npm.result }}" == "success" ]; then
+            echo "✅ **npm**: Successfully published" >> $GITHUB_STEP_SUMMARY
+            echo "   - View: https://www.npmjs.com/package/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.publish-npm.result }}" == "skipped" ]; then
+            echo "⏭️ **npm**: Skipped (not a Node.js package)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **npm**: Failed to publish" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.publish-pypi.result }}" == "success" ]; then
+            echo "✅ **PyPI**: Successfully published" >> $GITHUB_STEP_SUMMARY
+            echo "   - View: https://pypi.org/project/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.publish-pypi.result }}" == "skipped" ]; then
+            echo "⏭️ **PyPI**: Skipped (not a Python package)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **PyPI**: Failed to publish" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.publish-docker.result }}" == "success" ]; then
+            echo "✅ **Docker**: Successfully published" >> $GITHUB_STEP_SUMMARY
+            echo "   - Pull: \`docker pull ghcr.io/${{ github.repository }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.publish-docker.result }}" == "skipped" ]; then
+            echo "⏭️ **Docker**: Skipped (no Dockerfile)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Docker**: Failed to publish" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases)" >> $GITHUB_STEP_SUMMARY
+          echo "- [GitHub Packages](https://github.com/${{ github.repository }}/packages)" >> $GITHUB_STEP_SUMMARY
