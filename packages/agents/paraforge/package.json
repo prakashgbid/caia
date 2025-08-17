@@ -1,0 +1,72 @@
+{
+  "name": "@caia/agent-paraforge",
+  "version": "0.1.0",
+  "description": "Requirements to JIRA transformation agent",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
+    "setup": "node scripts/setup.js",
+    "start": "node dist/index.js",
+    "prepare": "echo 'Skipping husky in monorepo'"
+  },
+  "keywords": [
+    "caia",
+    "jira",
+    "project-management",
+    "ai",
+    "agents",
+    "orchestration",
+    "parallelization",
+    "agile",
+    "scrum",
+    "automation"
+  ],
+  "author": "ParaForge Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prakashgbid/paraforge.git"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.20.0",
+    "@dsazz/mcp-jira": "^0.5.4",
+    "axios": "^1.11.0",
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "joi": "^17.11.0",
+    "langchain": "^0.1.0",
+    "lodash": "^4.17.21",
+    "openai": "^4.20.0",
+    "p-queue": "^7.4.1",
+    "winston": "^3.11.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.8",
+    "@types/lodash": "^4.14.200",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "husky": "^8.0.3",
+    "jest": "^29.7.0",
+    "prettier": "^3.1.0",
+    "ts-jest": "^29.1.1",
+    "tsx": "^4.5.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

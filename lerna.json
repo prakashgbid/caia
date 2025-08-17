@@ -13,11 +13,14 @@
     }
   },
   "packages": [
-    "core",
-    "agents/*",
-    "engines/*",
-    "utils/*",
-    "modules/*",
-    "tools/*"
+    "packages/core",
+    "packages/agents/*",
+    "packages/engines/*",
+    "packages/utils/*",
+    "packages/integrations/*",
+    "packages/modules/*",
+    "packages/tools/*",
+    "apps/*",
+    "examples/*"
   ]
 }

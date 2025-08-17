@@ -4,12 +4,15 @@
   "description": "CAIA - Chief AI Agent: The Orchestrator of Orchestrators",
   "private": true,
   "workspaces": [
-    "core",
-    "agents/*",
-    "engines/*",
-    "utils/*",
-    "modules/*",
-    "tools/*"
+    "packages/core",
+    "packages/agents/*",
+    "packages/engines/*",
+    "packages/utils/*",
+    "packages/integrations/*",
+    "packages/modules/*",
+    "packages/tools/*",
+    "apps/*",
+    "examples/*"
   ],
   "scripts": {
     "bootstrap": "lerna bootstrap",

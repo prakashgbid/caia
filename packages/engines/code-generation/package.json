@@ -1,0 +1,27 @@
+{
+  "name": "@caia/engine-code-generation",
+  "version": "0.1.0",
+  "description": "Automated code generation engine",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "caia"
+  ],
+  "author": "CAIA Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caia-ai/caia.git",
+    "directory": "packages/engines/code-generation"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

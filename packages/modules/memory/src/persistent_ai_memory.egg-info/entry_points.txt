@@ -1,0 +1,2 @@
+[console_scripts]
+ai-memory = persistent_ai_memory.cli:main

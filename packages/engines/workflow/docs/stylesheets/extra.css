@@ -1,0 +1,32 @@
+/* Custom styles for FlowMaster */
+.md-header {
+    background-color: var(--md-primary-fg-color);
+}
+
+.md-hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* Card grid */
+.grid.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.grid.cards > * {
+    border: 1px solid var(--md-default-fg-color--lightest);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+/* Code blocks */
+.highlight {
+    border-radius: 0.5rem;
+}
+
+/* Admonitions */
+.admonition {
+    border-radius: 0.5rem;
+}

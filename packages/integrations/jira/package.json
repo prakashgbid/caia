@@ -1,0 +1,72 @@
+{
+  "name": "@caia/integration-jira",
+  "version": "0.1.0",
+  "description": "JIRA integration for CAIA",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "prepublishOnly": "npm run build && npm test",
+    "release": "npm version patch && npm publish --access public"
+  },
+  "keywords": [
+    "caia",
+    "jira",
+    "atlassian",
+    "mcp",
+    "model-context-protocol",
+    "api",
+    "integration",
+    "parallel",
+    "bulk",
+    "automation",
+    "connection-pool",
+    "rate-limiting",
+    "enterprise"
+  ],
+  "author": "AutoForge AI",
+  "license": "MIT",
+  "homepage": "https://github.com/autoforge-ai/jira-connect",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autoforge-ai/jira-connect.git"
+  },
+  "bugs": {
+    "url": "https://github.com/autoforge-ai/jira-connect/issues"
+  },
+  "dependencies": {
+    "@dsazz/mcp-jira": "^0.5.4",
+    "dotenv": "^16.3.1",
+    "eventemitter3": "^5.0.1",
+    "p-queue": "^7.4.1",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "eslint": "^8.54.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.1.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
