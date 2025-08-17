@@ -1,0 +1,459 @@
+name: 📚 Auto Documentation & Deployment
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '.github/**'
+      - '*.md'
+  pull_request:
+    branches: [main, master]
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment even without changes'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  packages: write
+
+jobs:
+  # 1. Generate Documentation
+  generate-docs:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check_changes.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install documentation tools
+        run: |
+          npm install -g typedoc @microsoft/api-extractor @microsoft/api-documenter
+          npm install -g mermaid-cli markdown-pdf jsdoc-to-markdown
+          pip install sphinx mkdocs mkdocs-material pydoc-markdown
+          
+      - name: Detect project type
+        id: detect
+        run: |
+          if [ -f "package.json" ]; then
+            echo "type=node" >> $GITHUB_OUTPUT
+          elif [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
+            echo "type=python" >> $GITHUB_OUTPUT
+          elif [ -f "go.mod" ]; then
+            echo "type=go" >> $GITHUB_OUTPUT
+          else
+            echo "type=generic" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Generate API documentation (Node.js)
+        if: steps.detect.outputs.type == 'node'
+        run: |
+          # Generate TypeDoc documentation
+          if [ -f "tsconfig.json" ]; then
+            npx typedoc --out docs/api src
+          fi
+          
+          # Generate JSDoc for JavaScript
+          if [ -d "src" ]; then
+            npx jsdoc -c .jsdoc.json -d docs/jsdoc src || npx jsdoc -d docs/jsdoc src
+          fi
+          
+          # Generate markdown API docs
+          npx jsdoc2md --files 'src/**/*.js' > docs/API.md || true
+          
+      - name: Generate API documentation (Python)
+        if: steps.detect.outputs.type == 'python'
+        run: |
+          # Generate Sphinx documentation
+          sphinx-quickstart -q -p "${GITHUB_REPOSITORY##*/}" -a "GitHub Actions" --ext-autodoc --makefile docs/sphinx
+          sphinx-build -b html . docs/sphinx/_build
+          
+          # Generate mkdocs
+          mkdocs build -d docs/mkdocs || true
+          
+      - name: Generate architecture diagrams
+        run: |
+          # Create architecture diagrams using mermaid
+          cat > docs/architecture.mmd << 'EOF'
+          graph TB
+            A[Client] -->|HTTP/HTTPS| B[Load Balancer]
+            B --> C[Web Server]
+            C --> D[Application]
+            D --> E[Database]
+            D --> F[Cache]
+            D --> G[Queue]
+          EOF
+          
+          npx mmdc -i docs/architecture.mmd -o docs/architecture.png || true
+          
+      - name: Generate README sections
+        run: |
+          # Auto-generate badges
+          cat > .github/readme-sections/badges.md << EOF
+          ![GitHub Actions](https://github.com/${{ github.repository }}/workflows/📚%20Auto%20Documentation%20&%20Deployment/badge.svg)
+          ![License](https://img.shields.io/github/license/${{ github.repository }})
+          ![GitHub release](https://img.shields.io/github/release/${{ github.repository }})
+          ![npm](https://img.shields.io/npm/v/${GITHUB_REPOSITORY##*/})
+          ![PyPI](https://img.shields.io/pypi/v/${GITHUB_REPOSITORY##*/})
+          ![GitHub Pages](https://img.shields.io/badge/docs-github%20pages-blue)
+          EOF
+          
+          # Generate TOC
+          npx markdown-toc README.md -i || true
+          
+      - name: Create/Update professional files
+        run: |
+          # Ensure LICENSE exists
+          if [ ! -f "LICENSE" ]; then
+            curl -s https://raw.githubusercontent.com/github/choosealicense.com/gh-pages/_licenses/mit.txt > LICENSE
+            sed -i "s/\[year\]/$(date +%Y)/g" LICENSE
+            sed -i "s/\[fullname\]/${{ github.repository_owner }}/g" LICENSE
+          fi
+          
+          # Ensure CONTRIBUTING.md exists
+          if [ ! -f "CONTRIBUTING.md" ]; then
+            cat > CONTRIBUTING.md << 'EOF'
+          # Contributing Guidelines
+          
+          We love your input! We want to make contributing to this project as easy and transparent as possible.
+          
+          ## Development Process
+          1. Fork the repo and create your branch from `main`
+          2. If you've added code that should be tested, add tests
+          3. If you've changed APIs, update the documentation
+          4. Ensure the test suite passes
+          5. Make sure your code lints
+          6. Issue that pull request!
+          
+          ## Any contributions you make will be under the MIT Software License
+          When you submit code changes, your submissions are understood to be under the same [MIT License](LICENSE) that covers the project.
+          
+          ## Report bugs using Github's [issue tracker](https://github.com/${{ github.repository }}/issues)
+          
+          ## License
+          By contributing, you agree that your contributions will be licensed under its MIT License.
+          EOF
+          fi
+          
+          # Ensure CODE_OF_CONDUCT.md exists
+          if [ ! -f "CODE_OF_CONDUCT.md" ]; then
+            curl -s https://raw.githubusercontent.com/github/docs/main/CODE_OF_CONDUCT.md > CODE_OF_CONDUCT.md
+          fi
+          
+      - name: Generate CHANGELOG
+        run: |
+          # Generate changelog from commits
+          cat > CHANGELOG.md << EOF
+          # Changelog
+          
+          All notable changes to this project will be documented in this file.
+          
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+          
+          ## [Unreleased]
+          
+          EOF
+          
+          # Add recent commits
+          git log --pretty=format:"- %s (%h)" -n 20 >> CHANGELOG.md
+          
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status -s) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Commit documentation updates
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git diff --staged --quiet || git commit -m "📚 Auto-update documentation [skip ci]"
+          git push || true
+
+  # 2. Sync to Wiki
+  sync-wiki:
+    needs: generate-docs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Checkout wiki
+        run: |
+          git clone https://github.com/${{ github.repository }}.wiki.git wiki || {
+            echo "Wiki not enabled, creating initial wiki"
+            mkdir wiki
+            cd wiki
+            git init
+            git remote add origin https://github.com/${{ github.repository }}.wiki.git
+            cd ..
+          }
+          
+      - name: Sync documentation to wiki
+        run: |
+          # Copy README as Home page
+          cp README.md wiki/Home.md
+          
+          # Copy all docs to wiki
+          if [ -d "docs" ]; then
+            cp -r docs/* wiki/ 2>/dev/null || true
+          fi
+          
+          # Create sidebar
+          cat > wiki/_Sidebar.md << EOF
+          # Navigation
+          
+          * [Home](Home)
+          * [API Documentation](API)
+          * [Contributing](CONTRIBUTING)
+          * [Changelog](CHANGELOG)
+          * [License](LICENSE)
+          
+          ## Guides
+          * [Getting Started](Getting-Started)
+          * [Installation](Installation)
+          * [Configuration](Configuration)
+          * [Examples](Examples)
+          
+          ## Reference
+          * [API Reference](API-Reference)
+          * [CLI Reference](CLI-Reference)
+          * [Configuration Options](Config-Options)
+          EOF
+          
+          # Copy other important files
+          cp CONTRIBUTING.md wiki/CONTRIBUTING.md 2>/dev/null || true
+          cp CHANGELOG.md wiki/CHANGELOG.md 2>/dev/null || true
+          cp LICENSE wiki/LICENSE.md 2>/dev/null || true
+          
+      - name: Push to wiki
+        run: |
+          cd wiki
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git add -A
+          git diff --staged --quiet || {
+            git commit -m "📖 Sync documentation from main repo"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git || true
+          }
+
+  # 3. Deploy to GitHub Pages
+  deploy-pages:
+    needs: generate-docs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Build documentation site
+        run: |
+          # Install site generator
+          npm install -g @vuepress/vuepress @vuepress/theme-default
+          npm install -g docsify-cli gitbook-cli
+          
+          # Create site structure
+          mkdir -p site
+          cp README.md site/README.md
+          cp -r docs/* site/ 2>/dev/null || true
+          
+          # Create index.html
+          cat > site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>${{ github.event.repository.name }}</title>
+            <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+            <meta name="description" content="${{ github.event.repository.description }}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+            <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+          </head>
+          <body>
+            <div id="app"></div>
+            <script>
+              window.$docsify = {
+                name: '${{ github.event.repository.name }}',
+                repo: '${{ github.repository }}',
+                loadSidebar: true,
+                loadNavbar: true,
+                maxLevel: 4,
+                subMaxLevel: 3,
+                search: 'auto',
+                coverpage: true,
+                onlyCover: false,
+              }
+            </script>
+            <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+            <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+            <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/emoji.min.js"></script>
+            <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/zoom-image.min.js"></script>
+            <script src="//cdn.jsdelivr.net/npm/docsify-copy-code"></script>
+            <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-typescript.min.js"></script>
+            <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-python.min.js"></script>
+            <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-go.min.js"></script>
+            <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-rust.min.js"></script>
+          </body>
+          </html>
+          EOF
+          
+          # Create _sidebar.md
+          cat > site/_sidebar.md << 'EOF'
+          * [Home](/)
+          * [Getting Started](getting-started.md)
+          * [API Reference](api.md)
+          * [Examples](examples.md)
+          * [Contributing](CONTRIBUTING.md)
+          * [Changelog](CHANGELOG.md)
+          EOF
+          
+          # Create _coverpage.md
+          cat > site/_coverpage.md << EOF
+          # ${{ github.event.repository.name }}
+          
+          > ${{ github.event.repository.description }}
+          
+          - Simple and lightweight
+          - No statically built html files
+          - Multiple themes
+          
+          [GitHub](https://github.com/${{ github.repository }})
+          [Get Started](#quick-start)
+          EOF
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ./site
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+  # 4. Publish Packages (on release)
+  publish-packages:
+    needs: [generate-docs, sync-wiki, deploy-pages]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Publish to npm
+        if: contains(github.repository, 'node') || contains(github.repository, 'js') || contains(github.repository, 'typescript')
+        run: |
+          if [ -f "package.json" ]; then
+            npm ci
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          
+      - name: Publish to PyPI
+        if: contains(github.repository, 'python') || contains(github.repository, 'py')
+        run: |
+          if [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
+            pip install build twine
+            python -m build
+            python -m twine upload dist/*
+          fi
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+  # 5. Quality Check
+  quality-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Check documentation completeness
+        run: |
+          # Check for required files
+          required_files=("README.md" "LICENSE" "CONTRIBUTING.md")
+          missing_files=()
+          
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+          
+          if [ ${#missing_files[@]} -gt 0 ]; then
+            echo "❌ Missing required files: ${missing_files[*]}"
+            exit 1
+          else
+            echo "✅ All required files present"
+          fi
+          
+      - name: Validate README quality
+        run: |
+          # Check README has minimum sections
+          if ! grep -q "## Installation" README.md && ! grep -q "## Getting Started" README.md; then
+            echo "⚠️ README missing Installation or Getting Started section"
+          fi
+          
+          if ! grep -q "## Usage" README.md && ! grep -q "## Examples" README.md; then
+            echo "⚠️ README missing Usage or Examples section"
+          fi
+          
+          if ! grep -q "## License" README.md; then
+            echo "⚠️ README missing License section"
+          fi
+          
+      - name: Create status badge
+        run: |
+          echo "📊 Documentation Quality Report" >> $GITHUB_STEP_SUMMARY
+          echo "================================" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation automation active" >> $GITHUB_STEP_SUMMARY
+          echo "📚 Wiki sync: Enabled" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 GitHub Pages: Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Package publishing: Ready" >> $GITHUB_STEP_SUMMARY

@@ -43,7 +43,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # cache: 'npm' # Disabled due to missing lock file
+          cache: 'npm'
           
       - name: Setup Python
         uses: actions/setup-python@v4
