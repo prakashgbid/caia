@@ -5,7 +5,7 @@
 import { AgentOrchestrator } from '../agents/AgentOrchestrator';
 import { SynthesisEngine } from '../synthesis/SynthesisEngine';
 import { ParallelizationOptimizer } from '../optimizer/ParallelizationOptimizer';
-import { JiraConnector } from '../jira/JiraConnector';
+import { JiraConnector } from '../agents/JiraConnectWrapper';
 import { LearningSystem } from '../learning/LearningSystem';
 import { logger } from '../utils/logger';
 

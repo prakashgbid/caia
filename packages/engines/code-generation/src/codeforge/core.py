@@ -15,6 +15,7 @@ import black
 import autopep8
 from ..agents.open_source_solution_finder import get_solution_finder, check_before_coding, RequirementSpec, SolutionLevel
 
+SOLUTION_FINDER_AVAILABLE = False
 
 class CodeType(Enum):
     """Types of code generation tasks"""
@@ -73,10 +74,24 @@ class CodeGenerator:
         self.langchain_engine = langchain_engine
         self.logger = logging.getLogger('MemCore-CodeGen')
         self.templates = self._initialize_templates()
-        self.analyzers = {ProgrammingLanguage.PYTHON: self._analyze_python, ProgrammingLanguage.JAVASCRIPT: self._analyze_javascript}
-        self.formatters = {ProgrammingLanguage.PYTHON: self._format_python, ProgrammingLanguage.JAVASCRIPT: self._format_javascript}
+        self.analyzers = self._initialize_analyzers()
+        self.formatters = self._initialize_formatters()
         self.modification_history = []
         self.code_cache = {}
+
+    def _initialize_analyzers(self) -> Dict[ProgrammingLanguage, callable]:
+        """Initialize code analyzers"""
+        return {
+            ProgrammingLanguage.PYTHON: self._analyze_python,
+            ProgrammingLanguage.JAVASCRIPT: self._analyze_javascript,
+        }
+
+    def _initialize_formatters(self) -> Dict[ProgrammingLanguage, callable]:
+        """Initialize code formatters"""
+        return {
+            ProgrammingLanguage.PYTHON: self._format_python,
+            ProgrammingLanguage.JAVASCRIPT: self._format_javascript,
+        }
 
     def _initialize_templates(self) -> Dict[str, CodeTemplate]:
         """Initialize code generation templates"""
@@ -89,15 +104,24 @@ class CodeGenerator:
     async def generate_code(self, request: CodeGenerationRequest) -> GeneratedCode:
         """Generate code based on request"""
         self.logger.info(f'Generating {request.code_type.value} in {request.language.value}')
+
+        solution = await self._find_existing_solution(request)
+        if solution:
+            return solution
+
+        self.logger.info('No suitable open source solution found, generating custom code')
+        if self.langchain_engine:
+            return await self._generate_with_langchain(request)
+        return await self._generate_with_templates(request)
+
+    async def _find_existing_solution(self, request: CodeGenerationRequest) -> Optional[GeneratedCode]:
+        """Find an existing open source solution"""
         if SOLUTION_FINDER_AVAILABLE:
             solution_check = await self._check_for_existing_solution(request)
             if solution_check['should_use_library']:
                 self.logger.info(f"🎯 Found open source solution: {solution_check['recommendation']}")
                 return await self._generate_library_usage_code(request, solution_check)
-        self.logger.info('No suitable open source solution found, generating custom code')
-        if self.langchain_engine:
-            return await self._generate_with_langchain(request)
-        return await self._generate_with_templates(request)
+        return None
 
     async def _generate_with_langchain(self, request: CodeGenerationRequest) -> GeneratedCode:
         """Generate code using LangChain"""
@@ -106,12 +130,22 @@ class CodeGenerator:
         code = self._extract_code_from_response(response, request.language)
         if request.language in self.formatters:
             code = self.formatters[request.language](code)
-        tests = None
-        if request.code_type != CodeType.TEST:
-            tests = await self._generate_tests(code, request)
-        documentation = await self._generate_documentation(code, request)
+
+        tests = await self._generate_tests_for_code(code, request)
+        documentation = await self._generate_docs_for_code(code, request)
         quality_score = await self._analyze_code_quality(code, request.language)
+
         return GeneratedCode(code=code, language=request.language, description=request.description, tests=tests, documentation=documentation, quality_score=quality_score)
+
+    async def _generate_tests_for_code(self, code: str, request: CodeGenerationRequest) -> Optional[str]:
+        """Generate tests for the given code"""
+        if request.code_type != CodeType.TEST:
+            return await self._generate_tests(code, request)
+        return None
+
+    async def _generate_docs_for_code(self, code: str, request: CodeGenerationRequest) -> str:
+        """Generate documentation for the given code"""
+        return await self._generate_documentation(code, request)
 
     async def _generate_with_templates(self, request: CodeGenerationRequest) -> GeneratedCode:
         """Generate code using templates (fallback)"""
@@ -248,12 +282,18 @@ class CodeGenerator:
         if not self._validate_modification(original_code, modified_code):
             self.logger.error('Modification validation failed')
             return False
+
+        self._apply_modification(target_file, original_code, modified_code, modification_request)
+        return True
+
+    def _apply_modification(self, target_file: str, original_code: str, modified_code: str, modification_request: str):
+        """Apply the modification to the target file"""
+        target_path = Path(target_file)
         backup_path = target_path.with_suffix('.bak')
         backup_path.write_text(original_code)
         target_path.write_text(modified_code)
         self.modification_history.append({'file': target_file, 'request': modification_request, 'timestamp': asyncio.get_event_loop().time(), 'backup': str(backup_path)})
         self.logger.info(f'Successfully self-modified {target_file}')
-        return True
 
     def _is_safe_to_modify(self, target_file: str) -> bool:
         """Check if file is safe to modify"""
