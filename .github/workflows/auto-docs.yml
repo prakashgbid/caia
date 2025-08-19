@@ -47,7 +47,7 @@ jobs:
       - name: Install documentation tools
         run: |
           npm install -g typedoc @microsoft/api-extractor @microsoft/api-documenter
-          npm install -g mermaid-cli markdown-pdf jsdoc-to-markdown
+          npm install -g @mermaid-js/mermaid-cli jsdoc-to-markdown
           pip install sphinx mkdocs mkdocs-material pydoc-markdown
           
       - name: Detect project type
