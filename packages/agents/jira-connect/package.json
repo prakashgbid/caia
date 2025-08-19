@@ -1,0 +1,48 @@
+{
+  "name": "@caia/agent-jira-connect",
+  "version": "1.0.0",
+  "description": "MCP-based Jira integration agent for CAIA framework with optimized parallel connection handling",
+  "main": "src/index.js",
+  "bin": {
+    "jira-connect": "src/index.js"
+  },
+  "scripts": {
+    "test": "node src/index.js test",
+    "start": "node src/index.js",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "jira",
+    "mcp",
+    "agent",
+    "caia",
+    "automation",
+    "parallel",
+    "integration"
+  ],
+  "author": "CAIA Framework",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "@caia/core": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@dsazz/mcp-jira": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caia-framework/caia.git",
+    "directory": "packages/agents/jira-connect"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ]
+}

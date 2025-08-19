@@ -1,0 +1,109 @@
+/**
+ * {{AGENT_NAME}} Agent
+ * 
+ * {{AGENT_DESCRIPTION}}
+ * 
+ * Features:
+{{FEATURES_COMMENT}}
+ */
+
+import { BaseAgent, AgentConfig, Task, TaskResult, TaskStatus, AgentCapability } from '@caia/core';
+import { Logger } from 'winston';
+
+export class {{AGENT_CLASS}} extends BaseAgent {
+  constructor(config?: Partial<AgentConfig>, logger?: Logger) {
+    const capabilities: AgentCapability[] = [
+      {{CAPABILITIES}}
+    ];
+
+    const defaultConfig: AgentConfig = {
+      id: config?.id || '{{AGENT_NAME}}-' + Math.random().toString(36).substr(2, 9),
+      name: '{{AGENT_NAME}}',
+      capabilities,
+      maxConcurrentTasks: 5,
+      timeout: 60000,
+      healthCheckInterval: 30000
+    };
+
+    const finalConfig = { ...defaultConfig, ...config };
+    
+    // Create default logger if none provided
+    const winston = require('winston');
+    const defaultLogger = logger || winston.createLogger({
+      level: 'info',
+      format: winston.format.simple(),
+      transports: [new winston.transports.Console()]
+    });
+
+    super(finalConfig, defaultLogger);
+  }
+
+  /**
+   * Initialize the agent
+   */
+  protected async onInitialize(): Promise<void> {
+    this.logger.info('{{AGENT_CLASS}} initialized');
+    // TODO: Add agent-specific initialization logic
+  }
+
+  /**
+   * Shutdown the agent
+   */
+  protected async onShutdown(): Promise<void> {
+    this.logger.info('{{AGENT_CLASS}} shutting down');
+    // TODO: Add agent-specific cleanup logic
+  }
+
+  /**
+   * Execute a task
+   */
+  protected async executeTask(task: Task): Promise<TaskResult> {
+    this.logger.info('Executing task', { taskId: task.id, type: task.type });
+
+    try {
+      // Route task to appropriate handler based on task type
+      let result: any;
+
+      switch (task.type) {
+        default:
+          throw new Error(`Unsupported task type: ${task.type}`);
+      }
+
+      return {
+        taskId: task.id,
+        status: TaskStatus.COMPLETED,
+        result: result,
+        executionTime: 0, // Will be set by BaseAgent
+        completedAt: new Date()
+      };
+
+    } catch (error) {
+      this.logger.error('Task execution failed', { taskId: task.id, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Handle task cancellation
+   */
+  protected async onTaskCancel(task: Task): Promise<void> {
+    this.logger.info('Cancelling task', { taskId: task.id });
+    // TODO: Add task cancellation logic
+  }
+
+  /**
+   * Agent version
+   */
+  protected getVersion(): string {
+    return '{{AGENT_VERSION}}';
+  }
+
+  // Public API methods extracted from README
+
+{{METHODS_IMPLEMENTATION}}
+}
+
+// Export singleton instance for convenience
+export const {{AGENT_NAME}}Agent = new {{AGENT_CLASS}}();
+
+export default {{AGENT_CLASS}};

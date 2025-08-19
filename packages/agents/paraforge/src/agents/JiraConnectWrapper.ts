@@ -6,7 +6,78 @@
  */
 
 import { logger } from '../utils/logger';
-import { JiraConnect } from '../../agents/jira-connect';
+// Note: JiraConnect would be imported from the actual jira-connect agent
+// For now, we'll create a mock interface
+interface JiraConnect {
+  initialize(): Promise<void>;
+  createIssue(data: any): Promise<any>;
+  updateIssue(key: string, data: any): Promise<any>;
+  getIssue(key: string, fields?: string[]): Promise<any>;
+  searchIssues(jql: string, fields?: string[], maxResults?: number): Promise<any>;
+  deleteIssue(key: string): Promise<any>;
+  bulkCreateIssues(issues: any[]): Promise<any[]>;
+  createEpic(data: any): Promise<any>;
+  addIssuesToEpic(epicKey: string, issueKeys: string[]): Promise<any>;
+  createSubtask(parentKey: string, data: any): Promise<any>;
+  getProject(projectKey: string): Promise<any>;
+  listProjects(): Promise<any[]>;
+  linkIssues(inward: string, outward: string, linkType: string): Promise<any>;
+}
+
+// Mock implementation for development
+class MockJiraConnect implements JiraConnect {
+  async initialize(): Promise<void> {
+    logger.info('Mock JiraConnect initialized');
+  }
+
+  async createIssue(data: any): Promise<any> {
+    return { key: `MOCK-${Math.random().toString(36).substr(2, 5)}`, ...data };
+  }
+
+  async updateIssue(key: string, data: any): Promise<any> {
+    return { key, ...data };
+  }
+
+  async getIssue(key: string, fields?: string[]): Promise<any> {
+    return { key, fields };
+  }
+
+  async searchIssues(jql: string, fields?: string[], maxResults?: number): Promise<any> {
+    return { issues: [], total: 0, maxResults: maxResults || 100 };
+  }
+
+  async deleteIssue(key: string): Promise<any> {
+    return { deleted: key };
+  }
+
+  async bulkCreateIssues(issues: any[]): Promise<any[]> {
+    return issues.map((issue, i) => ({ key: `BULK-${i}`, ...issue }));
+  }
+
+  async createEpic(data: any): Promise<any> {
+    return { key: `EPIC-${Math.random().toString(36).substr(2, 5)}`, ...data };
+  }
+
+  async addIssuesToEpic(epicKey: string, issueKeys: string[]): Promise<any> {
+    return { epicKey, issueKeys };
+  }
+
+  async createSubtask(parentKey: string, data: any): Promise<any> {
+    return { key: `SUB-${Math.random().toString(36).substr(2, 5)}`, parent: parentKey, ...data };
+  }
+
+  async getProject(projectKey: string): Promise<any> {
+    return { key: projectKey, name: `Project ${projectKey}` };
+  }
+
+  async listProjects(): Promise<any[]> {
+    return [{ key: 'DEMO', name: 'Demo Project' }];
+  }
+
+  async linkIssues(inward: string, outward: string, linkType: string): Promise<any> {
+    return { inward, outward, linkType };
+  }
+}
 
 export interface JiraIssue {
   project: string;
@@ -43,12 +114,10 @@ export class JiraConnectWrapper {
   private jiraConnect: JiraConnect;
   
   constructor(config?: any) {
-    // Use local jira-connect agent from agents folder
-    this.jiraConnect = new JiraConnect(config || {
-      host: process.env.JIRA_HOST_URL || 'https://roulettecommunity.atlassian.net',
-      email: process.env.JIRA_EMAIL || 'prakashmailid@gmail.com',
-      apiToken: process.env.JIRA_API_TOKEN
-    });
+    // Use mock implementation for development
+    // In production, this would use the actual jira-connect agent
+    this.jiraConnect = new MockJiraConnect();
+    logger.info('JiraConnectWrapper initialized with mock implementation');
   }
   
   /**

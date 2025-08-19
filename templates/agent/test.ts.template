@@ -1,0 +1,32 @@
+/**
+ * Tests for {{AGENT_CLASS}}
+ */
+
+import { {{AGENT_CLASS}} } from '../src/{{AGENT_CLASS}}';
+
+describe('{{AGENT_CLASS}}', () => {
+  let agent: {{AGENT_CLASS}};
+
+  beforeEach(() => {
+    agent = new {{AGENT_CLASS}}();
+  });
+
+  afterEach(async () => {
+    if (agent) {
+      await agent.shutdown();
+    }
+  });
+
+  test('should initialize successfully', async () => {
+    await agent.initialize();
+    expect(agent.getMetadata().status).toBe('idle');
+  });
+
+  test('should have correct capabilities', () => {
+    const metadata = agent.getMetadata();
+    expect(metadata.capabilities).toBeDefined();
+    expect(Array.isArray(metadata.capabilities)).toBe(true);
+  });
+
+{{TEST_METHODS}}
+});

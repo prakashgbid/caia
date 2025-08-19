@@ -1,0 +1,9 @@
+{
+  "name": "@caia/tool-admin",
+  "version": "1.0.0",
+  "description": "CAIA Admin tools and scripts",
+  "scripts": {
+    "status": "bash scripts/quick_status.sh",
+    "context": "python3 scripts/query_context.py --command summary"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@caia/core-memory-enhanced",
+  "version": "1.0.0",
+  "description": "Enhanced memory system from MemCore AI",
+  "main": "index.py",
+  "scripts": {
+    "test": "pytest"
+  },
+  "dependencies": {}
+}

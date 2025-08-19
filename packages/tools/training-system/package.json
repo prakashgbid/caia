@@ -1,0 +1,110 @@
+{
+  "name": "@caia/tool-training-system",
+  "version": "0.1.0",
+  "description": "Open source intelligent agent system with multi-LLM collaboration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prakashgbid/sats-agents-system.git"
+  },
+  "author": "SATS Team <team@sats.ai>",
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "multi-model",
+    "typescript",
+    "nodejs",
+    "openai",
+    "gemini",
+    "claude",
+    "intelligence",
+    "collaboration"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc && npm run build:docs",
+    "build:docs": "typedoc src --out docs/api",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "jest --config jest.integration.config.js",
+    "test:e2e": "jest --config jest.e2e.config.js",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,json,md}\"",
+    "typecheck": "tsc --noEmit",
+    "validate": "npm-run-all --parallel lint typecheck format:check test",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "docker:build": "docker build -t sats-agents-system .",
+    "docker:run": "docker-compose up -d",
+    "k8s:deploy": "kubectl apply -f k8s/",
+    "infra:plan": "cd terraform && terraform plan",
+    "infra:apply": "cd terraform && terraform apply",
+    "prepare": "husky install",
+    "release": "semantic-release"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.23",
+    "@qdrant/js-client-rest": "^1.12.0",
+    "@anthropic-ai/sdk": "^0.34.0",
+    "@google-ai/generativelanguage": "^2.7.0",
+    "openai": "^4.73.0",
+    "langfuse": "^3.29.0",
+    "ioredis": "^5.4.1",
+    "pg": "^8.13.1",
+    "winston": "^3.17.0",
+    "zod": "^3.24.1",
+    "uuid": "^11.1.0",
+    "axios": "^1.7.9",
+    "dotenv": "^17.2.1",
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "rate-limiter-flexible": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/pg": "^8.11.10",
+    "@types/uuid": "^10.0.0",
+    "@types/jest": "^29.5.14",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "supertest": "^7.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.4",
+    "npm-run-all": "^4.1.5",
+    "semantic-release": "^24.17.0",
+    "typedoc": "^0.27.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

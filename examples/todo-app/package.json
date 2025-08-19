@@ -1,0 +1,36 @@
+{
+  "name": "caia-todo-app-example",
+  "version": "1.0.0",
+  "description": "Example demonstrating CAIA building a complete todo application",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "build": "node index.js",
+    "demo": "node index.js",
+    "test": "echo \"Run generated app tests\" && exit 0"
+  },
+  "keywords": [
+    "caia",
+    "ai-agents",
+    "todo-app",
+    "code-generation",
+    "example"
+  ],
+  "dependencies": {
+    "@caia/core": "^1.0.0",
+    "@caia/agent-product-owner": "^1.0.0",
+    "@caia/agent-solution-architect": "^1.0.0",
+    "@caia/agent-frontend-engineer": "^1.0.0",
+    "@caia/agent-backend-engineer": "^1.0.0",
+    "chalk": "^5.3.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "CAIA AI",
+  "license": "MIT"
+}
