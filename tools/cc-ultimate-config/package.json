@@ -37,7 +37,7 @@
     "node-cron": "^3.0.3",
     "puppeteer": "^21.0.0",
     "semver": "^7.5.4",
-    "winston": "^3.11.0"
+    "@caia/util-logger": "1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

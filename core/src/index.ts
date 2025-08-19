@@ -12,21 +12,12 @@ export interface CAIAConfig {
   debug?: boolean;
 }
 
-export interface Agent {
-  name: string;
-  version: string;
-  execute(input: any): Promise<any>;
-}
-
-export interface Engine {
-  name: string;
-  version: string;
-  process(input: any): Promise<any>;
-}
+import { BaseAgent, BaseEngine, TaskDefinition } from './types';
 
 export class CAIA extends EventEmitter {
-  private agents = new Map<string, Agent>();
-  private engines = new Map<string, Engine>();
+  private agents = new Map<string, BaseAgent>();
+  private engines = new Map<string, BaseEngine>();
+  private tasks = new Map<string, TaskDefinition>();
   private config: CAIAConfig;
 
   constructor(config: CAIAConfig = {}) {
@@ -69,14 +60,19 @@ export class CAIA extends EventEmitter {
     }
   }
 
-  registerAgent(name: string, agent: Agent) {
+  registerAgent(name: string, agent: BaseAgent) {
     this.agents.set(name, agent);
     this.emit('agent:registered', { name, agent });
   }
 
-  registerEngine(name: string, engine: Engine) {
+  registerEngine(name: string, engine: BaseEngine) {
     this.engines.set(name, engine);
     this.emit('engine:registered', { name, engine });
+  }
+
+  registerTask(task: TaskDefinition) {
+    this.tasks.set(task.name, task);
+    this.emit('task:registered', { task });
   }
 
   async execute(options: {
@@ -129,36 +125,31 @@ export class CAIA extends EventEmitter {
     }
   }
 
-  private async orchestrate(task: string, input: any): Promise<any> {
-    // Task-based orchestration logic
-    switch (task) {
-      case 'build-app':
-        return this.orchestrateBuildApp(input);
-      case 'gather-requirements':
-        return this.orchestrateRequirements(input);
-      case 'generate-tests':
-        return this.orchestrateTests(input);
-      default:
-        throw new Error(`Unknown task: ${task}`);
+  private async orchestrate(taskName: string, input: any): Promise<any> {
+    const task = this.tasks.get(taskName);
+    if (!task) {
+      throw new Error(`Unknown task: ${taskName}`);
     }
-  }
 
-  private async orchestrateBuildApp(input: any) {
-    // Complex orchestration for building an app
-    const agents = ['product-owner', 'solution-architect', 'frontend-engineer', 'backend-engineer'];
-    return this.execute({ agents, input, parallel: false });
-  }
-
-  private async orchestrateRequirements(input: any) {
-    const agent = this.agents.get('product-owner');
-    if (!agent) throw new Error('Product Owner agent required');
-    return agent.execute(input);
-  }
-
-  private async orchestrateTests(input: any) {
-    const agent = this.agents.get('qa-engineer');
-    if (!agent) throw new Error('QA Engineer agent required');
-    return agent.execute(input);
+    // This is a simplified implementation of the orchestration logic.
+    // A more complete implementation would handle dependencies and parallel execution.
+    let lastResult: any = input;
+    for (const step of task.workflow.steps) {
+      if (step.agent) {
+        const agent = this.agents.get(step.agent);
+        if (!agent) {
+          throw new Error(`Agent ${step.agent} not found`);
+        }
+        lastResult = await agent.execute(lastResult);
+      } else if (step.engine) {
+        const engine = this.engines.get(step.engine);
+        if (!engine) {
+          throw new Error(`Engine ${step.engine} not found`);
+        }
+        lastResult = await engine.process(lastResult);
+      }
+    }
+    return lastResult;
   }
 
   listAgents(): string[] {
@@ -169,11 +160,11 @@ export class CAIA extends EventEmitter {
     return Array.from(this.engines.keys());
   }
 
-  getAgent(name: string): Agent | undefined {
+  getAgent(name: string): BaseAgent | undefined {
     return this.agents.get(name);
   }
 
-  getEngine(name: string): Engine | undefined {
+  getEngine(name: string): BaseEngine | undefined {
     return this.engines.get(name);
   }
 }

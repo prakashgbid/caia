@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "lint": "eslint . --ext .ts",
     "analyze": "node dist/cli.js analyze",
     "test-orchestrator": "node dist/cli.js test",

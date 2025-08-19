@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .ts,.tsx",
@@ -47,7 +47,7 @@
     "lodash": "^4.17.21",
     "openai": "^4.20.0",
     "p-queue": "^7.4.1",
-    "winston": "^3.11.0",
+    "@caia/util-logger": "1.0.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {

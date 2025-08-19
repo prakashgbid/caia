@@ -1,8 +1,4 @@
-/**
- * Logger Utility
- * Provides consistent logging across CCU components
- */
-
+import { createLogger as createBaseLogger } from '@caia/util-logger';
 import winston from 'winston';
 import path from 'path';
 
@@ -10,25 +6,14 @@ export class Logger {
   private logger: winston.Logger;
 
   constructor(component: string) {
-    this.logger = winston.createLogger({
-      level: process.env.LOG_LEVEL || 'info',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.colorize(),
-        winston.format.printf(({ timestamp, level, message, ...meta }) => {
-          const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
-          return `[${timestamp}] [${component}] ${level}: ${message}${metaStr}`;
-        })
-      ),
-      transports: [
-        new winston.transports.Console(),
-        new winston.transports.File({
-          filename: path.join(process.cwd(), 'logs', 'ccu.log'),
-          maxsize: 10485760, // 10MB
-          maxFiles: 5
-        })
-      ]
-    });
+    this.logger = createBaseLogger(component);
+    this.logger.add(
+      new winston.transports.File({
+        filename: path.join(process.cwd(), 'logs', 'ccu.log'),
+        maxsize: 10485760, // 10MB
+        maxFiles: 5
+      })
+    );
   }
 
   info(message: string, meta?: any): void {
