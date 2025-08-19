@@ -1,0 +1,37 @@
+site_name: CAIA - Chief AI Agent
+site_description: The Orchestrator of Orchestrators - Building the Future of Automated Intelligence
+site_author: CAIA AI
+site_url: https://docs.caia.ai
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: blue
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Packages: packages.md
+  - Contributing: CONTRIBUTING.md
+  - Changelog: CHANGELOG.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.details
+  - pymdownx.tabbed
+  - admonition
+  - toc:
+      permalink: true
