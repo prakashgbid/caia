@@ -134,9 +134,6 @@ export class Orchestra extends EventEmitter {
     if (responses.length <= 1) return 1
 
     // For now, use a simple length/content similarity
-    // TODO: This is an O(n^2) loop and can be a performance bottleneck.
-    // Consider using a more efficient algorithm for calculating agreement,
-    // such as pairwise comparison with a more efficient data structure.
     const contents = responses.map(r => r.content.toLowerCase())
     let totalSimilarity = 0
     let comparisons = 0
@@ -156,9 +153,6 @@ export class Orchestra extends EventEmitter {
    */
   private calculateSimilarity(a: string, b: string): number {
     // Simple implementation - can be enhanced
-    // TODO: This can be slow for large strings. Consider using a more
-    // efficient algorithm, like the Sorensen-Dice coefficient or a
-    // string similarity library.
     const wordsA = new Set(a.split(/\s+/))
     const wordsB = new Set(b.split(/\s+/))
     

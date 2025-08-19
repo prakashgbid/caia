@@ -3,7 +3,6 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
-import pLimit from 'p-limit';
 
 export interface CAIAConfig {
   agents?: string[];
@@ -28,7 +27,6 @@ export interface Engine {
 export class CAIA extends EventEmitter {
   private agents = new Map<string, Agent>();
   private engines = new Map<string, Engine>();
-  private cache = new Map<string, any>();
   private config: CAIAConfig;
 
   constructor(config: CAIAConfig = {}) {
@@ -87,14 +85,8 @@ export class CAIA extends EventEmitter {
     agents?: string[];
     input?: any;
     parallel?: boolean;
-    useCache?: boolean;
   }): Promise<any> {
     this.emit('execution:start', options);
-
-    const cacheKey = JSON.stringify(options);
-    if (options.useCache && this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey);
-    }
 
     try {
       let result;
@@ -108,11 +100,10 @@ export class CAIA extends EventEmitter {
         // Multi-agent execution
         if (options.parallel) {
           // Parallel execution
-          const limit = pLimit(10);
           const promises = options.agents.map(name => {
             const agent = this.agents.get(name);
             if (!agent) throw new Error(`Agent ${name} not found`);
-            return limit(() => agent.execute(options.input));
+            return agent.execute(options.input);
           });
           result = await Promise.all(promises);
         } else {
@@ -131,11 +122,6 @@ export class CAIA extends EventEmitter {
       }
 
       this.emit('execution:complete', { options, result });
-
-      if (options.useCache) {
-        this.cache.set(cacheKey, result);
-      }
-
       return result;
     } catch (error) {
       this.emit('execution:error', { options, error });
