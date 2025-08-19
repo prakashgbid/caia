@@ -25,7 +25,8 @@
   "license": "MIT",
   "dependencies": {
     "eventemitter3": "^5.0.1",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "p-limit": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

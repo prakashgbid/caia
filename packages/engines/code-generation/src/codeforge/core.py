@@ -229,14 +229,9 @@ class CodeGenerator:
                 variables[var] = f'# TODO: {var}'
         return variables
 
-    async def self_modify(self, target_file: str, modification_request: str, enabled: bool = False) -> bool:
+    async def self_modify(self, target_file: str, modification_request: str) -> bool:
         """Self-modify MemCore's own code"""
-        if not enabled:
-            self.logger.error('Self-modification is disabled by default. Set enabled=True to allow it.')
-            return False
-
         self.logger.warning(f'Self-modification requested for {target_file}')
-
         if not self._is_safe_to_modify(target_file):
             self.logger.error('Self-modification blocked for safety')
             return False
@@ -262,14 +257,8 @@ class CodeGenerator:
 
     def _is_safe_to_modify(self, target_file: str) -> bool:
         """Check if file is safe to modify"""
-        # Ensure the target file is within the project's root directory
-        root_dir = Path.cwd()
-        target_path = Path(target_file).resolve()
-        if not target_path.is_relative_to(root_dir):
-            self.logger.error(f'Target file {target_file} is outside the project root directory.')
-            return False
-
         safe_patterns = ['osa_*.py', 'src/core/*.py', 'src/plugins/*.py']
+        target_path = Path(target_file)
         for pattern in safe_patterns:
             if target_path.match(pattern):
                 return True
