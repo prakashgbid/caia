@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit hooks..."
+echo "================================"
+
+# Run linting
+echo "📝 Running linter..."
+npm run lint
+LINT_EXIT_CODE=$?
+
+if [ $LINT_EXIT_CODE -ne 0 ]; then
+  echo "❌ Linting failed! Please fix errors before committing."
+  exit $LINT_EXIT_CODE
+fi
+
+# Run tests
+echo "🧪 Running tests..."
+npm run test:all
+TEST_EXIT_CODE=$?
+
+if [ $TEST_EXIT_CODE -ne 0 ]; then
+  echo "❌ Tests failed! Please fix failing tests before committing."
+  exit $TEST_EXIT_CODE
+fi
+
+echo "✅ All pre-commit checks passed!"
+echo "================================"
