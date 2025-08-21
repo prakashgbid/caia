@@ -49,7 +49,6 @@
     "k8s:deploy": "kubectl apply -f k8s/",
     "infra:plan": "cd terraform && terraform plan",
     "infra:apply": "cd terraform && terraform apply",
-    "prepare": "husky install",
     "release": "semantic-release"
   },
   "dependencies": {
