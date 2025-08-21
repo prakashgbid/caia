@@ -112,16 +112,32 @@
       "impact": "high",
       "auto_generated": true,
       "git_hash": "4e1cf8a986fd6f65c5a7de22123903710fd52a22"
+    },
+    {
+      "time": "10:50",
+      "type": "bugfix",
+      "title": "Configure TypeDoc for monorepo documentation generation",
+      "description": "fix: Configure TypeDoc for monorepo documentation generation",
+      "files_changed": [
+        ".github/workflows/auto-docs.yml",
+        "PROGRESS/2025-08/daily/2025-08-21.json",
+        "package.json",
+        "typedoc.json"
+      ],
+      "complexity": "medium",
+      "impact": "medium",
+      "auto_generated": true,
+      "git_hash": "75c4c2c042234c8dcda3ff49acdc1e96852915f7"
     }
   ],
   "decisions": [],
   "blockers": [],
   "next_day_plan": [],
   "metrics": {
-    "commits": 15,
+    "commits": 16,
     "files_changed": 25,
-    "lines_added": 148816,
-    "lines_removed": 1866,
+    "lines_added": 148879,
+    "lines_removed": 1871,
     "tests_added": 0,
     "bugs_fixed": 0
   },

@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Core Package",
+    "path": "packages/core/dist/index.js",
+    "limit": "50 KB"
+  },
+  {
+    "name": "Agent - Frontend Engineer",
+    "path": "packages/agents/frontend-engineer/dist/index.js",
+    "limit": "75 KB"
+  },
+  {
+    "name": "Agent - Backend Engineer",
+    "path": "packages/agents/backend-engineer/dist/index.js",
+    "limit": "75 KB"
+  },
+  {
+    "name": "Engine - Workflow",
+    "path": "packages/engines/workflow/dist/index.js",
+    "limit": "100 KB"
+  },
+  {
+    "name": "All Packages",
+    "path": "packages/*/dist/index.js",
+    "limit": "2 MB"
+  }
+]

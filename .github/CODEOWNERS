@@ -1,0 +1,44 @@
+# CODEOWNERS for CAIA Repository
+# These owners will be requested for review when someone opens a pull request
+
+# Global owners
+* @prakashgbid
+
+# Core package owners
+/packages/core/ @prakashgbid
+
+# Agent packages
+/packages/agents/ @prakashgbid
+
+# Engine packages
+/packages/engines/ @prakashgbid
+
+# Integration packages
+/packages/integrations/ @prakashgbid
+
+# Module packages
+/packages/modules/ @prakashgbid
+
+# Utility packages
+/packages/utils/ @prakashgbid
+
+# Tool packages
+/packages/tools/ @prakashgbid
+
+# CI/CD and GitHub workflows
+/.github/ @prakashgbid
+/.github/workflows/ @prakashgbid
+
+# Documentation
+/docs/ @prakashgbid
+*.md @prakashgbid
+
+# Configuration files
+*.json @prakashgbid
+*.yml @prakashgbid
+*.yaml @prakashgbid
+
+# Security-sensitive files
+.env* @prakashgbid
+**/secrets/ @prakashgbid
+**/config/ @prakashgbid

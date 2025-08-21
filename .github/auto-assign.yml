@@ -1,0 +1,21 @@
+# Auto-assign configuration for PRs
+
+# Add reviewers
+reviewers:
+  - prakashgbid
+
+# Add assignees
+assignees:
+  - prakashgbid
+
+# Number of reviewers to add
+numberOfReviewers: 1
+
+# Skip specific keywords in PR title
+skipKeywords:
+  - WIP
+  - work in progress
+  - DO NOT REVIEW
+
+# Skip draft PRs
+skipDraft: true
