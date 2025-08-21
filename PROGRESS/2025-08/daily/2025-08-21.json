@@ -44,16 +44,34 @@
       "impact": "high",
       "auto_generated": true,
       "git_hash": "74796fabd76837595b1619f5183b9f69c99643a3"
+    },
+    {
+      "time": "03:12",
+      "type": "bugfix",
+      "title": "Remove non-existent @dsazz/mcp-jira dependency",
+      "description": "fix: Remove non-existent @dsazz/mcp-jira dependency",
+      "files_changed": [
+        "PROGRESS/2025-08/daily/2025-08-21.json",
+        "package-lock.json",
+        "packages/agents/jira-connect/package.json",
+        "packages/agents/paraforge/package.json",
+        "packages/integrations/jira/package.json",
+        "packages/utils/paraforge/package.json"
+      ],
+      "complexity": "medium",
+      "impact": "high",
+      "auto_generated": true,
+      "git_hash": "18423be111f66d1e11c93be7b44142c4f232bf2b"
     }
   ],
   "decisions": [],
   "blockers": [],
   "next_day_plan": [],
   "metrics": {
-    "commits": 3,
-    "files_changed": 19,
-    "lines_added": 48180,
-    "lines_removed": 14,
+    "commits": 6,
+    "files_changed": 21,
+    "lines_added": 96399,
+    "lines_removed": 375,
     "tests_added": 0,
     "bugs_fixed": 0
   },

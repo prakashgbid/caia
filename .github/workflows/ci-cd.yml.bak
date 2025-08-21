@@ -10,6 +10,7 @@ on:
 
 env:
   NODE_VERSION: '18'
+  PNPM_VERSION: '8'
 
 jobs:
   # Pre-flight checks
@@ -29,12 +30,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+
+      - name: Setup npm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get npm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(npm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup npm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-npm-store-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-store-
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm run bootstrap
+        run: npm ci
 
       - name: Detect changes
         id: changes
@@ -69,27 +84,29 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+
+      - name: Setup npm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm run bootstrap
+        run: npm ci
 
       - name: Audit dependencies
-        continue-on-error: true
-        run: npm audit --audit-level high
+        run: npm audit --continue-on-error || true --audit-level high
 
       - name: Lint code
         run: npm run lint
 
       - name: Check formatting
-        continue-on-error: true
         run: npm run format:check
 
       - name: Type check
-        continue-on-error: true
         run: npm run type-check
+
+      - name: License check
+        run: npx license-checker --production --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC"
 
   # Unit and integration tests
   test:
@@ -108,15 +125,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+
+      - name: Setup npm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm run bootstrap
+        run: npm ci
 
-      - name: Run tests
-        run: npm run test:all
+      - name: Run unit tests
+        run: npm run test:unit --coverage
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
   # Build packages
   build:
@@ -132,15 +162,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+
+      - name: Setup npm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm run bootstrap
+        run: npm ci
 
       - name: Build packages
         run: npm run build:all
+
+      - name: Validate build outputs
+        run: ./scripts/validate-build.sh
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
@@ -152,13 +187,15 @@ jobs:
             packages/*/build
           retention-days: 7
 
-  # E2E tests
+  # End-to-end tests
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: [preflight, build]
     if: needs.preflight.outputs.should-build == 'true'
-    continue-on-error: true
+    strategy:
+      matrix:
+        scenario: [basic, orchestration, performance]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -167,7 +204,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+
+      - name: Setup npm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v3
@@ -175,13 +216,20 @@ jobs:
           name: build-artifacts
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm run bootstrap
+        run: npm ci
 
-      - name: Run E2E tests
-        continue-on-error: true
-        run: npm run test:e2e || true
+      - name: Run E2E tests - ${{ matrix.scenario }}
+        run: npm run test:e2e:${{ matrix.scenario }}
+
+      - name: Upload E2E artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-artifacts-${{ matrix.scenario }}
+          path: |
+            test-results/
+            screenshots/
+            videos/
 
   # Performance benchmarks
   performance:
@@ -189,7 +237,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [preflight, build]
     if: github.event_name == 'pull_request' && needs.preflight.outputs.should-build == 'true'
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -198,22 +245,48 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+
+      - name: Setup npm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm run bootstrap
+        run: npm ci
 
       - name: Run performance benchmarks
-        continue-on-error: true
-        run: npm run benchmark || echo "No benchmarks configured"
+        run: npm run benchmark
+
+      - name: Compare with baseline
+        run: ./scripts/compare-performance.sh
+
+      - name: Comment performance results
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('performance-results.json')) {
+              const results = JSON.parse(fs.readFileSync('performance-results.json', 'utf8'));
+              const comment = `## Performance Benchmark Results\n\n${results.summary}`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
 
   # Package and publish
   publish:
     name: Publish Packages
     runs-on: ubuntu-latest
-    needs: [security, test, build]
+    needs: [security, test, build, e2e]
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
       - name: Checkout
@@ -227,22 +300,45 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
+
+      - name: Setup npm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm run bootstrap
+        run: npm ci
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Version packages
+        run: |
+          if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+            npx lerna version prerelease --yes --no-git-tag-version
+          else
+            npx lerna version ${{ github.event.release.tag_name }} --yes --no-git-tag-version
+          fi
+
       - name: Publish to NPM
-        run: npx lerna publish from-package --yes
+        run: |
+          if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+            npx lerna publish from-package --yes --dist-tag beta
+          else
+            npx lerna publish from-package --yes
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub release notes
+        run: ./scripts/generate-release-notes.sh ${{ github.event.release.tag_name }}
 
   # Documentation deployment
   docs:
@@ -250,7 +346,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [security, test, build]
     if: github.ref == 'refs/heads/main'
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -259,19 +354,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+
+      - name: Setup npm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm run bootstrap
+        run: npm ci
 
       - name: Build documentation
-        continue-on-error: true
-        run: npm run docs:build || echo "No docs build configured"
+        run: npm run docs:build
 
       - name: Deploy to GitHub Pages
-        if: success()
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -281,8 +376,38 @@ jobs:
   cleanup:
     name: Cleanup & Notify
     runs-on: ubuntu-latest
-    needs: [security, test, build]
+    needs: [security, test, build, e2e, performance, publish, docs]
     if: always()
     steps:
-      - name: Cleanup complete
-        run: echo "Pipeline complete"
+      - name: Cleanup artifacts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+            
+            const oldArtifacts = artifacts.data.artifacts.filter(
+              artifact => Date.now() - new Date(artifact.created_at).getTime() > 7 * 24 * 60 * 60 * 1000
+            );
+            
+            for (const artifact of oldArtifacts) {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
+            }
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // Notify team on critical failures
+            if (context.ref === 'refs/heads/main' || context.eventName === 'release') {
+              // Add notification logic here (Slack, email, etc.)
+              console.log('Pipeline failed on critical branch/event');
+            }
