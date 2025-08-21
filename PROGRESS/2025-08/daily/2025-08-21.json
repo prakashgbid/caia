@@ -95,16 +95,33 @@
       "impact": "medium",
       "auto_generated": true,
       "git_hash": "73c5d271ac6fc6283d049f3cc5350f4dde92645f"
+    },
+    {
+      "time": "04:51",
+      "type": "bugfix",
+      "title": "Remove lerna bootstrap from CI workflows",
+      "description": "fix: Remove lerna bootstrap from CI workflows",
+      "files_changed": [
+        ".github/workflows/ci-cd.yml",
+        ".github/workflows/ci-cd.yml.bak",
+        ".github/workflows/ci.yml",
+        ".github/workflows/ci.yml.bak",
+        "PROGRESS/2025-08/daily/2025-08-21.json"
+      ],
+      "complexity": "medium",
+      "impact": "high",
+      "auto_generated": true,
+      "git_hash": "4e1cf8a986fd6f65c5a7de22123903710fd52a22"
     }
   ],
   "decisions": [],
   "blockers": [],
   "next_day_plan": [],
   "metrics": {
-    "commits": 12,
+    "commits": 15,
     "files_changed": 25,
-    "lines_added": 147298,
-    "lines_removed": 1474,
+    "lines_added": 148816,
+    "lines_removed": 1866,
     "tests_added": 0,
     "bugs_fixed": 0
   },

@@ -41,7 +41,9 @@
     "version:patch": "lerna version patch",
     "graph": "nx graph",
     "affected:test": "nx affected:test",
-    "affected:build": "nx affected:build"
+    "affected:build": "nx affected:build",
+    "docs:generate": "typedoc",
+    "docs:build": "typedoc"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
