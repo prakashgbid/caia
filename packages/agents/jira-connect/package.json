@@ -27,7 +27,6 @@
     "@caia/core": "^1.0.0"
   },
   "peerDependencies": {
-    "@dsazz/mcp-jira": "^1.0.0"
   },
   "engines": {
     "node": ">=16.0.0"
