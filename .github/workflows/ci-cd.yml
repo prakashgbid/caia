@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm run bootstrap
+          
 
       - name: Detect changes
         id: changes
@@ -74,7 +74,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm run bootstrap
+          
 
       - name: Audit dependencies
         continue-on-error: true
@@ -113,7 +113,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm run bootstrap
+          
 
       - name: Run tests
         run: npm run test:all
@@ -137,7 +137,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm run bootstrap
+          
 
       - name: Build packages
         run: npm run build:all
@@ -177,7 +177,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm run bootstrap
+          
 
       - name: Run E2E tests
         continue-on-error: true
@@ -203,7 +203,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm run bootstrap
+          
 
       - name: Run performance benchmarks
         continue-on-error: true
@@ -232,7 +232,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm run bootstrap
+          
 
       - name: Configure Git
         run: |
@@ -264,7 +264,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          npm run bootstrap
+          
 
       - name: Build documentation
         continue-on-error: true

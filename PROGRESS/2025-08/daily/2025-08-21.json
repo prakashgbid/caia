@@ -80,16 +80,31 @@
       "impact": "high",
       "auto_generated": true,
       "git_hash": "4ff5b39f2fc1321ee6873a72b2d28d45d244b020"
+    },
+    {
+      "time": "04:12",
+      "type": "bugfix",
+      "title": "Remove husky prepare scripts from sub-packages",
+      "description": "fix: Remove husky prepare scripts from sub-packages",
+      "files_changed": [
+        "PROGRESS/2025-08/daily/2025-08-21.json",
+        "packages/tools/training-system/package.json",
+        "packages/utils/paraforge/package.json"
+      ],
+      "complexity": "medium",
+      "impact": "medium",
+      "auto_generated": true,
+      "git_hash": "73c5d271ac6fc6283d049f3cc5350f4dde92645f"
     }
   ],
   "decisions": [],
   "blockers": [],
   "next_day_plan": [],
   "metrics": {
-    "commits": 9,
+    "commits": 12,
     "files_changed": 25,
-    "lines_added": 145927,
-    "lines_removed": 928,
+    "lines_added": 147298,
+    "lines_removed": 1474,
     "tests_added": 0,
     "bugs_fixed": 0
   },
