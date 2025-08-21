@@ -9,7 +9,7 @@
       "access": "public"
     },
     "bootstrap": {
-      "npmClientArgs": ["--no-package-lock"]
+      "npmClientArgs": []
     }
   },
   "packages": [
