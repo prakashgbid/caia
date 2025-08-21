@@ -1,0 +1,17 @@
+{
+  "name": "@caia/util-logger",
+  "version": "1.0.0",
+  "description": "A shared logger utility for the CAIA ecosystem.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/winston": "^2.4.4",
+    "typescript": "^5.3.0"
+  }
+}

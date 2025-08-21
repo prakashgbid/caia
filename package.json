@@ -16,9 +16,9 @@
   ],
   "scripts": {
     "bootstrap": "lerna bootstrap",
-    "build:all": "lerna run build",
-    "test:all": "lerna run test",
-    "test:coverage": "lerna run test:coverage",
+    "build:all": "npx lerna run build",
+    "test:all": "npx lerna run test",
+    "test:coverage": "npx lerna run test:coverage",
     "clean": "lerna clean -y && rm -rf node_modules",
     "publish:all": "./scripts/npm-publish.sh",
     "publish:changed": "lerna publish --since HEAD~1",
