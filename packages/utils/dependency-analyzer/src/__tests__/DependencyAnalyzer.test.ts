@@ -3,14 +3,10 @@
  */
 
 import * as fs from 'fs';
-import * as path from 'path';
 
 import DependencyAnalyzer, {
   DependencyGraph,
   CyclicDependency,
-  DependencyAnalysis,
-  Vulnerability,
-  Optimization,
   AnalysisConfig,
   Parser,
   ImportResolver,

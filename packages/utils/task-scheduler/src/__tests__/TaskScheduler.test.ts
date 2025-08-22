@@ -236,7 +236,7 @@ describe('TaskScheduler', () => {
         id: 'unreliable',
         name: 'Unreliable Executor',
         canHandle: () => true,
-        execute: async (task: Task) => {
+        execute: async (_task: Task) => {
           attemptCount++;
           if (attemptCount < 3) {
             throw new Error('Temporary failure');
