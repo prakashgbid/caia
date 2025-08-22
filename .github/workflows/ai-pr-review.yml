@@ -1,0 +1,31 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  # PR-Agent (Qodo) - Free tier: 75 reviews/month
+  pr-agent:
+    name: "PR-Agent Review"
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    steps:
+      - name: PR Agent Review
+        id: pr_agent
+        uses: Codium-ai/pr-agent@v0.30
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_REVIEWER_EXTRA_INSTRUCTIONS: |
+            Focus on:
+            - Code quality and best practices
+            - Security vulnerabilities
+            - Performance issues
+            - Test coverage
+            - TypeScript type safety
+            - Proper error handling

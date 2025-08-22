@@ -340,7 +340,7 @@ export class DependencyAnalyzer extends EventEmitter {
 
     const vulnerabilities: Vulnerability[] = [];
 
-    for (const [nodeId, node] of graph.nodes) {
+    for (const [, node] of graph.nodes) {
       // Check for known security issues
       if (node.type === 'package') {
         const packageVulns = await this.checkPackageVulnerabilities(node);
@@ -563,7 +563,7 @@ export class DependencyAnalyzer extends EventEmitter {
 
     // If file system analysis is enabled, also analyze source files
     if (this.config.analyzeFileSystem) {
-      const sourceGraph = await this.buildSourceGraph(await this.findSourceFiles(basePath), basePath);
+      const sourceGraph = await this.buildSourceGraph(await this.findSourceFiles(_basePath), _basePath);
       this.mergeGraphs(graph, sourceGraph);
     }
 
