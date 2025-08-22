@@ -39,7 +39,6 @@
     "@caia/dependency-analyzer": "^0.1.0",
     "@caia/report-generator": "^0.1.0",
     "@caia/pattern-recognizer": "^0.1.0",
-    "@caia/cc-orchestrator": "^0.1.0",
     "chalk": "^5.3.0",
     "commander": "^11.0.0",
     "glob": "^10.3.0",

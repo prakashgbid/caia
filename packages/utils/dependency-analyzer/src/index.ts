@@ -530,7 +530,7 @@ export class DependencyAnalyzer extends EventEmitter {
   /**
    * Build dependency graph from package.json
    */
-  private async buildPackageGraph(packageJson: any, basePath: string): Promise<DependencyGraph> {
+  private async buildPackageGraph(packageJson: Record<string, unknown>, _basePath: string): Promise<DependencyGraph> {
     const graph: DependencyGraph = {
       nodes: new Map(),
       edges: new Map(),
@@ -726,7 +726,7 @@ export class DependencyAnalyzer extends EventEmitter {
   /**
    * Resolve import path to actual file
    */
-  private resolveImport(importPath: string, fromFile: string, basePath: string): string | null {
+  private resolveImport(importPath: string, fromFile: string, _basePath: string): string | null {
     for (const resolver of this.resolvers.values()) {
       if (resolver.supports(importPath)) {
         const resolved = resolver.resolve(importPath, fromFile);
@@ -924,7 +924,7 @@ export class DependencyAnalyzer extends EventEmitter {
   /**
    * Check performance issues
    */
-  private checkPerformanceIssues(node: DependencyNode, graph: DependencyGraph): Vulnerability[] {
+  private checkPerformanceIssues(node: DependencyNode, _graph: DependencyGraph): Vulnerability[] {
     const issues: Vulnerability[] = [];
     
     // Check for large files
@@ -1240,7 +1240,7 @@ export class TypeScriptImportResolver implements ImportResolver {
 
   resolve(importPath: string, fromFile: string): string | null {
     const dir = path.dirname(fromFile);
-    let resolvedPath = path.resolve(dir, importPath);
+    const resolvedPath = path.resolve(dir, importPath);
 
     // Try common extensions
     const extensions = ['.ts', '.tsx', '.js', '.jsx'];

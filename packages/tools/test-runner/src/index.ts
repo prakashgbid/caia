@@ -3,6 +3,10 @@
  * Parallel test runner leveraging all CAIA utilities for maximum performance
  */
 
+import { EventEmitter } from 'events';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+
 import { WorkDivider } from '@caia/work-divider';
 import { ResourceCalculator } from '@caia/resource-calculator';
 import { CoverageAggregator } from '@caia/coverage-aggregator';
@@ -14,10 +18,6 @@ import { ReportGenerator } from '@caia/report-generator';
 import { PatternRecognizer } from '@caia/pattern-recognizer';
 // @ts-ignore - CCO might not have types yet
 import { CCOrchestrator } from '@caia/cc-orchestrator';
-
-import { EventEmitter } from 'events';
-import * as path from 'path';
-import * as fs from 'fs/promises';
 import { glob } from 'glob';
 
 export interface TestRunnerConfig {

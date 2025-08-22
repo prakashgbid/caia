@@ -154,7 +154,7 @@ export class WorkDivider {
    * Divide work by size
    */
   divideBySize(items: WorkItem[], workers: number): WorkShard[] {
-    const targetSize = items.reduce((sum, item) => sum + (item.size || 1), 0) / workers;
+    const _targetSize = items.reduce((sum, item) => sum + (item.size || 1), 0) / workers;
     const shards: WorkShard[] = [];
     
     for (let i = 0; i < workers; i++) {
@@ -274,7 +274,7 @@ export class WorkDivider {
    */
   rebalance(shards: WorkShard[], feedback: RuntimeFeedback): WorkShard[] {
     // Find underutilized and overutilized shards
-    const avgThroughput = shards.reduce((sum, shard) => {
+    const _avgThroughput = shards.reduce((sum, _shard) => {
       const shardFeedback = feedback; // In real implementation, would lookup by shard.id
       return sum + shardFeedback.currentThroughput;
     }, 0) / shards.length;

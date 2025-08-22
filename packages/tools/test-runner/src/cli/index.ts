@@ -4,11 +4,13 @@
  * CLI for @caia/test-runner
  */
 
+import * as path from 'path';
+import * as fs from 'fs/promises';
+
 import { Command } from 'commander';
 import * as chalk from 'chalk';
 import * as ora from 'ora';
-import * as path from 'path';
-import * as fs from 'fs/promises';
+
 import { ParallelTestRunner, TestRunnerConfig } from '../index';
 
 const program = new Command();
