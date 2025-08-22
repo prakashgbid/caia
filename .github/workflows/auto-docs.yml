@@ -68,7 +68,11 @@ jobs:
         run: |
           # Generate TypeDoc documentation
           if [ -f "tsconfig.json" ]; then
-            npx typedoc --out docs/api src
+            if [ -f "typedoc.json" ]; then
+              npx typedoc
+            else
+              npx typedoc --out docs/api packages/*/src packages/*/*/src || echo "No TypeScript files found"
+            fi
           fi
           
           # Generate JSDoc for JavaScript

@@ -56,7 +56,7 @@
   "dependencies": {
     "@langchain/core": "^0.3.23",
     "@qdrant/js-client-rest": "^1.12.0",
-    "@anthropic-ai/sdk": "^0.24.0",
+    "@anthropic-ai/sdk": "^0.60.0",
     "@google-ai/generativelanguage": "^2.7.0",
     "openai": "^4.73.0",
     "langfuse": "^3.29.0",

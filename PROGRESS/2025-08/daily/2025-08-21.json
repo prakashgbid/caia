@@ -1,0 +1,148 @@
+{
+  "repo": "caia",
+  "date": "2025-08-21",
+  "daily_summary": "Worked on 1 bugfix",
+  "accomplishments": [
+    {
+      "time": "02:49",
+      "type": "bugfix",
+      "title": "Resolve merge conflicts with main branch",
+      "description": "fix: Resolve merge conflicts with main branch",
+      "files_changed": [],
+      "complexity": "medium",
+      "impact": "low",
+      "auto_generated": true,
+      "git_hash": "b79eab5a9e6463cf8fdbf2ee0c996b77163c8452"
+    },
+    {
+      "time": "03:10",
+      "type": "bugfix",
+      "title": "Add package-lock.json and fix dependency issues for CI/CD",
+      "description": "fix: Add package-lock.json and fix dependency issues for CI/CD",
+      "files_changed": [
+        ".gitignore",
+        "PROGRESS/2025-08/daily/2025-08-19.json",
+        "PROGRESS/2025-08/daily/2025-08-21.json",
+        "docs/CAIA-ARCHITECTURE.md",
+        "docs/ECOSYSTEM-STRATEGY.md",
+        "docs/ORCHESTRA-POSITIONING.md",
+        "docs/PRISM-API-DESIGN.md",
+        "docs/README-SUPER-AGENT.md",
+        "docs/SUPERLLM-ARCHITECTURE-ANALYSIS.md",
+        "docs/SUPERLLM-IMPLEMENTATION-PLAN.md",
+        "lerna.json",
+        "package-lock.json",
+        "packages/agents/frontend-engineer/package.json",
+        "packages/agents/paraforge/package-lock.json",
+        "packages/agents/paraforge/package.json",
+        "packages/agents/training-system/package.json",
+        "packages/tools/app-platform/package.json",
+        "packages/tools/training-system/package.json",
+        "packages/utils/paraforge/package.json"
+      ],
+      "complexity": "medium",
+      "impact": "high",
+      "auto_generated": true,
+      "git_hash": "74796fabd76837595b1619f5183b9f69c99643a3"
+    },
+    {
+      "time": "03:12",
+      "type": "bugfix",
+      "title": "Remove non-existent @dsazz/mcp-jira dependency",
+      "description": "fix: Remove non-existent @dsazz/mcp-jira dependency",
+      "files_changed": [
+        "PROGRESS/2025-08/daily/2025-08-21.json",
+        "package-lock.json",
+        "packages/agents/jira-connect/package.json",
+        "packages/agents/paraforge/package.json",
+        "packages/integrations/jira/package.json",
+        "packages/utils/paraforge/package.json"
+      ],
+      "complexity": "medium",
+      "impact": "high",
+      "auto_generated": true,
+      "git_hash": "18423be111f66d1e11c93be7b44142c4f232bf2b"
+    },
+    {
+      "time": "03:55",
+      "type": "bugfix",
+      "title": "Complete CI/CD pipeline fixes",
+      "description": "fix: Complete CI/CD pipeline fixes",
+      "files_changed": [
+        ".github/workflows/ci-cd.yml",
+        ".github/workflows/ci-cd.yml.bak",
+        "CONTRIBUTING.md",
+        "PROGRESS/2025-08/daily/2025-08-21.json",
+        "package-lock.json",
+        "package.json"
+      ],
+      "complexity": "high",
+      "impact": "high",
+      "auto_generated": true,
+      "git_hash": "4ff5b39f2fc1321ee6873a72b2d28d45d244b020"
+    },
+    {
+      "time": "04:12",
+      "type": "bugfix",
+      "title": "Remove husky prepare scripts from sub-packages",
+      "description": "fix: Remove husky prepare scripts from sub-packages",
+      "files_changed": [
+        "PROGRESS/2025-08/daily/2025-08-21.json",
+        "packages/tools/training-system/package.json",
+        "packages/utils/paraforge/package.json"
+      ],
+      "complexity": "medium",
+      "impact": "medium",
+      "auto_generated": true,
+      "git_hash": "73c5d271ac6fc6283d049f3cc5350f4dde92645f"
+    },
+    {
+      "time": "04:51",
+      "type": "bugfix",
+      "title": "Remove lerna bootstrap from CI workflows",
+      "description": "fix: Remove lerna bootstrap from CI workflows",
+      "files_changed": [
+        ".github/workflows/ci-cd.yml",
+        ".github/workflows/ci-cd.yml.bak",
+        ".github/workflows/ci.yml",
+        ".github/workflows/ci.yml.bak",
+        "PROGRESS/2025-08/daily/2025-08-21.json"
+      ],
+      "complexity": "medium",
+      "impact": "high",
+      "auto_generated": true,
+      "git_hash": "4e1cf8a986fd6f65c5a7de22123903710fd52a22"
+    },
+    {
+      "time": "10:50",
+      "type": "bugfix",
+      "title": "Configure TypeDoc for monorepo documentation generation",
+      "description": "fix: Configure TypeDoc for monorepo documentation generation",
+      "files_changed": [
+        ".github/workflows/auto-docs.yml",
+        "PROGRESS/2025-08/daily/2025-08-21.json",
+        "package.json",
+        "typedoc.json"
+      ],
+      "complexity": "medium",
+      "impact": "medium",
+      "auto_generated": true,
+      "git_hash": "75c4c2c042234c8dcda3ff49acdc1e96852915f7"
+    }
+  ],
+  "decisions": [],
+  "blockers": [],
+  "next_day_plan": [],
+  "metrics": {
+    "commits": 16,
+    "files_changed": 25,
+    "lines_added": 148879,
+    "lines_removed": 1871,
+    "tests_added": 0,
+    "bugs_fixed": 0
+  },
+  "mood": "",
+  "energy_level": 5,
+  "notes": "",
+  "auto_generated": true
+}
