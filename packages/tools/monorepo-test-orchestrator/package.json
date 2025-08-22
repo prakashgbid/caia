@@ -1,0 +1,59 @@
+{
+  "name": "@caia/monorepo-test-orchestrator",
+  "version": "0.1.0",
+  "description": "Parallel testing orchestrator with live dashboard for CAIA monorepo",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "caia-test-monorepo": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "node dist/server.js",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext .ts",
+    "start:dashboard": "node dist/dashboard/server.js"
+  },
+  "dependencies": {
+    "@caia/work-divider": "^0.1.0",
+    "@caia/resource-calculator": "^0.1.0",
+    "@caia/coverage-aggregator": "^0.1.0",
+    "@caia/metric-collector": "^0.1.0",
+    "@caia/progress-tracker": "^0.1.0",
+    "@caia/task-scheduler": "^0.1.0",
+    "@caia/dependency-analyzer": "^0.1.0",
+    "@caia/report-generator": "^0.1.0",
+    "@caia/pattern-recognizer": "^0.1.0",
+    "express": "^4.18.0",
+    "socket.io": "^4.6.0",
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.11.0",
+    "chalk": "^5.3.0",
+    "ora": "^7.0.0",
+    "glob": "^10.3.0",
+    "p-limit": "^5.0.0",
+    "execa": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/express": "^4.17.0",
+    "@types/blessed": "^0.1.25",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "caia",
+    "testing",
+    "parallel",
+    "monorepo",
+    "dashboard",
+    "orchestration"
+  ],
+  "author": "CAIA Team",
+  "license": "MIT"
+}
