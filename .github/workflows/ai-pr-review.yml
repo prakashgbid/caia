@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: PR Agent Review
         id: pragent
-        uses: Codium-ai/pr-agent@main
+        uses: Codium-ai/pr-agent@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # For GPT-4 support (optional, will use GPT-3.5 if not set)
@@ -54,7 +54,7 @@ jobs:
           fetch-depth: 0
           
       - name: Gemini Code Review
-        uses: google-github-actions/run-gemini-cli@v1-beta
+        uses: google-github-actions/run-gemini-cli@v0.1.11
         with:
           # Comprehensive review prompt
           prompt: |
