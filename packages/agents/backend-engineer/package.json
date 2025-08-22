@@ -1,0 +1,98 @@
+{
+  "name": "@caia/agent-backend-engineer",
+  "version": "1.0.0",
+  "description": "Backend Engineer Agent for API development, database design, and server infrastructure",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "rm -rf dist",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "backend-engineer",
+    "api",
+    "database",
+    "microservices",
+    "server",
+    "infrastructure",
+    "authentication",
+    "caia",
+    "typescript"
+  ],
+  "author": "CAIA Team",
+  "license": "MIT",
+  "dependencies": {
+    "@caia/core": "^1.0.0",
+    "winston": "^3.11.0",
+    "zod": "^3.22.4",
+    "uuid": "^9.0.1",
+    "axios": "^1.6.2",
+    "lodash": "^4.17.21",
+    "express": "^4.18.2",
+    "fastify": "^4.24.3",
+    "prisma": "^5.7.1",
+    "typeorm": "^0.3.17",
+    "mongoose": "^8.0.3",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "joi": "^17.11.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
+    "redis": "^4.6.10",
+    "pg": "^8.11.3",
+    "mysql2": "^3.6.5",
+    "mongodb": "^6.3.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.7",
+    "@types/node": "^20.10.5",
+    "@types/lodash": "^4.14.202",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.6",
+    "@types/pg": "^8.10.9",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.8",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.3",
+    "supertest": "^6.3.3",
+    "@types/supertest": "^6.0.2"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caia-ai/caia.git",
+    "directory": "packages/agents/backend-engineer"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
