@@ -1,0 +1,11 @@
+# CODEOWNERS file for CAIA project
+# This file defines who should review pull requests
+
+# Global owners - will be requested for review on all changes
+* @prakashgbid
+
+# Specific paths can have additional owners
+# Example:
+# /packages/ @prakashgbid
+# /docs/ @prakashgbid
+# /scripts/ @prakashgbid
