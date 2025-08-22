@@ -693,7 +693,7 @@ export class ProgressTracker extends EventEmitter {
   /**
    * Export to HTML format
    */
-  private exportToHtml(data: any): string {
+  private exportToHtml(data: { timestamp: number; items: ProgressItem[]; stats: ProgressStats; history?: ProgressSnapshot[] }): string {
     return `
 <!DOCTYPE html>
 <html>

@@ -394,7 +394,7 @@ export class PatternRecognizer extends EventEmitter {
     const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
     
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
+    const _intercept = (sumY - slope * sumX) / n;
     
     // Calculate correlation coefficient
     const meanX = sumX / n;
@@ -539,7 +539,7 @@ export class PatternRecognizer extends EventEmitter {
   /**
    * Analyze correlations between variables
    */
-  private analyzeCorrelations(data: DataPoint[], features: Record<string, number>): Correlation[] {
+  private analyzeCorrelations(data: DataPoint[], _features: Record<string, number>): Correlation[] {
     const correlations: Correlation[] = [];
     
     // For simplicity, check correlation between value and timestamp
@@ -883,7 +883,7 @@ export class StatisticalModel implements Model {
   trained = false;
   accuracy?: number;
 
-  async train(data: DataPoint[]): Promise<void> {
+  async train(_data: DataPoint[]): Promise<void> {
     // For statistical model, "training" is just marking as trained
     // since it doesn't require actual training
     this.trained = true;
@@ -924,7 +924,7 @@ export class StatisticalModel implements Model {
     return patterns;
   }
 
-  async evaluate(testData: DataPoint[]): Promise<{ accuracy: number; precision: number; recall: number; f1Score: number }> {
+  async evaluate(_testData: DataPoint[]): Promise<{ accuracy: number; precision: number; recall: number; f1Score: number }> {
     // Simplified evaluation metrics
     return {
       accuracy: this.accuracy || 0.75,
