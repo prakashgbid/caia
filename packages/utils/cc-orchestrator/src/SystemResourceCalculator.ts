@@ -365,7 +365,7 @@ export class SystemResourceCalculator {
     suggestedInstances: number;
     reason: string;
   }> {
-    const utilization = await getCurrentUtilization();
+    const utilization = await this.getCurrentUtilization();
     const calculation = await this.calculateOptimalInstances();
     
     // If utilization is high (>80%) and we're at max, suggest reducing

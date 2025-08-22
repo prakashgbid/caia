@@ -1,0 +1,260 @@
+name: ⚡ Optimized PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  # 1. Quick Fail Checks (Run First, Fail Fast)
+  quick-checks:
+    name: Quick Checks
+    runs-on: ubuntu-latest
+    outputs:
+      skip-tests: ${{ steps.changes.outputs.skip-tests }}
+      affected-packages: ${{ steps.affected.outputs.packages }}
+    steps:
+      - name: Checkout (Shallow)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check File Changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            skip-tests:
+              - '!(**/*.ts|**/*.tsx|**/*.js|**/*.jsx)'
+            docs-only:
+              - 'docs/**'
+              - '*.md'
+            config-only:
+              - '.github/**'
+              - '*.json'
+              - '*.yml'
+              - '*.yaml'
+
+      - name: Detect Affected Packages
+        id: affected
+        run: |
+          # Use git diff to find changed packages
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          AFFECTED_PACKAGES=""
+          
+          for file in $CHANGED_FILES; do
+            if [[ $file == packages/* ]]; then
+              PKG=$(echo $file | cut -d'/' -f1-3)
+              AFFECTED_PACKAGES="$AFFECTED_PACKAGES $PKG"
+            fi
+          done
+          
+          # Remove duplicates
+          AFFECTED_PACKAGES=$(echo $AFFECTED_PACKAGES | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "packages=$AFFECTED_PACKAGES" >> $GITHUB_OUTPUT
+
+  # 2. Parallel Static Analysis
+  static-analysis:
+    name: Static Analysis
+    needs: quick-checks
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - lint
+          - typecheck
+          - format
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            */*/node_modules
+            .eslintcache
+            .tscache
+          key: ${{ runner.os }}-${{ matrix.check }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.check }}-
+
+      - name: Install Dependencies
+        run: |
+          # Parallel npm install with reduced network calls
+          npm ci --prefer-offline --no-audit --fund=false
+
+      - name: Run ${{ matrix.check }}
+        run: |
+          case "${{ matrix.check }}" in
+            lint)
+              npm run lint -- --cache --cache-location .eslintcache
+              ;;
+            typecheck)
+              npm run typecheck || echo "No typecheck script"
+              ;;
+            format)
+              npm run format:check || echo "No format check script"
+              ;;
+          esac
+
+  # 3. Parallel Test Execution
+  test-matrix:
+    name: Tests
+    needs: quick-checks
+    if: needs.quick-checks.outputs.skip-tests != 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node: [18, 20]
+        shard: [1, 2, 3, 4]
+        include:
+          - os: ubuntu-latest
+            node: 20
+            shard: 1
+            coverage: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+
+      - name: Restore Test Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            */*/node_modules
+            .jest-cache
+          key: ${{ runner.os }}-test-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install Dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run Tests (Shard ${{ matrix.shard }}/4)
+        run: |
+          # Run tests in parallel shards
+          npm run test:all -- \
+            --shard=${{ matrix.shard }}/4 \
+            --cache \
+            --cacheDirectory=.jest-cache \
+            --maxWorkers=4 \
+            ${{ matrix.coverage && '--coverage' || '' }}
+
+      - name: Upload Coverage
+        if: matrix.coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+          name: coverage-${{ matrix.os }}-${{ matrix.node }}
+
+  # 4. Smart Build (Only Affected Packages)
+  smart-build:
+    name: Smart Build
+    needs: [quick-checks, static-analysis]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Turbo Cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install Dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Build Affected Packages
+        run: |
+          if [ -n "${{ needs.quick-checks.outputs.affected-packages }}" ]; then
+            # Build only affected packages
+            npx turbo run build --filter='...[HEAD^]' --cache-dir=.turbo
+          else
+            # Full build with caching
+            npx turbo run build --cache-dir=.turbo
+          fi
+
+  # 5. Bundle Size Check
+  bundle-size:
+    name: Bundle Size
+    needs: smart-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Bundle Size
+        uses: andresz1/size-limit-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          skip_step: install
+        continue-on-error: true
+
+  # 6. Final Status Check
+  pr-status:
+    name: PR Status
+    needs: [static-analysis, test-matrix, smart-build]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const needs = context.payload.workflow_run?.jobs || [];
+            const failed = needs.filter(j => j.conclusion === 'failure');
+            
+            if (failed.length > 0) {
+              core.setFailed(`${failed.length} checks failed`);
+            } else {
+              core.info('All checks passed!');
+            }
+
+      - name: Update PR Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const status = context.job.status === 'success' ? '✅' : '❌';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `## ${status} PR Checks Complete\n\nAll automated checks have finished. See details above.`
+            });

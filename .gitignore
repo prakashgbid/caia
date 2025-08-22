@@ -32,9 +32,8 @@ coverage/
 .nyc_output/
 
 # Package manager
-package-lock.json
+# Note: package-lock.json should be committed for reproducible builds
 yarn.lock
-**/package-lock.json
 **/yarn.lock
 
 # Temporary files

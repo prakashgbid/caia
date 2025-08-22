@@ -1,0 +1,35 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "CAIA - Comprehensive AI Agent Framework",
+  "entryPoints": [
+    "packages/core/src",
+    "packages/agents/*/src",
+    "packages/engines/*/src",
+    "packages/utils/*/src",
+    "packages/modules/*/src",
+    "packages/integrations/*/src",
+    "packages/tools/*/src"
+  ],
+  "entryPointStrategy": "expand",
+  "out": "docs/api",
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/test/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "theme": "default",
+  "readme": "README.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "excludeInternal": true,
+  "skipErrorChecking": true,
+  "plugin": [],
+  "navigationLinks": {
+    "GitHub": "https://github.com/prakashgbid/caia",
+    "NPM": "https://www.npmjs.com/org/caia"
+  }
+}

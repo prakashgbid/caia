@@ -1,0 +1,24 @@
+/**
+ * {{AGENT_NAME}} Agent
+ * 
+ * {{AGENT_DESCRIPTION}}
+ */
+
+export { {{AGENT_CLASS}} } from './{{AGENT_CLASS}}.js';
+export * from './types.js';
+
+// Re-export convenience instance
+export { {{AGENT_NAME}}Agent as default } from './{{AGENT_CLASS}}.js';
+
+/**
+ * Create a new {{AGENT_CLASS}} instance with custom configuration
+ */
+export function create{{AGENT_CLASS}}(config?: any) {
+  const { {{AGENT_CLASS}} } = require('./{{AGENT_CLASS}}.js');
+  return new {{AGENT_CLASS}}(config);
+}
+
+/**
+ * Package version
+ */
+export const VERSION = '1.0.0';

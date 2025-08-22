@@ -1,0 +1,30 @@
+/**
+ * Type definitions for {{AGENT_NAME}} agent
+ */
+
+// Common types
+export interface AgentOptions {
+  timeout?: number;
+  retries?: number;
+  debug?: boolean;
+}
+
+export interface AgentResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: Date;
+}
+
+// Agent-specific interfaces extracted from README
+{{INTERFACES}}
+
+// Re-export core types for convenience
+export type {
+  AgentConfig,
+  Task,
+  TaskResult,
+  TaskStatus,
+  AgentCapability,
+  AgentMetadata
+} from '@caia/core';
