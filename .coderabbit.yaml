@@ -1,0 +1,72 @@
+# CodeRabbit Configuration
+# AI-powered code review for CAIA project
+
+# Review triggers
+reviews:
+  # Automatically review all PRs
+  auto_review:
+    enabled: true
+    # Review PRs to these branches
+    base_branches:
+      - main
+      - develop
+    # Ignore drafts
+    ignore_draft_prs: true
+    # Review on every push
+    review_on_push: true
+
+# Review settings
+language: "en"
+path_instructions:
+  - path: "packages/**"
+    instructions: "Focus on TypeScript best practices, proper error handling, and test coverage"
+  - path: "**/*.test.ts"
+    instructions: "Ensure tests are comprehensive and follow testing best practices"
+  - path: "**/*.md"
+    instructions: "Check for clarity, grammar, and technical accuracy"
+
+# Summary settings
+summary:
+  # Generate PR summaries
+  enabled: true
+  # Include release notes
+  release_notes: true
+
+# Chat settings
+chat:
+  # Enable @coderabbitai mentions
+  enabled: true
+
+# Security
+security:
+  # Flag potential security issues
+  enabled: true
+  # Check for secrets
+  detect_secrets: true
+
+# Performance
+performance:
+  # Flag performance issues
+  enabled: true
+
+# Best practices
+best_practices:
+  # Check code style
+  style_guide: true
+  # Check for common anti-patterns
+  anti_patterns: true
+  # Suggest improvements
+  suggestions: true
+
+# Ignore patterns
+ignore_patterns:
+  - "node_modules/**"
+  - "dist/**"
+  - "build/**"
+  - ".next/**"
+  - "coverage/**"
+  - "*.min.js"
+  - "*.min.css"
+  - "package-lock.json"
+  - "pnpm-lock.yaml"
+  - "yarn.lock"

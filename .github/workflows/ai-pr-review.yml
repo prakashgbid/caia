@@ -1,0 +1,125 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  # 1. PR-Agent (Qodo) - Free tier: 75 reviews/month
+  pr-agent:
+    name: "PR-Agent (Qodo) Review"
+    if: |
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'issue_comment' && 
+       github.event.issue.pull_request && 
+       contains(github.event.comment.body, '@CodiumAI-Agent'))
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    steps:
+      - name: PR Agent Review
+        id: pragent
+        uses: Codium-ai/pr-agent@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # For GPT-4 support (optional, will use GPT-3.5 if not set)
+          # OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+        with:
+          pr_reviewer.extra_instructions: |
+            Focus on:
+            - Code quality and best practices
+            - Security vulnerabilities
+            - Performance issues
+            - Test coverage
+            - TypeScript type safety
+            - Proper error handling
+            - Memory leaks and resource management
+            
+  # 2. Google Gemini CLI review (Completely FREE)
+  gemini-review:
+    name: "Google Gemini AI Review"
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Gemini Code Review
+        uses: google-github-actions/run-gemini-cli@v1-beta
+        with:
+          # Comprehensive review prompt
+          prompt: |
+            You are an expert code reviewer for the CAIA project.
+            Review this pull request and provide detailed feedback on:
+            
+            1. Code Quality:
+               - Clean code principles
+               - DRY violations
+               - SOLID principles adherence
+               - Code complexity and readability
+            
+            2. Security:
+               - Potential vulnerabilities
+               - Input validation
+               - Authentication/authorization issues
+               - Sensitive data exposure
+            
+            3. Performance:
+               - Algorithm efficiency
+               - Memory usage
+               - Database query optimization
+               - Caching opportunities
+            
+            4. Best Practices:
+               - TypeScript type safety
+               - Error handling
+               - Logging and monitoring
+               - Documentation completeness
+            
+            5. Testing:
+               - Test coverage adequacy
+               - Edge cases coverage
+               - Test quality and maintainability
+            
+            Provide actionable feedback with specific code suggestions.
+            Rate the overall PR quality on a scale of 1-10.
+            
+  # 3. AI Code Review Action (Uses OpenAI GPT-4 if API key provided)
+  ai-code-review:
+    name: "AI Code Review Action"
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: AI Code Review
+        uses: freeedcom/ai-codereviewer@v2.7.0
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: Add OpenAI key for GPT-4 support
+          # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # OPENAI_API_MODEL: "gpt-4" # or gpt-3.5-turbo
+          exclude: "**/*.json, **/*.md, **/*.yaml, **/*.yml"
+          # Review focus areas
+          custom_prompt: |
+            Review this code for:
+            - Logic errors and bugs
+            - Security vulnerabilities
+            - Performance bottlenecks
+            - Code maintainability
+            - Testing requirements
+            Provide specific, actionable feedback.

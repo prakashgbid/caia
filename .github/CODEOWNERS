@@ -1,0 +1,21 @@
+# CODEOWNERS file for CAIA project
+# This file defines who should review pull requests
+
+# Human Reviewers
+# Global owners - will be requested for review on all changes
+* @prakashgbid
+
+# AI Reviewers (Automatically Active)
+# The following AI reviewers will automatically review all PRs:
+# 1. @coderabbitai - CodeRabbit AI (Free for open source)
+# 2. @CodiumAI-Agent - PR-Agent/Qodo (75 free reviews/month)
+# 3. Google Gemini - Via GitHub Actions (Unlimited free reviews)
+#
+# See .github/AI_REVIEWERS.md for detailed information
+
+# Specific paths can have additional owners
+# Example:
+# /packages/ @prakashgbid
+# /docs/ @prakashgbid
+# /scripts/ @prakashgbid
+# /.github/ @prakashgbid  # GitHub configurations need careful review
