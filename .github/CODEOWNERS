@@ -1,5 +1,5 @@
-# CODEOWNERS file for CAIA project
-# This file defines who should review pull requests
+# CODEOWNERS for CAIA Repository
+# These owners will be requested for review when someone opens a pull request
 
 # Human Reviewers
 # Global owners - will be requested for review on all changes
@@ -13,9 +13,41 @@
 #
 # See .github/AI_REVIEWERS.md for detailed information
 
-# Specific paths can have additional owners
-# Example:
-# /packages/ @prakashgbid
-# /docs/ @prakashgbid
-# /scripts/ @prakashgbid
-# /.github/ @prakashgbid  # GitHub configurations need careful review
+# Core package owners
+/packages/core/ @prakashgbid
+
+# Agent packages
+/packages/agents/ @prakashgbid
+
+# Engine packages
+/packages/engines/ @prakashgbid
+
+# Integration packages
+/packages/integrations/ @prakashgbid
+
+# Module packages
+/packages/modules/ @prakashgbid
+
+# Utility packages
+/packages/utils/ @prakashgbid
+
+# Tool packages
+/packages/tools/ @prakashgbid
+
+# CI/CD and GitHub workflows
+/.github/ @prakashgbid
+/.github/workflows/ @prakashgbid
+
+# Documentation
+/docs/ @prakashgbid
+*.md @prakashgbid
+
+# Configuration files
+*.json @prakashgbid
+*.yml @prakashgbid
+*.yaml @prakashgbid
+
+# Security-sensitive files
+.env* @prakashgbid
+**/secrets/ @prakashgbid
+**/config/ @prakashgbid

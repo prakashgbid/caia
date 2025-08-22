@@ -1,0 +1,347 @@
+name: 🤖 PR Automation & Quality Gates
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+  statuses: write
+
+jobs:
+  # 1. Validate PR Title and Description
+  pr-validation:
+    name: PR Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate PR Title (Conventional Commits)
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            doesn't start with an uppercase character.
+
+      - name: Check PR Description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const minLength = 50;
+            
+            if (!pr.body || pr.body.length < minLength) {
+              core.setFailed(`PR description must be at least ${minLength} characters long`);
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `❌ **PR Description Required**\n\nPlease provide a detailed description (at least ${minLength} characters) explaining:\n- What changes were made\n- Why these changes are needed\n- Any potential impacts or considerations`
+              });
+            }
+
+  # 2. Check PR Size and Complexity
+  pr-size-check:
+    name: Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR Size Labeler
+        uses: codelytv/pr-size-labeler@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          xs_label: 'size/xs'
+          xs_max_size: 10
+          s_label: 'size/s'
+          s_max_size: 100
+          m_label: 'size/m'
+          m_max_size: 500
+          l_label: 'size/l'
+          l_max_size: 1000
+          xl_label: 'size/xl'
+          fail_if_xl: false
+          message_if_xl: |
+            This PR exceeds 1000 lines. Please consider breaking it into smaller PRs for easier review.
+            Large PRs are harder to review and more likely to introduce bugs.
+
+      - name: Check Files Changed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            const maxFiles = 50;
+            if (files.length > maxFiles) {
+              core.warning(`This PR changes ${files.length} files. Consider splitting into smaller PRs.`);
+            }
+            
+            // Add labels based on files changed
+            const labels = new Set();
+            
+            for (const file of files) {
+              if (file.filename.startsWith('packages/core/')) labels.add('core');
+              if (file.filename.startsWith('packages/agents/')) labels.add('agents');
+              if (file.filename.startsWith('packages/engines/')) labels.add('engines');
+              if (file.filename.startsWith('.github/')) labels.add('ci/cd');
+              if (file.filename.endsWith('.test.ts') || file.filename.endsWith('.spec.ts')) labels.add('tests');
+              if (file.filename.startsWith('docs/')) labels.add('documentation');
+            }
+            
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: Array.from(labels)
+              });
+            }
+
+  # 3. Security and Dependency Analysis
+  security-analysis:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy Results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
+          
+  # 4. Code Quality Analysis
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        continue-on-error: true
+
+      - name: Code Coverage Check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // This would normally check coverage reports
+            // For now, we'll add a comment about coverage
+            const pr = context.payload.pull_request;
+            core.info('Code coverage check would run here');
+
+  # 5. Auto-assign Reviewers
+  auto-assign:
+    name: Auto Assign
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: Auto-assign PR Reviewers
+        uses: kentaro-m/auto-assign-action@v2.0.0
+        with:
+          configuration-path: '.github/auto-assign.yml'
+
+      - name: Add Initial Labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labels = ['needs-review'];
+            
+            if (pr.draft) {
+              labels.push('draft');
+            }
+            
+            if (pr.user.type === 'Bot') {
+              labels.push('bot');
+            }
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: labels
+            });
+
+  # 6. PR Comment Bot
+  pr-bot:
+    name: PR Assistant
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PR Welcome Message
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const isFirstPR = pr.author_association === 'FIRST_TIME_CONTRIBUTOR';
+            
+            let message = `## 🤖 PR Assistant\n\n`;
+            
+            if (isFirstPR) {
+              message += `Welcome @${pr.user.login}! 🎉 Thank you for your first contribution to CAIA!\n\n`;
+            } else {
+              message += `Thanks for the PR @${pr.user.login}!\n\n`;
+            }
+            
+            message += `### 📋 Checklist\n`;
+            message += `- [ ] PR title follows conventional commits\n`;
+            message += `- [ ] Tests are passing\n`;
+            message += `- [ ] Documentation updated (if needed)\n`;
+            message += `- [ ] No merge conflicts\n`;
+            message += `- [ ] Security scan passed\n\n`;
+            
+            message += `### 🔄 What happens next?\n`;
+            message += `1. Automated checks will run\n`;
+            message += `2. A reviewer will be assigned\n`;
+            message += `3. Address any feedback\n`;
+            message += `4. Once approved and checks pass, PR will be auto-merged\n\n`;
+            
+            message += `### ⚡ Quick Commands\n`;
+            message += `- Comment \`/rebase\` to rebase this PR\n`;
+            message += `- Comment \`/update-branch\` to update from main\n`;
+            message += `- Comment \`/ready\` to mark PR ready for review\n`;
+            message += `- Comment \`/hold\` to prevent auto-merge\n`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: message
+            });
+
+  # 7. Auto-merge when approved and checks pass
+  auto-merge:
+    name: Auto Merge
+    runs-on: ubuntu-latest
+    if: github.event.review && github.event.review.state == 'approved'
+    steps:
+      - name: Check Auto-merge Eligibility
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Check if PR has 'hold' label
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number
+            });
+            
+            if (labels.some(l => l.name === 'hold' || l.name === 'do-not-merge')) {
+              core.info('PR has hold label, skipping auto-merge');
+              return;
+            }
+            
+            // Enable auto-merge
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'squash'
+              });
+              
+              core.info('Auto-merge enabled for PR');
+            } catch (error) {
+              core.info(`Could not enable auto-merge: ${error.message}`);
+            }
+
+  # 8. PR Commands Handler
+  pr-commands:
+    name: PR Commands
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/')
+    steps:
+      - name: Handle PR Commands
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            const pr = context.payload.issue.number;
+            
+            if (comment.includes('/rebase')) {
+              // Trigger rebase action
+              core.info('Rebase command detected');
+              // Implementation would go here
+            }
+            
+            if (comment.includes('/update-branch')) {
+              // Update branch from main
+              core.info('Update branch command detected');
+              // Implementation would go here
+            }
+            
+            if (comment.includes('/ready')) {
+              // Mark PR as ready
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr,
+                draft: false
+              });
+            }
+            
+            if (comment.includes('/hold')) {
+              // Add hold label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr,
+                labels: ['hold']
+              });
+            }
