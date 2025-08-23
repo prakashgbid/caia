@@ -1,0 +1,15 @@
+[Unit]
+Description=Knowledge System File Watcher
+After=network.target
+
+[Service]
+Type=simple
+User=MAC
+WorkingDirectory=/Users/MAC/Documents/projects/caia/knowledge-system
+ExecStart=/usr/bin/python3 /Users/MAC/Documents/projects/caia/knowledge-system/watcher/file_watcher.py
+Restart=always
+RestartSec=5
+Environment=PYTHONPATH=/Users/MAC/Documents/projects/caia/knowledge-system
+
+[Install]
+WantedBy=multi-user.target

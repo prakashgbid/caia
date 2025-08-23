@@ -1,0 +1,45 @@
+{
+  "tasks": {
+    "A1": { "name": "setup_qdrant", "group": "infrastructure", "deps": [], "priority": 2 },
+    "A2": { "name": "setup_sqlite", "group": "infrastructure", "deps": [], "priority": 2 },
+    "A3": { "name": "setup_ast_parser", "group": "infrastructure", "deps": [], "priority": 1 },
+    "A4": { "name": "setup_file_watcher", "group": "infrastructure", "deps": [], "priority": 3 },
+    "A5": { "name": "setup_codet5", "group": "infrastructure", "deps": [], "priority": 1 },
+    "A6": { "name": "define_entity_models", "group": "infrastructure", "deps": [], "priority": 3 },
+    
+    "B1": { "name": "entity_extraction", "group": "pipelines", "deps": ["A3"], "priority": 1 },
+    "B2": { "name": "embedding_pipeline", "group": "pipelines", "deps": ["A5"], "priority": 1 },
+    "B3": { "name": "relationship_mapper", "group": "pipelines", "deps": ["A3", "A6"], "priority": 2 },
+    "B4": { "name": "incremental_updater", "group": "pipelines", "deps": ["A4"], "priority": 3 },
+    "B5": { "name": "batch_processor", "group": "pipelines", "deps": [], "priority": 3 },
+    "B6": { "name": "cache_layer", "group": "pipelines", "deps": [], "priority": 2 },
+    
+    "C1": { "name": "vector_search", "group": "search", "deps": ["A1", "B2"], "priority": 1 },
+    "C2": { "name": "sql_fts", "group": "search", "deps": ["A2"], "priority": 2 },
+    "C3": { "name": "graph_search", "group": "search", "deps": ["A2", "B3"], "priority": 2 },
+    "C4": { "name": "redundancy_detector", "group": "search", "deps": ["B1", "B2"], "priority": 1 },
+    "C5": { "name": "query_fusion", "group": "search", "deps": ["C1", "C2", "C3"], "priority": 1 },
+    "C6": { "name": "result_ranker", "group": "search", "deps": ["C5"], "priority": 2 },
+    
+    "D1": { "name": "cc_hooks", "group": "integration", "deps": ["C4", "C5"], "priority": 1 },
+    "D2": { "name": "cli_interface", "group": "integration", "deps": [], "priority": 2 },
+    "D3": { "name": "api_endpoints", "group": "integration", "deps": [], "priority": 2 },
+    "D4": { "name": "git_hooks", "group": "integration", "deps": ["C4"], "priority": 3 },
+    "D5": { "name": "pre_impl_checker", "group": "integration", "deps": ["C4", "C5"], "priority": 1 },
+    "D6": { "name": "enforcement_policies", "group": "integration", "deps": ["D1"], "priority": 2 },
+    
+    "E1": { "name": "cross_language", "group": "intelligence", "deps": ["C1"], "priority": 3 },
+    "E2": { "name": "arch_conformance", "group": "intelligence", "deps": ["C3"], "priority": 3 },
+    "E3": { "name": "knowledge_gaps", "group": "intelligence", "deps": ["C5"], "priority": 3 },
+    "E4": { "name": "perf_monitoring", "group": "intelligence", "deps": [], "priority": 2 },
+    "E5": { "name": "health_checks", "group": "intelligence", "deps": [], "priority": 2 },
+    "E6": { "name": "auto_recovery", "group": "intelligence", "deps": ["E5"], "priority": 3 },
+    
+    "F1": { "name": "perf_optimization", "group": "migration", "deps": ["E4"], "priority": 3 },
+    "F2": { "name": "gcp_configs", "group": "migration", "deps": [], "priority": 3 },
+    "F3": { "name": "migration_scripts", "group": "migration", "deps": [], "priority": 3 },
+    "F4": { "name": "backup_restore", "group": "migration", "deps": ["A2"], "priority": 3 },
+    "F5": { "name": "horizontal_scaling", "group": "migration", "deps": ["F2"], "priority": 3 },
+    "F6": { "name": "documentation", "group": "migration", "deps": [], "priority": 3 }
+  }
+}

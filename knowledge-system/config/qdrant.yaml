@@ -1,0 +1,20 @@
+service:
+  host: 0.0.0.0
+  http_port: 6333
+  grpc_port: 6334
+  
+storage:
+  storage_path: /Users/MAC/Documents/projects/caia/knowledge-system/data/qdrant
+  snapshots_path: /Users/MAC/Documents/projects/caia/knowledge-system/data/qdrant/snapshots
+  
+log:
+  level: INFO
+  
+collections:
+  code_embeddings:
+    vectors:
+      size: 768
+      distance: Cosine
+    optimizers_config:
+      default_segment_number: 16
+      max_segment_size: 100000

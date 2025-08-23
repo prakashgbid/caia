@@ -1,0 +1,16 @@
+# AST Parser requirements
+ast
+typing-extensions
+pathlib
+# File watcher requirements
+watchdog>=2.1.0
+# CodeT5 embedding requirements
+transformers>=4.20.0
+torch>=1.11.0
+sentence-transformers>=2.2.0
+numpy>=1.21.0
+scikit-learn>=1.1.0
+# Entity model requirements
+pydantic>=1.10.0
+uuid
+jsonschema>=4.0.0
