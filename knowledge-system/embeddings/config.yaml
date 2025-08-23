@@ -1,0 +1,23 @@
+# Embedding service configuration
+
+models:
+  primary:
+    name: "Salesforce/codet5-base"
+    type: "transformers"
+    cache_dir: "/Users/MAC/Documents/projects/caia/knowledge-system/models"
+    max_length: 512
+    device: "auto"  # auto, cpu, cuda
+  
+  fallback:
+    name: "all-MiniLM-L6-v2"
+    type: "sentence-transformers"
+
+processing:
+  batch_size: 8
+  max_workers: 4
+  chunk_size: 1000
+
+output:
+  format: "json"  # json, numpy, pickle
+  precision: "float32"
+  compression: true

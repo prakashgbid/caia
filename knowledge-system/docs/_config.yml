@@ -1,0 +1,59 @@
+# GitHub Pages Configuration for CAIA Knowledge System
+
+title: "CAIA Knowledge System"
+description: "Comprehensive knowledge management system for preventing code redundancy"
+url: "https://prakashgbid.github.io"
+baseurl: "/caia/knowledge-system"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# SEO
+author: "CAIA Team"
+logo: "/assets/images/logo.png"
+social:
+  name: "CAIA Knowledge System"
+  links:
+    - "https://github.com/prakashgbid/caia"
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Include additional files
+include:
+  - _pages
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+  - scope:
+      path: "_docs"
+      type: "docs"
+    values:
+      layout: "docs"
+
+# GitHub Pages specific
+github:
+  repository_url: "https://github.com/prakashgbid/caia"
