@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAIA Knowledge System</title>
+    <meta name="description" content="Comprehensive knowledge management system for preventing code redundancy and enforcing reusability">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        .hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 100px 20px; text-align: center; }
+        .hero h1 { font-size: 3rem; margin-bottom: 1rem; }
+        .hero p { font-size: 1.2rem; margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+        .btn { display: inline-block; background: #4CAF50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 0 10px; transition: all 0.3s; }
+        .btn:hover { background: #45a049; transform: translateY(-2px); }
+        .btn-secondary { background: transparent; border: 2px solid white; }
+        .btn-secondary:hover { background: white; color: #667eea; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .section { padding: 80px 0; }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 50px; }
+        .feature-card { background: #f8f9fa; padding: 30px; border-radius: 10px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: all 0.3s; }
+        .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .feature-icon { font-size: 3rem; margin-bottom: 20px; }
+        h2 { font-size: 2.5rem; text-align: center; margin-bottom: 20px; color: #2c3e50; }
+        .stats { background: #2c3e50; color: white; text-align: center; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px; }
+        .stat { padding: 20px; }
+        .stat-number { font-size: 3rem; font-weight: bold; color: #4CAF50; }
+        .footer { background: #333; color: white; text-align: center; padding: 40px 0; }
+    </style>
+</head>
+<body>
+    <header class="hero">
+        <div class="container">
+            <h1>🤖 CAIA Knowledge System</h1>
+            <p>Eliminate code redundancy and maximize reusability with semantic search, AI-powered analysis, and intelligent code detection.</p>
+            <a href="#features" class="btn">Explore Features</a>
+            <a href="getting-started.html" class="btn btn-secondary">Get Started</a>
+        </div>
+    </header>
+
+    <section class="section" id="features">
+        <div class="container">
+            <h2>Key Features</h2>
+            <div class="features">
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Semantic Search</h3>
+                    <p>Find conceptually similar code using CodeT5+ embeddings, beyond simple keyword matching.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Redundancy Detection</h3>
+                    <p>Detect duplicate functionality with 85%+ accuracy using multi-layer analysis.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Multi-Language</h3>
+                    <p>Support for TypeScript, JavaScript, Python with cross-language similarity detection.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Claude Code Integration</h3>
+                    <p>Automatic checking before code generation with enforcement policies.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Hyper-Parallel</h3>
+                    <p>336x faster implementation with intelligent task distribution.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Real-time Updates</h3>
+                    <p>Live file watching and git hooks for continuous knowledge base updates.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section stats">
+        <div class="container">
+            <h2>Performance Metrics</h2>
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-number">336x</div>
+                    <p>Faster Implementation</p>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">&lt;50ms</div>
+                    <p>Search Latency</p>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">85%+</div>
+                    <p>Detection Accuracy</p>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">36</div>
+                    <p>Components</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 CAIA Knowledge System. Part of the CAIA ecosystem.</p>
+            <p><a href="https://github.com/prakashgbid/caia" style="color: #4CAF50;">GitHub Repository</a> | <a href="api-docs.html" style="color: #4CAF50;">API Documentation</a></p>
+        </div>
+    </footer>
+</body>
+</html>
