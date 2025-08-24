@@ -1,0 +1,40 @@
+{
+  "env": {
+    "MAX_PARALLEL": "50",
+    "CCO_AUTO_INVOKE": "true",
+    "CCO_AUTO_CALCULATE": "true",
+    "CCO_TASK_TIMEOUT": "60000",
+    "CCO_RATE_LIMIT": "100",
+    "CCO_CONTEXT_PRESERVATION": "true",
+    "CCO_PATH": "/Users/MAC/Documents/projects/caia/utils/parallel/cc-orchestrator/src/index.js",
+    "CCU_AUTO_OPTIMIZE": "true",
+    "CCU_CONFIG_PATH": "/Users/MAC/Documents/projects/caia/tools/claude-code-ultimate",
+    "CCU_MIN_CONFIDENCE": "0.8",
+    "PREFERRED_PACKAGE_MANAGER": "pnpm"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/MAC/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "additionalDirectories": [
+      "/Users/MAC/.claude",
+      "/Users/MAC/.config",
+      "/Users/MAC/Library"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash /Users/MAC/.claude/statusline-command.sh"
+  },
+  "cleanupPeriodDays": 90
+}
