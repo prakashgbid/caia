@@ -1,0 +1,106 @@
+{
+  "name": "@caia/hierarchical-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive test suite for CAIA Hierarchical Agent System",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:performance": "jest --testPathPattern=performance --testTimeout=300000",
+    "test:e2e": "jest --testPathPattern=e2e --testTimeout=300000",
+    "test:parallel": "node src/test-runner.js",
+    "test:parallel:unit": "node src/test-runner.js --suite=unit",
+    "test:parallel:integration": "node src/test-runner.js --suite=integration",
+    "test:parallel:performance": "node src/test-runner.js --suite=performance",
+    "test:parallel:e2e": "node src/test-runner.js --suite=e2e",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:coverage:full": "jest --coverage --collectCoverageFrom='../../**/*.{ts,js}' --coveragePathIgnorePatterns='node_modules|dist|build|coverage'",
+    "lint": "eslint src/**/*.{ts,js} --fix",
+    "format": "prettier --write src/**/*.{ts,js,json}",
+    "clean": "rm -rf coverage dist node_modules .jest-cache",
+    "setup": "npm install && npm run fixtures:generate",
+    "fixtures:generate": "node src/fixtures/data-generator.js",
+    "mocks:verify": "node src/mocks/mock-verifier.js",
+    "benchmark": "node src/performance/benchmark-runner.js"
+  },
+  "dependencies": {
+    "@caia/core": "workspace:*",
+    "@jest/globals": "^29.7.0",
+    "axios": "^1.6.0",
+    "lodash": "^4.17.21",
+    "uuid": "^9.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "yargs": "^17.7.2",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.10.0",
+    "@types/lodash": "^4.14.202",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "jest": "^29.7.0",
+    "jest-environment-node": "^29.7.0",
+    "jest-extended": "^4.0.2",
+    "prettier": "^3.1.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["jest-extended/all", "<rootDir>/src/config/jest.setup.ts"],
+    "testMatch": [
+      "<rootDir>/unit/**/*.test.{ts,js}",
+      "<rootDir>/integration/**/*.test.{ts,js}",
+      "<rootDir>/performance/**/*.test.{ts,js}",
+      "<rootDir>/e2e/**/*.test.{ts,js}"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/",
+      "/coverage/",
+      "/fixtures/",
+      "/mocks/"
+    ],
+    "collectCoverage": true,
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "json", "html"],
+    "collectCoverageFrom": [
+      "../../**/*.{ts,js}",
+      "!../../node_modules/**",
+      "!../../dist/**",
+      "!../../coverage/**",
+      "!../../tests/**",
+      "!../../**/*.test.{ts,js}",
+      "!../../**/*.d.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 90,
+        "functions": 90,
+        "lines": 90,
+        "statements": 90
+      }
+    },
+    "maxWorkers": "50%",
+    "testTimeout": 30000,
+    "verbose": true,
+    "bail": false,
+    "clearMocks": true,
+    "restoreMocks": true,
+    "resetMocks": true
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

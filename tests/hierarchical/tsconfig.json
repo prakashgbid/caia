@@ -1,0 +1,40 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@fixtures/*": ["./fixtures/*"],
+      "@mocks/*": ["./mocks/*"],
+      "@caia/*": ["../../packages/*/src"]
+    },
+    "types": ["node", "jest", "jest-extended"],
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "noImplicitOverride": true
+  },
+  "include": [
+    "src/**/*",
+    "unit/**/*",
+    "integration/**/*",
+    "performance/**/*",
+    "e2e/**/*",
+    "fixtures/**/*",
+    "mocks/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "**/*.js"
+  ]
+}

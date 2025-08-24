@@ -1,0 +1,112 @@
+# Jekyll configuration for GitHub Pages
+title: "Hierarchical Agent System"
+description: "Revolutionary AI-powered project management with 7-level task decomposition and intelligent orchestration"
+baseurl: "/hierarchical-agent-system"
+url: "https://caia-team.github.io"
+
+# GitHub repository information
+repository: "caia-team/hierarchical-agent-system"
+github_username: "caia-team"
+
+# Build settings
+theme: minima
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+    span:
+      line_numbers: false
+    block:
+      line_numbers: false
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-redirect-from
+
+# Navigation
+header_pages:
+  - getting-started.md
+  - api/index.md
+  - guides/installation.md
+  - examples/basic-usage.md
+  - reference/cli.md
+  - support.md
+
+# Collections
+collections:
+  guides:
+    output: true
+    permalink: /:collection/:name/
+  examples:
+    output: true
+    permalink: /:collection/:name/
+  reference:
+    output: true
+    permalink: /:collection/:name/
+  api:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: "_guides"
+      type: "guides"
+    values:
+      layout: "default"
+  - scope:
+      path: "_examples"
+      type: "examples"
+    values:
+      layout: "default"
+  - scope:
+      path: "_reference"
+      type: "reference"
+    values:
+      layout: "default"
+  - scope:
+      path: "_api"
+      type: "api"
+    values:
+      layout: "default"
+
+# SEO settings
+seo:
+  name: "CAIA Team"
+  twitter:
+    username: CAIADev
+    card: summary_large_image
+  social:
+    name: "CAIA Team"
+    links:
+      - https://github.com/caia-team
+      - https://twitter.com/CAIADev
+      - https://linkedin.com/company/caia-dev
+
+# Custom variables
+version: "1.0.0"
+npm_package: "@caia/hierarchical-agent-system"
+github_repo: "https://github.com/caia-team/hierarchical-agent-system"
+discord_invite: "https://discord.gg/caia-dev"
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .sass-cache
+  - .jekyll-cache
+  - gemfiles
+  - README.md
