@@ -110,11 +110,10 @@
 │                    ↓                        │
 │  MCP Bridge Layer (Integrations)           │
 │  ┌─────────────────────────────────────┐   │
-│  │ • jira-connect (~/,claude/agents)   │   │
+│  │ • jira-connect (~/.claude/agents)   │   │
 │  │ • github-mcp                        │   │
 │  │ • slack-bridge                      │   │
 │  │ • Integration Agent (wrapper)       │   │
-│  └─────────────────────────────────────┘   │
 │                    ↓                        │
 │  Custom Services Layer (Intelligence)       │
 │  ┌─────────────────────────────────────┐   │
