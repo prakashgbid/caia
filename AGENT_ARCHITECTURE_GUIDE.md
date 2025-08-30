@@ -279,11 +279,10 @@ await orchestrator.executeWorkflow({
 
 ## 📚 Resources
 
-- CC Agents: `/Users/MAC/.claude/CLAUDE.md`
-- MCP Spec: https://github.com/anthropics/mcp
+- CC Agents: `~/.claude/CLAUDE.md`
+- MCP Spec: [https://github.com/anthropics/mcp](https://github.com/anthropics/mcp)
 - CAIA Agents: `/caia/packages/agents/`
 - Integration Agent: `/caia/packages/agents/integration-agent/`
-
 ---
 
 *Last Updated: August 2024*
