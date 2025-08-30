@@ -155,7 +155,7 @@ def update_knowledge_base(components):
                     
         except Exception as e:
             print(f"⚠️ Error inserting {component['path']}: {e}")
-    
+            raise
     # Log training history
     cursor.execute('''
         INSERT INTO training_history (timestamp, files_processed, components_found, status)
