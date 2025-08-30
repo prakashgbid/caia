@@ -167,24 +167,20 @@ def update_knowledge_base(components):
         'completed'
     ))
     
-    conn.commit()
-    
-    print(f"✅ Updated {updated} components, inserted {inserted} new components")
-    
-    # Show statistics
-    cursor.execute('SELECT COUNT(*) FROM components')
-    total_components = cursor.fetchone()[0]
-    
-    cursor.execute('SELECT COUNT(DISTINCT language) FROM components')
-    languages = cursor.fetchone()[0]
-    
-    print(f"\n📊 Knowledge Base Statistics:")
-    print(f"   Total components: {total_components}")
-    print(f"   Languages tracked: {languages}")
-    print(f"   Database size: {os.path.getsize(KNOWLEDGE_DB) / 1024 / 1024:.2f} MB")
-    
-    conn.close()
-
+    try:
+        conn.commit()
+        print(f"✅ Updated {updated} components, inserted {inserted} new components")
+        # Show statistics
+        cursor.execute('SELECT COUNT(*) FROM components')
+        total_components = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(DISTINCT language) FROM components')
+        languages = cursor.fetchone()[0]
+        print("\n📊 Knowledge Base Statistics:")
+        print(f"   Total components: {total_components}")
+        print(f"   Languages tracked: {languages}")
+        print(f"   Database size: {os.path.getsize(KNOWLEDGE_DB) / 1024 / 1024:.2f} MB")
+    finally:
+        conn.close()
 def main():
     print("🚀 Starting Full CKS Training")
     print("=" * 50)
