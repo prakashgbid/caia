@@ -171,10 +171,13 @@ export class IdeaAnalyzer extends EventEmitter {
       const response = await axios.get(this.config.webSearchApiUrl, {
         params: {
           query,
-          api_key: this.config.webSearchApiKey,
           num_results: this.getSearchResultCount()
         },
-        timeout: 10000
+        headers: {
+          'X-API-Key': this.config.webSearchApiKey
+        },
+        timeout: 10000,
+        validateStatus: (s) => s >= 200 && s < 500 // treat 4xx as handled fallback
       });
 
       return this.parseSearchResults(response.data, query);
