@@ -33,11 +33,10 @@ Idea → Initiative → Feature → Epic → Story → Task → Subtask
 - **Key Features**: 7-level breakdown, market research integration, quality gates
 
 ### **Stream 2: JIRA Advanced Roadmaps Integration** ✅
-- **Location**: `~/.claude/agents/jira-connect/`
+- **Location**: `packages/integrations/jira-connect/`
 - **Components**: AdvancedRoadmapsModule, BulkHierarchyCreator, WorkflowAutomation
 - **Lines of Code**: 3,800+ JavaScript
 - **Key Features**: Initiative support, bulk operations, custom field mapping
-
 ### **Stream 3: Intelligence & Learning Layer** ✅
 - **Location**: `/admin/scripts/`
 - **Components**: TraceabilityManager, EstimationLearning, PatternRecognition, ConfidenceScorer
