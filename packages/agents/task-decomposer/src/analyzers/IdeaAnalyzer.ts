@@ -16,10 +16,10 @@ import {
 export interface IdeaAnalyzerConfig {
   webSearchApiKey?: string;
   webSearchApiUrl?: string;
-  confidenceThreshold: number;
-  marketResearchDepth: 'shallow' | 'medium' | 'deep';
-  enableCompetitorAnalysis: boolean;
-  riskAssessmentLevel: 'basic' | 'comprehensive';
+  confidenceThreshold?: number;
+  marketResearchDepth?: 'shallow' | 'medium' | 'deep';
+  enableCompetitorAnalysis?: boolean;
+  riskAssessmentLevel?: 'basic' | 'comprehensive';
 }
 
 /**
