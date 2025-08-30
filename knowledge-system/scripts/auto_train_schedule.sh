@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Automatic CKS Training Scheduler
-
+set -euo pipefail
+IFS=$'\n\t'
 # Configuration
 CKS_ROOT="/Users/MAC/Documents/projects/caia/knowledge-system"
 TRAIN_SCRIPT="$CKS_ROOT/scripts/train_cks_full.py"
