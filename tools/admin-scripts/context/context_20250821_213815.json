@@ -1,0 +1,754 @@
+{
+  "timestamp": "2025-08-21T21:38:15.212608",
+  "hours_covered": 1,
+  "projects": {
+    "temp-scripts": {
+      "name": "temp-scripts",
+      "path": "/Users/MAC/Documents/projects/temp-scripts",
+      "last_modified": "2025-08-19T02:47:34.234241",
+      "size_bytes": 0,
+      "file_count": 0,
+      "directory_count": 0,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "standalone-apps": {
+      "name": "standalone-apps",
+      "path": "/Users/MAC/Documents/projects/standalone-apps",
+      "last_modified": "2025-08-19T02:47:34.204354",
+      "size_bytes": 2595752,
+      "file_count": 244,
+      "directory_count": 90,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {
+        "package.json": "roulette-community/package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [
+        {
+          "file": "roulette-community/src/app/layout.tsx",
+          "line": 31,
+          "content": "// TODO: Get user from auth context when implementing authentication"
+        },
+        {
+          "file": "roulette-community/src/features/currency/service.ts",
+          "line": 262,
+          "content": "// TODO: Integrate with actual payment processor (Stripe)"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 478,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 492,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 550,
+          "content": "upsellRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 551,
+          "content": "churnRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 552,
+          "content": "reactivationRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 556,
+          "content": "refundRate: 0, // TODO: Track refunds"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 557,
+          "content": "paymentFailureRate: 0, // TODO: Track failed payments"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 575,
+          "content": "// TODO: Implement more sophisticated calculations"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 621,
+          "content": "// TODO: Implement growth calculations"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "@next/font",
+          "@radix-ui/react-avatar",
+          "@radix-ui/react-checkbox",
+          "@radix-ui/react-collapsible",
+          "@radix-ui/react-dialog",
+          "@radix-ui/react-dropdown-menu",
+          "@radix-ui/react-icons",
+          "@radix-ui/react-label",
+          "@radix-ui/react-navigation-menu",
+          "@radix-ui/react-progress",
+          "@radix-ui/react-separator",
+          "@radix-ui/react-slot",
+          "@radix-ui/react-tabs",
+          "@radix-ui/react-toast",
+          "@react-email/components",
+          "@sentry/nextjs",
+          "@supabase/auth-ui-react",
+          "@supabase/auth-ui-shared",
+          "@supabase/ssr",
+          "@supabase/supabase-js",
+          "@tanstack/react-query",
+          "@types/react",
+          "@types/react-dom",
+          "@types/uuid",
+          "@types/zxcvbn",
+          "@upstash/redis",
+          "autoprefixer",
+          "class-variance-authority",
+          "cloudinary",
+          "clsx",
+          "contentful",
+          "date-fns",
+          "dotenv",
+          "framer-motion",
+          "lucide-react",
+          "next",
+          "postcss",
+          "react",
+          "react-dom",
+          "react-hook-form",
+          "resend",
+          "socket.io",
+          "socket.io-client",
+          "stripe",
+          "tailwind-merge",
+          "tailwindcss",
+          "tailwindcss-animate",
+          "typescript",
+          "uuid",
+          "zustand",
+          "zxcvbn"
+        ]
+      }
+    },
+    "caia": {
+      "name": "caia",
+      "path": "/Users/MAC/Documents/projects/caia",
+      "last_modified": "2025-08-21T20:39:20.129167",
+      "size_bytes": 2702999,
+      "file_count": 566,
+      "directory_count": 337,
+      "recent_changes": [
+        {
+          "file": "package-lock.json",
+          "modified": "2025-08-21T20:40:48.793381"
+        },
+        {
+          "file": "package.json",
+          "modified": "2025-08-21T20:40:48.582435"
+        },
+        {
+          "file": "temp-scripts/fix-all-linting.sh",
+          "modified": "2025-08-21T20:41:12.999754"
+        },
+        {
+          "file": "temp-scripts/run-all-tests-parallel.sh",
+          "modified": "2025-08-21T20:39:39.404815"
+        },
+        {
+          "file": "packages/tools/test-runner/package.json",
+          "modified": "2025-08-21T20:39:02.900995"
+        },
+        {
+          "file": "packages/tools/test-runner/src/index.ts",
+          "modified": "2025-08-21T20:41:32.307852"
+        },
+        {
+          "file": "packages/tools/test-runner/src/cli/index.ts",
+          "modified": "2025-08-21T20:41:32.307830"
+        },
+        {
+          "file": "packages/utils/metric-collector/jest.config.js",
+          "modified": "2025-08-21T20:38:17.835406"
+        },
+        {
+          "file": "packages/utils/metric-collector/package.json",
+          "modified": "2025-08-21T20:38:17.833077"
+        },
+        {
+          "file": "packages/utils/metric-collector/src/__tests__/MetricCollector.test.ts",
+          "modified": "2025-08-21T20:46:02.662704"
+        },
+        {
+          "file": "packages/utils/work-divider/jest.config.js",
+          "modified": "2025-08-21T20:38:17.834970"
+        },
+        {
+          "file": "packages/utils/work-divider/package.json",
+          "modified": "2025-08-21T20:38:17.831916"
+        },
+        {
+          "file": "packages/utils/work-divider/src/index.ts",
+          "modified": "2025-08-21T21:07:22.679128"
+        },
+        {
+          "file": "packages/utils/work-divider/src/__tests__/WorkDivider.test.ts",
+          "modified": "2025-08-21T21:10:18.404166"
+        },
+        {
+          "file": "packages/utils/task-scheduler/jest.config.js",
+          "modified": "2025-08-21T20:38:17.835665"
+        },
+        {
+          "file": "packages/utils/task-scheduler/package.json",
+          "modified": "2025-08-21T20:38:17.833798"
+        },
+        {
+          "file": "packages/utils/task-scheduler/src/__tests__/TaskScheduler.test.ts",
+          "modified": "2025-08-21T21:08:26.751998"
+        },
+        {
+          "file": "packages/utils/progress-tracker/jest.config.js",
+          "modified": "2025-08-21T20:38:17.835575"
+        },
+        {
+          "file": "packages/utils/progress-tracker/package.json",
+          "modified": "2025-08-21T20:38:17.833570"
+        },
+        {
+          "file": "packages/utils/progress-tracker/src/index.ts",
+          "modified": "2025-08-21T20:44:45.711316"
+        },
+        {
+          "file": "packages/utils/progress-tracker/src/__tests__/ProgressTracker.test.ts",
+          "modified": "2025-08-21T21:37:57.299735"
+        },
+        {
+          "file": "packages/utils/dependency-analyzer/jest.config.js",
+          "modified": "2025-08-21T20:38:17.835758"
+        },
+        {
+          "file": "packages/utils/dependency-analyzer/package.json",
+          "modified": "2025-08-21T20:38:17.834141"
+        },
+        {
+          "file": "packages/utils/dependency-analyzer/src/index.ts",
+          "modified": "2025-08-21T20:49:34.519962"
+        },
+        {
+          "file": "packages/utils/dependency-analyzer/src/__tests__/DependencyAnalyzer.test.ts",
+          "modified": "2025-08-21T20:48:32.910252"
+        },
+        {
+          "file": "packages/utils/resource-calculator/jest.config.js",
+          "modified": "2025-08-21T20:38:17.835186"
+        },
+        {
+          "file": "packages/utils/resource-calculator/package.json",
+          "modified": "2025-08-21T20:38:17.832470"
+        },
+        {
+          "file": "packages/utils/resource-calculator/src/__tests__/ResourceCalculator.test.ts",
+          "modified": "2025-08-21T21:06:10.716269"
+        },
+        {
+          "file": "packages/utils/pattern-recognizer/jest.config.js",
+          "modified": "2025-08-21T20:38:17.835933"
+        },
+        {
+          "file": "packages/utils/pattern-recognizer/package.json",
+          "modified": "2025-08-21T20:38:17.834748"
+        },
+        {
+          "file": "packages/utils/pattern-recognizer/src/index.ts",
+          "modified": "2025-08-21T20:48:25.517609"
+        },
+        {
+          "file": "packages/utils/pattern-recognizer/src/__tests__/PatternRecognizer.test.ts",
+          "modified": "2025-08-21T21:36:56.602466"
+        },
+        {
+          "file": "packages/utils/report-generator/jest.config.js",
+          "modified": "2025-08-21T20:38:17.835845"
+        },
+        {
+          "file": "packages/utils/report-generator/package.json",
+          "modified": "2025-08-21T20:38:17.834415"
+        },
+        {
+          "file": "packages/utils/report-generator/src/__tests__/ReportEngine.test.ts",
+          "modified": "2025-08-21T20:41:32.244821"
+        }
+      ],
+      "git_info": {
+        "commits": [],
+        "modified_files": [
+          "ackage.json",
+          "packages/tools/test-runner/package.json",
+          "packages/tools/test-runner/src/cli/index.ts",
+          "packages/tools/test-runner/src/index.ts",
+          "packages/utils/coverage-aggregator/jest.config.js",
+          "packages/utils/coverage-aggregator/package.json",
+          "packages/utils/coverage-aggregator/src/index.ts",
+          "packages/utils/dependency-analyzer/jest.config.js",
+          "packages/utils/dependency-analyzer/package.json",
+          "packages/utils/dependency-analyzer/src/index.ts",
+          "packages/utils/metric-collector/jest.config.js",
+          "packages/utils/metric-collector/package.json",
+          "packages/utils/pattern-recognizer/jest.config.js",
+          "packages/utils/pattern-recognizer/package.json",
+          "packages/utils/pattern-recognizer/src/index.ts",
+          "packages/utils/progress-tracker/jest.config.js",
+          "packages/utils/progress-tracker/package.json",
+          "packages/utils/progress-tracker/src/index.ts",
+          "packages/utils/report-generator/jest.config.js",
+          "packages/utils/report-generator/package.json",
+          "packages/utils/resource-calculator/jest.config.js",
+          "packages/utils/resource-calculator/package.json",
+          "packages/utils/task-scheduler/jest.config.js",
+          "packages/utils/task-scheduler/package.json",
+          "packages/utils/work-divider/jest.config.js",
+          "packages/utils/work-divider/package.json",
+          "packages/utils/work-divider/src/index.ts"
+        ],
+        "untracked_files": [
+          "packages/utils/coverage-aggregator/src/__tests__/",
+          "packages/utils/dependency-analyzer/src/__tests__/",
+          "packages/utils/metric-collector/src/__tests__/",
+          "packages/utils/pattern-recognizer/src/__tests__/",
+          "packages/utils/progress-tracker/src/__tests__/",
+          "packages/utils/report-generator/src/__tests__/",
+          "packages/utils/resource-calculator/src/__tests__/",
+          "packages/utils/task-scheduler/src/__tests__/",
+          "packages/utils/work-divider/src/__tests__/",
+          "temp-scripts/"
+        ],
+        "branches": [
+          "feat/parallel-testing-utilities",
+          "feature/integrate-all-repos-20250819",
+          "fix/linting-errors",
+          "main",
+          "remotes/origin/feat/parallel-testing-utilities",
+          "remotes/origin/feature/integrate-all-repos-20250819",
+          "remotes/origin/main"
+        ],
+        "current_branch": "feat/parallel-testing-utilities"
+      },
+      "key_files": {
+        "package.json": "packages/modules/autonomy/package.json",
+        "requirements.txt": "packages/modules/autonomy/docs/requirements.txt"
+      },
+      "technologies": [
+        "Python",
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        }
+      ],
+      "dependencies": {
+        "npm": []
+      }
+    }
+  },
+  "recent_decisions": [
+    {
+      "id": "20250821_213815",
+      "timestamp": "2025-08-21T21:38:15.048882",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_213815. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_201621",
+      "timestamp": "2025-08-21T20:16:21.151058",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_201621. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_174417",
+      "timestamp": "2025-08-21T17:44:17.400952",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_174417. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_153707",
+      "timestamp": "2025-08-21T15:37:07.326926",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_153707. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_143724",
+      "timestamp": "2025-08-21T14:37:24.067816",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_143724. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_114246",
+      "timestamp": "2025-08-21T11:42:46.131479",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_114246. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_033714",
+      "timestamp": "2025-08-21T03:37:14.072005",
+      "project": "caia",
+      "task": "CI/CD Pipeline Partially Fixed",
+      "status": "in_progress",
+      "details": "Successfully resolved merge conflicts and added package-lock.json to repository. Fixed multiple dependency issues including invalid packages (emotion, @sats/core, @dsazz/mcp-jira) and updated outdated versions. Tests are now running but failing due to Nx post-install script issues. Main improvements: (1) package-lock.json now committed per industry standards, (2) CI can use npm ci for faster installs, (3) resolved all merge conflicts. Remaining issue: Nx native module installation in CI environment.",
+      "completion_percentage": 80,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_022424",
+      "timestamp": "2025-08-21T02:24:24.501750",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_022424. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    }
+  ],
+  "summary": {
+    "total_projects": 3,
+    "active_projects": 1,
+    "total_commits": 0,
+    "total_todos": 66,
+    "total_recent_changes": 35
+  },
+  "changes_since_last": {
+    "new_projects": [
+      "temp-scripts",
+      "standalone-apps",
+      "caia"
+    ],
+    "removed_projects": [],
+    "new_commits": 0,
+    "new_todos": 0,
+    "new_decisions": 8
+  }
+}

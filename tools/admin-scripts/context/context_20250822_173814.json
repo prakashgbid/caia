@@ -1,0 +1,2235 @@
+{
+  "timestamp": "2025-08-22T17:38:14.234369",
+  "hours_covered": 1,
+  "projects": {
+    "temp-scripts": {
+      "name": "temp-scripts",
+      "path": "/Users/MAC/Documents/projects/temp-scripts",
+      "last_modified": "2025-08-19T02:47:34.234241",
+      "size_bytes": 0,
+      "file_count": 0,
+      "directory_count": 0,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "standalone-apps": {
+      "name": "standalone-apps",
+      "path": "/Users/MAC/Documents/projects/standalone-apps",
+      "last_modified": "2025-08-19T02:47:34.204354",
+      "size_bytes": 2595752,
+      "file_count": 244,
+      "directory_count": 90,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {
+        "package.json": "roulette-community/package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [
+        {
+          "file": "roulette-community/src/app/layout.tsx",
+          "line": 31,
+          "content": "// TODO: Get user from auth context when implementing authentication"
+        },
+        {
+          "file": "roulette-community/src/features/currency/service.ts",
+          "line": 262,
+          "content": "// TODO: Integrate with actual payment processor (Stripe)"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 478,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 492,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 550,
+          "content": "upsellRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 551,
+          "content": "churnRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 552,
+          "content": "reactivationRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 556,
+          "content": "refundRate: 0, // TODO: Track refunds"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 557,
+          "content": "paymentFailureRate: 0, // TODO: Track failed payments"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 575,
+          "content": "// TODO: Implement more sophisticated calculations"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 621,
+          "content": "// TODO: Implement growth calculations"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "@next/font",
+          "@radix-ui/react-avatar",
+          "@radix-ui/react-checkbox",
+          "@radix-ui/react-collapsible",
+          "@radix-ui/react-dialog",
+          "@radix-ui/react-dropdown-menu",
+          "@radix-ui/react-icons",
+          "@radix-ui/react-label",
+          "@radix-ui/react-navigation-menu",
+          "@radix-ui/react-progress",
+          "@radix-ui/react-separator",
+          "@radix-ui/react-slot",
+          "@radix-ui/react-tabs",
+          "@radix-ui/react-toast",
+          "@react-email/components",
+          "@sentry/nextjs",
+          "@supabase/auth-ui-react",
+          "@supabase/auth-ui-shared",
+          "@supabase/ssr",
+          "@supabase/supabase-js",
+          "@tanstack/react-query",
+          "@types/react",
+          "@types/react-dom",
+          "@types/uuid",
+          "@types/zxcvbn",
+          "@upstash/redis",
+          "autoprefixer",
+          "class-variance-authority",
+          "cloudinary",
+          "clsx",
+          "contentful",
+          "date-fns",
+          "dotenv",
+          "framer-motion",
+          "lucide-react",
+          "next",
+          "postcss",
+          "react",
+          "react-dom",
+          "react-hook-form",
+          "resend",
+          "socket.io",
+          "socket.io-client",
+          "stripe",
+          "tailwind-merge",
+          "tailwindcss",
+          "tailwindcss-animate",
+          "typescript",
+          "uuid",
+          "zustand",
+          "zxcvbn"
+        ]
+      }
+    },
+    "caia": {
+      "name": "caia",
+      "path": "/Users/MAC/Documents/projects/caia",
+      "last_modified": "2025-08-22T17:12:28.024992",
+      "size_bytes": 7727894,
+      "file_count": 1207,
+      "directory_count": 507,
+      "recent_changes": [
+        {
+          "file": "NPM_PUBLISHING_READY.md",
+          "modified": "2025-08-22T17:12:27.945991"
+        },
+        {
+          "file": "AGENT-ACTIVATION.md",
+          "modified": "2025-08-22T17:12:27.945461"
+        },
+        {
+          "file": "test-activation.js",
+          "modified": "2025-08-22T17:12:28.024752"
+        },
+        {
+          "file": "turbo.json",
+          "modified": "2025-08-22T17:12:28.024962"
+        },
+        {
+          "file": "README.md",
+          "modified": "2025-08-22T17:12:27.947954"
+        },
+        {
+          "file": "package-lock.json",
+          "modified": "2025-08-22T17:30:18.314854"
+        },
+        {
+          "file": "package.json",
+          "modified": "2025-08-22T17:12:27.959177"
+        },
+        {
+          "file": "CONTRIBUTING.md",
+          "modified": "2025-08-22T17:12:27.945724"
+        },
+        {
+          "file": "run-activation.js",
+          "modified": "2025-08-22T17:12:28.019474"
+        },
+        {
+          "file": "typedoc.json",
+          "modified": "2025-08-22T17:12:28.025161"
+        },
+        {
+          "file": "PACKAGES.md",
+          "modified": "2025-08-22T17:12:27.946347"
+        },
+        {
+          "file": "lerna.json",
+          "modified": "2025-08-22T17:12:27.956948"
+        },
+        {
+          "file": "temp-scripts/migration_batch.py",
+          "modified": "2025-08-22T17:12:28.023798"
+        },
+        {
+          "file": "temp-scripts/migrate_agents.py",
+          "modified": "2025-08-22T17:12:28.023660"
+        },
+        {
+          "file": "temp-scripts/migrate-cc-agents-to-caia.sh",
+          "modified": "2025-08-22T17:12:28.023477"
+        },
+        {
+          "file": "PROGRESS/2025-08/daily/2025-08-19.json",
+          "modified": "2025-08-22T17:12:27.947275"
+        },
+        {
+          "file": "PROGRESS/2025-08/daily/2025-08-21.json",
+          "modified": "2025-08-22T17:12:27.947469"
+        },
+        {
+          "file": "agents/connectors/chatgpt-access/README.md",
+          "modified": "2025-08-22T17:12:27.948360"
+        },
+        {
+          "file": "agents/connectors/jira-automation/README.md",
+          "modified": "2025-08-22T17:12:27.948572"
+        },
+        {
+          "file": "agents/connectors/jira-connect/index.js",
+          "modified": "2025-08-22T17:12:27.949169"
+        },
+        {
+          "file": "agents/connectors/jira-connect/README.md",
+          "modified": "2025-08-22T17:12:27.948778"
+        },
+        {
+          "file": "agents/connectors/jira-connect/package.json",
+          "modified": "2025-08-22T17:12:27.949404"
+        },
+        {
+          "file": "agents/orchestrators/project-director/README.md",
+          "modified": "2025-08-22T17:12:27.949765"
+        },
+        {
+          "file": "agents/sme/ai-engineer/README.md",
+          "modified": "2025-08-22T17:12:27.950007"
+        },
+        {
+          "file": "docs/frontend-monitoring-summary.md",
+          "modified": "2025-08-22T17:12:27.955659"
+        },
+        {
+          "file": "docs/ORCHESTRA-POSITIONING.md",
+          "modified": "2025-08-22T17:12:27.953373"
+        },
+        {
+          "file": "docs/PHASE2-OVERLAP-ANALYSIS.md",
+          "modified": "2025-08-22T17:12:27.953720"
+        },
+        {
+          "file": "docs/CAIA-ARCHITECTURE.md",
+          "modified": "2025-08-22T17:12:27.951370"
+        },
+        {
+          "file": "docs/AGENT_DEVELOPMENT.md",
+          "modified": "2025-08-22T17:12:27.950427"
+        },
+        {
+          "file": "docs/API.md",
+          "modified": "2025-08-22T17:12:27.951017"
+        },
+        {
+          "file": "docs/PRISM-API-DESIGN.md",
+          "modified": "2025-08-22T17:12:27.954289"
+        },
+        {
+          "file": "docs/CAIA-VS-GCP-ANALYSIS.md",
+          "modified": "2025-08-22T17:12:27.951618"
+        },
+        {
+          "file": "docs/README-SUPER-AGENT.md",
+          "modified": "2025-08-22T17:12:27.954569"
+        },
+        {
+          "file": "docs/frontend-monitoring-specifications.md",
+          "modified": "2025-08-22T17:12:27.955460"
+        },
+        {
+          "file": "docs/AGENT_INTEGRATION_SPECS.md",
+          "modified": "2025-08-22T17:12:27.950717"
+        },
+        {
+          "file": "docs/ECOSYSTEM-STRATEGY.md",
+          "modified": "2025-08-22T17:12:27.951901"
+        },
+        {
+          "file": "docs/GETTING_STARTED.md",
+          "modified": "2025-08-22T17:12:27.952747"
+        },
+        {
+          "file": "docs/PR-WORKFLOW.md",
+          "modified": "2025-08-22T17:12:27.953979"
+        },
+        {
+          "file": "docs/ENV-TO-GCP-MIGRATION-MAPPING.md",
+          "modified": "2025-08-22T17:12:27.952119"
+        },
+        {
+          "file": "docs/SUPERLLM-IMPLEMENTATION-PLAN.md",
+          "modified": "2025-08-22T17:12:27.954994"
+        },
+        {
+          "file": "docs/NPM_SETUP.md",
+          "modified": "2025-08-22T17:12:27.953014"
+        },
+        {
+          "file": "docs/frontend-implementation-guide.md",
+          "modified": "2025-08-22T17:12:27.955269"
+        },
+        {
+          "file": "docs/SUPERLLM-ARCHITECTURE-ANALYSIS.md",
+          "modified": "2025-08-22T17:12:27.954830"
+        },
+        {
+          "file": "docs/GCP_FRONTEND_MIGRATION_STRATEGY.md",
+          "modified": "2025-08-22T17:12:27.952282"
+        },
+        {
+          "file": "docs/PHASE2-GCP-MIGRATION-COMPREHENSIVE.md",
+          "modified": "2025-08-22T17:12:27.953546"
+        },
+        {
+          "file": "docs/GCP_MIGRATION_ANALYSIS.md",
+          "modified": "2025-08-22T17:12:27.952523"
+        },
+        {
+          "file": "examples/paraforge-workflow.js",
+          "modified": "2025-08-22T17:12:27.955931"
+        },
+        {
+          "file": "examples/todo-app/index.js",
+          "modified": "2025-08-22T17:12:27.956324"
+        },
+        {
+          "file": "examples/todo-app/package.json",
+          "modified": "2025-08-22T17:12:27.956563"
+        },
+        {
+          "file": "scripts/quick-activation-report.js",
+          "modified": "2025-08-22T17:12:28.021657"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "modified": "2025-08-22T17:12:28.019933"
+        },
+        {
+          "file": "scripts/npm-publish.sh",
+          "modified": "2025-08-22T17:12:28.021119"
+        },
+        {
+          "file": "scripts/prepare-npm-publish.sh",
+          "modified": "2025-08-22T17:12:28.021332"
+        },
+        {
+          "file": "scripts/batch-activate.js",
+          "modified": "2025-08-22T17:12:28.020483"
+        },
+        {
+          "file": "scripts/README.md",
+          "modified": "2025-08-22T17:12:28.019763"
+        },
+        {
+          "file": "scripts/verify-packages.sh",
+          "modified": "2025-08-22T17:12:28.022906"
+        },
+        {
+          "file": "scripts/test-monorepo.sh",
+          "modified": "2025-08-22T17:12:28.022151"
+        },
+        {
+          "file": "scripts/system-summary.js",
+          "modified": "2025-08-22T17:12:28.021959"
+        },
+        {
+          "file": "scripts/compare-performance.sh",
+          "modified": "2025-08-22T17:12:28.020957"
+        },
+        {
+          "file": "scripts/validate-agents.js",
+          "modified": "2025-08-22T17:12:28.022299"
+        },
+        {
+          "file": "scripts/activate-all.js",
+          "modified": "2025-08-22T17:12:28.020193"
+        },
+        {
+          "file": "packages/ui/monitoring-dashboard/README.md",
+          "modified": "2025-08-22T17:12:28.016927"
+        },
+        {
+          "file": "packages/ui/monitoring-dashboard/package.json",
+          "modified": "2025-08-22T17:12:28.017061"
+        },
+        {
+          "file": "packages/tools/monorepo-test-orchestrator/src/cli.ts",
+          "modified": "2025-08-22T17:30:34.179735"
+        },
+        {
+          "file": "packages/tools/monorepo-test-orchestrator/src/index.ts",
+          "modified": "2025-08-22T17:31:12.252327"
+        },
+        {
+          "file": "packages/tools/monorepo-test-orchestrator/src/dashboard/terminal-ui.ts",
+          "modified": "2025-08-22T17:30:39.823653"
+        },
+        {
+          "file": "packages/tools/monorepo-test-orchestrator/src/dashboard/web-server.ts",
+          "modified": "2025-08-22T17:30:46.898776"
+        },
+        {
+          "file": "packages/tools/admin/CLAUDE_CCO_INSTRUCTIONS.md",
+          "modified": "2025-08-22T17:12:28.003698"
+        },
+        {
+          "file": "packages/tools/admin/CCU_IMPLEMENTATION_SUMMARY.md",
+          "modified": "2025-08-22T17:12:28.003551"
+        },
+        {
+          "file": "packages/tools/admin/ADMIN_SHORTCUTS_GUIDE.md",
+          "modified": "2025-08-22T17:12:28.003129"
+        },
+        {
+          "file": "packages/tools/admin/README.md",
+          "modified": "2025-08-22T17:12:28.003896"
+        },
+        {
+          "file": "packages/tools/admin/ALL_ADMIN_TASKS.md",
+          "modified": "2025-08-22T17:12:28.003369"
+        },
+        {
+          "file": "packages/tools/admin/package.json",
+          "modified": "2025-08-22T17:12:28.004025"
+        },
+        {
+          "file": "packages/tools/admin/scripts/realtime_monitor.py",
+          "modified": "2025-08-22T17:12:28.012378"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_aggregator.py",
+          "modified": "2025-08-22T17:12:28.005264"
+        },
+        {
+          "file": "packages/tools/admin/scripts/enable_cco_integration.sh",
+          "modified": "2025-08-22T17:12:28.010469"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "modified": "2025-08-22T17:12:28.009183"
+        },
+        {
+          "file": "packages/tools/admin/scripts/test_cco_integration.sh",
+          "modified": "2025-08-22T17:12:28.013046"
+        },
+        {
+          "file": "packages/tools/admin/scripts/admin_dashboard.py",
+          "modified": "2025-08-22T17:12:28.004318"
+        },
+        {
+          "file": "packages/tools/admin/scripts/log_decision.py",
+          "modified": "2025-08-22T17:12:28.010888"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "modified": "2025-08-22T17:12:28.012098"
+        },
+        {
+          "file": "packages/tools/admin/scripts/start_context_daemon.sh",
+          "modified": "2025-08-22T17:12:28.012760"
+        },
+        {
+          "file": "packages/tools/admin/scripts/setup_caia_aliases.sh",
+          "modified": "2025-08-22T17:12:28.012635"
+        },
+        {
+          "file": "packages/tools/admin/scripts/admin_menu.sh",
+          "modified": "2025-08-22T17:12:28.004499"
+        },
+        {
+          "file": "packages/tools/admin/scripts/stop_context_daemon.sh",
+          "modified": "2025-08-22T17:12:28.012917"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia-session-startup.sh",
+          "modified": "2025-08-22T17:12:28.005062"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "modified": "2025-08-22T17:12:28.008884"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_status.sh",
+          "modified": "2025-08-22T17:12:28.007555"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_tracker.py",
+          "modified": "2025-08-22T17:12:28.007392"
+        },
+        {
+          "file": "packages/tools/admin/scripts/progress_to_web.py",
+          "modified": "2025-08-22T17:12:28.011557"
+        },
+        {
+          "file": "packages/tools/admin/scripts/cco_config_implementation.js",
+          "modified": "2025-08-22T17:12:28.009701"
+        },
+        {
+          "file": "packages/tools/admin/scripts/ccu_config_orchestrator.py",
+          "modified": "2025-08-22T17:12:28.009848"
+        },
+        {
+          "file": "packages/tools/admin/scripts/qa_automation.py",
+          "modified": "2025-08-22T17:12:28.011831"
+        },
+        {
+          "file": "packages/tools/admin/scripts/verify_cco.sh",
+          "modified": "2025-08-22T17:12:28.013585"
+        },
+        {
+          "file": "packages/tools/admin/scripts/implement_missing_configs.py",
+          "modified": "2025-08-22T17:12:28.010711"
+        },
+        {
+          "file": "packages/tools/admin/scripts/progress_logger.py",
+          "modified": "2025-08-22T17:12:28.011401"
+        },
+        {
+          "file": "packages/tools/admin/scripts/test_ccu_integration.sh",
+          "modified": "2025-08-22T17:12:28.013337"
+        },
+        {
+          "file": "packages/tools/admin/scripts/daily_update_check.py",
+          "modified": "2025-08-22T17:12:28.010122"
+        },
+        {
+          "file": "packages/tools/admin/scripts/ecosystem_progress_dashboard.py",
+          "modified": "2025-08-22T17:12:28.010281"
+        },
+        {
+          "file": "packages/tools/admin/scripts/monorepo_manager.py",
+          "modified": "2025-08-22T17:12:28.011048"
+        },
+        {
+          "file": "packages/tools/admin/scripts/parallel_config_implementor.py",
+          "modified": "2025-08-22T17:12:28.011222"
+        },
+        {
+          "file": "packages/tools/admin/scripts/cco_auto_detector.py",
+          "modified": "2025-08-22T17:12:28.009391"
+        },
+        {
+          "file": "packages/tools/admin/scripts/quick_status.sh",
+          "modified": "2025-08-22T17:12:28.012225"
+        },
+        {
+          "file": "packages/tools/admin/scripts/automated_progress_collector.py",
+          "modified": "2025-08-22T17:12:28.004846"
+        },
+        {
+          "file": "packages/tools/training-system/README.md",
+          "modified": "2025-08-22T17:12:28.014526"
+        },
+        {
+          "file": "packages/tools/training-system/package.json",
+          "modified": "2025-08-22T17:12:28.016353"
+        },
+        {
+          "file": "packages/tools/training-system/index.ts",
+          "modified": "2025-08-22T17:12:28.015264"
+        },
+        {
+          "file": "packages/tools/training-system/types/index.ts",
+          "modified": "2025-08-22T17:12:28.016482"
+        },
+        {
+          "file": "packages/tools/training-system/core/decision-engine/DecisionEngine.ts",
+          "modified": "2025-08-22T17:12:28.014832"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "modified": "2025-08-22T17:12:28.015047"
+        },
+        {
+          "file": "packages/tools/training-system/utils/Logger.ts",
+          "modified": "2025-08-22T17:12:28.016608"
+        },
+        {
+          "file": "packages/tools/training-system/models/google/GoogleProvider.ts",
+          "modified": "2025-08-22T17:12:28.015746"
+        },
+        {
+          "file": "packages/tools/training-system/models/anthropic/AnthropicProvider.ts",
+          "modified": "2025-08-22T17:12:28.015520"
+        },
+        {
+          "file": "packages/tools/training-system/models/openai/OpenAIProvider.ts",
+          "modified": "2025-08-22T17:12:28.016127"
+        },
+        {
+          "file": "packages/tools/app-platform/README.md",
+          "modified": "2025-08-22T17:12:28.013995"
+        },
+        {
+          "file": "packages/tools/app-platform/package.json",
+          "modified": "2025-08-22T17:12:28.014215"
+        },
+        {
+          "file": "packages/core/jest.config.js",
+          "modified": "2025-08-22T17:12:27.983278"
+        },
+        {
+          "file": "packages/core/README.md",
+          "modified": "2025-08-22T17:12:27.982664"
+        },
+        {
+          "file": "packages/core/package.json",
+          "modified": "2025-08-22T17:12:27.997180"
+        },
+        {
+          "file": "packages/core/tsconfig.json",
+          "modified": "2025-08-22T17:12:28.000072"
+        },
+        {
+          "file": "packages/core/memory-enhanced/__init__.py",
+          "modified": "2025-08-22T17:12:27.983432"
+        },
+        {
+          "file": "packages/core/memory-enhanced/package.json",
+          "modified": "2025-08-22T17:12:27.996037"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/action_hooks.py",
+          "modified": "2025-08-22T17:12:27.990095"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/metrics.py",
+          "modified": "2025-08-22T17:12:27.992592"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/command_approval.py",
+          "modified": "2025-08-22T17:12:27.990806"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/self_learning.py",
+          "modified": "2025-08-22T17:12:27.995063"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/orchestrator_adapter.py",
+          "modified": "2025-08-22T17:12:27.993910"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/memory_persistence.py",
+          "modified": "2025-08-22T17:12:27.992357"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/langchain_engine.py",
+          "modified": "2025-08-22T17:12:27.991034"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/task_planner.py",
+          "modified": "2025-08-22T17:12:27.995319"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/osa_minimal.py",
+          "modified": "2025-08-22T17:12:27.994649"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/__init__.py",
+          "modified": "2025-08-22T17:12:27.989782"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/osa_autonomous.py",
+          "modified": "2025-08-22T17:12:27.994415"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/logger.py",
+          "modified": "2025-08-22T17:12:27.991531"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/memory_adapter.py",
+          "modified": "2025-08-22T17:12:27.992144"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/thinking_states.py",
+          "modified": "2025-08-22T17:12:27.995583"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/llm_orchestrator.py",
+          "modified": "2025-08-22T17:12:27.991349"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/agent_orchestrator.py",
+          "modified": "2025-08-22T17:12:27.990250"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/loguru_adapter.py",
+          "modified": "2025-08-22T17:12:27.991745"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/mcp_client.py",
+          "modified": "2025-08-22T17:12:27.991922"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/readiness.py",
+          "modified": "2025-08-22T17:12:27.994819"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/osa.py",
+          "modified": "2025-08-22T17:12:27.994080"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "modified": "2025-08-22T17:12:27.990528"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/modules/thinking.py",
+          "modified": "2025-08-22T17:12:27.993770"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/modules/architecture_reviewer.py",
+          "modified": "2025-08-22T17:12:27.992926"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/modules/learning.py",
+          "modified": "2025-08-22T17:12:27.993531"
+        },
+        {
+          "file": "packages/core/memory-enhanced/providers/__init__.py",
+          "modified": "2025-08-22T17:12:27.996195"
+        },
+        {
+          "file": "packages/core/memory-enhanced/providers/openai_provider.py",
+          "modified": "2025-08-22T17:12:27.997054"
+        },
+        {
+          "file": "packages/core/memory-enhanced/providers/ollama_provider.py",
+          "modified": "2025-08-22T17:12:27.996878"
+        },
+        {
+          "file": "packages/core/memory-enhanced/providers/anthropic_provider.py",
+          "modified": "2025-08-22T17:12:27.996373"
+        },
+        {
+          "file": "packages/core/memory-enhanced/providers/manager.py",
+          "modified": "2025-08-22T17:12:27.996705"
+        },
+        {
+          "file": "packages/core/memory-enhanced/providers/base.py",
+          "modified": "2025-08-22T17:12:27.996539"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/parallel_development_orchestrator.py",
+          "modified": "2025-08-22T17:12:27.987322"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/omnimind_agent.py",
+          "modified": "2025-08-22T17:12:27.986453"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/automation_qa_agent.py",
+          "modified": "2025-08-22T17:12:27.984722"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/site_architecture_specialist.py",
+          "modified": "2025-08-22T17:12:27.988591"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/registry.py",
+          "modified": "2025-08-22T17:12:27.987997"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/parallel_sprint_planner.py",
+          "modified": "2025-08-22T17:12:27.987481"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/__init__.py",
+          "modified": "2025-08-22T17:12:27.984394"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/tester_fullstack_agents.py",
+          "modified": "2025-08-22T17:12:27.988892"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "modified": "2025-08-22T17:12:27.986897"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/hybrid_workflow_orchestrator.py",
+          "modified": "2025-08-22T17:12:27.986207"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/roulette_committee_workflow.py",
+          "modified": "2025-08-22T17:12:27.988409"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/vendor_integration_manager.py",
+          "modified": "2025-08-22T17:12:27.989502"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/ux_ui_designer_agents.py",
+          "modified": "2025-08-22T17:12:27.989182"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/git_workflow_manager.py",
+          "modified": "2025-08-22T17:12:27.985933"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/roulette_committee_po.py",
+          "modified": "2025-08-22T17:12:27.988225"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/business_analyst_agent.py",
+          "modified": "2025-08-22T17:12:27.985350"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_solution_finder.py",
+          "modified": "2025-08-22T17:12:27.987157"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/rc_workflow_orchestrator.py",
+          "modified": "2025-08-22T17:12:27.987773"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/base.py",
+          "modified": "2025-08-22T17:12:27.984990"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/cross_project_product_owner.py",
+          "modified": "2025-08-22T17:12:27.985669"
+        },
+        {
+          "file": "packages/core/memory-enhanced/orchestrators/master_orchestrator.py",
+          "modified": "2025-08-22T17:12:27.995909"
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/auto_coder_adapter.py",
+          "modified": "2025-08-22T17:12:27.983684"
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/deep_reasoner_adapter.py",
+          "modified": "2025-08-22T17:12:27.983808"
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/o_s_a_autonomous_adapter.py",
+          "modified": "2025-08-22T17:12:27.983941"
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/smart_planner_adapter.py",
+          "modified": "2025-08-22T17:12:27.984219"
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/self_learning_adapter.py",
+          "modified": "2025-08-22T17:12:27.984085"
+        },
+        {
+          "file": "packages/core/tests/setup.ts",
+          "modified": "2025-08-22T17:12:27.999957"
+        },
+        {
+          "file": "packages/core/examples/usage.ts",
+          "modified": "2025-08-22T17:12:27.983151"
+        },
+        {
+          "file": "packages/core/examples/SimpleAgent.ts",
+          "modified": "2025-08-22T17:12:27.982937"
+        },
+        {
+          "file": "packages/core/src/index.ts",
+          "modified": "2025-08-22T17:12:27.998697"
+        },
+        {
+          "file": "packages/core/src/types/index.ts",
+          "modified": "2025-08-22T17:12:27.999739"
+        },
+        {
+          "file": "packages/core/src/plugin/PluginManager.ts",
+          "modified": "2025-08-22T17:12:27.999440"
+        },
+        {
+          "file": "packages/core/src/agent/BaseAgent.ts",
+          "modified": "2025-08-22T17:12:27.998097"
+        },
+        {
+          "file": "packages/core/src/communication/MessageBus.ts",
+          "modified": "2025-08-22T17:12:27.998536"
+        },
+        {
+          "file": "packages/core/src/orchestrator/Orchestrator.ts",
+          "modified": "2025-08-22T17:12:27.998977"
+        },
+        {
+          "file": "packages/agents/solution-architect/jest.config.js",
+          "modified": "2025-08-22T17:12:27.978878"
+        },
+        {
+          "file": "packages/agents/solution-architect/README.md",
+          "modified": "2025-08-22T17:12:27.978786"
+        },
+        {
+          "file": "packages/agents/solution-architect/package.json",
+          "modified": "2025-08-22T17:12:27.979079"
+        },
+        {
+          "file": "packages/agents/solution-architect/tsconfig.json",
+          "modified": "2025-08-22T17:12:27.981742"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/SolutionArchitectAgent.ts",
+          "modified": "2025-08-22T17:12:27.979462"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/index.ts",
+          "modified": "2025-08-22T17:12:27.980108"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/types/SolutionTypes.ts",
+          "modified": "2025-08-22T17:12:27.981655"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/__tests__/setup.ts",
+          "modified": "2025-08-22T17:12:27.979986"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/__tests__/SolutionArchitectAgent.test.ts",
+          "modified": "2025-08-22T17:12:27.979749"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/ComplianceAnalyzer.ts",
+          "modified": "2025-08-22T17:12:27.980579"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/CostAnalyzer.ts",
+          "modified": "2025-08-22T17:12:27.980705"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/ArchitectureGenerator.ts",
+          "modified": "2025-08-22T17:12:27.980452"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/SecurityAnalyzer.ts",
+          "modified": "2025-08-22T17:12:27.981079"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/DiagramGenerator.ts",
+          "modified": "2025-08-22T17:12:27.980832"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/TechnologySelector.ts",
+          "modified": "2025-08-22T17:12:27.981303"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/PerformanceAnalyzer.ts",
+          "modified": "2025-08-22T17:12:27.980954"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/jest.config.js",
+          "modified": "2025-08-22T17:12:27.963810"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/README.md",
+          "modified": "2025-08-22T17:12:27.963686"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/package.json",
+          "modified": "2025-08-22T17:12:27.964026"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/tsconfig.json",
+          "modified": "2025-08-22T17:12:27.967597"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/FrontendEngineerAgent.ts",
+          "modified": "2025-08-22T17:12:27.964399"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/index.ts",
+          "modified": "2025-08-22T17:12:27.964685"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/types/FrontendTypes.ts",
+          "modified": "2025-08-22T17:12:27.967357"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/__tests__/setup.ts",
+          "modified": "2025-08-22T17:12:27.964549"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/TestingService.ts",
+          "modified": "2025-08-22T17:12:27.966447"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/PerformanceOptimizer.ts",
+          "modified": "2025-08-22T17:12:27.965923"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/ComponentGenerator.ts",
+          "modified": "2025-08-22T17:12:27.965391"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/UXService.ts",
+          "modified": "2025-08-22T17:12:27.966983"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/FormService.ts",
+          "modified": "2025-08-22T17:12:27.965653"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/StateManager.ts",
+          "modified": "2025-08-22T17:12:27.966321"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/AccessibilityService.ts",
+          "modified": "2025-08-22T17:12:27.964930"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/BuildService.ts",
+          "modified": "2025-08-22T17:12:27.965155"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/ThemeService.ts",
+          "modified": "2025-08-22T17:12:27.966568"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/ResponsiveDesigner.ts",
+          "modified": "2025-08-22T17:12:27.966166"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/UIDesigner.ts",
+          "modified": "2025-08-22T17:12:27.966851"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/DeploymentService.ts",
+          "modified": "2025-08-22T17:12:27.965523"
+        },
+        {
+          "file": "packages/agents/backend-engineer/jest.config.js",
+          "modified": "2025-08-22T17:12:27.960122"
+        },
+        {
+          "file": "packages/agents/backend-engineer/README.md",
+          "modified": "2025-08-22T17:12:27.959843"
+        },
+        {
+          "file": "packages/agents/backend-engineer/package.json",
+          "modified": "2025-08-22T17:12:27.960352"
+        },
+        {
+          "file": "packages/agents/backend-engineer/tsconfig.json",
+          "modified": "2025-08-22T17:12:27.963337"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/BackendEngineerAgent.ts",
+          "modified": "2025-08-22T17:12:27.960714"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/index.ts",
+          "modified": "2025-08-22T17:12:27.961178"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/types/BackendTypes.ts",
+          "modified": "2025-08-22T17:12:27.963093"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/__tests__/setup.ts",
+          "modified": "2025-08-22T17:12:27.961059"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/PerformanceOptimizer.ts",
+          "modified": "2025-08-22T17:12:27.962507"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/AuthenticationService.ts",
+          "modified": "2025-08-22T17:12:27.961555"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/MonitoringService.ts",
+          "modified": "2025-08-22T17:12:27.962392"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/DatabaseMigrator.ts",
+          "modified": "2025-08-22T17:12:27.961931"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/MicroserviceDesigner.ts",
+          "modified": "2025-08-22T17:12:27.962272"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/ApiGenerator.ts",
+          "modified": "2025-08-22T17:12:27.961314"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/MessageQueueService.ts",
+          "modified": "2025-08-22T17:12:27.962149"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/CodeGenerator.ts",
+          "modified": "2025-08-22T17:12:27.961683"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/DatabaseDesigner.ts",
+          "modified": "2025-08-22T17:12:27.961803"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/SecurityService.ts",
+          "modified": "2025-08-22T17:12:27.962723"
+        },
+        {
+          "file": "packages/agents/training-system/package.json",
+          "modified": "2025-08-22T17:12:27.982110"
+        },
+        {
+          "file": "packages/agents/paraforge/package-lock.json",
+          "modified": "2025-08-22T17:12:27.970060"
+        },
+        {
+          "file": "packages/agents/paraforge/package.json",
+          "modified": "2025-08-22T17:12:27.970769"
+        },
+        {
+          "file": "packages/agents/paraforge/tsconfig.json",
+          "modified": "2025-08-22T17:12:27.973339"
+        },
+        {
+          "file": "packages/agents/paraforge/test-compile.js",
+          "modified": "2025-08-22T17:12:27.972761"
+        },
+        {
+          "file": "packages/agents/paraforge/test/integration.test.js",
+          "modified": "2025-08-22T17:12:27.973170"
+        },
+        {
+          "file": "packages/agents/paraforge/bin/paraforge.js",
+          "modified": "2025-08-22T17:12:27.969279"
+        },
+        {
+          "file": "packages/agents/paraforge/src/optimizer/ParallelizationOptimizer.ts",
+          "modified": "2025-08-22T17:12:27.972077"
+        },
+        {
+          "file": "packages/agents/paraforge/src/learning/LearningSystem.ts",
+          "modified": "2025-08-22T17:12:27.971855"
+        },
+        {
+          "file": "packages/agents/paraforge/src/agents/AgentOrchestrator.ts",
+          "modified": "2025-08-22T17:12:27.971080"
+        },
+        {
+          "file": "packages/agents/paraforge/src/agents/JiraConnectWrapper.ts",
+          "modified": "2025-08-22T17:12:27.971426"
+        },
+        {
+          "file": "packages/agents/paraforge/src/utils/logger.ts",
+          "modified": "2025-08-22T17:12:27.972615"
+        },
+        {
+          "file": "packages/agents/paraforge/src/synthesis/SynthesisEngine.ts",
+          "modified": "2025-08-22T17:12:27.972477"
+        },
+        {
+          "file": "packages/agents/paraforge/src/jira/JiraConnector.ts",
+          "modified": "2025-08-22T17:12:27.971595"
+        },
+        {
+          "file": "packages/agents/product-owner/jest.config.js",
+          "modified": "2025-08-22T17:12:27.973877"
+        },
+        {
+          "file": "packages/agents/product-owner/README.md",
+          "modified": "2025-08-22T17:12:27.973742"
+        },
+        {
+          "file": "packages/agents/product-owner/package.json",
+          "modified": "2025-08-22T17:12:27.974102"
+        },
+        {
+          "file": "packages/agents/product-owner/tsconfig.json",
+          "modified": "2025-08-22T17:12:27.978376"
+        },
+        {
+          "file": "packages/agents/product-owner/src/types.ts",
+          "modified": "2025-08-22T17:12:27.974919"
+        },
+        {
+          "file": "packages/agents/product-owner/src/index.ts",
+          "modified": "2025-08-22T17:12:27.974705"
+        },
+        {
+          "file": "packages/agents/product-owner/src/__tests__/index.test.ts",
+          "modified": "2025-08-22T17:12:27.974440"
+        },
+        {
+          "file": "packages/agents/jira-connect/README.md",
+          "modified": "2025-08-22T17:12:27.968226"
+        },
+        {
+          "file": "packages/agents/jira-connect/package.json",
+          "modified": "2025-08-22T17:12:27.968650"
+        },
+        {
+          "file": "packages/agents/jira-connect/src/index.js",
+          "modified": "2025-08-22T17:12:27.968976"
+        },
+        {
+          "file": "packages/utils/paraforge/README.md",
+          "modified": "2025-08-22T17:12:28.018364"
+        },
+        {
+          "file": "packages/utils/paraforge/package.json",
+          "modified": "2025-08-22T17:12:28.019230"
+        },
+        {
+          "file": "packages/utils/paraforge/index.ts",
+          "modified": "2025-08-22T17:12:28.018923"
+        },
+        {
+          "file": "packages/utils/paraforge/core/ParaForgeCore.ts",
+          "modified": "2025-08-22T17:12:28.018723"
+        },
+        {
+          "file": "packages/utils/paraforge/agents/JiraAdminAgent.ts",
+          "modified": "2025-08-22T17:12:28.018637"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/package.json",
+          "modified": "2025-08-22T17:12:28.017642"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/test-compile.js",
+          "modified": "2025-08-22T17:12:28.018145"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/SystemResourceCalculator.ts",
+          "modified": "2025-08-22T17:12:28.018027"
+        },
+        {
+          "file": "packages/integrations/jira/package.json",
+          "modified": "2025-08-22T17:12:28.000458"
+        },
+        {
+          "file": "packages/testing/test-utils/README.md",
+          "modified": "2025-08-22T17:12:28.000783"
+        },
+        {
+          "file": "packages/testing/test-utils/package.json",
+          "modified": "2025-08-22T17:12:28.000921"
+        },
+        {
+          "file": "packages/testing/test-utils/tsconfig.json",
+          "modified": "2025-08-22T17:12:28.002924"
+        },
+        {
+          "file": "packages/testing/test-utils/src/setup.ts",
+          "modified": "2025-08-22T17:12:28.002475"
+        },
+        {
+          "file": "packages/testing/test-utils/src/index.ts",
+          "modified": "2025-08-22T17:12:28.001763"
+        },
+        {
+          "file": "packages/testing/test-utils/src/mocks/agent-mocks.ts",
+          "modified": "2025-08-22T17:12:28.002315"
+        },
+        {
+          "file": "packages/testing/test-utils/src/types/test-types.ts",
+          "modified": "2025-08-22T17:12:28.002668"
+        },
+        {
+          "file": "packages/testing/test-utils/src/core/test-runner.ts",
+          "modified": "2025-08-22T17:12:28.001622"
+        },
+        {
+          "file": "packages/testing/test-utils/src/core/assertion-helpers.ts",
+          "modified": "2025-08-22T17:12:28.001433"
+        },
+        {
+          "file": "packages/testing/test-utils/src/integration/setup-helpers.ts",
+          "modified": "2025-08-22T17:12:28.002040"
+        },
+        {
+          "file": "templates/agent/index.ts.template",
+          "modified": "2025-08-22T17:12:28.024261"
+        },
+        {
+          "file": "templates/agent/test.ts.template",
+          "modified": "2025-08-22T17:12:28.024487"
+        },
+        {
+          "file": "templates/agent/base-agent.ts.template",
+          "modified": "2025-08-22T17:12:28.024023"
+        },
+        {
+          "file": "templates/agent/types.ts.template",
+          "modified": "2025-08-22T17:12:28.024620"
+        }
+      ],
+      "git_info": {
+        "commits": [
+          {
+            "hash": "26c8aa1fce3e9e2bec58a189e8485aad15bc6c3b",
+            "author": "Prakash Tiwari",
+            "email": "prakashmailid@gmail.com",
+            "date": "2025-08-22 17:12:52 -0400",
+            "message": "fix: resolve CODEOWNERS merge conflict"
+          }
+        ],
+        "modified_files": [
+          "ackage-lock.json",
+          "packages/tools/monorepo-test-orchestrator/src/cli.ts",
+          "packages/tools/monorepo-test-orchestrator/src/dashboard/terminal-ui.ts",
+          "packages/tools/monorepo-test-orchestrator/src/dashboard/web-server.ts",
+          "packages/tools/monorepo-test-orchestrator/src/index.ts"
+        ],
+        "untracked_files": [],
+        "branches": [
+          "add-code-reviewers",
+          "feat/parallel-testing-utilities",
+          "feature/integrate-all-repos-20250819",
+          "fix/linting-errors",
+          "main",
+          "setup-ai-reviewers",
+          "remotes/origin/HEAD -> origin/main",
+          "remotes/origin/add-code-reviewers",
+          "remotes/origin/feat/parallel-testing-utilities",
+          "remotes/origin/feature/integrate-all-repos-20250819",
+          "remotes/origin/main",
+          "remotes/origin/setup-ai-reviewers"
+        ],
+        "current_branch": "setup-ai-reviewers"
+      },
+      "key_files": {
+        "package.json": "packages/modules/autonomy/package.json",
+        "requirements.txt": "packages/modules/autonomy/docs/requirements.txt"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js",
+        "Python"
+      ],
+      "todos": [
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "caia/scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "caia/packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "caia/packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 373,
+          "content": "return `export interface ${interfaceName} {\\n  // TODO: Define ${interfaceName} properties\\n  [key: string]: any;\\n}`;"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 447,
+          "content": "// TODO: Implement test for ${method}"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 479,
+          "content": "// TODO: Implement ${methodName} logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 529,
+          "content": "return `${words.charAt(0).toUpperCase() + words.slice(1)} - TODO: Add detailed description`;"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 545,
+          "content": "// TODO: Add TypeScript compilation check"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 684,
+          "content": "// TODO: Add agent-specific initialization logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 692,
+          "content": "// TODO: Add agent-specific cleanup logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 729,
+          "content": "// TODO: Add task cancellation logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 197,
+          "content": "# Scan for TODOs in code files"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 203,
+          "content": "if 'TODO' in line or 'FIXME' in line or 'HACK' in line:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 302,
+          "content": "print(f\"\ud83d\udccc {context['summary']['total_todos']} TODOs found\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 170,
+          "content": "f\"Open TODOs: {context.get('summary', {}).get('total_todos', 0)}\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 207,
+          "content": "# Add critical TODOs"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 211,
+          "content": "if \"FIXME\" in todo[\"content\"] or \"CRITICAL\" in todo[\"content\"]:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 222,
+          "content": "\"## CRITICAL TODOs\""
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 277,
+          "content": "print(f\"Active TODOs: {result['recent_activity']['active_todos']}\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 136,
+          "content": "# Scan for TODOs"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 143,
+          "content": "if 'TODO' in line or 'FIXME' in line:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 288,
+          "content": "actions.append(f\"Address {len(component['todos'])} TODOs\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 351,
+          "content": "f\"Total TODOs: {tracking_data['summary']['total_todos']}\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 421,
+          "content": "\"5. Address critical TODOs in active components\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "packages/tools/admin/scripts/progress_to_web.py",
+          "line": 525,
+          "content": "# TODO: Implement ecosystem-wide publishing to admin repo"
+        },
+        {
+          "file": "packages/tools/training-system/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/agent_orchestrator.py",
+          "line": 483,
+          "content": "# TODO: Implement swarm pattern"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/agent_orchestrator.py",
+          "line": 488,
+          "content": "# TODO: Implement hierarchical pattern"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 274,
+          "content": "code=f\"# TODO: Implement {request.description}\","
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 462,
+          "content": "variables[var] = f\"# TODO: {var}\""
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 708,
+          "content": "# TODO: Implement using {best_solution.name}"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 746,
+          "content": "# Convert absolute MemCore imports to TODO comments"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 749,
+          "content": "r'# TODO: Replace with appropriate import\\n# from \\1 import \\2',"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 762,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 765,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 804,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 853,
+          "content": "# TODO: Add quick start example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1069,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1083,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1168,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1267,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1450,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1473,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1492,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1513,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1517,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1627,
+          "content": "TODO: Document methods"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1653,
+          "content": "TODO: Document components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1657,
+          "content": "TODO: Document data flow"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1674,
+          "content": "TODO: Add real-world examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1696,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1703,
+          "content": "# TODO: Add exports"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_solution_finder.py",
+          "line": 455,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_solution_finder.py",
+          "line": 607,
+          "content": "replacement_code=\"# TODO: Replace with suggested library\","
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/self_learning_adapter.py",
+          "line": 13,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/self_learning_adapter.py",
+          "line": 20,
+          "content": "# TODO: Add exports"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        }
+      ],
+      "dependencies": {
+        "npm": []
+      }
+    }
+  },
+  "recent_decisions": [],
+  "summary": {
+    "total_projects": 3,
+    "active_projects": 1,
+    "total_commits": 1,
+    "total_todos": 180,
+    "total_recent_changes": 288
+  },
+  "changes_since_last": {
+    "new_projects": [
+      "temp-scripts",
+      "standalone-apps",
+      "caia"
+    ],
+    "removed_projects": [],
+    "new_commits": 0,
+    "new_todos": 0,
+    "new_decisions": 0
+  }
+}

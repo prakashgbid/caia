@@ -1,0 +1,2464 @@
+{
+  "timestamp": "2025-08-21T21:56:58.276389",
+  "hours_covered": 1,
+  "projects": {
+    "temp-scripts": {
+      "name": "temp-scripts",
+      "path": "/Users/MAC/Documents/projects/temp-scripts",
+      "last_modified": "2025-08-19T02:47:34.234241",
+      "size_bytes": 0,
+      "file_count": 0,
+      "directory_count": 0,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "standalone-apps": {
+      "name": "standalone-apps",
+      "path": "/Users/MAC/Documents/projects/standalone-apps",
+      "last_modified": "2025-08-19T02:47:34.204354",
+      "size_bytes": 2595752,
+      "file_count": 244,
+      "directory_count": 90,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {
+        "package.json": "roulette-community/package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [
+        {
+          "file": "roulette-community/src/app/layout.tsx",
+          "line": 31,
+          "content": "// TODO: Get user from auth context when implementing authentication"
+        },
+        {
+          "file": "roulette-community/src/features/currency/service.ts",
+          "line": 262,
+          "content": "// TODO: Integrate with actual payment processor (Stripe)"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 478,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 492,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 550,
+          "content": "upsellRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 551,
+          "content": "churnRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 552,
+          "content": "reactivationRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 556,
+          "content": "refundRate: 0, // TODO: Track refunds"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 557,
+          "content": "paymentFailureRate: 0, // TODO: Track failed payments"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 575,
+          "content": "// TODO: Implement more sophisticated calculations"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 621,
+          "content": "// TODO: Implement growth calculations"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "@next/font",
+          "@radix-ui/react-avatar",
+          "@radix-ui/react-checkbox",
+          "@radix-ui/react-collapsible",
+          "@radix-ui/react-dialog",
+          "@radix-ui/react-dropdown-menu",
+          "@radix-ui/react-icons",
+          "@radix-ui/react-label",
+          "@radix-ui/react-navigation-menu",
+          "@radix-ui/react-progress",
+          "@radix-ui/react-separator",
+          "@radix-ui/react-slot",
+          "@radix-ui/react-tabs",
+          "@radix-ui/react-toast",
+          "@react-email/components",
+          "@sentry/nextjs",
+          "@supabase/auth-ui-react",
+          "@supabase/auth-ui-shared",
+          "@supabase/ssr",
+          "@supabase/supabase-js",
+          "@tanstack/react-query",
+          "@types/react",
+          "@types/react-dom",
+          "@types/uuid",
+          "@types/zxcvbn",
+          "@upstash/redis",
+          "autoprefixer",
+          "class-variance-authority",
+          "cloudinary",
+          "clsx",
+          "contentful",
+          "date-fns",
+          "dotenv",
+          "framer-motion",
+          "lucide-react",
+          "next",
+          "postcss",
+          "react",
+          "react-dom",
+          "react-hook-form",
+          "resend",
+          "socket.io",
+          "socket.io-client",
+          "stripe",
+          "tailwind-merge",
+          "tailwindcss",
+          "tailwindcss-animate",
+          "typescript",
+          "uuid",
+          "zustand",
+          "zxcvbn"
+        ]
+      }
+    },
+    "caia": {
+      "name": "caia",
+      "path": "/Users/MAC/Documents/projects/caia",
+      "last_modified": "2025-08-21T21:44:19.163402",
+      "size_bytes": 4222520,
+      "file_count": 932,
+      "directory_count": 478,
+      "recent_changes": [
+        {
+          "file": "package.json",
+          "modified": "2025-08-21T21:44:19.163768"
+        },
+        {
+          "file": "temp-scripts/parallel-test-writer.js",
+          "modified": "2025-08-21T21:44:19.174409"
+        },
+        {
+          "file": "temp-scripts/fix-all-linting.sh",
+          "modified": "2025-08-21T21:44:19.174182"
+        },
+        {
+          "file": "temp-scripts/run-all-tests-parallel.sh",
+          "modified": "2025-08-21T21:44:19.174594"
+        },
+        {
+          "file": "caia/CODE_OF_CONDUCT.md",
+          "modified": "2025-08-21T21:40:52.164046"
+        },
+        {
+          "file": "caia/PARAFORGE-MIGRATION.md",
+          "modified": "2025-08-21T21:40:52.164636"
+        },
+        {
+          "file": "caia/STRUCTURE.md",
+          "modified": "2025-08-21T21:40:52.165087"
+        },
+        {
+          "file": "caia/mkdocs.yml",
+          "modified": "2025-08-21T21:40:52.167284"
+        },
+        {
+          "file": "caia/LICENSE",
+          "modified": "2025-08-21T21:40:52.164446"
+        },
+        {
+          "file": "caia/tsconfig.base.json",
+          "modified": "2025-08-21T21:40:52.230320"
+        },
+        {
+          "file": "caia/IMPLEMENTATION-SUMMARY.md",
+          "modified": "2025-08-21T21:40:52.164369"
+        },
+        {
+          "file": "caia/README.md",
+          "modified": "2025-08-21T21:40:52.164825"
+        },
+        {
+          "file": "caia/CLASSIFICATION-FLOWCHART.md",
+          "modified": "2025-08-21T21:40:52.163955"
+        },
+        {
+          "file": "caia/ROADMAP.md",
+          "modified": "2025-08-21T21:40:52.164924"
+        },
+        {
+          "file": "caia/package.json",
+          "modified": "2025-08-21T21:40:52.167402"
+        },
+        {
+          "file": "caia/DOCUMENTATION.md",
+          "modified": "2025-08-21T21:40:52.164260"
+        },
+        {
+          "file": "caia/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.230397"
+        },
+        {
+          "file": "caia/packages.md",
+          "modified": "2025-08-21T21:40:52.167530"
+        },
+        {
+          "file": "caia/lerna.json",
+          "modified": "2025-08-21T21:40:52.167101"
+        },
+        {
+          "file": "caia/COMPONENT-CLASSIFICATION.md",
+          "modified": "2025-08-21T21:40:52.164160"
+        },
+        {
+          "file": "caia/MIGRATION-STATUS.md",
+          "modified": "2025-08-21T21:40:52.164540"
+        },
+        {
+          "file": "caia/QUICK-STATUS.md",
+          "modified": "2025-08-21T21:40:52.164703"
+        },
+        {
+          "file": "caia/SECURITY.md",
+          "modified": "2025-08-21T21:40:52.165015"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/PARALLELAI_FRAMEWORK_DESIGN.md",
+          "modified": "2025-08-21T21:40:52.228310"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "modified": "2025-08-21T21:40:52.228758"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_launcher_tmux.sh",
+          "modified": "2025-08-21T21:40:52.229816"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/ENHANCEMENT_MATRIX.md",
+          "modified": "2025-08-21T21:40:52.227715"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/LAUNCH_PARALLEL.sh",
+          "modified": "2025-08-21T21:40:52.227970"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/DECISION_FRAMEWORK_VS_CONFIG.md",
+          "modified": "2025-08-21T21:40:52.227248"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/README.md",
+          "modified": "2025-08-21T21:40:52.228457"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/PARALLELAI_ACTION_PLAN.md",
+          "modified": "2025-08-21T21:40:52.228151"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/test_setup.sh",
+          "modified": "2025-08-21T21:40:52.230235"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_orchestrator.py",
+          "modified": "2025-08-21T21:40:52.229969"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallelai_poc.py",
+          "modified": "2025-08-21T21:40:52.230125"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/monitor_dashboard.py",
+          "modified": "2025-08-21T21:40:52.229673"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/configs/core/caia-integration.json",
+          "modified": "2025-08-21T21:40:52.229365"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/configs/hooks/caia-session-startup.sh",
+          "modified": "2025-08-21T21:40:52.229558"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/README.md",
+          "modified": "2025-08-21T21:40:52.222954"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/package.json",
+          "modified": "2025-08-21T21:40:52.223402"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.225069"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/admin/daily-update.js",
+          "modified": "2025-08-21T21:40:52.223129"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/configs/ultimate-config.yaml",
+          "modified": "2025-08-21T21:40:52.223314"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/src/cli.ts",
+          "modified": "2025-08-21T21:40:52.223896"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/src/index.ts",
+          "modified": "2025-08-21T21:40:52.224463"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/src/crawler/ResearchCrawler.ts",
+          "modified": "2025-08-21T21:40:52.224212"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/src/utils/logger.ts",
+          "modified": "2025-08-21T21:40:52.224794"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/src/commands/config-update.ts",
+          "modified": "2025-08-21T21:40:52.224051"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/src/rollback/RollbackManager.ts",
+          "modified": "2025-08-21T21:40:52.224594"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/src/versioning/ConfigVersionManager.ts",
+          "modified": "2025-08-21T21:40:52.224992"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/src/engine/OptimizationEngine.ts",
+          "modified": "2025-08-21T21:40:52.224377"
+        },
+        {
+          "file": "caia/tools/cc-ultimate-config/src/analyzer/ConfigAnalyzer.ts",
+          "modified": "2025-08-21T21:40:52.223614"
+        },
+        {
+          "file": "caia/core/package.json",
+          "modified": "2025-08-21T21:40:52.165741"
+        },
+        {
+          "file": "caia/core/src/types.ts",
+          "modified": "2025-08-21T21:40:52.166119"
+        },
+        {
+          "file": "caia/core/src/index.ts",
+          "modified": "2025-08-21T21:40:52.165888"
+        },
+        {
+          "file": "caia/agents/README.md",
+          "modified": "2025-08-21T21:40:52.165370"
+        },
+        {
+          "file": "caia/agents/AGENT-CATEGORIES.md",
+          "modified": "2025-08-21T21:40:52.165262"
+        },
+        {
+          "file": "caia/agents/react-sme/README.md",
+          "modified": "2025-08-21T21:40:52.165626"
+        },
+        {
+          "file": "caia/agents/npm-connector/package.json",
+          "modified": "2025-08-21T21:40:52.165486"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/TERMINAL-POOL.md",
+          "modified": "2025-08-21T21:40:52.230913"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/README.md",
+          "modified": "2025-08-21T21:40:52.230743"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/package.json",
+          "modified": "2025-08-21T21:40:52.231011"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/memory-profiler.ts",
+          "modified": "2025-08-21T21:40:52.232351"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/CCInstanceManager.ts",
+          "modified": "2025-08-21T21:40:52.231177"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/RateLimitManager.ts",
+          "modified": "2025-08-21T21:40:52.231470"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/WorkDistributor.ts",
+          "modified": "2025-08-21T21:40:52.231821"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/cli.ts",
+          "modified": "2025-08-21T21:40:52.232079"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/index.ts",
+          "modified": "2025-08-21T21:40:52.232209"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/SystemResourceCalculator.ts",
+          "modified": "2025-08-21T21:40:52.231575"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/TerminalPoolManager.ts",
+          "modified": "2025-08-21T21:40:52.231706"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/utils/Logger.ts",
+          "modified": "2025-08-21T21:40:52.232481"
+        },
+        {
+          "file": "caia/docs/CHANGELOG.md",
+          "modified": "2025-08-21T21:40:52.166303"
+        },
+        {
+          "file": "caia/docs/getting-started.md",
+          "modified": "2025-08-21T21:40:52.166570"
+        },
+        {
+          "file": "caia/docs/README.md",
+          "modified": "2025-08-21T21:40:52.166489"
+        },
+        {
+          "file": "caia/docs/index.md",
+          "modified": "2025-08-21T21:40:52.166660"
+        },
+        {
+          "file": "caia/docs/CONTRIBUTING.md",
+          "modified": "2025-08-21T21:40:52.166414"
+        },
+        {
+          "file": "caia/examples/super-agent/claude-code-super-agent.ts",
+          "modified": "2025-08-21T21:40:52.166885"
+        },
+        {
+          "file": "caia/scripts/progress_tracker.py",
+          "modified": "2025-08-21T21:40:52.222440"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "modified": "2025-08-21T21:40:52.221940"
+        },
+        {
+          "file": "caia/scripts/migrate-projects.js",
+          "modified": "2025-08-21T21:40:52.222058"
+        },
+        {
+          "file": "caia/scripts/setup_aliases.sh",
+          "modified": "2025-08-21T21:40:52.222678"
+        },
+        {
+          "file": "caia/packages/agents/chatgpt-autonomous/autonomous_agent_v2.py",
+          "modified": "2025-08-21T21:40:52.168184"
+        },
+        {
+          "file": "caia/packages/agents/chatgpt-autonomous/README.md",
+          "modified": "2025-08-21T21:40:52.167890"
+        },
+        {
+          "file": "caia/packages/agents/chatgpt-autonomous/package.json",
+          "modified": "2025-08-21T21:40:52.168297"
+        },
+        {
+          "file": "caia/packages/agents/chatgpt-autonomous/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.168383"
+        },
+        {
+          "file": "caia/packages/agents/chatgpt-autonomous/autonomous_agent.py",
+          "modified": "2025-08-21T21:40:52.168015"
+        },
+        {
+          "file": "caia/packages/agents/training-system/LICENSE",
+          "modified": "2025-08-21T21:40:52.173018"
+        },
+        {
+          "file": "caia/packages/agents/training-system/README.md",
+          "modified": "2025-08-21T21:40:52.173136"
+        },
+        {
+          "file": "caia/packages/agents/training-system/package.json",
+          "modified": "2025-08-21T21:40:52.173207"
+        },
+        {
+          "file": "caia/packages/agents/training-system/CONTRIBUTING.md",
+          "modified": "2025-08-21T21:40:52.172956"
+        },
+        {
+          "file": "caia/packages/agents/training-system/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.174617"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/index.ts",
+          "modified": "2025-08-21T21:40:52.173792"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/types/index.ts",
+          "modified": "2025-08-21T21:40:52.174410"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "modified": "2025-08-21T21:40:52.173469"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "modified": "2025-08-21T21:40:52.173714"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/utils/Logger.ts",
+          "modified": "2025-08-21T21:40:52.174536"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/models/google/GoogleProvider.ts",
+          "modified": "2025-08-21T21:40:52.174117"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/models/anthropic/AnthropicProvider.ts",
+          "modified": "2025-08-21T21:40:52.173980"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/models/openai/OpenAIProvider.ts",
+          "modified": "2025-08-21T21:40:52.174280"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/PROJECT-SCOPE.md",
+          "modified": "2025-08-21T21:40:52.168813"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/LICENSE",
+          "modified": "2025-08-21T21:40:52.168717"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/TODO-IMPLEMENTATION.md",
+          "modified": "2025-08-21T21:40:52.169112"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/README.md",
+          "modified": "2025-08-21T21:40:52.168997"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/CAIA-ALIGNMENT.md",
+          "modified": "2025-08-21T21:40:52.168658"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/package.json",
+          "modified": "2025-08-21T21:40:52.171175"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/PROJECT-TOOLS.md",
+          "modified": "2025-08-21T21:40:52.168902"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.172835"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/README.md",
+          "modified": "2025-08-21T21:40:52.169248"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/index.ts",
+          "modified": "2025-08-21T21:40:52.169326"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/product-owner/README.md",
+          "modified": "2025-08-21T21:40:52.170364"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/product-owner/prompts.ts",
+          "modified": "2025-08-21T21:40:52.170556"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/product-owner/types.ts",
+          "modified": "2025-08-21T21:40:52.170624"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/product-owner/index.ts",
+          "modified": "2025-08-21T21:40:52.170458"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/logger.d.ts.map",
+          "modified": "2025-08-21T21:40:52.170018"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/logger.js",
+          "modified": "2025-08-21T21:40:52.170085"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/index.js",
+          "modified": "2025-08-21T21:40:52.169679"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/README.md",
+          "modified": "2025-08-21T21:40:52.169432"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/logger.ts",
+          "modified": "2025-08-21T21:40:52.170223"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/logger.d.ts",
+          "modified": "2025-08-21T21:40:52.169948"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/index.js.map",
+          "modified": "2025-08-21T21:40:52.169772"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/index.ts",
+          "modified": "2025-08-21T21:40:52.169883"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/index.d.ts",
+          "modified": "2025-08-21T21:40:52.169502"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/logger.js.map",
+          "modified": "2025-08-21T21:40:52.170154"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/index.d.ts.map",
+          "modified": "2025-08-21T21:40:52.169567"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/docs/JIRA-ADMIN-PERMISSIONS.md",
+          "modified": "2025-08-21T21:40:52.170762"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/docs/PARAFORGE-INITIATIVES.md",
+          "modified": "2025-08-21T21:40:52.171094"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/docs/JIRA-LABELING-STRATEGY.md",
+          "modified": "2025-08-21T21:40:52.170998"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/docs/JIRA-CATEGORIZATION-GUIDE.md",
+          "modified": "2025-08-21T21:40:52.170883"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/list-projects.js",
+          "modified": "2025-08-21T21:40:52.171700"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/create-para-project.js",
+          "modified": "2025-08-21T21:40:52.171550"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/create-jira-project.js",
+          "modified": "2025-08-21T21:40:52.171469"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/populate-para-issues.js",
+          "modified": "2025-08-21T21:40:52.171772"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/create-initiative.js",
+          "modified": "2025-08-21T21:40:52.171351"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/setup-jira-labels.js",
+          "modified": "2025-08-21T21:40:52.171869"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/update-project-description.js",
+          "modified": "2025-08-21T21:40:52.171988"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/get-issue-types.js",
+          "modified": "2025-08-21T21:40:52.171636"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/index.ts",
+          "modified": "2025-08-21T21:40:52.172436"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/core/ParaForgeCore.ts",
+          "modified": "2025-08-21T21:40:52.172370"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/optimizer/ParallelizationOptimizer.ts",
+          "modified": "2025-08-21T21:40:52.172647"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/learning/LearningSystem.ts",
+          "modified": "2025-08-21T21:40:52.172542"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/agents/AgentOrchestrator.ts",
+          "modified": "2025-08-21T21:40:52.172139"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/agents/JiraConnectWrapper.ts",
+          "modified": "2025-08-21T21:40:52.172256"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/synthesis/SynthesisEngine.ts",
+          "modified": "2025-08-21T21:40:52.172757"
+        },
+        {
+          "file": "caia/packages/utils/logger/package.json",
+          "modified": "2025-08-21T21:40:52.221465"
+        },
+        {
+          "file": "caia/packages/utils/logger/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.221715"
+        },
+        {
+          "file": "caia/packages/utils/logger/src/index.ts",
+          "modified": "2025-08-21T21:40:52.221635"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/TERMINAL-POOL.md",
+          "modified": "2025-08-21T21:40:52.217983"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/README.md",
+          "modified": "2025-08-21T21:40:52.217780"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/package.json",
+          "modified": "2025-08-21T21:40:52.218135"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.221121"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/memory-profiler.ts",
+          "modified": "2025-08-21T21:40:52.220135"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/CCInstanceManager.ts",
+          "modified": "2025-08-21T21:40:52.218351"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/RateLimitManager.ts",
+          "modified": "2025-08-21T21:40:52.218452"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/WorkDistributor.ts",
+          "modified": "2025-08-21T21:40:52.218946"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/cli.ts",
+          "modified": "2025-08-21T21:40:52.219260"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/index.ts",
+          "modified": "2025-08-21T21:40:52.219805"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/SystemResourceCalculator.ts",
+          "modified": "2025-08-21T21:40:52.218547"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/TerminalPoolManager.ts",
+          "modified": "2025-08-21T21:40:52.218658"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/utils/Logger.ts",
+          "modified": "2025-08-21T21:40:52.220599"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/package.json",
+          "modified": "2025-08-21T21:40:52.210153"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.210978"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/src/consensus.ts",
+          "modified": "2025-08-21T21:40:52.210331"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/src/types.ts",
+          "modified": "2025-08-21T21:40:52.210896"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/src/registry.ts",
+          "modified": "2025-08-21T21:40:52.210764"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/src/index.ts",
+          "modified": "2025-08-21T21:40:52.210422"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/src/provider.ts",
+          "modified": "2025-08-21T21:40:52.210645"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/src/orchestra.ts",
+          "modified": "2025-08-21T21:40:52.210550"
+        },
+        {
+          "file": "caia/packages/integrations/jira/README.md",
+          "modified": "2025-08-21T21:40:52.207266"
+        },
+        {
+          "file": "caia/packages/integrations/jira/package.json",
+          "modified": "2025-08-21T21:40:52.207412"
+        },
+        {
+          "file": "caia/packages/integrations/jira/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.207780"
+        },
+        {
+          "file": "caia/packages/integrations/jira/src/logger.ts",
+          "modified": "2025-08-21T21:40:52.207705"
+        },
+        {
+          "file": "caia/packages/integrations/jira/src/index.ts",
+          "modified": "2025-08-21T21:40:52.207626"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/setup.sh",
+          "modified": "2025-08-21T21:40:52.209507"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/server.py",
+          "modified": "2025-08-21T21:40:52.208405"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/requirements.txt",
+          "modified": "2025-08-21T21:40:52.208263"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/client.py",
+          "modified": "2025-08-21T21:40:52.208040"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/start_server.sh",
+          "modified": "2025-08-21T21:40:52.209921"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/README.md",
+          "modified": "2025-08-21T21:40:52.207914"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/package.json",
+          "modified": "2025-08-21T21:40:52.208157"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.210018"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/src/index.ts",
+          "modified": "2025-08-21T21:40:52.209752"
+        },
+        {
+          "file": "caia/packages/engines/learning/mkdocs.yml",
+          "modified": "2025-08-21T21:40:52.181275"
+        },
+        {
+          "file": "caia/packages/engines/learning/LICENSE",
+          "modified": "2025-08-21T21:40:52.179974"
+        },
+        {
+          "file": "caia/packages/engines/learning/README.md",
+          "modified": "2025-08-21T21:40:52.180048"
+        },
+        {
+          "file": "caia/packages/engines/learning/setup.py",
+          "modified": "2025-08-21T21:40:52.181574"
+        },
+        {
+          "file": "caia/packages/engines/learning/package.json",
+          "modified": "2025-08-21T21:40:52.181435"
+        },
+        {
+          "file": "caia/packages/engines/learning/CONTRIBUTING.md",
+          "modified": "2025-08-21T21:40:52.179908"
+        },
+        {
+          "file": "caia/packages/engines/learning/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.182066"
+        },
+        {
+          "file": "caia/packages/engines/learning/tests/test_self_learning.py",
+          "modified": "2025-08-21T21:40:52.181996"
+        },
+        {
+          "file": "caia/packages/engines/learning/docs/license.md",
+          "modified": "2025-08-21T21:40:52.180809"
+        },
+        {
+          "file": "caia/packages/engines/learning/docs/requirements.txt",
+          "modified": "2025-08-21T21:40:52.180946"
+        },
+        {
+          "file": "caia/packages/engines/learning/docs/changelog.md",
+          "modified": "2025-08-21T21:40:52.180272"
+        },
+        {
+          "file": "caia/packages/engines/learning/docs/index.md",
+          "modified": "2025-08-21T21:40:52.180671"
+        },
+        {
+          "file": "caia/packages/engines/learning/docs/getting-started/quickstart.md",
+          "modified": "2025-08-21T21:40:52.180557"
+        },
+        {
+          "file": "caia/packages/engines/learning/docs/getting-started/installation.md",
+          "modified": "2025-08-21T21:40:52.180488"
+        },
+        {
+          "file": "caia/packages/engines/learning/docs/examples/basic.md",
+          "modified": "2025-08-21T21:40:52.180379"
+        },
+        {
+          "file": "caia/packages/engines/learning/docs/api/core.md",
+          "modified": "2025-08-21T21:40:52.180203"
+        },
+        {
+          "file": "caia/packages/engines/learning/docs/stylesheets/extra.css",
+          "modified": "2025-08-21T21:40:52.181093"
+        },
+        {
+          "file": "caia/packages/engines/learning/examples/basic_usage.py",
+          "modified": "2025-08-21T21:40:52.181245"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/self_learning.py",
+          "modified": "2025-08-21T21:40:52.181861"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/__init__.py",
+          "modified": "2025-08-21T21:40:52.181756"
+        },
+        {
+          "file": "caia/packages/engines/planning/mkdocs.yml",
+          "modified": "2025-08-21T21:40:52.185187"
+        },
+        {
+          "file": "caia/packages/engines/planning/LICENSE",
+          "modified": "2025-08-21T21:40:52.182674"
+        },
+        {
+          "file": "caia/packages/engines/planning/requirements.txt",
+          "modified": "2025-08-21T21:40:52.185584"
+        },
+        {
+          "file": "caia/packages/engines/planning/CHANGELOG.md",
+          "modified": "2025-08-21T21:40:52.182540"
+        },
+        {
+          "file": "caia/packages/engines/planning/pyproject.toml",
+          "modified": "2025-08-21T21:40:52.185421"
+        },
+        {
+          "file": "caia/packages/engines/planning/README.md",
+          "modified": "2025-08-21T21:40:52.182743"
+        },
+        {
+          "file": "caia/packages/engines/planning/setup.py",
+          "modified": "2025-08-21T21:40:52.185655"
+        },
+        {
+          "file": "caia/packages/engines/planning/requirements-dev.txt",
+          "modified": "2025-08-21T21:40:52.185512"
+        },
+        {
+          "file": "caia/packages/engines/planning/package.json",
+          "modified": "2025-08-21T21:40:52.185321"
+        },
+        {
+          "file": "caia/packages/engines/planning/CONTRIBUTING.md",
+          "modified": "2025-08-21T21:40:52.182608"
+        },
+        {
+          "file": "caia/packages/engines/planning/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.186425"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_smart_planner.py",
+          "modified": "2025-08-21T21:40:52.186351"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_integration.py",
+          "modified": "2025-08-21T21:40:52.186279"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/examples.md",
+          "modified": "2025-08-21T21:40:52.183156"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/license.md",
+          "modified": "2025-08-21T21:40:52.184594"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/architecture.md",
+          "modified": "2025-08-21T21:40:52.183027"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/api.md",
+          "modified": "2025-08-21T21:40:52.182850"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/requirements.txt",
+          "modified": "2025-08-21T21:40:52.184703"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/changelog.md",
+          "modified": "2025-08-21T21:40:52.183087"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/index.md",
+          "modified": "2025-08-21T21:40:52.184412"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/getting-started/quickstart.md",
+          "modified": "2025-08-21T21:40:52.184245"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/getting-started/installation.md",
+          "modified": "2025-08-21T21:40:52.183644"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/examples/basic.md",
+          "modified": "2025-08-21T21:40:52.183359"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/api/core.md",
+          "modified": "2025-08-21T21:40:52.182962"
+        },
+        {
+          "file": "caia/packages/engines/planning/docs/stylesheets/extra.css",
+          "modified": "2025-08-21T21:40:52.184861"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/basic_usage.py",
+          "modified": "2025-08-21T21:40:52.185155"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/advanced_usage.py",
+          "modified": "2025-08-21T21:40:52.185073"
+        },
+        {
+          "file": "caia/packages/engines/planning/src/strategix/__init__.py",
+          "modified": "2025-08-21T21:40:52.185825"
+        },
+        {
+          "file": "caia/packages/engines/planning/src/strategix/core.py",
+          "modified": "2025-08-21T21:40:52.185923"
+        },
+        {
+          "file": "caia/packages/engines/planning/src/strategix/types.py",
+          "modified": "2025-08-21T21:40:52.186081"
+        },
+        {
+          "file": "caia/packages/engines/planning/src/strategix/utils.py",
+          "modified": "2025-08-21T21:40:52.186156"
+        },
+        {
+          "file": "caia/packages/engines/planning/src/strategix/exceptions.py",
+          "modified": "2025-08-21T21:40:52.186006"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/mkdocs.yml",
+          "modified": "2025-08-21T21:40:52.188845"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/LICENSE",
+          "modified": "2025-08-21T21:40:52.187260"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/requirements.txt",
+          "modified": "2025-08-21T21:40:52.189233"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/CHANGELOG.md",
+          "modified": "2025-08-21T21:40:52.186998"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/pyproject.toml",
+          "modified": "2025-08-21T21:40:52.189097"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/README.md",
+          "modified": "2025-08-21T21:40:52.187448"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/setup.py",
+          "modified": "2025-08-21T21:40:52.189300"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/requirements-dev.txt",
+          "modified": "2025-08-21T21:40:52.189168"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/package.json",
+          "modified": "2025-08-21T21:40:52.189015"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/CONTRIBUTING.md",
+          "modified": "2025-08-21T21:40:52.187122"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.189992"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "modified": "2025-08-21T21:40:52.189863"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_integration.py",
+          "modified": "2025-08-21T21:40:52.189927"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/examples.md",
+          "modified": "2025-08-21T21:40:52.188039"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/license.md",
+          "modified": "2025-08-21T21:40:52.188452"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/architecture.md",
+          "modified": "2025-08-21T21:40:52.187904"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/api.md",
+          "modified": "2025-08-21T21:40:52.187671"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/requirements.txt",
+          "modified": "2025-08-21T21:40:52.188523"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/changelog.md",
+          "modified": "2025-08-21T21:40:52.187973"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/index.md",
+          "modified": "2025-08-21T21:40:52.188387"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/getting-started/quickstart.md",
+          "modified": "2025-08-21T21:40:52.188323"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/getting-started/installation.md",
+          "modified": "2025-08-21T21:40:52.188253"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/examples/basic.md",
+          "modified": "2025-08-21T21:40:52.188143"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/api/core.md",
+          "modified": "2025-08-21T21:40:52.187831"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/docs/stylesheets/extra.css",
+          "modified": "2025-08-21T21:40:52.188641"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/basic_usage.py",
+          "modified": "2025-08-21T21:40:52.188816"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/advanced_usage.py",
+          "modified": "2025-08-21T21:40:52.188751"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/src/cognitron/__init__.py",
+          "modified": "2025-08-21T21:40:52.189456"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/src/cognitron/core.py",
+          "modified": "2025-08-21T21:40:52.189600"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/src/cognitron/types.py",
+          "modified": "2025-08-21T21:40:52.189763"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/src/cognitron/exceptions.py",
+          "modified": "2025-08-21T21:40:52.189698"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/mkdocs.yml",
+          "modified": "2025-08-21T21:40:52.177940"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/LICENSE",
+          "modified": "2025-08-21T21:40:52.175837"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/requirements.txt",
+          "modified": "2025-08-21T21:40:52.178594"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/CHANGELOG.md",
+          "modified": "2025-08-21T21:40:52.175649"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/pyproject.toml",
+          "modified": "2025-08-21T21:40:52.178160"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/README.md",
+          "modified": "2025-08-21T21:40:52.175930"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/setup.py",
+          "modified": "2025-08-21T21:40:52.178722"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/requirements-dev.txt",
+          "modified": "2025-08-21T21:40:52.178354"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/package.json",
+          "modified": "2025-08-21T21:40:52.178067"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/CONTRIBUTING.md",
+          "modified": "2025-08-21T21:40:52.175757"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.179498"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_auto_coder.py",
+          "modified": "2025-08-21T21:40:52.179357"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_integration.py",
+          "modified": "2025-08-21T21:40:52.179430"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/examples.md",
+          "modified": "2025-08-21T21:40:52.176518"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/license.md",
+          "modified": "2025-08-21T21:40:52.177202"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/architecture.md",
+          "modified": "2025-08-21T21:40:52.176359"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/api.md",
+          "modified": "2025-08-21T21:40:52.176135"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/requirements.txt",
+          "modified": "2025-08-21T21:40:52.177287"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/changelog.md",
+          "modified": "2025-08-21T21:40:52.176440"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/index.md",
+          "modified": "2025-08-21T21:40:52.177057"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/getting-started/quickstart.md",
+          "modified": "2025-08-21T21:40:52.176904"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/getting-started/installation.md",
+          "modified": "2025-08-21T21:40:52.176821"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/examples/basic.md",
+          "modified": "2025-08-21T21:40:52.176648"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/api/core.md",
+          "modified": "2025-08-21T21:40:52.176270"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/docs/stylesheets/extra.css",
+          "modified": "2025-08-21T21:40:52.177612"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/basic_usage.py",
+          "modified": "2025-08-21T21:40:52.177860"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/advanced_usage.py",
+          "modified": "2025-08-21T21:40:52.177760"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/__init__.py",
+          "modified": "2025-08-21T21:40:52.178888"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "modified": "2025-08-21T21:40:52.179005"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/types.py",
+          "modified": "2025-08-21T21:40:52.179168"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/utils.py",
+          "modified": "2025-08-21T21:40:52.179238"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/exceptions.py",
+          "modified": "2025-08-21T21:40:52.179098"
+        },
+        {
+          "file": "caia/packages/engines/workflow/mkdocs.yml",
+          "modified": "2025-08-21T21:40:52.205543"
+        },
+        {
+          "file": "caia/packages/engines/workflow/LICENSE",
+          "modified": "2025-08-21T21:40:52.198559"
+        },
+        {
+          "file": "caia/packages/engines/workflow/README.md",
+          "modified": "2025-08-21T21:40:52.200431"
+        },
+        {
+          "file": "caia/packages/engines/workflow/setup.py",
+          "modified": "2025-08-21T21:40:52.206416"
+        },
+        {
+          "file": "caia/packages/engines/workflow/package.json",
+          "modified": "2025-08-21T21:40:52.206331"
+        },
+        {
+          "file": "caia/packages/engines/workflow/CONTRIBUTING.md",
+          "modified": "2025-08-21T21:40:52.198335"
+        },
+        {
+          "file": "caia/packages/engines/workflow/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.207007"
+        },
+        {
+          "file": "caia/packages/engines/workflow/tests/test_orchestrator.py",
+          "modified": "2025-08-21T21:40:52.206927"
+        },
+        {
+          "file": "caia/packages/engines/workflow/docs/license.md",
+          "modified": "2025-08-21T21:40:52.202944"
+        },
+        {
+          "file": "caia/packages/engines/workflow/docs/requirements.txt",
+          "modified": "2025-08-21T21:40:52.203116"
+        },
+        {
+          "file": "caia/packages/engines/workflow/docs/changelog.md",
+          "modified": "2025-08-21T21:40:52.200793"
+        },
+        {
+          "file": "caia/packages/engines/workflow/docs/index.md",
+          "modified": "2025-08-21T21:40:52.202797"
+        },
+        {
+          "file": "caia/packages/engines/workflow/docs/getting-started/quickstart.md",
+          "modified": "2025-08-21T21:40:52.201805"
+        },
+        {
+          "file": "caia/packages/engines/workflow/docs/getting-started/installation.md",
+          "modified": "2025-08-21T21:40:52.201720"
+        },
+        {
+          "file": "caia/packages/engines/workflow/docs/examples/basic.md",
+          "modified": "2025-08-21T21:40:52.201432"
+        },
+        {
+          "file": "caia/packages/engines/workflow/docs/api/core.md",
+          "modified": "2025-08-21T21:40:52.200680"
+        },
+        {
+          "file": "caia/packages/engines/workflow/docs/stylesheets/extra.css",
+          "modified": "2025-08-21T21:40:52.203916"
+        },
+        {
+          "file": "caia/packages/engines/workflow/examples/basic_usage.py",
+          "modified": "2025-08-21T21:40:52.205451"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/__init__.py",
+          "modified": "2025-08-21T21:40:52.206602"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "modified": "2025-08-21T21:40:52.206727"
+        },
+        {
+          "file": "caia/packages/modules/memory/mkdocs.yml",
+          "modified": "2025-08-21T21:40:52.215794"
+        },
+        {
+          "file": "caia/packages/modules/memory/README.md",
+          "modified": "2025-08-21T21:40:52.214768"
+        },
+        {
+          "file": "caia/packages/modules/memory/setup.py",
+          "modified": "2025-08-21T21:40:52.215983"
+        },
+        {
+          "file": "caia/packages/modules/memory/package.json",
+          "modified": "2025-08-21T21:40:52.215914"
+        },
+        {
+          "file": "caia/packages/modules/memory/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.217267"
+        },
+        {
+          "file": "caia/packages/modules/memory/tests/test_memory.py",
+          "modified": "2025-08-21T21:40:52.217192"
+        },
+        {
+          "file": "caia/packages/modules/memory/docs/license.md",
+          "modified": "2025-08-21T21:40:52.215446"
+        },
+        {
+          "file": "caia/packages/modules/memory/docs/requirements.txt",
+          "modified": "2025-08-21T21:40:52.215511"
+        },
+        {
+          "file": "caia/packages/modules/memory/docs/changelog.md",
+          "modified": "2025-08-21T21:40:52.215017"
+        },
+        {
+          "file": "caia/packages/modules/memory/docs/index.md",
+          "modified": "2025-08-21T21:40:52.215377"
+        },
+        {
+          "file": "caia/packages/modules/memory/docs/getting-started/quickstart.md",
+          "modified": "2025-08-21T21:40:52.215310"
+        },
+        {
+          "file": "caia/packages/modules/memory/docs/getting-started/installation.md",
+          "modified": "2025-08-21T21:40:52.215242"
+        },
+        {
+          "file": "caia/packages/modules/memory/docs/examples/basic.md",
+          "modified": "2025-08-21T21:40:52.215132"
+        },
+        {
+          "file": "caia/packages/modules/memory/docs/api/core.md",
+          "modified": "2025-08-21T21:40:52.214945"
+        },
+        {
+          "file": "caia/packages/modules/memory/docs/stylesheets/extra.css",
+          "modified": "2025-08-21T21:40:52.215738"
+        },
+        {
+          "file": "caia/packages/modules/memory/src/__init__.py",
+          "modified": "2025-08-21T21:40:52.216097"
+        },
+        {
+          "file": "caia/packages/modules/memory/src/memcore.py",
+          "modified": "2025-08-21T21:40:52.216190"
+        },
+        {
+          "file": "caia/packages/modules/memory/src/persistent_ai_memory.egg-info/PKG-INFO",
+          "modified": "2025-08-21T21:40:52.216373"
+        },
+        {
+          "file": "caia/packages/modules/memory/src/persistent_ai_memory.egg-info/SOURCES.txt",
+          "modified": "2025-08-21T21:40:52.216450"
+        },
+        {
+          "file": "caia/packages/modules/memory/src/persistent_ai_memory.egg-info/entry_points.txt",
+          "modified": "2025-08-21T21:40:52.216644"
+        },
+        {
+          "file": "caia/packages/modules/memory/src/persistent_ai_memory.egg-info/requires.txt",
+          "modified": "2025-08-21T21:40:52.216715"
+        },
+        {
+          "file": "caia/packages/modules/memory/src/persistent_ai_memory.egg-info/top_level.txt",
+          "modified": "2025-08-21T21:40:52.216988"
+        },
+        {
+          "file": "caia/packages/modules/memory/src/persistent_ai_memory.egg-info/dependency_links.txt",
+          "modified": "2025-08-21T21:40:52.216572"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/mkdocs.yml",
+          "modified": "2025-08-21T21:40:52.213180"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/LICENSE",
+          "modified": "2025-08-21T21:40:52.211668"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/requirements.txt",
+          "modified": "2025-08-21T21:40:52.213495"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/CHANGELOG.md",
+          "modified": "2025-08-21T21:40:52.211535"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/pyproject.toml",
+          "modified": "2025-08-21T21:40:52.213328"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/README.md",
+          "modified": "2025-08-21T21:40:52.211745"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/setup.py",
+          "modified": "2025-08-21T21:40:52.213606"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/requirements-dev.txt",
+          "modified": "2025-08-21T21:40:52.213397"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/package.json",
+          "modified": "2025-08-21T21:40:52.213264"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/CONTRIBUTING.md",
+          "modified": "2025-08-21T21:40:52.211601"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tsconfig.json",
+          "modified": "2025-08-21T21:40:52.214447"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_autonomix.py",
+          "modified": "2025-08-21T21:40:52.214303"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_integration.py",
+          "modified": "2025-08-21T21:40:52.214371"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/examples.md",
+          "modified": "2025-08-21T21:40:52.212329"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/license.md",
+          "modified": "2025-08-21T21:40:52.212799"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/architecture.md",
+          "modified": "2025-08-21T21:40:52.212035"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/api.md",
+          "modified": "2025-08-21T21:40:52.211859"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/requirements.txt",
+          "modified": "2025-08-21T21:40:52.212863"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/changelog.md",
+          "modified": "2025-08-21T21:40:52.212245"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/index.md",
+          "modified": "2025-08-21T21:40:52.212732"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/getting-started/quickstart.md",
+          "modified": "2025-08-21T21:40:52.212651"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/getting-started/installation.md",
+          "modified": "2025-08-21T21:40:52.212582"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/examples/basic.md",
+          "modified": "2025-08-21T21:40:52.212458"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/api/core.md",
+          "modified": "2025-08-21T21:40:52.211969"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/docs/stylesheets/extra.css",
+          "modified": "2025-08-21T21:40:52.212973"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/basic_usage.py",
+          "modified": "2025-08-21T21:40:52.213151"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/advanced_usage.py",
+          "modified": "2025-08-21T21:40:52.213082"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/src/autonomix/__init__.py",
+          "modified": "2025-08-21T21:40:52.213801"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/src/autonomix/core.py",
+          "modified": "2025-08-21T21:40:52.213914"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/src/autonomix/types.py",
+          "modified": "2025-08-21T21:40:52.214113"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/src/autonomix/utils.py",
+          "modified": "2025-08-21T21:40:52.214188"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/src/autonomix/exceptions.py",
+          "modified": "2025-08-21T21:40:52.214024"
+        },
+        {
+          "file": "packages/tools/test-runner/package.json",
+          "modified": "2025-08-21T21:44:19.164111"
+        },
+        {
+          "file": "packages/tools/test-runner/src/index.ts",
+          "modified": "2025-08-21T21:44:19.164802"
+        },
+        {
+          "file": "packages/tools/test-runner/src/cli/index.ts",
+          "modified": "2025-08-21T21:44:19.164479"
+        },
+        {
+          "file": "packages/utils/metric-collector/jest.config.js",
+          "modified": "2025-08-21T21:44:19.167343"
+        },
+        {
+          "file": "packages/utils/metric-collector/package.json",
+          "modified": "2025-08-21T21:44:19.167703"
+        },
+        {
+          "file": "packages/utils/metric-collector/src/__tests__/MetricCollector.test.ts",
+          "modified": "2025-08-21T21:44:19.168013"
+        },
+        {
+          "file": "packages/utils/work-divider/jest.config.js",
+          "modified": "2025-08-21T21:44:19.173082"
+        },
+        {
+          "file": "packages/utils/work-divider/package.json",
+          "modified": "2025-08-21T21:44:19.173327"
+        },
+        {
+          "file": "packages/utils/work-divider/src/index.ts",
+          "modified": "2025-08-21T21:44:19.173956"
+        },
+        {
+          "file": "packages/utils/work-divider/src/__tests__/WorkDivider.test.ts",
+          "modified": "2025-08-21T21:44:19.173640"
+        },
+        {
+          "file": "packages/utils/task-scheduler/jest.config.js",
+          "modified": "2025-08-21T21:44:19.172446"
+        },
+        {
+          "file": "packages/utils/task-scheduler/package.json",
+          "modified": "2025-08-21T21:44:19.172661"
+        },
+        {
+          "file": "packages/utils/task-scheduler/src/__tests__/TaskScheduler.test.ts",
+          "modified": "2025-08-21T21:44:19.172920"
+        },
+        {
+          "file": "packages/utils/progress-tracker/jest.config.js",
+          "modified": "2025-08-21T21:44:19.169637"
+        },
+        {
+          "file": "packages/utils/progress-tracker/package.json",
+          "modified": "2025-08-21T21:44:19.169937"
+        },
+        {
+          "file": "packages/utils/progress-tracker/src/index.ts",
+          "modified": "2025-08-21T21:44:19.170664"
+        },
+        {
+          "file": "packages/utils/progress-tracker/src/__tests__/ProgressTracker.test.ts",
+          "modified": "2025-08-21T21:44:19.170316"
+        },
+        {
+          "file": "packages/utils/dependency-analyzer/jest.config.js",
+          "modified": "2025-08-21T21:44:19.166248"
+        },
+        {
+          "file": "packages/utils/dependency-analyzer/package.json",
+          "modified": "2025-08-21T21:44:19.166465"
+        },
+        {
+          "file": "packages/utils/dependency-analyzer/src/index.ts",
+          "modified": "2025-08-21T21:44:19.167109"
+        },
+        {
+          "file": "packages/utils/dependency-analyzer/src/__tests__/DependencyAnalyzer.test.ts",
+          "modified": "2025-08-21T21:44:19.166778"
+        },
+        {
+          "file": "packages/utils/resource-calculator/jest.config.js",
+          "modified": "2025-08-21T21:44:19.171700"
+        },
+        {
+          "file": "packages/utils/resource-calculator/package.json",
+          "modified": "2025-08-21T21:44:19.171974"
+        },
+        {
+          "file": "packages/utils/resource-calculator/src/__tests__/ResourceCalculator.test.ts",
+          "modified": "2025-08-21T21:44:19.172280"
+        },
+        {
+          "file": "packages/utils/pattern-recognizer/jest.config.js",
+          "modified": "2025-08-21T21:44:19.168182"
+        },
+        {
+          "file": "packages/utils/pattern-recognizer/package.json",
+          "modified": "2025-08-21T21:44:19.168417"
+        },
+        {
+          "file": "packages/utils/pattern-recognizer/src/index.ts",
+          "modified": "2025-08-21T21:44:19.169405"
+        },
+        {
+          "file": "packages/utils/pattern-recognizer/src/__tests__/PatternRecognizer.test.ts",
+          "modified": "2025-08-21T21:44:19.168792"
+        },
+        {
+          "file": "packages/utils/report-generator/jest.config.js",
+          "modified": "2025-08-21T21:44:19.170827"
+        },
+        {
+          "file": "packages/utils/report-generator/package.json",
+          "modified": "2025-08-21T21:44:19.171100"
+        },
+        {
+          "file": "packages/utils/report-generator/src/__tests__/ReportEngine.test.ts",
+          "modified": "2025-08-21T21:44:19.171456"
+        }
+      ],
+      "git_info": {
+        "commits": [
+          {
+            "hash": "6cee139bee69db19d15e54fff78c6a79f1c4db75",
+            "author": "Prakash Tiwari",
+            "email": "prakashmailid@gmail.com",
+            "date": "2025-08-21 21:41:27 -0400",
+            "message": "feat(utilities): add comprehensive tests and fix linting for utility packages"
+          }
+        ],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [
+          "add-code-reviewers",
+          "feat/parallel-testing-utilities",
+          "feature/integrate-all-repos-20250819",
+          "fix/linting-errors",
+          "main",
+          "remotes/origin/add-code-reviewers",
+          "remotes/origin/feat/parallel-testing-utilities",
+          "remotes/origin/feature/integrate-all-repos-20250819",
+          "remotes/origin/main"
+        ],
+        "current_branch": "feat/parallel-testing-utilities"
+      },
+      "key_files": {
+        "package.json": "packages/modules/autonomy/package.json",
+        "requirements.txt": "packages/modules/autonomy/docs/requirements.txt"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js",
+        "Python"
+      ],
+      "todos": [
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "caia/scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "caia/packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "caia/packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        }
+      ],
+      "dependencies": {
+        "npm": []
+      }
+    }
+  },
+  "recent_decisions": [
+    {
+      "id": "20250821_213815",
+      "timestamp": "2025-08-21T21:38:15.048882",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_213815. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_201621",
+      "timestamp": "2025-08-21T20:16:21.151058",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_201621. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_174417",
+      "timestamp": "2025-08-21T17:44:17.400952",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_174417. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_153707",
+      "timestamp": "2025-08-21T15:37:07.326926",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_153707. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_143724",
+      "timestamp": "2025-08-21T14:37:24.067816",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_143724. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_114246",
+      "timestamp": "2025-08-21T11:42:46.131479",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_114246. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_033714",
+      "timestamp": "2025-08-21T03:37:14.072005",
+      "project": "caia",
+      "task": "CI/CD Pipeline Partially Fixed",
+      "status": "in_progress",
+      "details": "Successfully resolved merge conflicts and added package-lock.json to repository. Fixed multiple dependency issues including invalid packages (emotion, @sats/core, @dsazz/mcp-jira) and updated outdated versions. Tests are now running but failing due to Nx post-install script issues. Main improvements: (1) package-lock.json now committed per industry standards, (2) CI can use npm ci for faster installs, (3) resolved all merge conflicts. Remaining issue: Nx native module installation in CI environment.",
+      "completion_percentage": 80,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_022424",
+      "timestamp": "2025-08-21T02:24:24.501750",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_022424. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    }
+  ],
+  "summary": {
+    "total_projects": 3,
+    "active_projects": 1,
+    "total_commits": 1,
+    "total_todos": 121,
+    "total_recent_changes": 401
+  },
+  "changes_since_last": {
+    "new_projects": [
+      "temp-scripts",
+      "standalone-apps",
+      "caia"
+    ],
+    "removed_projects": [],
+    "new_commits": 0,
+    "new_todos": 0,
+    "new_decisions": 8
+  }
+}

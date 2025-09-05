@@ -1,0 +1,16 @@
+{
+  "id": "20250817_225451",
+  "timestamp": "2025-08-17T22:54:51.460512",
+  "title": "Design CAIA Agent Integration Frontend Monitoring Dashboard",
+  "description": "Creating comprehensive frontend specifications for monitoring and managing the CAIA agent ecosystem, including real-time dashboards, workflow tracking, communication visualization, and debugging tools",
+  "category": "architecture",
+  "project": "caia",
+  "tags": [
+    "frontend",
+    "monitoring",
+    "dashboard",
+    "agents",
+    "real-time"
+  ],
+  "metadata": {}
+}

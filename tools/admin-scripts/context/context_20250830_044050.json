@@ -1,0 +1,1373 @@
+{
+  "timestamp": "2025-08-30T04:40:50.603663",
+  "hours_covered": 1,
+  "projects": {
+    "temp-scripts": {
+      "name": "temp-scripts",
+      "path": "/Users/MAC/Documents/projects/temp-scripts",
+      "last_modified": "2025-08-28T02:10:54.992891",
+      "size_bytes": 1781,
+      "file_count": 1,
+      "directory_count": 0,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "standalone-apps": {
+      "name": "standalone-apps",
+      "path": "/Users/MAC/Documents/projects/standalone-apps",
+      "last_modified": "2025-08-19T02:47:34.204354",
+      "size_bytes": 2595752,
+      "file_count": 244,
+      "directory_count": 90,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {
+        "package.json": "roulette-community/package.json"
+      },
+      "technologies": [
+        "Node.js",
+        "TypeScript"
+      ],
+      "todos": [
+        {
+          "file": "roulette-community/src/app/layout.tsx",
+          "line": 31,
+          "content": "// TODO: Get user from auth context when implementing authentication"
+        },
+        {
+          "file": "roulette-community/src/features/currency/service.ts",
+          "line": 262,
+          "content": "// TODO: Integrate with actual payment processor (Stripe)"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 478,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 492,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 550,
+          "content": "upsellRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 551,
+          "content": "churnRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 552,
+          "content": "reactivationRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 556,
+          "content": "refundRate: 0, // TODO: Track refunds"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 557,
+          "content": "paymentFailureRate: 0, // TODO: Track failed payments"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 575,
+          "content": "// TODO: Implement more sophisticated calculations"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 621,
+          "content": "// TODO: Implement growth calculations"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "@next/font",
+          "@radix-ui/react-avatar",
+          "@radix-ui/react-checkbox",
+          "@radix-ui/react-collapsible",
+          "@radix-ui/react-dialog",
+          "@radix-ui/react-dropdown-menu",
+          "@radix-ui/react-icons",
+          "@radix-ui/react-label",
+          "@radix-ui/react-navigation-menu",
+          "@radix-ui/react-progress",
+          "@radix-ui/react-separator",
+          "@radix-ui/react-slot",
+          "@radix-ui/react-tabs",
+          "@radix-ui/react-toast",
+          "@react-email/components",
+          "@sentry/nextjs",
+          "@supabase/auth-ui-react",
+          "@supabase/auth-ui-shared",
+          "@supabase/ssr",
+          "@supabase/supabase-js",
+          "@tanstack/react-query",
+          "@types/react",
+          "@types/react-dom",
+          "@types/uuid",
+          "@types/zxcvbn",
+          "@upstash/redis",
+          "autoprefixer",
+          "class-variance-authority",
+          "cloudinary",
+          "clsx",
+          "contentful",
+          "date-fns",
+          "dotenv",
+          "framer-motion",
+          "lucide-react",
+          "next",
+          "postcss",
+          "react",
+          "react-dom",
+          "react-hook-form",
+          "resend",
+          "socket.io",
+          "socket.io-client",
+          "stripe",
+          "tailwind-merge",
+          "tailwindcss",
+          "tailwindcss-animate",
+          "typescript",
+          "uuid",
+          "zustand",
+          "zxcvbn"
+        ]
+      }
+    },
+    "salon-management-system": {
+      "name": "salon-management-system",
+      "path": "/Users/MAC/Documents/projects/salon-management-system",
+      "last_modified": "2025-08-25T17:47:49.744579",
+      "size_bytes": 22569,
+      "file_count": 4,
+      "directory_count": 17,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {
+        "package.json": "package.json"
+      },
+      "technologies": [
+        "Node.js"
+      ],
+      "todos": [],
+      "dependencies": {
+        "npm": [
+          "@prisma/client",
+          "express",
+          "next",
+          "react",
+          "react-dom",
+          "stripe",
+          "twilio",
+          "@sendgrid/mail",
+          "bcrypt",
+          "jsonwebtoken",
+          "zod",
+          "date-fns",
+          "@tanstack/react-query",
+          "zustand",
+          "tailwindcss",
+          "@radix-ui/react-dialog",
+          "@radix-ui/react-select",
+          "lucide-react",
+          "recharts"
+        ]
+      }
+    },
+    "omnivision": {
+      "name": "omnivision",
+      "path": "/Users/MAC/Documents/projects/omnivision",
+      "last_modified": "2025-08-29T05:18:24.880415",
+      "size_bytes": 659841,
+      "file_count": 21,
+      "directory_count": 13,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {
+        "package.json": "package.json"
+      },
+      "technologies": [
+        "Node.js",
+        "TypeScript"
+      ],
+      "todos": [],
+      "dependencies": {
+        "npm": [
+          "@playwright/test",
+          "playwright",
+          "puppeteer",
+          "chrome-remote-interface",
+          "pg",
+          "mysql2",
+          "mongodb",
+          "redis",
+          "winston",
+          "chalk",
+          "commander",
+          "express",
+          "ws",
+          "jimp",
+          "pixelmatch",
+          "pngjs",
+          "dotenv",
+          "joi",
+          "lodash",
+          "axios",
+          "cheerio",
+          "yaml",
+          "glob",
+          "chokidar",
+          "tail",
+          "ssh2",
+          "node-ssh",
+          "@modelcontextprotocol/sdk"
+        ]
+      }
+    },
+    "claude-code-ultimate": {
+      "name": "claude-code-ultimate",
+      "path": "/Users/MAC/Documents/projects/claude-code-ultimate",
+      "last_modified": "2025-08-28T01:39:51.907091",
+      "size_bytes": 18315,
+      "file_count": 3,
+      "directory_count": 2,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [
+          "master",
+          "remotes/origin/master"
+        ],
+        "current_branch": "master"
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "caia": {
+      "name": "caia",
+      "path": "/Users/MAC/Documents/projects/caia",
+      "last_modified": "2025-08-29T21:53:07.466598",
+      "size_bytes": 353441337,
+      "file_count": 1350,
+      "directory_count": 621,
+      "recent_changes": [
+        {
+          "file": "knowledge-system/cache/metrics_20250830.jsonl",
+          "modified": "2025-08-30T04:40:02.970800"
+        },
+        {
+          "file": "knowledge-system/learning/learning_system.pid",
+          "modified": "2025-08-30T04:01:52.584832"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/parallel-development-config.json",
+          "modified": "2025-08-30T04:35:19.418360"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/start-termistrator.sh",
+          "modified": "2025-08-30T04:36:32.207059"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/launch-parallel-development.sh",
+          "modified": "2025-08-30T04:36:20.389336"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/monitor-progress.py",
+          "modified": "2025-08-30T04:36:32.210578"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/ckf/INSTRUCTIONS.md",
+          "modified": "2025-08-30T04:36:32.173862"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/cpo/INSTRUCTIONS.md",
+          "modified": "2025-08-30T04:36:32.201727"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/cps/context_persistence_system.py",
+          "modified": "2025-08-30T04:32:23.792136"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/cps/INSTRUCTIONS.md",
+          "modified": "2025-08-30T04:36:32.170113"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/cwa/INSTRUCTIONS.md",
+          "modified": "2025-08-30T04:36:32.177911"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/integration/README.md",
+          "modified": "2025-08-30T04:36:32.205075"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/cer/INSTRUCTIONS.md",
+          "modified": "2025-08-30T04:36:32.193643"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/cmo/INSTRUCTIONS.md",
+          "modified": "2025-08-30T04:36:32.197779"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/cav/INSTRUCTIONS.md",
+          "modified": "2025-08-30T04:36:32.182223"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/cpe/INSTRUCTIONS.md",
+          "modified": "2025-08-30T04:36:32.189511"
+        },
+        {
+          "file": "knowledge-system/cc-enhancement/cse/INSTRUCTIONS.md",
+          "modified": "2025-08-30T04:36:32.186010"
+        },
+        {
+          "file": "knowledge-system/logs/0.log",
+          "modified": "2025-08-30T04:40:02.970937"
+        },
+        {
+          "file": "knowledge-system/logs/monitoring_dashboard.log",
+          "modified": "2025-08-30T04:40:49.698658"
+        },
+        {
+          "file": "knowledge-system/logs/demo_api.log",
+          "modified": "2025-08-30T04:40:02.949006"
+        },
+        {
+          "file": "knowledge-system/data/chat_history.db",
+          "modified": "2025-08-30T04:39:56.303046"
+        }
+      ],
+      "git_info": {
+        "commits": [],
+        "modified_files": [
+          "aia"
+        ],
+        "untracked_files": [
+          "knowledge-system/cache/",
+          "knowledge-system/cc-enhancement/",
+          "knowledge-system/data/chat_history.db",
+          "knowledge-system/learning/",
+          "knowledge-system/scripts/start_learning_system.sh",
+          "knowledge-system/scripts/status_learning_system.sh",
+          "knowledge-system/scripts/stop_learning_system.sh",
+          "knowledge-system/web/",
+          "packages/tools/termistrator/"
+        ],
+        "branches": [
+          "add-code-reviewers",
+          "feat/ccu-statusline-config",
+          "feat/parallel-testing-utilities",
+          "feat/stream5-orchestration",
+          "feature/cks-and-consolidation",
+          "feature/clean-consolidation",
+          "feature/hierarchical-agent-system",
+          "feature/integrate-all-repos-20250819",
+          "fix/linting-errors",
+          "main",
+          "setup-ai-reviewers",
+          "remotes/origin/HEAD -> origin/main",
+          "remotes/origin/add-code-reviewers",
+          "remotes/origin/feat/autonomous-pipeline",
+          "remotes/origin/feat/ccu-statusline-clean",
+          "remotes/origin/feat/knowledge-system",
+          "remotes/origin/feat/parallel-testing-utilities",
+          "remotes/origin/feature/hierarchical-agent-system",
+          "remotes/origin/feature/integrate-all-repos-20250819",
+          "remotes/origin/main",
+          "remotes/origin/setup-ai-reviewers"
+        ],
+        "current_branch": "feature/cks-and-consolidation"
+      },
+      "key_files": {
+        "package.json": "packages/modules/autonomy/package.json",
+        "requirements.txt": "packages/modules/autonomy/docs/requirements.txt"
+      },
+      "technologies": [
+        "Node.js",
+        "TypeScript",
+        "Python"
+      ],
+      "todos": [
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "knowledge-system/parsers/js_parser.py",
+          "line": 88,
+          "content": "'complexity': 1,  # TODO: Calculate complexity"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "caia/scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/index.ts",
+          "line": 627,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/index.minimal.test.ts",
+          "line": 218,
+          "content": "expect(result.todos).toEqual(['TODO 1', 'TODO 2']);"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/services/FeatureValidator.ts",
+          "line": 302,
+          "content": "// Check for TODO comments"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/services/FeatureValidator.ts",
+          "line": 303,
+          "content": "const todos = await this.searchPattern(/TODO|FIXME|HACK/);"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/services/FeatureValidator.ts",
+          "line": 307,
+          "content": "message: 'Unfinished TODOs found in code',"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/services/FeatureValidator.ts",
+          "line": 308,
+          "content": "code: 'UNFINISHED_TODO'"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/services/FeatureValidator.ts",
+          "line": 382,
+          "content": "if (result.issues.some(i => i.code === 'UNFINISHED_TODO')) {"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/services/FeatureValidator.ts",
+          "line": 383,
+          "content": "result.suggestions.push('Complete or remove TODO comments');"
+        },
+        {
+          "file": "caia/packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "caia/packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "caia/packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 373,
+          "content": "return `export interface ${interfaceName} {\\n  // TODO: Define ${interfaceName} properties\\n  [key: string]: any;\\n}`;"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 447,
+          "content": "// TODO: Implement test for ${method}"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 479,
+          "content": "// TODO: Implement ${methodName} logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 529,
+          "content": "return `${words.charAt(0).toUpperCase() + words.slice(1)} - TODO: Add detailed description`;"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 545,
+          "content": "// TODO: Add TypeScript compilation check"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 684,
+          "content": "// TODO: Add agent-specific initialization logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 692,
+          "content": "// TODO: Add agent-specific cleanup logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 729,
+          "content": "// TODO: Add task cancellation logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 197,
+          "content": "# Scan for TODOs in code files"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 203,
+          "content": "if 'TODO' in line or 'FIXME' in line or 'HACK' in line:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 302,
+          "content": "print(f\"\ud83d\udccc {context['summary']['total_todos']} TODOs found\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 170,
+          "content": "f\"Open TODOs: {context.get('summary', {}).get('total_todos', 0)}\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 207,
+          "content": "# Add critical TODOs"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 211,
+          "content": "if \"FIXME\" in todo[\"content\"] or \"CRITICAL\" in todo[\"content\"]:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 222,
+          "content": "\"## CRITICAL TODOs\""
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 277,
+          "content": "print(f\"Active TODOs: {result['recent_activity']['active_todos']}\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 136,
+          "content": "# Scan for TODOs"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 143,
+          "content": "if 'TODO' in line or 'FIXME' in line:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 288,
+          "content": "actions.append(f\"Address {len(component['todos'])} TODOs\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 351,
+          "content": "f\"Total TODOs: {tracking_data['summary']['total_todos']}\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 421,
+          "content": "\"5. Address critical TODOs in active components\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "packages/tools/admin/scripts/progress_to_web.py",
+          "line": 525,
+          "content": "# TODO: Implement ecosystem-wide publishing to admin repo"
+        },
+        {
+          "file": "packages/tools/training-system/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/agent_orchestrator.py",
+          "line": 483,
+          "content": "# TODO: Implement swarm pattern"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/agent_orchestrator.py",
+          "line": 488,
+          "content": "# TODO: Implement hierarchical pattern"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 274,
+          "content": "code=f\"# TODO: Implement {request.description}\","
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 462,
+          "content": "variables[var] = f\"# TODO: {var}\""
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 708,
+          "content": "# TODO: Implement using {best_solution.name}"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 746,
+          "content": "# Convert absolute MemCore imports to TODO comments"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 749,
+          "content": "r'# TODO: Replace with appropriate import\\n# from \\1 import \\2',"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 762,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 765,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 804,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 853,
+          "content": "# TODO: Add quick start example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1069,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1083,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1168,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1267,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1450,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1473,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1492,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1513,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1517,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1627,
+          "content": "TODO: Document methods"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1653,
+          "content": "TODO: Document components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1657,
+          "content": "TODO: Document data flow"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1674,
+          "content": "TODO: Add real-world examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1696,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1703,
+          "content": "# TODO: Add exports"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_solution_finder.py",
+          "line": 455,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_solution_finder.py",
+          "line": 607,
+          "content": "replacement_code=\"# TODO: Replace with suggested library\","
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/self_learning_adapter.py",
+          "line": 13,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/self_learning_adapter.py",
+          "line": 20,
+          "content": "# TODO: Add exports"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        }
+      ],
+      "dependencies": {
+        "npm": []
+      }
+    }
+  },
+  "recent_decisions": [
+    {
+      "id": "20250830_044050",
+      "timestamp": "2025-08-30T04:40:50.451989",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250830_044050. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250830_011442",
+      "timestamp": "2025-08-30T01:14:42.271283",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250830_011442. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250830_011413",
+      "timestamp": "2025-08-30T01:14:13.232521",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250830_011413. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    }
+  ],
+  "summary": {
+    "total_projects": 6,
+    "active_projects": 1,
+    "total_commits": 0,
+    "total_todos": 188,
+    "total_recent_changes": 21
+  },
+  "changes_since_last": {
+    "new_projects": [
+      "caia",
+      "temp-scripts",
+      "claude-code-ultimate",
+      "omnivision",
+      "salon-management-system",
+      "standalone-apps"
+    ],
+    "removed_projects": [],
+    "new_commits": 0,
+    "new_todos": 0,
+    "new_decisions": 3
+  }
+}

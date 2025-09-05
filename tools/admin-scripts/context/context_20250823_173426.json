@@ -1,0 +1,2138 @@
+{
+  "timestamp": "2025-08-23T17:34:26.248954",
+  "hours_covered": 1,
+  "projects": {
+    "temp-scripts": {
+      "name": "temp-scripts",
+      "path": "/Users/MAC/Documents/projects/temp-scripts",
+      "last_modified": "2025-08-23T02:54:48.258421",
+      "size_bytes": 0,
+      "file_count": 0,
+      "directory_count": 0,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "standalone-apps": {
+      "name": "standalone-apps",
+      "path": "/Users/MAC/Documents/projects/standalone-apps",
+      "last_modified": "2025-08-19T02:47:34.204354",
+      "size_bytes": 2595752,
+      "file_count": 244,
+      "directory_count": 90,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {
+        "package.json": "roulette-community/package.json"
+      },
+      "technologies": [
+        "Node.js",
+        "TypeScript"
+      ],
+      "todos": [
+        {
+          "file": "roulette-community/src/app/layout.tsx",
+          "line": 31,
+          "content": "// TODO: Get user from auth context when implementing authentication"
+        },
+        {
+          "file": "roulette-community/src/features/currency/service.ts",
+          "line": 262,
+          "content": "// TODO: Integrate with actual payment processor (Stripe)"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 478,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 492,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 550,
+          "content": "upsellRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 551,
+          "content": "churnRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 552,
+          "content": "reactivationRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 556,
+          "content": "refundRate: 0, // TODO: Track refunds"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 557,
+          "content": "paymentFailureRate: 0, // TODO: Track failed payments"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 575,
+          "content": "// TODO: Implement more sophisticated calculations"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 621,
+          "content": "// TODO: Implement growth calculations"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "@next/font",
+          "@radix-ui/react-avatar",
+          "@radix-ui/react-checkbox",
+          "@radix-ui/react-collapsible",
+          "@radix-ui/react-dialog",
+          "@radix-ui/react-dropdown-menu",
+          "@radix-ui/react-icons",
+          "@radix-ui/react-label",
+          "@radix-ui/react-navigation-menu",
+          "@radix-ui/react-progress",
+          "@radix-ui/react-separator",
+          "@radix-ui/react-slot",
+          "@radix-ui/react-tabs",
+          "@radix-ui/react-toast",
+          "@react-email/components",
+          "@sentry/nextjs",
+          "@supabase/auth-ui-react",
+          "@supabase/auth-ui-shared",
+          "@supabase/ssr",
+          "@supabase/supabase-js",
+          "@tanstack/react-query",
+          "@types/react",
+          "@types/react-dom",
+          "@types/uuid",
+          "@types/zxcvbn",
+          "@upstash/redis",
+          "autoprefixer",
+          "class-variance-authority",
+          "cloudinary",
+          "clsx",
+          "contentful",
+          "date-fns",
+          "dotenv",
+          "framer-motion",
+          "lucide-react",
+          "next",
+          "postcss",
+          "react",
+          "react-dom",
+          "react-hook-form",
+          "resend",
+          "socket.io",
+          "socket.io-client",
+          "stripe",
+          "tailwind-merge",
+          "tailwindcss",
+          "tailwindcss-animate",
+          "typescript",
+          "uuid",
+          "zustand",
+          "zxcvbn"
+        ]
+      }
+    },
+    "claude-code-ultimate": {
+      "name": "claude-code-ultimate",
+      "path": "/Users/MAC/Documents/projects/claude-code-ultimate",
+      "last_modified": "2025-08-23T02:24:33.572536",
+      "size_bytes": 4113,
+      "file_count": 1,
+      "directory_count": 2,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "caia": {
+      "name": "caia",
+      "path": "/Users/MAC/Documents/projects/caia",
+      "last_modified": "2025-08-23T16:46:20.788098",
+      "size_bytes": 10548774,
+      "file_count": 1336,
+      "directory_count": 523,
+      "recent_changes": [
+        {
+          "file": "temp-scripts/parallel-hierarchical-setup.sh",
+          "modified": "2025-08-23T16:46:11.497912"
+        },
+        {
+          "file": "temp-scripts/launch-parallel-development.sh",
+          "modified": "2025-08-23T16:46:20.811508"
+        },
+        {
+          "file": "admin/scripts/README_STREAM3.md",
+          "modified": "2025-08-23T17:33:31.177683"
+        },
+        {
+          "file": "admin/scripts/stream3_intelligence_hub.py",
+          "modified": "2025-08-23T17:32:32.247865"
+        },
+        {
+          "file": "admin/scripts/patterns/pattern_recognition.py",
+          "modified": "2025-08-23T17:24:41.031918"
+        },
+        {
+          "file": "admin/scripts/confidence/confidence_scorer.py",
+          "modified": "2025-08-23T17:28:36.055526"
+        },
+        {
+          "file": "admin/scripts/learning/estimation_learning.py",
+          "modified": "2025-08-23T17:21:41.556916"
+        },
+        {
+          "file": "admin/scripts/traceability/traceability_manager.py",
+          "modified": "2025-08-23T17:19:37.853698"
+        },
+        {
+          "file": "admin/scripts/analytics/analytics_engine.py",
+          "modified": "2025-08-23T17:30:53.932535"
+        },
+        {
+          "file": "knowledge-system/requirements.txt",
+          "modified": "2025-08-23T17:06:27.748535"
+        },
+        {
+          "file": "knowledge-system/README.md",
+          "modified": "2025-08-23T17:13:25.464676"
+        },
+        {
+          "file": "knowledge-system/parsers/parser_factory.py",
+          "modified": "2025-08-23T17:06:27.402350"
+        },
+        {
+          "file": "knowledge-system/parsers/js_parser.py",
+          "modified": "2025-08-23T17:06:27.394346"
+        },
+        {
+          "file": "knowledge-system/parsers/python_parser.py",
+          "modified": "2025-08-23T17:06:27.392061"
+        },
+        {
+          "file": "knowledge-system/embeddings/codet5_embedder.py",
+          "modified": "2025-08-23T17:06:27.619863"
+        },
+        {
+          "file": "knowledge-system/embeddings/config.yaml",
+          "modified": "2025-08-23T17:06:27.645262"
+        },
+        {
+          "file": "knowledge-system/watcher/stop_watcher.sh",
+          "modified": "2025-08-23T17:06:27.515931"
+        },
+        {
+          "file": "knowledge-system/watcher/status_watcher.sh",
+          "modified": "2025-08-23T17:06:27.518560"
+        },
+        {
+          "file": "knowledge-system/watcher/start_watcher.sh",
+          "modified": "2025-08-23T17:06:27.511282"
+        },
+        {
+          "file": "knowledge-system/watcher/file_watcher.py",
+          "modified": "2025-08-23T17:06:27.503990"
+        },
+        {
+          "file": "knowledge-system/config/qdrant.yaml",
+          "modified": "2025-08-23T17:06:27.177022"
+        },
+        {
+          "file": "knowledge-system/tests/conftest.py",
+          "modified": "2025-08-23T17:16:27.576087"
+        },
+        {
+          "file": "knowledge-system/tests/pytest.ini",
+          "modified": "2025-08-23T17:32:52.148446"
+        },
+        {
+          "file": "knowledge-system/tests/requirements.txt",
+          "modified": "2025-08-23T17:33:03.120597"
+        },
+        {
+          "file": "knowledge-system/tests/README.md",
+          "modified": "2025-08-23T17:33:58.025775"
+        },
+        {
+          "file": "knowledge-system/tests/unit/test_redundancy_detector.py",
+          "modified": "2025-08-23T17:18:39.018400"
+        },
+        {
+          "file": "knowledge-system/tests/unit/test_embeddings.py",
+          "modified": "2025-08-23T17:20:04.350849"
+        },
+        {
+          "file": "knowledge-system/tests/unit/test_entity_extraction.py",
+          "modified": "2025-08-23T17:22:56.199952"
+        },
+        {
+          "file": "knowledge-system/tests/unit/test_vector_search.py",
+          "modified": "2025-08-23T17:17:21.148781"
+        },
+        {
+          "file": "knowledge-system/tests/unit/test_ast_parser.py",
+          "modified": "2025-08-23T17:21:16.481985"
+        },
+        {
+          "file": "knowledge-system/tests/integration/test_integration.py",
+          "modified": "2025-08-23T17:26:03.665938"
+        },
+        {
+          "file": "knowledge-system/tests/cli/test_cli.py",
+          "modified": "2025-08-23T17:27:54.280833"
+        },
+        {
+          "file": "knowledge-system/tests/api/test_api.py",
+          "modified": "2025-08-23T17:24:10.819872"
+        },
+        {
+          "file": "knowledge-system/tests/fixtures/sample_code.py",
+          "modified": "2025-08-23T17:30:54.732697"
+        },
+        {
+          "file": "knowledge-system/tests/fixtures/sample_code.js",
+          "modified": "2025-08-23T17:31:49.226239"
+        },
+        {
+          "file": "knowledge-system/tests/fixtures/mock_data.json",
+          "modified": "2025-08-23T17:32:35.545997"
+        },
+        {
+          "file": "knowledge-system/tests/performance/test_performance.py",
+          "modified": "2025-08-23T17:29:55.241884"
+        },
+        {
+          "file": "knowledge-system/pipelines/embeddings/embedding_pipeline.py",
+          "modified": "2025-08-23T17:06:34.034150"
+        },
+        {
+          "file": "knowledge-system/pipelines/relationships/relationship_mapper.py",
+          "modified": "2025-08-23T17:06:31.876928"
+        },
+        {
+          "file": "knowledge-system/updater/incremental_updater.py",
+          "modified": "2025-08-23T17:06:31.980982"
+        },
+        {
+          "file": "knowledge-system/models/download_models.py",
+          "modified": "2025-08-23T17:06:27.626128"
+        },
+        {
+          "file": "knowledge-system/models/entities.py",
+          "modified": "2025-08-23T17:06:27.734967"
+        },
+        {
+          "file": "knowledge-system/models/validate_models.py",
+          "modified": "2025-08-23T17:06:27.742772"
+        },
+        {
+          "file": "knowledge-system/cli/knowledge_cli.py",
+          "modified": "2025-08-23T17:06:28.094331"
+        },
+        {
+          "file": "knowledge-system/search/vector_search.py",
+          "modified": "2025-08-23T17:07:50.042871"
+        },
+        {
+          "file": "knowledge-system/schema/schema.sql",
+          "modified": "2025-08-23T17:06:27.285519"
+        },
+        {
+          "file": "knowledge-system/schema/entity_schema.json",
+          "modified": "2025-08-23T17:06:27.737797"
+        },
+        {
+          "file": "knowledge-system/schema/entity_types.ts",
+          "modified": "2025-08-23T17:06:27.740339"
+        },
+        {
+          "file": "knowledge-system/components/documentation/documentation.py",
+          "modified": "2025-08-23T17:06:28.867979"
+        },
+        {
+          "file": "knowledge-system/components/redundancy_detector/redundancy_detector.py",
+          "modified": "2025-08-23T17:07:50.146992"
+        },
+        {
+          "file": "knowledge-system/components/cache_layer/cache_layer.py",
+          "modified": "2025-08-23T17:06:27.968531"
+        },
+        {
+          "file": "knowledge-system/components/pre_impl_checker/pre_impl_checker.py",
+          "modified": "2025-08-23T17:07:54.524860"
+        },
+        {
+          "file": "knowledge-system/components/query_fusion/query_fusion.py",
+          "modified": "2025-08-23T17:07:52.176706"
+        },
+        {
+          "file": "knowledge-system/components/arch_conformance/arch_conformance.py",
+          "modified": "2025-08-23T17:06:36.240388"
+        },
+        {
+          "file": "knowledge-system/components/batch_processor/batch_processor.py",
+          "modified": "2025-08-23T17:06:27.860944"
+        },
+        {
+          "file": "knowledge-system/components/sql_fts/sql_fts.py",
+          "modified": "2025-08-23T17:06:29.656154"
+        },
+        {
+          "file": "knowledge-system/components/backup_restore/backup_restore.py",
+          "modified": "2025-08-23T17:06:28.756779"
+        },
+        {
+          "file": "knowledge-system/components/migration_scripts/migration_scripts.py",
+          "modified": "2025-08-23T17:06:28.648684"
+        },
+        {
+          "file": "knowledge-system/components/git_hooks/git_hooks.py",
+          "modified": "2025-08-23T17:07:52.287541"
+        },
+        {
+          "file": "knowledge-system/components/knowledge_gaps/knowledge_gaps.py",
+          "modified": "2025-08-23T17:07:54.629872"
+        },
+        {
+          "file": "knowledge-system/components/result_ranker/result_ranker.py",
+          "modified": "2025-08-23T17:07:54.314357"
+        },
+        {
+          "file": "knowledge-system/components/gcp_configs/gcp_configs.py",
+          "modified": "2025-08-23T17:06:28.582134"
+        },
+        {
+          "file": "knowledge-system/components/horizontal_scaling/horizontal_scaling.py",
+          "modified": "2025-08-23T17:06:29.999023"
+        },
+        {
+          "file": "knowledge-system/components/graph_search/graph_search.py",
+          "modified": "2025-08-23T17:06:34.140446"
+        },
+        {
+          "file": "knowledge-system/components/cross_language/cross_language.py",
+          "modified": "2025-08-23T17:07:52.395206"
+        },
+        {
+          "file": "knowledge-system/components/enforcement_policies/enforcement_policies.py",
+          "modified": "2025-08-23T17:07:56.437626"
+        },
+        {
+          "file": "knowledge-system/components/auto_recovery/auto_recovery.py",
+          "modified": "2025-08-23T17:06:29.776699"
+        },
+        {
+          "file": "knowledge-system/components/perf_optimization/perf_optimization.py",
+          "modified": "2025-08-23T17:06:29.886847"
+        },
+        {
+          "file": "knowledge-system/components/health_checks/health_checks.py",
+          "modified": "2025-08-23T17:06:28.493674"
+        },
+        {
+          "file": "knowledge-system/components/perf_monitoring/perf_monitoring.py",
+          "modified": "2025-08-23T17:06:28.305828"
+        },
+        {
+          "file": "knowledge-system/logs/C3_graph_search.log",
+          "modified": "2025-08-23T17:06:34.142351"
+        },
+        {
+          "file": "knowledge-system/logs/B3_relationship_mapper.log",
+          "modified": "2025-08-23T17:06:31.880444"
+        },
+        {
+          "file": "knowledge-system/logs/B4_incremental_updater.log",
+          "modified": "2025-08-23T17:06:31.983069"
+        },
+        {
+          "file": "knowledge-system/logs/A1_setup_qdrant.log",
+          "modified": "2025-08-23T17:06:27.177372"
+        },
+        {
+          "file": "knowledge-system/logs/C1_vector_search.log",
+          "modified": "2025-08-23T17:07:50.045282"
+        },
+        {
+          "file": "knowledge-system/logs/A2_setup_sqlite.log",
+          "modified": "2025-08-23T17:06:27.308779"
+        },
+        {
+          "file": "knowledge-system/logs/B1_entity_extraction.log",
+          "modified": "2025-08-23T17:06:29.540870"
+        },
+        {
+          "file": "knowledge-system/logs/D1_cc_hooks.log",
+          "modified": "2025-08-23T17:07:54.421597"
+        },
+        {
+          "file": "knowledge-system/logs/F2_gcp_configs.log",
+          "modified": "2025-08-23T17:06:28.585204"
+        },
+        {
+          "file": "knowledge-system/logs/E2_arch_conformance.log",
+          "modified": "2025-08-23T17:06:36.242189"
+        },
+        {
+          "file": "knowledge-system/logs/F1_perf_optimization.log",
+          "modified": "2025-08-23T17:06:29.890100"
+        },
+        {
+          "file": "knowledge-system/logs/C4_redundancy_detector.log",
+          "modified": "2025-08-23T17:07:50.149162"
+        },
+        {
+          "file": "knowledge-system/logs/F4_backup_restore.log",
+          "modified": "2025-08-23T17:06:28.759562"
+        },
+        {
+          "file": "knowledge-system/logs/F6_documentation.log",
+          "modified": "2025-08-23T17:06:28.873082"
+        },
+        {
+          "file": "knowledge-system/logs/E4_perf_monitoring.log",
+          "modified": "2025-08-23T17:06:28.307982"
+        },
+        {
+          "file": "knowledge-system/logs/A6_define_entity_models.log",
+          "modified": "2025-08-23T17:06:30.077655"
+        },
+        {
+          "file": "knowledge-system/logs/A4_setup_file_watcher.log",
+          "modified": "2025-08-23T17:06:29.977676"
+        },
+        {
+          "file": "knowledge-system/logs/C6_result_ranker.log",
+          "modified": "2025-08-23T17:07:54.316313"
+        },
+        {
+          "file": "knowledge-system/logs/E3_knowledge_gaps.log",
+          "modified": "2025-08-23T17:07:54.632060"
+        },
+        {
+          "file": "knowledge-system/logs/A3_setup_ast_parser.log",
+          "modified": "2025-08-23T17:06:27.467354"
+        },
+        {
+          "file": "knowledge-system/logs/F3_migration_scripts.log",
+          "modified": "2025-08-23T17:06:28.653983"
+        },
+        {
+          "file": "knowledge-system/logs/C2_sql_fts.log",
+          "modified": "2025-08-23T17:06:29.661963"
+        },
+        {
+          "file": "knowledge-system/logs/D5_pre_impl_checker.log",
+          "modified": "2025-08-23T17:07:54.527336"
+        },
+        {
+          "file": "knowledge-system/logs/E6_auto_recovery.log",
+          "modified": "2025-08-23T17:06:29.781081"
+        },
+        {
+          "file": "knowledge-system/logs/F5_horizontal_scaling.log",
+          "modified": "2025-08-23T17:06:30.001243"
+        },
+        {
+          "file": "knowledge-system/logs/D6_enforcement_policies.log",
+          "modified": "2025-08-23T17:07:56.439948"
+        },
+        {
+          "file": "knowledge-system/logs/B2_embedding_pipeline.log",
+          "modified": "2025-08-23T17:06:34.036433"
+        },
+        {
+          "file": "knowledge-system/logs/D3_api_endpoints.log",
+          "modified": "2025-08-23T17:06:28.196888"
+        },
+        {
+          "file": "knowledge-system/logs/B5_batch_processor.log",
+          "modified": "2025-08-23T17:06:27.863320"
+        },
+        {
+          "file": "knowledge-system/logs/D2_cli_interface.log",
+          "modified": "2025-08-23T17:06:28.103153"
+        },
+        {
+          "file": "knowledge-system/logs/D4_git_hooks.log",
+          "modified": "2025-08-23T17:07:52.289422"
+        },
+        {
+          "file": "knowledge-system/logs/E5_health_checks.log",
+          "modified": "2025-08-23T17:06:28.520229"
+        },
+        {
+          "file": "knowledge-system/logs/B6_cache_layer.log",
+          "modified": "2025-08-23T17:06:27.973574"
+        },
+        {
+          "file": "knowledge-system/logs/C5_query_fusion.log",
+          "modified": "2025-08-23T17:07:52.178678"
+        },
+        {
+          "file": "knowledge-system/logs/E1_cross_language.log",
+          "modified": "2025-08-23T17:07:52.397074"
+        },
+        {
+          "file": "knowledge-system/logs/A5_setup_codet5.log",
+          "modified": "2025-08-23T17:06:32.718685"
+        },
+        {
+          "file": "knowledge-system/hooks/cc_hooks.py",
+          "modified": "2025-08-23T17:07:54.419657"
+        },
+        {
+          "file": "knowledge-system/configs/dependency-graph.json",
+          "modified": "2025-08-23T16:46:01.521700"
+        },
+        {
+          "file": "knowledge-system/scripts/validate-system.sh",
+          "modified": "2025-08-23T17:08:41.232647"
+        },
+        {
+          "file": "knowledge-system/scripts/db_utils.sh",
+          "modified": "2025-08-23T17:06:27.306331"
+        },
+        {
+          "file": "knowledge-system/scripts/hyperparallel-launcher.sh",
+          "modified": "2025-08-23T17:04:43.410482"
+        },
+        {
+          "file": "knowledge-system/scripts/monitor-dashboard.sh",
+          "modified": "2025-08-23T17:03:43.286613"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/arch_conformance.sh",
+          "modified": "2025-08-23T17:01:11.236210"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/vector_search.sh",
+          "modified": "2025-08-23T16:58:24.079038"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/define_entity_models.sh",
+          "modified": "2025-08-23T16:52:38.180287"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/setup_sqlite.sh",
+          "modified": "2025-08-23T16:48:04.248041"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/embedding_pipeline.sh",
+          "modified": "2025-08-23T16:54:33.981031"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/cross_language.sh",
+          "modified": "2025-08-23T17:01:11.231634"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/cache_layer.sh",
+          "modified": "2025-08-23T17:01:11.206678"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/perf_monitoring.sh",
+          "modified": "2025-08-23T17:01:11.240753"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/backup_restore.sh",
+          "modified": "2025-08-23T17:01:11.254287"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/incremental_updater.sh",
+          "modified": "2025-08-23T16:57:44.709092"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/auto_recovery.sh",
+          "modified": "2025-08-23T17:01:11.245311"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/migration_scripts.sh",
+          "modified": "2025-08-23T17:01:11.252021"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/api_endpoints.sh",
+          "modified": "2025-08-23T17:00:02.147067"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/horizontal_scaling.sh",
+          "modified": "2025-08-23T17:01:11.256509"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/setup_qdrant.sh",
+          "modified": "2025-08-23T16:47:38.942711"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/relationship_mapper.sh",
+          "modified": "2025-08-23T16:55:24.015182"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/run_all_tasks.sh",
+          "modified": "2025-08-23T17:01:36.558444"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/documentation.sh",
+          "modified": "2025-08-23T17:01:11.259129"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/README.md",
+          "modified": "2025-08-23T17:02:20.766096"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/batch_processor.sh",
+          "modified": "2025-08-23T17:01:11.203934"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/validate_tasks.sh",
+          "modified": "2025-08-23T17:01:52.809342"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/entity_extraction.sh",
+          "modified": "2025-08-23T16:53:53.382775"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/setup_ast_parser.sh",
+          "modified": "2025-08-23T16:49:03.368304"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/knowledge_gaps.sh",
+          "modified": "2025-08-23T17:01:11.238426"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/setup_codet5.sh",
+          "modified": "2025-08-23T16:50:56.362628"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/cc_hooks.sh",
+          "modified": "2025-08-23T16:59:19.920923"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/setup_file_watcher.sh",
+          "modified": "2025-08-23T16:49:56.131594"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/result_ranker.sh",
+          "modified": "2025-08-23T17:01:11.220490"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/query_fusion.sh",
+          "modified": "2025-08-23T17:01:11.218325"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/health_checks.sh",
+          "modified": "2025-08-23T17:01:11.242905"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/pre_impl_checker.sh",
+          "modified": "2025-08-23T17:01:11.225477"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/cli_interface.sh",
+          "modified": "2025-08-23T16:59:51.965957"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/gcp_configs.sh",
+          "modified": "2025-08-23T17:01:11.249908"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/sql_fts.sh",
+          "modified": "2025-08-23T17:01:11.209191"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/redundancy_detector.sh",
+          "modified": "2025-08-23T17:01:11.215434"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/graph_search.sh",
+          "modified": "2025-08-23T17:01:11.212452"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/perf_optimization.sh",
+          "modified": "2025-08-23T17:01:11.247721"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/git_hooks.sh",
+          "modified": "2025-08-23T17:01:11.222990"
+        },
+        {
+          "file": "knowledge-system/scripts/tasks/enforcement_policies.sh",
+          "modified": "2025-08-23T17:01:11.228246"
+        },
+        {
+          "file": "knowledge-system/api/api_server.py",
+          "modified": "2025-08-23T17:06:28.193890"
+        },
+        {
+          "file": "knowledge-system/data/task_status.db",
+          "modified": "2025-08-23T17:07:56.444141"
+        },
+        {
+          "file": "knowledge-system/data/knowledge.db",
+          "modified": "2025-08-23T17:06:27.296338"
+        },
+        {
+          "file": "knowledge-system/services/knowledge-watcher.service",
+          "modified": "2025-08-23T17:06:27.506359"
+        },
+        {
+          "file": "knowledge-system/services/com.caia.knowledge-watcher.plist",
+          "modified": "2025-08-23T17:06:27.508602"
+        },
+        {
+          "file": "caia/packages/agents/chatgpt-autonomous/jest.config.js",
+          "modified": "2025-08-23T16:39:47.094429"
+        },
+        {
+          "file": "caia/packages/agents/chatgpt-autonomous/jest.setup.test.ts",
+          "modified": "2025-08-23T16:39:40.604350"
+        },
+        {
+          "file": "caia/packages/agents/training-system/jest.config.js",
+          "modified": "2025-08-23T16:39:47.098885"
+        },
+        {
+          "file": "caia/packages/agents/training-system/jest.setup.test.ts",
+          "modified": "2025-08-23T16:39:40.620865"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/decision-engine/DecisionEngine.test.ts",
+          "modified": "2025-08-23T16:39:40.642018"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.test.ts",
+          "modified": "2025-08-23T16:39:40.662817"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/utils/Logger.test.ts",
+          "modified": "2025-08-23T16:39:40.680049"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/models/google/GoogleProvider.test.ts",
+          "modified": "2025-08-23T16:39:40.701074"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/models/anthropic/AnthropicProvider.test.ts",
+          "modified": "2025-08-23T16:39:40.720429"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/models/openai/OpenAIProvider.test.ts",
+          "modified": "2025-08-23T16:39:40.739239"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/jest.config.js",
+          "modified": "2025-08-23T16:39:47.096959"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/jest.setup.test.ts",
+          "modified": "2025-08-23T16:39:40.815269"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/product-owner/types.test.ts",
+          "modified": "2025-08-23T16:39:40.773694"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/product-owner/prompts.test.ts",
+          "modified": "2025-08-23T16:39:40.758060"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/agents/jira-connect/logger.test.ts",
+          "modified": "2025-08-23T16:39:40.795676"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/ParaForgeCore.comprehensive.test.ts",
+          "modified": "2025-08-23T16:59:02.281004"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/core/ParaForgeCore.test.ts",
+          "modified": "2025-08-23T16:39:40.839906"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/optimizer/ParallelizationOptimizer.test.ts",
+          "modified": "2025-08-23T16:39:40.862666"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/src/learning/LearningSystem.test.ts",
+          "modified": "2025-08-23T16:39:40.875068"
+        },
+        {
+          "file": "caia/packages/utils/logger/jest.config.js",
+          "modified": "2025-08-23T16:39:47.122891"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/jest.setup.test.ts.disabled",
+          "modified": "2025-08-23T16:45:15.624876"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/jest.config.js",
+          "modified": "2025-08-23T16:46:03.718963"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/__mocks__/p-queue.js",
+          "modified": "2025-08-23T16:46:08.964983"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/CCInstanceManager.test.ts",
+          "modified": "2025-08-23T17:12:51.912507"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/RateLimitManager.ts",
+          "modified": "2025-08-23T16:44:32.085026"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/RateLimitManager.test.ts",
+          "modified": "2025-08-23T17:15:33.834465"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/index.ts",
+          "modified": "2025-08-23T16:45:32.753407"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/TerminalPoolManager.test.ts",
+          "modified": "2025-08-23T17:22:18.832578"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/WorkDistributor.test.ts",
+          "modified": "2025-08-23T17:18:52.715131"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/TerminalPoolManager.ts",
+          "modified": "2025-08-23T16:44:58.732094"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/jest.config.js",
+          "modified": "2025-08-23T16:39:47.115232"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/jest.setup.test.ts",
+          "modified": "2025-08-23T16:40:49.724309"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/src/orchestra.test.ts",
+          "modified": "2025-08-23T16:40:35.046412"
+        },
+        {
+          "file": "caia/packages/integrations/orchestra/src/orchestra.comprehensive.test.ts",
+          "modified": "2025-08-23T17:00:54.538774"
+        },
+        {
+          "file": "caia/packages/integrations/jira/jest.config.js",
+          "modified": "2025-08-23T16:39:47.111259"
+        },
+        {
+          "file": "caia/packages/integrations/mcp-chatgpt/jest.config.js",
+          "modified": "2025-08-23T16:39:47.113286"
+        },
+        {
+          "file": "caia/packages/engines/learning/jest.config.js",
+          "modified": "2025-08-23T16:39:47.102806"
+        },
+        {
+          "file": "caia/packages/engines/planning/jest.config.js",
+          "modified": "2025-08-23T16:39:47.104818"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/jest.config.js",
+          "modified": "2025-08-23T16:39:47.107301"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/jest.config.js",
+          "modified": "2025-08-23T16:39:47.100888"
+        },
+        {
+          "file": "caia/packages/engines/workflow/jest.config.js",
+          "modified": "2025-08-23T16:39:47.109334"
+        },
+        {
+          "file": "caia/packages/modules/memory/jest.config.js",
+          "modified": "2025-08-23T16:39:47.119008"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/jest.config.js",
+          "modified": "2025-08-23T16:39:47.117127"
+        },
+        {
+          "file": "packages/agents/task-decomposer/IMPLEMENTATION_SUMMARY.md",
+          "modified": "2025-08-23T17:03:44.693900"
+        },
+        {
+          "file": "packages/agents/task-decomposer/README.md",
+          "modified": "2025-08-23T17:02:07.363651"
+        },
+        {
+          "file": "packages/agents/task-decomposer/package.json",
+          "modified": "2025-08-23T17:02:22.324061"
+        },
+        {
+          "file": "packages/agents/task-decomposer/verify-implementation.js",
+          "modified": "2025-08-23T17:02:55.006388"
+        },
+        {
+          "file": "packages/agents/task-decomposer/__tests__/EnhancedTaskDecomposer.test.ts",
+          "modified": "2025-08-23T17:01:11.956465"
+        },
+        {
+          "file": "packages/agents/task-decomposer/src/index.ts",
+          "modified": "2025-08-23T17:00:03.290664"
+        },
+        {
+          "file": "packages/agents/task-decomposer/src/analyzers/IdeaAnalyzer.ts",
+          "modified": "2025-08-23T16:48:57.144429"
+        },
+        {
+          "file": "packages/agents/task-decomposer/src/architects/FeatureArchitect.ts",
+          "modified": "2025-08-23T16:53:51.563049"
+        },
+        {
+          "file": "packages/agents/task-decomposer/src/planners/InitiativePlanner.ts",
+          "modified": "2025-08-23T16:51:07.410093"
+        },
+        {
+          "file": "packages/agents/task-decomposer/src/services/QualityGateController.ts",
+          "modified": "2025-08-23T16:56:21.108036"
+        },
+        {
+          "file": "packages/shared/hierarchical-types/index.ts",
+          "modified": "2025-08-23T16:46:20.809158"
+        }
+      ],
+      "git_info": {
+        "commits": [
+          {
+            "hash": "d406adc57b17dd0b4c86c722c81964c335ecac5b",
+            "author": "Prakash Tiwari",
+            "email": "prakashmailid@gmail.com",
+            "date": "2025-08-23 17:33:57 -0400",
+            "message": "feat(intelligence): implement Stream 3 intelligence and learning layer"
+          },
+          {
+            "hash": "be29761159e0be41c44de412e7484db65ce0a580",
+            "author": "Prakash Tiwari",
+            "email": "prakashmailid@gmail.com",
+            "date": "2025-08-23 17:13:30 -0400",
+            "message": "docs: add comprehensive README for knowledge system"
+          },
+          {
+            "hash": "b4054a73b5f6bb59d04f2366a725eb6bdbdd8178",
+            "author": "Prakash Tiwari",
+            "email": "prakashmailid@gmail.com",
+            "date": "2025-08-23 17:11:49 -0400",
+            "message": "feat(knowledge-system): add comprehensive knowledge management system"
+          }
+        ],
+        "modified_files": [
+          "aia",
+          "packages/agents/task-decomposer/package.json",
+          "packages/agents/task-decomposer/src/index.ts",
+          "packages/core/jest.config.js"
+        ],
+        "untracked_files": [
+          "jest.config.js",
+          "jest.setup.js",
+          "knowledge-system/tests/",
+          "packages/agents/task-decomposer/IMPLEMENTATION_SUMMARY.md",
+          "packages/agents/task-decomposer/README.md",
+          "packages/agents/task-decomposer/__tests__/EnhancedTaskDecomposer.test.ts",
+          "packages/agents/task-decomposer/src/analyzers/",
+          "packages/agents/task-decomposer/src/architects/",
+          "packages/agents/task-decomposer/src/planners/",
+          "packages/agents/task-decomposer/src/services/",
+          "packages/agents/task-decomposer/verify-implementation.js",
+          "packages/core/src/__tests__/",
+          "packages/shared/",
+          "temp-scripts/launch-parallel-development.sh",
+          "temp-scripts/parallel-hierarchical-setup.sh"
+        ],
+        "branches": [
+          "add-code-reviewers",
+          "feat/knowledge-system",
+          "feat/parallel-testing-utilities",
+          "feature/integrate-all-repos-20250819",
+          "fix/linting-errors",
+          "main",
+          "setup-ai-reviewers",
+          "remotes/origin/HEAD -> origin/main",
+          "remotes/origin/add-code-reviewers",
+          "remotes/origin/feat/autonomous-pipeline",
+          "remotes/origin/feat/knowledge-system",
+          "remotes/origin/feat/parallel-testing-utilities",
+          "remotes/origin/feature/integrate-all-repos-20250819",
+          "remotes/origin/main",
+          "remotes/origin/setup-ai-reviewers"
+        ],
+        "current_branch": "feat/knowledge-system"
+      },
+      "key_files": {
+        "package.json": "packages/modules/autonomy/package.json",
+        "requirements.txt": "packages/modules/autonomy/docs/requirements.txt"
+      },
+      "technologies": [
+        "Node.js",
+        "Python",
+        "TypeScript"
+      ],
+      "todos": [
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "knowledge-system/parsers/js_parser.py",
+          "line": 88,
+          "content": "'complexity': 1,  # TODO: Calculate complexity"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "caia/tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "caia/utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "caia/scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "caia/scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "caia/packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "caia/packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "caia/packages/utils/cc-orchestrator/src/index.ts",
+          "line": 613,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "caia/packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "caia/packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "caia/packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "caia/packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "caia/packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "caia/packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "caia/packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 373,
+          "content": "return `export interface ${interfaceName} {\\n  // TODO: Define ${interfaceName} properties\\n  [key: string]: any;\\n}`;"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 447,
+          "content": "// TODO: Implement test for ${method}"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 479,
+          "content": "// TODO: Implement ${methodName} logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 529,
+          "content": "return `${words.charAt(0).toUpperCase() + words.slice(1)} - TODO: Add detailed description`;"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 545,
+          "content": "// TODO: Add TypeScript compilation check"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 684,
+          "content": "// TODO: Add agent-specific initialization logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 692,
+          "content": "// TODO: Add agent-specific cleanup logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 729,
+          "content": "// TODO: Add task cancellation logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 197,
+          "content": "# Scan for TODOs in code files"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 203,
+          "content": "if 'TODO' in line or 'FIXME' in line or 'HACK' in line:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 302,
+          "content": "print(f\"\ud83d\udccc {context['summary']['total_todos']} TODOs found\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 170,
+          "content": "f\"Open TODOs: {context.get('summary', {}).get('total_todos', 0)}\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 207,
+          "content": "# Add critical TODOs"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 211,
+          "content": "if \"FIXME\" in todo[\"content\"] or \"CRITICAL\" in todo[\"content\"]:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 222,
+          "content": "\"## CRITICAL TODOs\""
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 277,
+          "content": "print(f\"Active TODOs: {result['recent_activity']['active_todos']}\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 136,
+          "content": "# Scan for TODOs"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 143,
+          "content": "if 'TODO' in line or 'FIXME' in line:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 288,
+          "content": "actions.append(f\"Address {len(component['todos'])} TODOs\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 351,
+          "content": "f\"Total TODOs: {tracking_data['summary']['total_todos']}\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 421,
+          "content": "\"5. Address critical TODOs in active components\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "packages/tools/admin/scripts/progress_to_web.py",
+          "line": 525,
+          "content": "# TODO: Implement ecosystem-wide publishing to admin repo"
+        },
+        {
+          "file": "packages/tools/training-system/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/agent_orchestrator.py",
+          "line": 483,
+          "content": "# TODO: Implement swarm pattern"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/agent_orchestrator.py",
+          "line": 488,
+          "content": "# TODO: Implement hierarchical pattern"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 274,
+          "content": "code=f\"# TODO: Implement {request.description}\","
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 462,
+          "content": "variables[var] = f\"# TODO: {var}\""
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 708,
+          "content": "# TODO: Implement using {best_solution.name}"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 746,
+          "content": "# Convert absolute MemCore imports to TODO comments"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 749,
+          "content": "r'# TODO: Replace with appropriate import\\n# from \\1 import \\2',"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 762,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 765,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 804,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 853,
+          "content": "# TODO: Add quick start example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1069,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1083,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1168,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1267,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1450,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1473,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1492,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1513,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1517,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1627,
+          "content": "TODO: Document methods"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1653,
+          "content": "TODO: Document components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1657,
+          "content": "TODO: Document data flow"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1674,
+          "content": "TODO: Add real-world examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1696,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1703,
+          "content": "# TODO: Add exports"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_solution_finder.py",
+          "line": 455,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_solution_finder.py",
+          "line": 607,
+          "content": "replacement_code=\"# TODO: Replace with suggested library\","
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/self_learning_adapter.py",
+          "line": 13,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/self_learning_adapter.py",
+          "line": 20,
+          "content": "# TODO: Add exports"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        }
+      ],
+      "dependencies": {
+        "npm": []
+      }
+    }
+  },
+  "recent_decisions": [
+    {
+      "id": "20250823_173426",
+      "timestamp": "2025-08-23T17:34:26.096251",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250823_173426. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_173339",
+      "timestamp": "2025-08-23T17:33:39.381625",
+      "title": "Implemented Stream 3 Intelligence and Learning Layer",
+      "description": "Built complete intelligence layer with 5 core modules: TraceabilityManager for idea-to-subtask mapping, EstimationLearning for ML-based estimation improvement, PatternRecognition for successful pattern discovery, ConfidenceScorer for quality prediction, and AnalyticsEngine for comprehensive insights. Includes unified IntelligenceHub orchestrator. All modules integrate with existing context management and use shared TypeScript types.",
+      "category": "architecture",
+      "project": "caia",
+      "tags": [
+        "intelligence",
+        "learning",
+        "ml",
+        "patterns",
+        "traceability",
+        "confidence",
+        "analytics"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "20250823_173339",
+      "timestamp": "2025-08-23T17:33:39.381625",
+      "title": "Implemented Stream 3 Intelligence and Learning Layer",
+      "description": "Built complete intelligence layer with 5 core modules: TraceabilityManager for idea-to-subtask mapping, EstimationLearning for ML-based estimation improvement, PatternRecognition for successful pattern discovery, ConfidenceScorer for quality prediction, and AnalyticsEngine for comprehensive insights. Includes unified IntelligenceHub orchestrator. All modules integrate with existing context management and use shared TypeScript types.",
+      "category": "architecture",
+      "project": "caia",
+      "tags": [
+        "intelligence",
+        "learning",
+        "ml",
+        "patterns",
+        "traceability",
+        "confidence",
+        "analytics"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "20250823_171648",
+      "timestamp": "2025-08-23T17:16:48.025057",
+      "project": "caia",
+      "task": "Stream 2 JIRA Connect Advanced Roadmaps Extension Completed",
+      "status": "completed",
+      "details": "Successfully implemented and tested 5 enhancement modules for JIRA Connect agent: AdvancedRoadmapsModule, BulkHierarchyCreator, WorkflowAutomation, CustomFieldMapper, and HierarchyNavigator. All modules integrate with existing MCP architecture and parallel connection handling. Comprehensive test suite shows 100% pass rate with 26 tests covering all modules and end-to-end integration scenarios.",
+      "completion_percentage": 100,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_170403",
+      "timestamp": "2025-08-23T17:04:03.591289",
+      "project": "caia",
+      "task": "CAIA Monorepo Test Coverage Implementation Completed",
+      "status": "completed",
+      "details": "Successfully implemented comprehensive business logic tests for CAIA monorepo, achieving significant coverage improvements from 2% to 19.34% overall, with SystemResourceCalculator at 76%, Logger at 100%, and main orchestrator index.ts at 40%. Created focused test strategies that target real business logic rather than placeholder tests.",
+      "completion_percentage": 95,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_165020",
+      "timestamp": "2025-08-23T16:50:20.531392",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250823_165020. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_163418",
+      "timestamp": "2025-08-23T16:34:18.826632",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250823_163418. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_152553",
+      "timestamp": "2025-08-23T15:25:53.471485",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250823_152553. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_111913",
+      "timestamp": "2025-08-23T11:19:13.557596",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250823_111913. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_024538",
+      "timestamp": "2025-08-23T02:45:38.929850",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250823_024538. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_022906",
+      "timestamp": "2025-08-23T02:29:06.823826",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250823_022906. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_022524",
+      "timestamp": "2025-08-23T02:25:24.555834",
+      "project": "admin",
+      "task": "Fixed status reporting scripts",
+      "status": "completed",
+      "details": "Fixed query_context.py to properly filter context files by timestamp pattern, fixed syntax error in caia_status.sh, and created improved session startup hook that shows accurate project statistics",
+      "completion_percentage": 100,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_021211",
+      "timestamp": "2025-08-23T02:12:11.117163",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250823_021211. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250823_012816",
+      "timestamp": "2025-08-23T01:28:16.759199",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250823_012816. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    }
+  ],
+  "summary": {
+    "total_projects": 4,
+    "active_projects": 1,
+    "total_commits": 3,
+    "total_todos": 181,
+    "total_recent_changes": 210
+  },
+  "changes_since_last": {
+    "new_projects": [
+      "caia",
+      "temp-scripts",
+      "claude-code-ultimate",
+      "standalone-apps"
+    ],
+    "removed_projects": [],
+    "new_commits": 0,
+    "new_todos": 0,
+    "new_decisions": 14
+  }
+}

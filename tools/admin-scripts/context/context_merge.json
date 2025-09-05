@@ -1,0 +1,11 @@
+{
+  "name": "context_merge",
+  "type": "context_awareness",
+  "config": {
+    "id": "C086",
+    "type": "CONTEXT",
+    "name": "context_merge",
+    "merge": true
+  },
+  "created": "2025-08-16T21:17:16.745252"
+}

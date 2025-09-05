@@ -1,0 +1,1844 @@
+{
+  "timestamp": "2025-08-21T16:28:02.093336",
+  "hours_covered": 1,
+  "projects": {
+    "temp-scripts": {
+      "name": "temp-scripts",
+      "path": "/Users/MAC/Documents/projects/temp-scripts",
+      "last_modified": "2025-08-19T02:47:34.234241",
+      "size_bytes": 0,
+      "file_count": 0,
+      "directory_count": 0,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "standalone-apps": {
+      "name": "standalone-apps",
+      "path": "/Users/MAC/Documents/projects/standalone-apps",
+      "last_modified": "2025-08-19T02:47:34.204354",
+      "size_bytes": 2595752,
+      "file_count": 244,
+      "directory_count": 90,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {
+        "package.json": "roulette-community/package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [
+        {
+          "file": "roulette-community/src/app/layout.tsx",
+          "line": 31,
+          "content": "// TODO: Get user from auth context when implementing authentication"
+        },
+        {
+          "file": "roulette-community/src/features/currency/service.ts",
+          "line": 262,
+          "content": "// TODO: Integrate with actual payment processor (Stripe)"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 478,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 492,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 550,
+          "content": "upsellRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 551,
+          "content": "churnRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 552,
+          "content": "reactivationRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 556,
+          "content": "refundRate: 0, // TODO: Track refunds"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 557,
+          "content": "paymentFailureRate: 0, // TODO: Track failed payments"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 575,
+          "content": "// TODO: Implement more sophisticated calculations"
+        },
+        {
+          "file": "roulette-community/src/lib/analytics/metrics.ts",
+          "line": 621,
+          "content": "// TODO: Implement growth calculations"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "@next/font",
+          "@radix-ui/react-avatar",
+          "@radix-ui/react-checkbox",
+          "@radix-ui/react-collapsible",
+          "@radix-ui/react-dialog",
+          "@radix-ui/react-dropdown-menu",
+          "@radix-ui/react-icons",
+          "@radix-ui/react-label",
+          "@radix-ui/react-navigation-menu",
+          "@radix-ui/react-progress",
+          "@radix-ui/react-separator",
+          "@radix-ui/react-slot",
+          "@radix-ui/react-tabs",
+          "@radix-ui/react-toast",
+          "@react-email/components",
+          "@sentry/nextjs",
+          "@supabase/auth-ui-react",
+          "@supabase/auth-ui-shared",
+          "@supabase/ssr",
+          "@supabase/supabase-js",
+          "@tanstack/react-query",
+          "@types/react",
+          "@types/react-dom",
+          "@types/uuid",
+          "@types/zxcvbn",
+          "@upstash/redis",
+          "autoprefixer",
+          "class-variance-authority",
+          "cloudinary",
+          "clsx",
+          "contentful",
+          "date-fns",
+          "dotenv",
+          "framer-motion",
+          "lucide-react",
+          "next",
+          "postcss",
+          "react",
+          "react-dom",
+          "react-hook-form",
+          "resend",
+          "socket.io",
+          "socket.io-client",
+          "stripe",
+          "tailwind-merge",
+          "tailwindcss",
+          "tailwindcss-animate",
+          "typescript",
+          "uuid",
+          "zustand",
+          "zxcvbn"
+        ]
+      }
+    },
+    "caia": {
+      "name": "caia",
+      "path": "/Users/MAC/Documents/projects/caia",
+      "last_modified": "2025-08-21T15:35:10.134174",
+      "size_bytes": 5664822,
+      "file_count": 783,
+      "directory_count": 332,
+      "recent_changes": [
+        {
+          "file": "package-lock.json",
+          "modified": "2025-08-21T15:31:11.320865"
+        },
+        {
+          "file": "fix-all-lint-errors.sh",
+          "modified": "2025-08-21T15:35:10.128008"
+        },
+        {
+          "file": "packages/tools/training-system/index.ts.tmp",
+          "modified": "2025-08-21T15:39:19.162423"
+        },
+        {
+          "file": "packages/tools/training-system/index.ts",
+          "modified": "2025-08-21T15:39:36.828976"
+        },
+        {
+          "file": "packages/tools/training-system/types/index.ts.tmp",
+          "modified": "2025-08-21T15:39:17.203914"
+        },
+        {
+          "file": "packages/tools/training-system/types/index.ts",
+          "modified": "2025-08-21T15:39:33.646483"
+        },
+        {
+          "file": "packages/tools/training-system/core/decision-engine/DecisionEngine.ts",
+          "modified": "2025-08-21T15:39:33.650183"
+        },
+        {
+          "file": "packages/tools/training-system/core/decision-engine/DecisionEngine.ts.tmp",
+          "modified": "2025-08-21T15:39:17.207606"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts.tmp",
+          "modified": "2025-08-21T15:39:17.209591"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "modified": "2025-08-21T15:39:33.653964"
+        },
+        {
+          "file": "packages/tools/training-system/utils/Logger.ts",
+          "modified": "2025-08-21T15:39:36.817975"
+        },
+        {
+          "file": "packages/tools/training-system/utils/Logger.ts.tmp",
+          "modified": "2025-08-21T15:39:19.155260"
+        },
+        {
+          "file": "packages/tools/training-system/models/google/GoogleProvider.ts",
+          "modified": "2025-08-21T15:39:36.820685"
+        },
+        {
+          "file": "packages/tools/training-system/models/google/GoogleProvider.ts.tmp",
+          "modified": "2025-08-21T15:39:19.157039"
+        },
+        {
+          "file": "packages/tools/training-system/models/anthropic/AnthropicProvider.ts.tmp",
+          "modified": "2025-08-21T15:39:19.158776"
+        },
+        {
+          "file": "packages/tools/training-system/models/anthropic/AnthropicProvider.ts",
+          "modified": "2025-08-21T15:39:36.823962"
+        },
+        {
+          "file": "packages/tools/training-system/models/openai/OpenAIProvider.ts",
+          "modified": "2025-08-21T15:39:36.826841"
+        },
+        {
+          "file": "packages/tools/training-system/models/openai/OpenAIProvider.ts.tmp",
+          "modified": "2025-08-21T15:39:19.160611"
+        },
+        {
+          "file": "packages/core/tests/setup.ts",
+          "modified": "2025-08-21T15:39:37.442793"
+        },
+        {
+          "file": "packages/core/tests/setup.ts.tmp",
+          "modified": "2025-08-21T15:39:19.480810"
+        },
+        {
+          "file": "packages/core/examples/usage.ts",
+          "modified": "2025-08-21T15:39:37.445830"
+        },
+        {
+          "file": "packages/core/examples/usage.ts.tmp",
+          "modified": "2025-08-21T15:39:19.482664"
+        },
+        {
+          "file": "packages/core/examples/SimpleAgent.ts.tmp",
+          "modified": "2025-08-21T15:39:19.484526"
+        },
+        {
+          "file": "packages/core/examples/SimpleAgent.ts",
+          "modified": "2025-08-21T15:39:37.448713"
+        },
+        {
+          "file": "packages/core/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:19.491425"
+        },
+        {
+          "file": "packages/core/src/index.ts",
+          "modified": "2025-08-21T15:39:37.464040"
+        },
+        {
+          "file": "packages/core/src/types/index.ts.tmp",
+          "modified": "2025-08-21T15:39:19.486212"
+        },
+        {
+          "file": "packages/core/src/types/index.ts",
+          "modified": "2025-08-21T15:39:37.451713"
+        },
+        {
+          "file": "packages/core/src/plugin/PluginManager.ts.tmp",
+          "modified": "2025-08-21T15:39:19.488031"
+        },
+        {
+          "file": "packages/core/src/plugin/PluginManager.ts",
+          "modified": "2025-08-21T15:57:32.479130"
+        },
+        {
+          "file": "packages/core/src/agent/BaseAgent.ts.tmp",
+          "modified": "2025-08-21T15:39:19.489804"
+        },
+        {
+          "file": "packages/core/src/agent/BaseAgent.ts",
+          "modified": "2025-08-21T15:55:49.639646"
+        },
+        {
+          "file": "packages/core/src/agent/BaseAgent.ts.bak",
+          "modified": "2025-08-21T15:40:58.277202"
+        },
+        {
+          "file": "packages/core/src/communication/MessageBus.ts.tmp",
+          "modified": "2025-08-21T15:39:19.493150"
+        },
+        {
+          "file": "packages/core/src/communication/MessageBus.ts",
+          "modified": "2025-08-21T15:57:21.994808"
+        },
+        {
+          "file": "packages/core/src/communication/MessageBus.ts.bak",
+          "modified": "2025-08-21T15:40:58.360527"
+        },
+        {
+          "file": "packages/core/src/orchestrator/Orchestrator.ts",
+          "modified": "2025-08-21T15:57:59.948789"
+        },
+        {
+          "file": "packages/core/src/orchestrator/Orchestrator.ts.tmp",
+          "modified": "2025-08-21T15:39:19.494884"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/SolutionArchitectAgent.ts.tmp",
+          "modified": "2025-08-21T15:39:19.498445"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/SolutionArchitectAgent.ts",
+          "modified": "2025-08-21T15:39:37.481093"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:19.505580"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/index.ts",
+          "modified": "2025-08-21T15:39:37.492187"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/types/SolutionTypes.ts.tmp",
+          "modified": "2025-08-21T15:39:19.500379"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/types/SolutionTypes.ts",
+          "modified": "2025-08-21T15:39:37.485212"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/__tests__/setup.ts",
+          "modified": "2025-08-21T15:39:37.487422"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/__tests__/setup.ts.tmp",
+          "modified": "2025-08-21T15:39:19.502172"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/__tests__/SolutionArchitectAgent.test.ts.tmp",
+          "modified": "2025-08-21T15:39:19.503860"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/__tests__/SolutionArchitectAgent.test.ts",
+          "modified": "2025-08-21T15:39:37.489858"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/SecurityAnalyzer.ts.tmp",
+          "modified": "2025-08-21T15:39:19.512315"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/ComplianceAnalyzer.ts",
+          "modified": "2025-08-21T15:39:37.494330"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/CostAnalyzer.ts",
+          "modified": "2025-08-21T15:39:37.496505"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/DiagramGenerator.ts.tmp",
+          "modified": "2025-08-21T15:39:19.514065"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/ArchitectureGenerator.ts",
+          "modified": "2025-08-21T15:39:37.498971"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/SecurityAnalyzer.ts",
+          "modified": "2025-08-21T15:39:37.501376"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/TechnologySelector.ts.tmp",
+          "modified": "2025-08-21T15:39:19.515744"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/PerformanceAnalyzer.ts.tmp",
+          "modified": "2025-08-21T15:39:19.517403"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/DiagramGenerator.ts",
+          "modified": "2025-08-21T15:39:37.504449"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/ArchitectureGenerator.ts.tmp",
+          "modified": "2025-08-21T15:39:19.510589"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/TechnologySelector.ts",
+          "modified": "2025-08-21T15:39:37.506904"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/PerformanceAnalyzer.ts",
+          "modified": "2025-08-21T15:39:37.509065"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/CostAnalyzer.ts.tmp",
+          "modified": "2025-08-21T15:39:19.508944"
+        },
+        {
+          "file": "packages/agents/solution-architect/src/services/ComplianceAnalyzer.ts.tmp",
+          "modified": "2025-08-21T15:39:19.507244"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/FrontendEngineerAgent.ts",
+          "modified": "2025-08-21T15:39:37.526347"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/FrontendEngineerAgent.ts.tmp",
+          "modified": "2025-08-21T15:39:19.522627"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:19.526118"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/index.ts",
+          "modified": "2025-08-21T15:39:37.531119"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/types/FrontendTypes.ts",
+          "modified": "2025-08-21T15:39:37.520436"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/types/FrontendTypes.ts.tmp",
+          "modified": "2025-08-21T15:39:19.520773"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/__tests__/setup.ts",
+          "modified": "2025-08-21T15:39:37.528689"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/__tests__/setup.ts.tmp",
+          "modified": "2025-08-21T15:39:19.524415"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/TestingService.ts",
+          "modified": "2025-08-21T15:39:37.533362"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/PerformanceOptimizer.ts",
+          "modified": "2025-08-21T15:39:37.535510"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/AccessibilityService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.537982"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/UIDesigner.ts.tmp",
+          "modified": "2025-08-21T15:39:19.544960"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/ComponentGenerator.ts",
+          "modified": "2025-08-21T15:39:37.537722"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/UXService.ts",
+          "modified": "2025-08-21T15:39:37.540109"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/DeploymentService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.546895"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/ThemeService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.541555"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/BuildService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.539825"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/FormService.ts",
+          "modified": "2025-08-21T15:39:37.542467"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/StateManager.ts",
+          "modified": "2025-08-21T15:39:37.544533"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/StateManager.ts.tmp",
+          "modified": "2025-08-21T15:39:19.536274"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/AccessibilityService.ts",
+          "modified": "2025-08-21T15:39:37.546894"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/BuildService.ts",
+          "modified": "2025-08-21T15:39:37.549510"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/ResponsiveDesigner.ts.tmp",
+          "modified": "2025-08-21T15:39:19.543273"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/ThemeService.ts",
+          "modified": "2025-08-21T15:39:37.551829"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/FormService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.534520"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/UXService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.532895"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/ResponsiveDesigner.ts",
+          "modified": "2025-08-21T15:39:37.553964"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/UIDesigner.ts",
+          "modified": "2025-08-21T15:39:37.556254"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/DeploymentService.ts",
+          "modified": "2025-08-21T15:39:37.558348"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/PerformanceOptimizer.ts.tmp",
+          "modified": "2025-08-21T15:39:19.529501"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/ComponentGenerator.ts.tmp",
+          "modified": "2025-08-21T15:39:19.531212"
+        },
+        {
+          "file": "packages/agents/frontend-engineer/src/services/TestingService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.527835"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/BackendEngineerAgent.ts",
+          "modified": "2025-08-21T15:39:37.583613"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/BackendEngineerAgent.ts.tmp",
+          "modified": "2025-08-21T15:39:19.555846"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:19.559458"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/index.ts",
+          "modified": "2025-08-21T15:39:37.588962"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/types/BackendTypes.ts",
+          "modified": "2025-08-21T15:39:37.577179"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/types/BackendTypes.ts.tmp",
+          "modified": "2025-08-21T15:39:19.554099"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/__tests__/setup.ts",
+          "modified": "2025-08-21T15:39:37.586579"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/__tests__/setup.ts.tmp",
+          "modified": "2025-08-21T15:39:19.557686"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/AuthenticationService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.563532"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/PerformanceOptimizer.ts",
+          "modified": "2025-08-21T15:39:37.591160"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/MonitoringService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.565254"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/MicroserviceDesigner.ts.tmp",
+          "modified": "2025-08-21T15:39:19.568584"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/ApiGenerator.ts.tmp",
+          "modified": "2025-08-21T15:39:19.570182"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/AuthenticationService.ts",
+          "modified": "2025-08-21T15:39:37.593379"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/MonitoringService.ts",
+          "modified": "2025-08-21T15:39:37.595467"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/DatabaseDesigner.ts.tmp",
+          "modified": "2025-08-21T15:39:19.575510"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/DatabaseMigrator.ts",
+          "modified": "2025-08-21T15:39:37.597647"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/MicroserviceDesigner.ts",
+          "modified": "2025-08-21T15:39:37.599752"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/ApiGenerator.ts",
+          "modified": "2025-08-21T15:39:37.601975"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/MessageQueueService.ts",
+          "modified": "2025-08-21T15:39:37.604059"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/CodeGenerator.ts",
+          "modified": "2025-08-21T15:39:37.606230"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/CodeGenerator.ts.tmp",
+          "modified": "2025-08-21T15:39:19.573727"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/DatabaseDesigner.ts",
+          "modified": "2025-08-21T15:39:37.608424"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/MessageQueueService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.571824"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/SecurityService.ts.tmp",
+          "modified": "2025-08-21T15:39:19.577213"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/SecurityService.ts",
+          "modified": "2025-08-21T15:39:37.610483"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/PerformanceOptimizer.ts.tmp",
+          "modified": "2025-08-21T15:39:19.561645"
+        },
+        {
+          "file": "packages/agents/backend-engineer/src/services/DatabaseMigrator.ts.tmp",
+          "modified": "2025-08-21T15:39:19.566921"
+        },
+        {
+          "file": "packages/agents/training-system/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:20.669790"
+        },
+        {
+          "file": "packages/agents/training-system/src/index.ts",
+          "modified": "2025-08-21T15:39:39.253477"
+        },
+        {
+          "file": "packages/agents/training-system/src/types/index.ts.tmp",
+          "modified": "2025-08-21T15:39:20.657397"
+        },
+        {
+          "file": "packages/agents/training-system/src/types/index.ts",
+          "modified": "2025-08-21T15:39:39.231881"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "modified": "2025-08-21T15:39:39.235361"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts.tmp",
+          "modified": "2025-08-21T15:39:20.659091"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts.tmp",
+          "modified": "2025-08-21T15:39:20.660939"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "modified": "2025-08-21T15:39:39.239175"
+        },
+        {
+          "file": "packages/agents/training-system/src/utils/Logger.ts",
+          "modified": "2025-08-21T15:39:39.242356"
+        },
+        {
+          "file": "packages/agents/training-system/src/utils/Logger.ts.tmp",
+          "modified": "2025-08-21T15:39:20.662811"
+        },
+        {
+          "file": "packages/agents/training-system/src/models/google/GoogleProvider.ts",
+          "modified": "2025-08-21T15:39:39.245511"
+        },
+        {
+          "file": "packages/agents/training-system/src/models/google/GoogleProvider.ts.tmp",
+          "modified": "2025-08-21T15:39:20.664500"
+        },
+        {
+          "file": "packages/agents/training-system/src/models/anthropic/AnthropicProvider.ts.tmp",
+          "modified": "2025-08-21T15:39:20.666260"
+        },
+        {
+          "file": "packages/agents/training-system/src/models/anthropic/AnthropicProvider.ts",
+          "modified": "2025-08-21T15:39:39.248515"
+        },
+        {
+          "file": "packages/agents/training-system/src/models/openai/OpenAIProvider.ts",
+          "modified": "2025-08-21T15:39:39.251291"
+        },
+        {
+          "file": "packages/agents/training-system/src/models/openai/OpenAIProvider.ts.tmp",
+          "modified": "2025-08-21T15:39:20.668052"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.217171"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/index.ts",
+          "modified": "2025-08-21T15:39:43.963603"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/product-owner/types.ts.tmp",
+          "modified": "2025-08-21T15:39:24.213175"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/product-owner/prompts.ts",
+          "modified": "2025-08-21T15:39:43.954887"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/product-owner/types.ts",
+          "modified": "2025-08-21T15:39:43.957706"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/product-owner/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.215284"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/product-owner/prompts.ts.tmp",
+          "modified": "2025-08-21T15:39:24.211034"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/product-owner/index.ts",
+          "modified": "2025-08-21T15:39:43.961163"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/jira-connect/logger.d.ts.tmp",
+          "modified": "2025-08-21T15:39:24.221077"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/jira-connect/index.d.ts.tmp",
+          "modified": "2025-08-21T15:39:24.224748"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/jira-connect/logger.ts",
+          "modified": "2025-08-21T15:39:43.965597"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/jira-connect/logger.d.ts",
+          "modified": "2025-08-21T15:39:43.967629"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/jira-connect/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.222880"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/jira-connect/index.ts",
+          "modified": "2025-08-21T15:39:43.970761"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/jira-connect/index.d.ts",
+          "modified": "2025-08-21T15:39:43.973197"
+        },
+        {
+          "file": "packages/agents/paraforge/agents/jira-connect/logger.ts.tmp",
+          "modified": "2025-08-21T15:39:24.219050"
+        },
+        {
+          "file": "packages/agents/paraforge/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.241173"
+        },
+        {
+          "file": "packages/agents/paraforge/src/index.ts",
+          "modified": "2025-08-21T15:39:44.000365"
+        },
+        {
+          "file": "packages/agents/paraforge/src/core/ParaForgeCore.ts",
+          "modified": "2025-08-21T15:39:43.975952"
+        },
+        {
+          "file": "packages/agents/paraforge/src/core/ParaForgeCore.ts.tmp",
+          "modified": "2025-08-21T15:39:24.226617"
+        },
+        {
+          "file": "packages/agents/paraforge/src/optimizer/ParallelizationOptimizer.ts",
+          "modified": "2025-08-21T15:39:43.978933"
+        },
+        {
+          "file": "packages/agents/paraforge/src/optimizer/ParallelizationOptimizer.ts.tmp",
+          "modified": "2025-08-21T15:39:24.228438"
+        },
+        {
+          "file": "packages/agents/paraforge/src/learning/LearningSystem.ts",
+          "modified": "2025-08-21T15:39:43.982155"
+        },
+        {
+          "file": "packages/agents/paraforge/src/learning/LearningSystem.ts.tmp",
+          "modified": "2025-08-21T15:39:24.230261"
+        },
+        {
+          "file": "packages/agents/paraforge/src/agents/JiraConnectWrapper.ts.tmp",
+          "modified": "2025-08-21T15:39:24.233780"
+        },
+        {
+          "file": "packages/agents/paraforge/src/agents/AgentOrchestrator.ts",
+          "modified": "2025-08-21T15:39:43.984686"
+        },
+        {
+          "file": "packages/agents/paraforge/src/agents/AgentOrchestrator.ts.tmp",
+          "modified": "2025-08-21T15:39:24.232032"
+        },
+        {
+          "file": "packages/agents/paraforge/src/agents/JiraConnectWrapper.ts",
+          "modified": "2025-08-21T15:39:43.988202"
+        },
+        {
+          "file": "packages/agents/paraforge/src/utils/logger.ts",
+          "modified": "2025-08-21T15:39:43.990417"
+        },
+        {
+          "file": "packages/agents/paraforge/src/utils/logger.ts.tmp",
+          "modified": "2025-08-21T15:39:24.235641"
+        },
+        {
+          "file": "packages/agents/paraforge/src/synthesis/SynthesisEngine.ts",
+          "modified": "2025-08-21T15:39:43.994127"
+        },
+        {
+          "file": "packages/agents/paraforge/src/synthesis/SynthesisEngine.ts.tmp",
+          "modified": "2025-08-21T15:39:24.237409"
+        },
+        {
+          "file": "packages/agents/paraforge/src/jira/JiraConnector.ts",
+          "modified": "2025-08-21T15:39:43.998152"
+        },
+        {
+          "file": "packages/agents/paraforge/src/jira/JiraConnector.ts.tmp",
+          "modified": "2025-08-21T15:39:24.239218"
+        },
+        {
+          "file": "packages/agents/product-owner/src/types.ts.tmp",
+          "modified": "2025-08-21T15:39:24.243312"
+        },
+        {
+          "file": "packages/agents/product-owner/src/types.ts",
+          "modified": "2025-08-21T15:39:44.003019"
+        },
+        {
+          "file": "packages/agents/product-owner/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.251646"
+        },
+        {
+          "file": "packages/agents/product-owner/src/index.ts",
+          "modified": "2025-08-21T15:39:44.009882"
+        },
+        {
+          "file": "packages/agents/product-owner/src/__tests__/index.test.ts",
+          "modified": "2025-08-21T15:39:44.006065"
+        },
+        {
+          "file": "packages/agents/product-owner/src/__tests__/index.test.ts.tmp",
+          "modified": "2025-08-21T15:39:24.249457"
+        },
+        {
+          "file": "packages/utils/logger/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.253739"
+        },
+        {
+          "file": "packages/utils/logger/src/index.ts",
+          "modified": "2025-08-21T15:39:44.012281"
+        },
+        {
+          "file": "packages/utils/paraforge/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.292506"
+        },
+        {
+          "file": "packages/utils/paraforge/index.ts",
+          "modified": "2025-08-21T15:39:44.034976"
+        },
+        {
+          "file": "packages/utils/paraforge/core/ParaForgeCore.ts",
+          "modified": "2025-08-21T15:39:44.014793"
+        },
+        {
+          "file": "packages/utils/paraforge/core/ParaForgeCore.ts.tmp",
+          "modified": "2025-08-21T15:39:24.258071"
+        },
+        {
+          "file": "packages/utils/paraforge/agents/JiraAdminAgent.ts",
+          "modified": "2025-08-21T15:39:44.032555"
+        },
+        {
+          "file": "packages/utils/paraforge/agents/JiraAdminAgent.ts.tmp",
+          "modified": "2025-08-21T15:39:24.286708"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/memory-profiler.ts",
+          "modified": "2025-08-21T15:39:44.063330"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/cli.ts.tmp",
+          "modified": "2025-08-21T15:39:24.331696"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/CCInstanceManager.ts",
+          "modified": "2025-08-21T15:39:44.066758"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/RateLimitManager.ts",
+          "modified": "2025-08-21T15:39:44.070411"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/WorkDistributor.ts",
+          "modified": "2025-08-21T15:39:44.074237"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/cli.ts",
+          "modified": "2025-08-21T15:39:44.077715"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/RateLimitManager.ts.tmp",
+          "modified": "2025-08-21T15:39:24.327952"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/memory-profiler.ts.tmp",
+          "modified": "2025-08-21T15:39:24.323844"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/TerminalPoolManager.ts.tmp",
+          "modified": "2025-08-21T15:39:24.338943"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/CCInstanceManager.ts.tmp",
+          "modified": "2025-08-21T15:39:24.326022"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/WorkDistributor.ts.tmp",
+          "modified": "2025-08-21T15:39:24.329849"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.335212"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/index.ts",
+          "modified": "2025-08-21T15:39:44.086731"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/SystemResourceCalculator.ts",
+          "modified": "2025-08-21T15:39:44.091253"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/SystemResourceCalculator.ts.tmp",
+          "modified": "2025-08-21T15:39:24.337077"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/TerminalPoolManager.ts",
+          "modified": "2025-08-21T15:39:44.097659"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/utils/Logger.ts",
+          "modified": "2025-08-21T15:39:44.079996"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/utils/Logger.ts.tmp",
+          "modified": "2025-08-21T15:39:24.333534"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/consensus.ts.tmp",
+          "modified": "2025-08-21T15:39:24.340731"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/types.ts.tmp",
+          "modified": "2025-08-21T15:39:24.342385"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/provider.ts.tmp",
+          "modified": "2025-08-21T15:39:24.347387"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/orchestra.ts.tmp",
+          "modified": "2025-08-21T15:39:24.349068"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/consensus.ts",
+          "modified": "2025-08-21T15:39:44.101389"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/types.ts",
+          "modified": "2025-08-21T15:39:44.104211"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/registry.ts",
+          "modified": "2025-08-21T15:39:44.106867"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.345724"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/index.ts",
+          "modified": "2025-08-21T15:39:44.109358"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/provider.ts",
+          "modified": "2025-08-21T15:39:44.111898"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/registry.ts.tmp",
+          "modified": "2025-08-21T15:39:24.344097"
+        },
+        {
+          "file": "packages/integrations/orchestra/src/orchestra.ts",
+          "modified": "2025-08-21T15:39:44.115246"
+        },
+        {
+          "file": "packages/integrations/jira/src/logger.ts",
+          "modified": "2025-08-21T15:39:44.124414"
+        },
+        {
+          "file": "packages/integrations/jira/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.356241"
+        },
+        {
+          "file": "packages/integrations/jira/src/index.ts",
+          "modified": "2025-08-21T15:39:44.128206"
+        },
+        {
+          "file": "packages/integrations/jira/src/logger.ts.tmp",
+          "modified": "2025-08-21T15:39:24.354339"
+        },
+        {
+          "file": "packages/integrations/mcp-chatgpt/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.363268"
+        },
+        {
+          "file": "packages/integrations/mcp-chatgpt/src/index.ts",
+          "modified": "2025-08-21T15:39:44.141234"
+        },
+        {
+          "file": "packages/testing/test-utils/src/setup.ts",
+          "modified": "2025-08-21T15:39:44.164267"
+        },
+        {
+          "file": "packages/testing/test-utils/src/setup.ts.tmp",
+          "modified": "2025-08-21T15:39:24.374642"
+        },
+        {
+          "file": "packages/testing/test-utils/src/index.ts.tmp",
+          "modified": "2025-08-21T15:39:24.376378"
+        },
+        {
+          "file": "packages/testing/test-utils/src/index.ts",
+          "modified": "2025-08-21T15:39:44.166952"
+        },
+        {
+          "file": "packages/testing/test-utils/src/mocks/agent-mocks.ts",
+          "modified": "2025-08-21T15:39:44.145149"
+        },
+        {
+          "file": "packages/testing/test-utils/src/mocks/agent-mocks.ts.tmp",
+          "modified": "2025-08-21T15:39:24.365599"
+        },
+        {
+          "file": "packages/testing/test-utils/src/types/test-types.ts.tmp",
+          "modified": "2025-08-21T15:39:24.367568"
+        },
+        {
+          "file": "packages/testing/test-utils/src/types/test-types.ts",
+          "modified": "2025-08-21T15:39:44.149056"
+        },
+        {
+          "file": "packages/testing/test-utils/src/core/test-runner.ts.tmp",
+          "modified": "2025-08-21T15:39:24.369371"
+        },
+        {
+          "file": "packages/testing/test-utils/src/core/assertion-helpers.ts.tmp",
+          "modified": "2025-08-21T15:39:24.371108"
+        },
+        {
+          "file": "packages/testing/test-utils/src/core/test-runner.ts",
+          "modified": "2025-08-21T15:39:44.152592"
+        },
+        {
+          "file": "packages/testing/test-utils/src/core/assertion-helpers.ts",
+          "modified": "2025-08-21T15:39:44.156670"
+        },
+        {
+          "file": "packages/testing/test-utils/src/integration/setup-helpers.ts.tmp",
+          "modified": "2025-08-21T15:39:24.372790"
+        },
+        {
+          "file": "packages/testing/test-utils/src/integration/setup-helpers.ts",
+          "modified": "2025-08-21T15:39:44.161039"
+        },
+        {
+          "file": "packages/engines/code-generation/package.json",
+          "modified": "2025-08-21T15:29:16.113437"
+        },
+        {
+          "file": "packages/engines/workflow/package.json",
+          "modified": "2025-08-21T15:29:05.065077"
+        }
+      ],
+      "git_info": {
+        "commits": [],
+        "modified_files": [
+          ".husky/pre-commit",
+          "PACKAGES.md",
+          "package.json",
+          "packages/agents/backend-engineer/src/BackendEngineerAgent.ts",
+          "packages/agents/frontend-engineer/src/FrontendEngineerAgent.ts",
+          "packages/agents/paraforge/agents/index.ts",
+          "packages/agents/paraforge/agents/jira-connect/index.d.ts",
+          "packages/agents/paraforge/agents/product-owner/prompts.ts",
+          "packages/agents/paraforge/src/index.ts",
+          "packages/agents/paraforge/src/jira/JiraConnector.ts",
+          "packages/agents/paraforge/src/optimizer/ParallelizationOptimizer.ts",
+          "packages/agents/solution-architect/src/SolutionArchitectAgent.ts",
+          "packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "packages/agents/training-system/src/models/anthropic/AnthropicProvider.ts",
+          "packages/agents/training-system/src/models/google/GoogleProvider.ts",
+          "packages/agents/training-system/src/models/openai/OpenAIProvider.ts",
+          "packages/core/.eslintrc.js",
+          "packages/core/examples/SimpleAgent.ts",
+          "packages/core/package.json",
+          "packages/core/src/agent/BaseAgent.ts",
+          "packages/core/src/communication/MessageBus.ts",
+          "packages/core/src/index.ts",
+          "packages/core/src/orchestrator/Orchestrator.ts",
+          "packages/core/src/plugin/PluginManager.ts",
+          "packages/core/src/types/index.ts",
+          "packages/engines/code-generation/package.json",
+          "packages/engines/learning/package.json",
+          "packages/engines/planning/package.json",
+          "packages/engines/reasoning/package.json",
+          "packages/engines/workflow/package.json",
+          "packages/integrations/orchestra/src/consensus.ts",
+          "packages/integrations/orchestra/src/registry.ts",
+          "packages/modules/autonomy/package.json",
+          "packages/modules/memory/package.json",
+          "packages/testing/test-utils/src/integration/setup-helpers.ts",
+          "packages/tools/training-system/core/decision-engine/DecisionEngine.ts",
+          "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "packages/tools/training-system/models/anthropic/AnthropicProvider.ts",
+          "packages/tools/training-system/models/google/GoogleProvider.ts",
+          "packages/tools/training-system/models/openai/OpenAIProvider.ts",
+          "packages/utils/cc-orchestrator/src/RateLimitManager.ts",
+          "packages/utils/cc-orchestrator/src/cli.ts",
+          "packages/utils/paraforge/agents/JiraAdminAgent.ts",
+          "packages/utils/paraforge/index.ts"
+        ],
+        "untracked_files": [
+          "ENFORCEMENT-STATUS.md",
+          "fix-all-lint-errors.sh",
+          "fix-all-unused.sh",
+          "packages/core/.eslintrc.strict.js",
+          "packages/core/src/agent/BaseAgent.ts.bak",
+          "packages/core/src/communication/MessageBus.ts.bak",
+          "temp-scripts/comprehensive-lint-fix.sh",
+          "temp-scripts/fix-unused-vars.sh"
+        ],
+        "branches": [
+          "feature/integrate-all-repos-20250819",
+          "main",
+          "remotes/origin/feature/integrate-all-repos-20250819",
+          "remotes/origin/main"
+        ],
+        "current_branch": "feature/integrate-all-repos-20250819"
+      },
+      "key_files": {
+        "package.json": "packages/modules/autonomy/package.json",
+        "requirements.txt": "packages/modules/autonomy/docs/requirements.txt"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js",
+        "Python"
+      ],
+      "todos": [
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "tools/claude-code-ultimate/monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        },
+        {
+          "file": "utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "scripts/progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 373,
+          "content": "return `export interface ${interfaceName} {\\n  // TODO: Define ${interfaceName} properties\\n  [key: string]: any;\\n}`;"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 447,
+          "content": "// TODO: Implement test for ${method}"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 479,
+          "content": "// TODO: Implement ${methodName} logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 529,
+          "content": "return `${words.charAt(0).toUpperCase() + words.slice(1)} - TODO: Add detailed description`;"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 545,
+          "content": "// TODO: Add TypeScript compilation check"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 684,
+          "content": "// TODO: Add agent-specific initialization logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 692,
+          "content": "// TODO: Add agent-specific cleanup logic"
+        },
+        {
+          "file": "scripts/activate-agents.js",
+          "line": 729,
+          "content": "// TODO: Add task cancellation logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 288,
+          "content": "// TODO: Implement agent logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 345,
+          "content": "// TODO: Implement engine transformation"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 367,
+          "content": "// TODO: Implement utility logic"
+        },
+        {
+          "file": "scripts/create-package.js",
+          "line": 382,
+          "content": "// TODO: Implement async utility logic"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 197,
+          "content": "# Scan for TODOs in code files"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 203,
+          "content": "if 'TODO' in line or 'FIXME' in line or 'HACK' in line:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/capture_context.py",
+          "line": 302,
+          "content": "print(f\"\ud83d\udccc {context['summary']['total_todos']} TODOs found\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 170,
+          "content": "f\"Open TODOs: {context.get('summary', {}).get('total_todos', 0)}\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 207,
+          "content": "# Add critical TODOs"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 211,
+          "content": "if \"FIXME\" in todo[\"content\"] or \"CRITICAL\" in todo[\"content\"]:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 222,
+          "content": "\"## CRITICAL TODOs\""
+        },
+        {
+          "file": "packages/tools/admin/scripts/query_context.py",
+          "line": 277,
+          "content": "print(f\"Active TODOs: {result['recent_activity']['active_todos']}\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 136,
+          "content": "# Scan for TODOs"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 143,
+          "content": "if 'TODO' in line or 'FIXME' in line:"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 288,
+          "content": "actions.append(f\"Address {len(component['todos'])} TODOs\")"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 351,
+          "content": "f\"Total TODOs: {tracking_data['summary']['total_todos']}\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_tracker.py",
+          "line": 421,
+          "content": "\"5. Address critical TODOs in active components\","
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_tracker.py",
+          "line": 171,
+          "content": "\"published\": 0,  # TODO: Check NPM for published packages"
+        },
+        {
+          "file": "packages/tools/admin/scripts/caia_progress_tracker.py",
+          "line": 172,
+          "content": "\"building\": 0,    # TODO: Check which packages build successfully"
+        },
+        {
+          "file": "packages/tools/admin/scripts/progress_to_web.py",
+          "line": 525,
+          "content": "# TODO: Implement ecosystem-wide publishing to admin repo"
+        },
+        {
+          "file": "packages/tools/training-system/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/tools/training-system/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/agent_orchestrator.py",
+          "line": 483,
+          "content": "# TODO: Implement swarm pattern"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/agent_orchestrator.py",
+          "line": 488,
+          "content": "# TODO: Implement hierarchical pattern"
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 274,
+          "content": "code=f\"# TODO: Implement {request.description}\","
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 462,
+          "content": "variables[var] = f\"# TODO: {var}\""
+        },
+        {
+          "file": "packages/core/memory-enhanced/core/code_generator.py",
+          "line": 708,
+          "content": "# TODO: Implement using {best_solution.name}"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 746,
+          "content": "# Convert absolute MemCore imports to TODO comments"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 749,
+          "content": "r'# TODO: Replace with appropriate import\\n# from \\1 import \\2',"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 762,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 765,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 804,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 853,
+          "content": "# TODO: Add quick start example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1069,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1083,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1168,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1267,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1450,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1473,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1492,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1513,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1517,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1627,
+          "content": "TODO: Document methods"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1653,
+          "content": "TODO: Document components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1657,
+          "content": "TODO: Document data flow"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1674,
+          "content": "TODO: Add real-world examples"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1696,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_extractor_agent.py",
+          "line": 1703,
+          "content": "# TODO: Add exports"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_solution_finder.py",
+          "line": 455,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/core/memory-enhanced/agents/open_source_solution_finder.py",
+          "line": 607,
+          "content": "replacement_code=\"# TODO: Replace with suggested library\","
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/self_learning_adapter.py",
+          "line": 13,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "packages/core/memory-enhanced/adapters/self_learning_adapter.py",
+          "line": 20,
+          "content": "# TODO: Add exports"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "packages/agents/training-system/src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        },
+        {
+          "file": "packages/agents/paraforge/scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        },
+        {
+          "file": "packages/utils/cc-orchestrator/src/index.ts",
+          "line": 613,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        },
+        {
+          "file": "packages/engines/learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "packages/engines/learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "packages/engines/learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "packages/engines/planning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/planning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/planning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/planning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/reasoning/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/reasoning/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/engines/code-generation/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/engines/code-generation/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 157,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 263,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "packages/engines/code-generation/src/codeforge/core.py",
+          "line": 370,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "packages/engines/workflow/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "packages/modules/autonomy/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "packages/modules/autonomy/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "packages/modules/autonomy/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        }
+      ],
+      "dependencies": {
+        "npm": []
+      }
+    }
+  },
+  "recent_decisions": [
+    {
+      "id": "20250821_153707",
+      "timestamp": "2025-08-21T15:37:07.326926",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_153707. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_143724",
+      "timestamp": "2025-08-21T14:37:24.067816",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_143724. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_114246",
+      "timestamp": "2025-08-21T11:42:46.131479",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_114246. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_033714",
+      "timestamp": "2025-08-21T03:37:14.072005",
+      "project": "caia",
+      "task": "CI/CD Pipeline Partially Fixed",
+      "status": "in_progress",
+      "details": "Successfully resolved merge conflicts and added package-lock.json to repository. Fixed multiple dependency issues including invalid packages (emotion, @sats/core, @dsazz/mcp-jira) and updated outdated versions. Tests are now running but failing due to Nx post-install script issues. Main improvements: (1) package-lock.json now committed per industry standards, (2) CI can use npm ci for faster installs, (3) resolved all merge conflicts. Remaining issue: Nx native module installation in CI environment.",
+      "completion_percentage": 80,
+      "type": "progress"
+    },
+    {
+      "id": "20250821_022424",
+      "timestamp": "2025-08-21T02:24:24.501750",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250821_022424. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    }
+  ],
+  "summary": {
+    "total_projects": 3,
+    "active_projects": 1,
+    "total_commits": 0,
+    "total_todos": 125,
+    "total_recent_changes": 238
+  },
+  "changes_since_last": {
+    "new_projects": [
+      "temp-scripts",
+      "standalone-apps",
+      "caia"
+    ],
+    "removed_projects": [],
+    "new_commits": 0,
+    "new_todos": 0,
+    "new_decisions": 5
+  }
+}

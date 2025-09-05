@@ -1,0 +1,15 @@
+{
+  "id": "20250818_051204",
+  "timestamp": "2025-08-18T05:12:04.464984",
+  "title": "CAIA to GCP Migration Technical Analysis",
+  "description": "Created comprehensive technical migration mapping from CAIA monorepo to GCP cloud-native architecture with detailed code replacement strategy",
+  "category": "architecture",
+  "project": "caia",
+  "tags": [
+    "migration",
+    "gcp",
+    "cloud-native",
+    "serverless"
+  ],
+  "metadata": {}
+}

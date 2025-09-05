@@ -1,0 +1,16 @@
+{
+  "name": "active_decisions_tracker",
+  "type": "context_awareness",
+  "auto_load": false,
+  "display": "none",
+  "track_active": true,
+  "version": false,
+  "backup": false,
+  "created": "2025-08-16T21:13:09.049037",
+  "config": {
+    "id": "C082",
+    "type": "CONTEXT",
+    "name": "active_decisions_tracker",
+    "track_active": true
+  }
+}

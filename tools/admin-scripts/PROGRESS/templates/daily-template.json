@@ -1,0 +1,52 @@
+{
+  "repo": "admin",
+  "date": "YYYY-MM-DD",
+  "daily_summary": "Brief summary of the day's work",
+  "accomplishments": [
+    {
+      "time": "HH:MM",
+      "type": "feature|bugfix|refactor|docs|test|chore",
+      "title": "Short title",
+      "description": "Detailed description",
+      "files_changed": [
+        "file1.js",
+        "file2.py"
+      ],
+      "complexity": "low|medium|high",
+      "impact": "low|medium|high"
+    }
+  ],
+  "decisions": [
+    {
+      "time": "HH:MM",
+      "decision": "What was decided",
+      "reasoning": "Why this decision was made",
+      "alternatives_considered": [
+        "option1",
+        "option2"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "title": "Blocker description",
+      "impact": "How it affects progress",
+      "plan": "How to resolve it"
+    }
+  ],
+  "next_day_plan": [
+    "Task 1 for tomorrow",
+    "Task 2 for tomorrow"
+  ],
+  "metrics": {
+    "commits": 0,
+    "files_changed": 0,
+    "lines_added": 0,
+    "lines_removed": 0,
+    "tests_added": 0,
+    "bugs_fixed": 0
+  },
+  "mood": "productive|frustrated|focused|energetic|tired",
+  "energy_level": 8,
+  "notes": "Any additional thoughts or observations"
+}

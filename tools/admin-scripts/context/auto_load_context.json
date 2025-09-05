@@ -1,0 +1,16 @@
+{
+  "name": "auto_load_context",
+  "type": "context_awareness",
+  "auto_load": true,
+  "display": "none",
+  "track_active": false,
+  "version": false,
+  "backup": false,
+  "created": "2025-08-16T21:13:09.048759",
+  "config": {
+    "id": "C080",
+    "type": "CONTEXT",
+    "name": "auto_load_context",
+    "auto_load": true
+  }
+}

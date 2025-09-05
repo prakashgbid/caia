@@ -1,0 +1,11 @@
+{
+  "name": "context_backup",
+  "type": "context_awareness",
+  "config": {
+    "id": "C084",
+    "type": "CONTEXT",
+    "name": "context_backup",
+    "backup": true
+  },
+  "created": "2025-08-16T21:17:16.745038"
+}

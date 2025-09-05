@@ -1,0 +1,11 @@
+{
+  "name": "context_restore",
+  "type": "context_awareness",
+  "config": {
+    "id": "C085",
+    "type": "CONTEXT",
+    "name": "context_restore",
+    "restore": true
+  },
+  "created": "2025-08-16T21:17:16.745162"
+}

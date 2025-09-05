@@ -1,0 +1,14 @@
+{
+  "id": "20250816_161210",
+  "timestamp": "2025-08-16T16:12:10.265588",
+  "title": "Created Project Admin System",
+  "description": "Implemented comprehensive context management system with hourly captures, decision logging, and query capabilities to maintain continuity across Claude sessions and manage complex multi-project development",
+  "category": "architecture",
+  "project": "admin",
+  "tags": [
+    "context-management",
+    "decision-tracking",
+    "automation"
+  ],
+  "metadata": {}
+}

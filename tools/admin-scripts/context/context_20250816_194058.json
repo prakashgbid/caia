@@ -1,0 +1,1070 @@
+{
+  "timestamp": "2025-08-16T19:40:58.245032",
+  "hours_covered": 1,
+  "projects": {
+    "orchestra-platform": {
+      "name": "orchestra-platform",
+      "path": "/Users/MAC/Documents/projects/orchestra-platform",
+      "last_modified": "2025-08-09T06:16:36.358946",
+      "size_bytes": 471902,
+      "file_count": 36,
+      "directory_count": 7,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [
+          "main",
+          "remotes/origin/main"
+        ],
+        "current_branch": "main"
+      },
+      "key_files": {
+        "package.json": "packages/core/package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [],
+      "dependencies": {
+        "npm": [
+          "eventemitter3"
+        ]
+      }
+    },
+    "smart-agents-training-system": {
+      "name": "smart-agents-training-system",
+      "path": "/Users/MAC/Documents/projects/smart-agents-training-system",
+      "last_modified": "2025-08-09T03:33:58.678582",
+      "size_bytes": 63061,
+      "file_count": 13,
+      "directory_count": 18,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [
+          "main",
+          "remotes/origin/main"
+        ],
+        "current_branch": "main"
+      },
+      "key_files": {
+        "package.json": "package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [
+        {
+          "file": "src/core/decision-engine/DecisionEngine.ts",
+          "line": 89,
+          "content": "// TODO: Implement expertise weighting based on domain knowledge"
+        },
+        {
+          "file": "src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 313,
+          "content": "// TODO: Implement proper semantic similarity"
+        },
+        {
+          "file": "src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 359,
+          "content": "vector: [], // TODO: Generate embeddings"
+        },
+        {
+          "file": "src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 373,
+          "content": "// TODO: Implement learning mechanism"
+        },
+        {
+          "file": "src/core/llm-alliance/SuperIntelligentAgent.ts",
+          "line": 413,
+          "content": "// TODO: Add more detailed metrics"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "@langchain/core",
+          "@qdrant/js-client-rest",
+          "@anthropic-ai/sdk",
+          "@google-ai/generativelanguage",
+          "openai",
+          "langfuse",
+          "ioredis",
+          "pg",
+          "winston",
+          "zod",
+          "uuid",
+          "axios",
+          "dotenv",
+          "express",
+          "cors",
+          "helmet",
+          "rate-limiter-flexible"
+        ]
+      }
+    },
+    "autonomous-chatgpt-agent": {
+      "name": "autonomous-chatgpt-agent",
+      "path": "/Users/MAC/Documents/projects/autonomous-chatgpt-agent",
+      "last_modified": "2025-08-10T22:08:49.010350",
+      "size_bytes": 62494,
+      "file_count": 3,
+      "directory_count": 0,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "claude-code-ultimate": {
+      "name": "claude-code-ultimate",
+      "path": "/Users/MAC/Documents/projects/claude-code-ultimate",
+      "last_modified": "2025-08-16T14:19:07.139544",
+      "size_bytes": 127663,
+      "file_count": 14,
+      "directory_count": 18,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [
+        {
+          "file": "aggregate_results.py",
+          "line": 92,
+          "content": "if '|' in line and '\u2b1c TODO' in line:"
+        },
+        {
+          "file": "aggregate_results.py",
+          "line": 103,
+          "content": "line = line.replace('\u2b1c TODO', '\u2705 COMPLETED')"
+        },
+        {
+          "file": "aggregate_results.py",
+          "line": 106,
+          "content": "line = line.replace('\u2b1c TODO', '\u274c FAILED')"
+        },
+        {
+          "file": "aggregate_results.py",
+          "line": 109,
+          "content": "line = line.replace('\u2b1c TODO', '\u26a0\ufe0f BLOCKED')"
+        },
+        {
+          "file": "parallel_orchestrator.py",
+          "line": 71,
+          "content": "if line.startswith('## ') and 'TODO' not in line and 'COMPLETED' not in line:"
+        },
+        {
+          "file": "parallel_orchestrator.py",
+          "line": 76,
+          "content": "elif line.startswith('| ') and '\u2b1c TODO' in line and current_category:"
+        },
+        {
+          "file": "monitor_dashboard.py",
+          "line": 64,
+          "content": "elif '\u2b1c TODO' in line and line.startswith('|'):"
+        }
+      ],
+      "dependencies": {}
+    },
+    "omnimind": {
+      "name": "omnimind",
+      "path": "/Users/MAC/Documents/projects/omnimind",
+      "last_modified": "2025-08-11T22:42:33.779635",
+      "size_bytes": 35990003,
+      "file_count": 372,
+      "directory_count": 152,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [
+          "main",
+          "remotes/origin/main"
+        ],
+        "current_branch": "main"
+      },
+      "key_files": {
+        "requirements.txt": "modules/deep-reasoner/docs/requirements.txt"
+      },
+      "technologies": [
+        "Python"
+      ],
+      "todos": [
+        {
+          "file": "modules/o-s-a-autonomous/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "modules/o-s-a-autonomous/tests/test_autonomix.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "modules/o-s-a-autonomous/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "modules/o-s-a-autonomous/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "modules/o-s-a-autonomous/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "modules/o-s-a-autonomous/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "modules/smart-planner/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "modules/smart-planner/tests/test_smart_planner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "modules/smart-planner/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "modules/smart-planner/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "modules/smart-planner/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "modules/smart-planner/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "modules/langgraph-orchestrator/src/flowmaster/orchestrator.py",
+          "line": 491,
+          "content": "# TODO: Implement full swarm pattern"
+        },
+        {
+          "file": "modules/langgraph-orchestrator/src/flowmaster/orchestrator.py",
+          "line": 504,
+          "content": "# TODO: Implement full hierarchical pattern"
+        },
+        {
+          "file": "modules/self-learning/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "modules/self-learning/tests/test_self_learning.py",
+          "line": 12,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "modules/self-learning/examples/basic_usage.py",
+          "line": 9,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "modules/self-learning/src/evolux/__init__.py",
+          "line": 6,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "modules/self-learning/src/evolux/__init__.py",
+          "line": 9,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "modules/auto-coder/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "modules/auto-coder/tests/test_auto_coder.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "modules/auto-coder/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "modules/auto-coder/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "modules/auto-coder/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "modules/auto-coder/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "modules/auto-coder/src/codeforge/core.py",
+          "line": 123,
+          "content": "return GeneratedCode(code=f'# TODO: Implement {request.description}', language=request.language, description=request.description)"
+        },
+        {
+          "file": "modules/auto-coder/src/codeforge/core.py",
+          "line": 229,
+          "content": "variables[var] = f'# TODO: {var}'"
+        },
+        {
+          "file": "modules/auto-coder/src/codeforge/core.py",
+          "line": 330,
+          "content": "library_code += f'\\nimport {best_solution.name}\\n\\n# TODO: Implement using {best_solution.name}\\n# See documentation: {best_solution.url}\\n'"
+        },
+        {
+          "file": "modules/deep-reasoner/setup.py",
+          "line": 32,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "modules/deep-reasoner/tests/test_deep_reasoner.py",
+          "line": 19,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "modules/deep-reasoner/tests/test_integration.py",
+          "line": 13,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "modules/deep-reasoner/examples/basic_usage.py",
+          "line": 12,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "modules/deep-reasoner/examples/advanced_usage.py",
+          "line": 12,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "modules/deep-reasoner/examples/advanced_usage.py",
+          "line": 16,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "src/core/agent_orchestrator.py",
+          "line": 483,
+          "content": "# TODO: Implement swarm pattern"
+        },
+        {
+          "file": "src/core/agent_orchestrator.py",
+          "line": 488,
+          "content": "# TODO: Implement hierarchical pattern"
+        },
+        {
+          "file": "src/core/code_generator.py",
+          "line": 274,
+          "content": "code=f\"# TODO: Implement {request.description}\","
+        },
+        {
+          "file": "src/core/code_generator.py",
+          "line": 462,
+          "content": "variables[var] = f\"# TODO: {var}\""
+        },
+        {
+          "file": "src/core/code_generator.py",
+          "line": 708,
+          "content": "# TODO: Implement using {best_solution.name}"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 746,
+          "content": "# Convert absolute MemCore imports to TODO comments"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 749,
+          "content": "r'# TODO: Replace with appropriate import\\n# from \\1 import \\2',"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 762,
+          "content": "# TODO: Add actual imports based on module structure"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 765,
+          "content": "# TODO: Add exported classes and functions"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 804,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 853,
+          "content": "# TODO: Add quick start example"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1069,
+          "content": "# TODO: Add actual tests based on module functionality"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1083,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1168,
+          "content": "# TODO: Add actual dependencies"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1267,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1450,
+          "content": "# TODO: Add actual tests based on functionality"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1473,
+          "content": "# TODO: Add integration tests"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1492,
+          "content": "# TODO: Add actual usage examples"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1513,
+          "content": "# TODO: Add configuration options"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1517,
+          "content": "# TODO: Add advanced usage examples"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1627,
+          "content": "TODO: Document methods"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1653,
+          "content": "TODO: Document components"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1657,
+          "content": "TODO: Document data flow"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1674,
+          "content": "TODO: Add real-world examples"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1696,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "src/agents/open_source_extractor_agent.py",
+          "line": 1703,
+          "content": "# TODO: Add exports"
+        },
+        {
+          "file": "src/agents/open_source_solution_finder.py",
+          "line": 455,
+          "content": "# TODO: Add actual usage example"
+        },
+        {
+          "file": "src/agents/open_source_solution_finder.py",
+          "line": 607,
+          "content": "replacement_code=\"# TODO: Replace with suggested library\","
+        },
+        {
+          "file": "src/adapters/self_learning_adapter.py",
+          "line": 13,
+          "content": "# TODO: Import specific components"
+        },
+        {
+          "file": "src/adapters/self_learning_adapter.py",
+          "line": 20,
+          "content": "# TODO: Add exports"
+        }
+      ],
+      "dependencies": {}
+    },
+    "roulette-community": {
+      "name": "roulette-community",
+      "path": "/Users/MAC/Documents/projects/roulette-community",
+      "last_modified": "2025-08-15T02:55:21.369106",
+      "size_bytes": 2554660,
+      "file_count": 238,
+      "directory_count": 87,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [
+          "gitignore",
+          "README.md"
+        ],
+        "untracked_files": [
+          "FIGMA-API-KEY-GUIDE.md",
+          "FIGMA-INTEGRATION.md",
+          "FREE-TIER-LIMITS.md",
+          "INTEGRATION-AGENT.md",
+          "INTEGRATION-TYPES.md",
+          "jira-reorganization-script.py",
+          "mflp-created-issues.json",
+          "reorganization-action-plan.md",
+          "scripts/create-jira-project.js",
+          "scripts/fetch-mflp-project.js",
+          "scripts/fetch-projects.js",
+          "scripts/figma-integration.sh",
+          "scripts/integration-agent.sh",
+          "scripts/jira-populate.js",
+          "scripts/populate-mflp-project.js",
+          "scripts/setup-vault.sh",
+          "scripts/start-figma-mcp.sh",
+          "scripts/start-mcp-jira.sh",
+          "scripts/test-correct-email.js",
+          "scripts/test-figma-connection.js",
+          "scripts/test-figma-mcp.js",
+          "scripts/test-integrations.sh",
+          "scripts/test-jira-connection.js",
+          "scripts/test-jira-token.js",
+          "scripts/test-mcp-jira.js",
+          "scripts/test-mcp-servers.sh",
+          "scripts/verify-jira.sh"
+        ],
+        "branches": [
+          "main",
+          "remotes/origin/main"
+        ],
+        "current_branch": "main"
+      },
+      "key_files": {
+        "package.json": "package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [
+        {
+          "file": "src/app/layout.tsx",
+          "line": 31,
+          "content": "// TODO: Get user from auth context when implementing authentication"
+        },
+        {
+          "file": "src/features/currency/service.ts",
+          "line": 262,
+          "content": "// TODO: Integrate with actual payment processor (Stripe)"
+        },
+        {
+          "file": "src/lib/analytics/metrics.ts",
+          "line": 478,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "src/lib/analytics/metrics.ts",
+          "line": 492,
+          "content": "// TODO: Implement actual sending logic"
+        },
+        {
+          "file": "src/lib/analytics/metrics.ts",
+          "line": 550,
+          "content": "upsellRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "src/lib/analytics/metrics.ts",
+          "line": 551,
+          "content": "churnRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "src/lib/analytics/metrics.ts",
+          "line": 552,
+          "content": "reactivationRate: 0, // TODO: Calculate"
+        },
+        {
+          "file": "src/lib/analytics/metrics.ts",
+          "line": 556,
+          "content": "refundRate: 0, // TODO: Track refunds"
+        },
+        {
+          "file": "src/lib/analytics/metrics.ts",
+          "line": 557,
+          "content": "paymentFailureRate: 0, // TODO: Track failed payments"
+        },
+        {
+          "file": "src/lib/analytics/metrics.ts",
+          "line": 575,
+          "content": "// TODO: Implement more sophisticated calculations"
+        },
+        {
+          "file": "src/lib/analytics/metrics.ts",
+          "line": 621,
+          "content": "// TODO: Implement growth calculations"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "@next/font",
+          "@radix-ui/react-avatar",
+          "@radix-ui/react-checkbox",
+          "@radix-ui/react-collapsible",
+          "@radix-ui/react-dialog",
+          "@radix-ui/react-dropdown-menu",
+          "@radix-ui/react-icons",
+          "@radix-ui/react-label",
+          "@radix-ui/react-navigation-menu",
+          "@radix-ui/react-progress",
+          "@radix-ui/react-separator",
+          "@radix-ui/react-slot",
+          "@radix-ui/react-tabs",
+          "@radix-ui/react-toast",
+          "@react-email/components",
+          "@sentry/nextjs",
+          "@supabase/auth-ui-react",
+          "@supabase/auth-ui-shared",
+          "@supabase/ssr",
+          "@supabase/supabase-js",
+          "@tanstack/react-query",
+          "@types/react",
+          "@types/react-dom",
+          "@types/uuid",
+          "@types/zxcvbn",
+          "@upstash/redis",
+          "autoprefixer",
+          "class-variance-authority",
+          "cloudinary",
+          "clsx",
+          "contentful",
+          "date-fns",
+          "dotenv",
+          "framer-motion",
+          "lucide-react",
+          "next",
+          "postcss",
+          "react",
+          "react-dom",
+          "react-hook-form",
+          "resend",
+          "socket.io",
+          "socket.io-client",
+          "stripe",
+          "tailwind-merge",
+          "tailwindcss",
+          "tailwindcss-animate",
+          "typescript",
+          "uuid",
+          "zustand",
+          "zxcvbn"
+        ]
+      }
+    },
+    "caia": {
+      "name": "caia",
+      "path": "/Users/MAC/Documents/projects/caia",
+      "last_modified": "2025-08-16T19:40:27.679180",
+      "size_bytes": 387260,
+      "file_count": 47,
+      "directory_count": 57,
+      "recent_changes": [
+        {
+          "file": "package.json",
+          "modified": "2025-08-16T19:39:51.172430"
+        },
+        {
+          "file": "lerna.json",
+          "modified": "2025-08-16T19:40:27.674255"
+        }
+      ],
+      "git_info": {
+        "commits": [
+          {
+            "hash": "b13d18ee0f4bd1b9d7e1c46a9a41a891f8fcfb19",
+            "author": "Prakash Tiwari",
+            "email": "prakashmailid@gmail.com",
+            "date": "2025-08-16 18:41:22 -0400",
+            "message": "feat(cco): implement Terminal Pool Manager with safety-first approach"
+          }
+        ],
+        "modified_files": [
+          "erna.json",
+          "package.json"
+        ],
+        "untracked_files": [],
+        "branches": [
+          "main",
+          "remotes/origin/main"
+        ],
+        "current_branch": "main"
+      },
+      "key_files": {
+        "package.json": "utils/parallel/cc-orchestrator/package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [
+        {
+          "file": "utils/parallel/cc-orchestrator/src/index.ts",
+          "line": 611,
+          "content": "todos: ['TODO 1', 'TODO 2']"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "p-queue",
+          "p-limit",
+          "bottleneck",
+          "eventemitter3",
+          "winston",
+          "commander"
+        ]
+      }
+    },
+    "application-development-platform": {
+      "name": "application-development-platform",
+      "path": "/Users/MAC/Documents/projects/application-development-platform",
+      "last_modified": "2025-08-09T03:35:21.917921",
+      "size_bytes": 15815,
+      "file_count": 3,
+      "directory_count": 0,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [
+          "main",
+          "remotes/origin/main"
+        ],
+        "current_branch": "main"
+      },
+      "key_files": {
+        "package.json": "package.json"
+      },
+      "technologies": [
+        "Node.js"
+      ],
+      "todos": [],
+      "dependencies": {
+        "npm": [
+          "@sats/core",
+          "express",
+          "socket.io",
+          "ioredis",
+          "bull",
+          "pg",
+          "winston",
+          "zod",
+          "uuid"
+        ]
+      }
+    },
+    "paraforge": {
+      "name": "paraforge",
+      "path": "/Users/MAC/Documents/projects/paraforge",
+      "last_modified": "2025-08-16T14:11:28.306987",
+      "size_bytes": 618770,
+      "file_count": 37,
+      "directory_count": 19,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [
+          "EADME.md",
+          "package.json"
+        ],
+        "untracked_files": [
+          "CAIA-ALIGNMENT.md",
+          "PROJECT-SCOPE.md",
+          "TODO-IMPLEMENTATION.md",
+          "agents/",
+          "docs/JIRA-CATEGORIZATION-GUIDE.md",
+          "docs/JIRA-LABELING-STRATEGY.md",
+          "docs/PARAFORGE-INITIATIVES.md",
+          "package-lock.json",
+          "scripts/check-issue-types.js",
+          "scripts/clean-and-create-project.js",
+          "scripts/create-initiative.js",
+          "scripts/create-para-project.js",
+          "scripts/create-simple-epic.js",
+          "scripts/list-projects.js",
+          "scripts/setup-jira-labels.js",
+          "scripts/test-auth.js",
+          "scripts/update-project-description.js",
+          "src/agents/JiraConnectWrapper.ts"
+        ],
+        "branches": [
+          "main",
+          "remotes/origin/main"
+        ],
+        "current_branch": "main"
+      },
+      "key_files": {
+        "package.json": "package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [
+        {
+          "file": "scripts/update-project-description.js",
+          "line": 225,
+          "content": "- TODO-IMPLEMENTATION.md - Complete implementation checklist"
+        }
+      ],
+      "dependencies": {
+        "npm": [
+          "@anthropic-ai/sdk",
+          "@dsazz/mcp-jira",
+          "axios",
+          "chalk",
+          "commander",
+          "dotenv",
+          "express",
+          "joi",
+          "langchain",
+          "lodash",
+          "openai",
+          "p-queue",
+          "winston",
+          "zod"
+        ]
+      }
+    },
+    "jira-connect": {
+      "name": "jira-connect",
+      "path": "/Users/MAC/Documents/projects/jira-connect",
+      "last_modified": "2025-08-16T03:07:34.413800",
+      "size_bytes": 20788,
+      "file_count": 4,
+      "directory_count": 1,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [
+          "README.md",
+          "package.json",
+          "src/"
+        ],
+        "branches": [],
+        "current_branch": "master"
+      },
+      "key_files": {
+        "package.json": "package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js"
+      ],
+      "todos": [],
+      "dependencies": {
+        "npm": [
+          "@dsazz/mcp-jira",
+          "dotenv",
+          "eventemitter3",
+          "p-queue",
+          "winston"
+        ]
+      }
+    },
+    "omnimind-wiki": {
+      "name": "omnimind-wiki",
+      "path": "/Users/MAC/Documents/projects/omnimind-wiki",
+      "last_modified": "2025-08-11T00:15:13.607116",
+      "size_bytes": 37606,
+      "file_count": 5,
+      "directory_count": 0,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [
+          "master",
+          "remotes/origin/HEAD -> origin/master",
+          "remotes/origin/master"
+        ],
+        "current_branch": "master"
+      },
+      "key_files": {},
+      "technologies": [],
+      "todos": [],
+      "dependencies": {}
+    },
+    "chatgpt-mcp-server": {
+      "name": "chatgpt-mcp-server",
+      "path": "/Users/MAC/Documents/projects/chatgpt-mcp-server",
+      "last_modified": "2025-08-10T22:07:27.193519",
+      "size_bytes": 43557,
+      "file_count": 9,
+      "directory_count": 1,
+      "recent_changes": [],
+      "git_info": {
+        "commits": [],
+        "modified_files": [],
+        "untracked_files": [],
+        "branches": [],
+        "current_branch": null
+      },
+      "key_files": {
+        "requirements.txt": "requirements.txt",
+        "package.json": "package.json"
+      },
+      "technologies": [
+        "TypeScript",
+        "Node.js",
+        "Python"
+      ],
+      "todos": [],
+      "dependencies": {
+        "npm": [
+          "@modelcontextprotocol/sdk",
+          "playwright",
+          "dotenv"
+        ]
+      }
+    }
+  },
+  "recent_decisions": [
+    {
+      "id": "20250816_184225",
+      "timestamp": "2025-08-16T18:42:25.023888",
+      "project": "admin",
+      "task": "Claude Session Started",
+      "status": "started",
+      "details": "New context-aware session started with ID: session_20250816_184224. Admin system loaded and ready.",
+      "completion_percentage": 0,
+      "type": "progress"
+    },
+    {
+      "id": "20250816_184105",
+      "timestamp": "2025-08-16T18:41:05.726501",
+      "title": "Comprehensive Admin System Implementation Complete",
+      "description": "Built complete enterprise-grade admin system with: 1) CCU integration for context-aware sessions, 2) Real-time monitoring (git, quality, security), 3) Daily self-update system, 4) Mono-repo management with quality gates, 5) QA automation with linting, testing, security scanning, 6) Context capture daemon, 7) Decision tracking, 8) CAIA component tracking, 9) Admin dashboard. System includes 12 scripts, automated hourly captures, quality gates, security scanning, and self-evolving capabilities.",
+      "category": "architecture",
+      "project": "caia",
+      "tags": [
+        "admin-system",
+        "enterprise",
+        "automation",
+        "monitoring",
+        "quality-assurance"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "20250816_184105",
+      "timestamp": "2025-08-16T18:41:05.726501",
+      "title": "Comprehensive Admin System Implementation Complete",
+      "description": "Built complete enterprise-grade admin system with: 1) CCU integration for context-aware sessions, 2) Real-time monitoring (git, quality, security), 3) Daily self-update system, 4) Mono-repo management with quality gates, 5) QA automation with linting, testing, security scanning, 6) Context capture daemon, 7) Decision tracking, 8) CAIA component tracking, 9) Admin dashboard. System includes 12 scripts, automated hourly captures, quality gates, security scanning, and self-evolving capabilities.",
+      "category": "architecture",
+      "project": "caia",
+      "tags": [
+        "admin-system",
+        "enterprise",
+        "automation",
+        "monitoring",
+        "quality-assurance"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "20250816_163018",
+      "timestamp": "2025-08-16T16:30:18.954424",
+      "title": "CAIA Component Tracking System Created",
+      "description": "Implemented specialized tracking for CAIA's open source ecosystem with component scanning, NPM publication status, quality metrics, and automated roadmap generation. Currently tracking 1 initialized component ready for NPM publication.",
+      "category": "architecture",
+      "project": "caia",
+      "tags": [
+        "open-source",
+        "npm",
+        "component-tracking"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "20250816_161425",
+      "timestamp": "2025-08-16T16:14:25.781284",
+      "project": "admin",
+      "task": "Admin System Implementation Complete",
+      "status": "completed",
+      "details": "Successfully implemented and tested the project admin system with context capture, decision logging, query tools, and automation scripts. System is ready for production use.",
+      "completion_percentage": 100,
+      "type": "progress"
+    },
+    {
+      "id": "20250816_161210",
+      "timestamp": "2025-08-16T16:12:10.265588",
+      "title": "Created Project Admin System",
+      "description": "Implemented comprehensive context management system with hourly captures, decision logging, and query capabilities to maintain continuity across Claude sessions and manage complex multi-project development",
+      "category": "architecture",
+      "project": "admin",
+      "tags": [
+        "context-management",
+        "decision-tracking",
+        "automation"
+      ],
+      "metadata": {}
+    }
+  ],
+  "summary": {
+    "total_projects": 12,
+    "active_projects": 1,
+    "total_commits": 1,
+    "total_todos": 89,
+    "total_recent_changes": 2
+  },
+  "changes_since_last": {
+    "new_projects": [],
+    "removed_projects": [],
+    "new_commits": 0,
+    "new_todos": 0,
+    "new_decisions": 6
+  }
+}
