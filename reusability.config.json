@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "initialized": "2025-09-13T13:04:04.414Z",
+  "environment": {
+    "local": true,
+    "cloud": false
+  },
+  "settings": {
+    "autoSync": true,
+    "syncInterval": 300000,
+    "conflictResolution": "newest"
+  }
+}
