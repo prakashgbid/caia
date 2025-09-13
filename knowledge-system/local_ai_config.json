@@ -1,0 +1,34 @@
+{
+  "mode": "hybrid_local_first",
+  "components": {
+    "embeddings": {
+      "provider": "local",
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "device": "cpu"
+    },
+    "vector_db": {
+      "provider": "chromadb",
+      "path": "./data/chromadb",
+      "persist": true
+    },
+    "llm": {
+      "primary": "ollama",
+      "fallback": "api",
+      "models": {
+        "code": "codellama:7b",
+        "text": "mistral:7b",
+        "small": "phi"
+      }
+    },
+    "knowledge_system": {
+      "use_local": true,
+      "cache_embeddings": true,
+      "index_code": true
+    }
+  },
+  "performance": {
+    "max_parallel": 4,
+    "batch_size": 32,
+    "cache_size": "2GB"
+  }
+}
