@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hierarchical Project Planner - CAIA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/explorer.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/project_planner.css') }}">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://unpkg.com/ag-grid-enterprise@31.0.0/dist/ag-grid-enterprise.min.js"></script>
+    <link href="https://unpkg.com/vis-network/styles/vis-network.css" rel="stylesheet" type="text/css" />
+    <link href="https://unpkg.com/ag-grid-community@31.0.0/styles/ag-grid.css" rel="stylesheet" />
+    <link href="https://unpkg.com/ag-grid-community@31.0.0/styles/ag-theme-material.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1><i class="fas fa-project-diagram"></i> Hierarchical Project Planner</h1>
+                <div class="header-stats">
+                    <span class="stat-badge"><i class="fas fa-layer-group"></i> 7 Levels</span>
+                    <span class="stat-badge"><i class="fas fa-tasks"></i> <span id="total-items">0</span> Items</span>
+                    <span class="stat-badge"><i class="fas fa-clock"></i> <span id="breakdown-time">0</span>s</span>
+                </div>
+                <div class="header-actions">
+                    <button id="view-graph-btn" class="btn btn-primary active">
+                        <i class="fas fa-network-wired"></i> Graph View
+                    </button>
+                    <button id="view-grid-btn" class="btn btn-primary">
+                        <i class="fas fa-table"></i> Grid View
+                    </button>
+                    <button id="export-jira-btn" class="btn btn-secondary">
+                        <i class="fab fa-jira"></i> Export to JIRA
+                    </button>
+                    <button id="export-csv-btn" class="btn btn-secondary">
+                        <i class="fas fa-file-csv"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Idea Input Panel -->
+                <div class="panel idea-panel">
+                    <h3><i class="fas fa-lightbulb"></i> Project Idea</h3>
+                    <textarea id="idea-input" placeholder="Describe your project idea in detail..." rows="6"></textarea>
+                    <button id="breakdown-btn" class="btn btn-primary btn-full">
+                        <i class="fas fa-magic"></i> Generate Breakdown
+                    </button>
+                </div>
+
+                <!-- Hierarchy Levels Panel -->
+                <div class="panel hierarchy-panel">
+                    <h3><i class="fas fa-layer-group"></i> Hierarchy Levels</h3>
+                    <div class="hierarchy-levels">
+                        <div class="level-item idea-level" data-level="idea">
+                            <i class="fas fa-lightbulb"></i> Idea
+                            <span class="level-count">0</span>
+                        </div>
+                        <div class="level-item initiative-level" data-level="initiative">
+                            <i class="fas fa-flag"></i> Initiative
+                            <span class="level-count">0</span>
+                        </div>
+                        <div class="level-item feature-level" data-level="feature">
+                            <i class="fas fa-puzzle-piece"></i> Feature
+                            <span class="level-count">0</span>
+                        </div>
+                        <div class="level-item epic-level" data-level="epic">
+                            <i class="fas fa-book"></i> Epic
+                            <span class="level-count">0</span>
+                        </div>
+                        <div class="level-item story-level" data-level="story">
+                            <i class="fas fa-bookmark"></i> Story
+                            <span class="level-count">0</span>
+                        </div>
+                        <div class="level-item task-level" data-level="task">
+                            <i class="fas fa-check-square"></i> Task
+                            <span class="level-count">0</span>
+                        </div>
+                        <div class="level-item subtask-level" data-level="subtask">
+                            <i class="fas fa-tasks"></i> Subtask
+                            <span class="level-count">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters Panel -->
+                <div class="panel filters-panel">
+                    <h3><i class="fas fa-filter"></i> Filters</h3>
+
+                    <div class="filter-group">
+                        <label>Status:</label>
+                        <select id="status-filter" multiple>
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="blocked">Blocked</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Priority:</label>
+                        <select id="priority-filter" multiple>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Labels:</label>
+                        <input type="text" id="label-filter" placeholder="Enter labels...">
+                    </div>
+
+                    <button id="apply-filters-btn" class="btn btn-primary btn-sm">
+                        Apply Filters
+                    </button>
+                    <button id="clear-filters-btn" class="btn btn-secondary btn-sm">
+                        Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main View Container -->
+            <div class="view-container">
+                <!-- Graph View -->
+                <div id="graph-view" class="view-panel active">
+                    <div class="graph-controls">
+                        <button id="expand-all" class="btn btn-sm"><i class="fas fa-expand"></i> Expand All</button>
+                        <button id="collapse-all" class="btn btn-sm"><i class="fas fa-compress"></i> Collapse All</button>
+                        <button id="center-graph" class="btn btn-sm"><i class="fas fa-crosshairs"></i> Center</button>
+                        <button id="fit-graph" class="btn btn-sm"><i class="fas fa-expand-arrows-alt"></i> Fit</button>
+                    </div>
+                    <div id="network-container"></div>
+                </div>
+
+                <!-- Grid View -->
+                <div id="grid-view" class="view-panel" style="display: none;">
+                    <div class="grid-controls">
+                        <button id="expand-grid" class="btn btn-sm"><i class="fas fa-expand"></i> Expand All</button>
+                        <button id="collapse-grid" class="btn btn-sm"><i class="fas fa-compress"></i> Collapse All</button>
+                        <input type="text" id="quick-filter" placeholder="Quick filter..." class="grid-search">
+                    </div>
+                    <div id="grid-container" class="ag-theme-material"></div>
+                </div>
+            </div>
+
+            <!-- Details Panel -->
+            <div class="details-panel" id="details-panel" style="display: none;">
+                <div class="details-header">
+                    <h3 id="item-title">Item Details</h3>
+                    <button id="close-details" class="btn btn-sm">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="details-content">
+                    <div class="detail-group">
+                        <label>Description:</label>
+                        <p id="item-description">-</p>
+                    </div>
+                    <div class="detail-group">
+                        <label>Level:</label>
+                        <span id="item-level" class="badge">-</span>
+                    </div>
+                    <div class="detail-group">
+                        <label>Status:</label>
+                        <select id="item-status">
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="blocked">Blocked</option>
+                        </select>
+                    </div>
+                    <div class="detail-group">
+                        <label>Priority:</label>
+                        <select id="item-priority">
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="detail-group">
+                        <label>Assignee:</label>
+                        <input type="text" id="item-assignee" placeholder="Unassigned">
+                    </div>
+                    <div class="detail-group">
+                        <label>Effort Points:</label>
+                        <input type="number" id="item-effort" min="0" max="100">
+                    </div>
+                    <div class="detail-group">
+                        <label>Labels:</label>
+                        <input type="text" id="item-labels" placeholder="Comma-separated labels">
+                    </div>
+                    <div class="detail-group">
+                        <label>Acceptance Criteria:</label>
+                        <textarea id="item-criteria" rows="4" placeholder="One criterion per line"></textarea>
+                    </div>
+                    <button id="save-item" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Breaking down your idea into hierarchical structure...</p>
+            <small>This typically takes 10-15 seconds</small>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/project_planner.js') }}"></script>
+</body>
+</html>
