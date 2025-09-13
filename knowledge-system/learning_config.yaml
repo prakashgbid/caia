@@ -1,0 +1,221 @@
+# CAIA Knowledge System - Learning Configuration
+# Phase 3: Advanced Learning System Configuration
+
+# Training Configuration
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 5e-5
+  num_epochs: 3
+  warmup_steps: 100
+  save_steps: 500
+  eval_steps: 500
+  logging_steps: 50
+  max_seq_length: 2048
+  fp16: true
+  dataloader_num_workers: 4
+
+# LoRA Configuration
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.1
+  bias: "none"
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+  task_type: "CAUSAL_LM"
+
+# Model Configuration
+model:
+  base_model: "microsoft/DialoGPT-medium"
+  quantization: "4bit"
+  device_map: "auto"
+  torch_dtype: "float16"
+  max_memory: "8GB"
+
+# RLHF Configuration
+rlhf:
+  reward_model_lr: 1e-5
+  policy_model_lr: 5e-6
+  kl_penalty: 0.2
+  cliprange: 0.2
+  value_loss_coeff: 0.1
+  entropy_coeff: 0.01
+  gamma: 0.99
+  lam: 0.95
+  ppo_epochs: 4
+  batch_size: 16
+  gradient_accumulation_steps: 2
+
+# Uncertainty Sampling Configuration
+uncertainty:
+  model_name: "microsoft/DialoGPT-medium"
+  max_sequence_length: 1024
+  temperature: 1.0
+  num_samples: 5
+  threshold: 0.7
+  diversity_weight: 0.3
+
+# Sampling Thresholds
+sampling:
+  entropy_threshold: 2.0
+  confidence_threshold: 0.6
+  novelty_threshold: 0.8
+  min_samples: 10
+
+# Orchestrator Configuration
+orchestrator:
+  learning_cycle_interval: 3600  # 1 hour in seconds
+  fine_tuning_threshold: 100     # minimum interactions for fine-tuning
+  rlhf_threshold: 50            # minimum feedback items for RLHF
+  active_learning_interval: 1800 # 30 minutes
+  profile_update_interval: 900   # 15 minutes
+  max_concurrent_tasks: 4
+  auto_start: true
+  enable_real_time: true
+
+# Learning Triggers
+triggers:
+  new_interactions: 10          # trigger on interaction spike
+  feedback_received: 5          # trigger on feedback spike
+  uncertainty_detected: 3       # trigger on uncertainty spike
+  performance_drop: 0.1         # trigger on performance drop
+
+# Quality Thresholds
+thresholds:
+  min_confidence: 0.6           # minimum AI confidence
+  max_uncertainty: 0.8          # maximum uncertainty allowed
+  satisfaction_threshold: 3.5   # minimum user satisfaction
+  engagement_threshold: 0.4     # minimum engagement score
+
+# Database Configuration
+database:
+  path: "data/learning_interactions.db"
+  backup_interval: 86400        # 24 hours
+  vacuum_interval: 604800       # 7 days
+  max_history_days: 365         # 1 year retention
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "[%(name)s] %(asctime)s - %(levelname)s - %(message)s"
+  file_rotation: true
+  max_file_size: "10MB"
+  backup_count: 5
+  log_to_console: true
+
+# Performance Configuration
+performance:
+  enable_caching: true
+  cache_ttl: 3600              # 1 hour cache TTL
+  max_cache_size: 1000         # max cached items
+  enable_profiling: false
+  profile_interval: 3600       # 1 hour profiling
+
+# Feature Flags
+features:
+  enable_fine_tuning: true
+  enable_rlhf: true
+  enable_active_learning: true
+  enable_personalization: true
+  enable_uncertainty_sampling: true
+  enable_real_time_learning: true
+  enable_ollama_integration: true
+  enable_distributed_training: false
+
+# Integration Configuration
+integration:
+  ollama:
+    base_url: "http://localhost:11434"
+    timeout: 300
+    max_retries: 3
+  
+  cks:
+    base_url: "http://localhost:5555"
+    timeout: 30
+    max_retries: 3
+  
+  enhancement_systems:
+    base_url: "http://localhost:5002"
+    timeout: 30
+    max_retries: 3
+
+# Personalization Configuration
+personalization:
+  enable_user_profiles: true
+  profile_update_frequency: 900 # 15 minutes
+  min_interactions_for_profile: 5
+  max_profile_history: 1000
+  enable_behavior_tracking: true
+  enable_preference_learning: true
+
+# Active Learning Configuration
+active_learning:
+  uncertainty_methods: ["entropy", "semantic", "behavioral"]
+  query_strategies: ["uncertainty", "diversity", "committee"]
+  sample_selection_method: "diverse"
+  max_questions_per_cycle: 10
+  question_priority_weights:
+    uncertainty: 0.4
+    recency: 0.3
+    importance: 0.3
+
+# Continuous Learning Configuration
+continuous:
+  enable_streaming: true
+  buffer_size: 1000
+  update_frequency: 300         # 5 minutes
+  batch_processing: true
+  incremental_updates: true
+  enable_concept_drift_detection: true
+
+# Security Configuration
+security:
+  enable_data_encryption: false
+  enable_model_encryption: false
+  enable_audit_logging: true
+  anonymize_user_data: true
+  data_retention_days: 365
+
+# Resource Configuration
+resources:
+  max_memory_usage: "8GB"
+  max_cpu_usage: 80            # percentage
+  max_disk_usage: "50GB"
+  enable_gpu: true
+  gpu_memory_fraction: 0.7
+
+# Monitoring Configuration
+monitoring:
+  enable_metrics: true
+  metrics_interval: 60         # 1 minute
+  enable_alerts: true
+  alert_thresholds:
+    memory_usage: 90           # percentage
+    cpu_usage: 90             # percentage
+    disk_usage: 85            # percentage
+    error_rate: 5             # errors per minute
+
+# Experimental Features
+experimental:
+  enable_multi_modal: false
+  enable_federated_learning: false
+  enable_meta_learning: false
+  enable_few_shot_learning: true
+  enable_transfer_learning: true
+
+# Model Versioning
+versioning:
+  enable_model_versioning: true
+  max_versions: 10
+  auto_cleanup: true
+  version_naming: "timestamp"
+  enable_a_b_testing: true
+
+# Data Pipeline Configuration
+data_pipeline:
+  enable_preprocessing: true
+  enable_augmentation: false
+  enable_validation: true
+  validation_split: 0.1
+  enable_filtering: true
+  quality_threshold: 0.5

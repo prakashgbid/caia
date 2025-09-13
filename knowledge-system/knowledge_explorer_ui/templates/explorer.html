@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAIA Knowledge Graph Explorer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/explorer.css') }}">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <link href="https://unpkg.com/vis-network/styles/vis-network.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1><i class="fas fa-brain"></i> CAIA Knowledge Graph Explorer</h1>
+                <div class="header-actions">
+                    <button id="refresh-btn" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button id="export-btn" class="btn btn-secondary">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                    <button id="settings-btn" class="btn btn-secondary">
+                        <i class="fas fa-cog"></i> Settings
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Search Panel -->
+                <div class="panel search-panel">
+                    <h3><i class="fas fa-search"></i> Search</h3>
+                    <div class="search-container">
+                        <input type="text" id="search-input" placeholder="Search knowledge graph..." />
+                        <button id="search-btn" class="btn btn-sm btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div class="search-suggestions" id="search-suggestions"></div>
+                </div>
+
+                <!-- Filters Panel -->
+                <div class="panel filters-panel">
+                    <h3><i class="fas fa-filter"></i> Filters</h3>
+                    
+                    <div class="filter-group">
+                        <label>Node Types:</label>
+                        <div class="checkbox-group" id="node-type-filters">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Relationship Types:</label>
+                        <div class="checkbox-group" id="relationship-type-filters">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Confidence Range:</label>
+                        <div class="range-slider">
+                            <input type="range" id="confidence-min" min="0" max="1" step="0.1" value="0">
+                            <input type="range" id="confidence-max" min="0" max="1" step="0.1" value="1">
+                            <div class="range-labels">
+                                <span id="confidence-min-label">0.0</span>
+                                <span id="confidence-max-label">1.0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="apply-filters-btn" class="btn btn-primary btn-full">
+                        Apply Filters
+                    </button>
+                    <button id="clear-filters-btn" class="btn btn-secondary btn-full">
+                        Clear Filters
+                    </button>
+                </div>
+
+                <!-- Layout Panel -->
+                <div class="panel layout-panel">
+                    <h3><i class="fas fa-project-diagram"></i> Layout</h3>
+                    
+                    <div class="layout-options">
+                        <label>Algorithm:</label>
+                        <select id="layout-algorithm">
+                            <option value="force">Force-Directed</option>
+                            <option value="hierarchical">Hierarchical</option>
+                            <option value="circular">Circular</option>
+                            <option value="random">Random</option>
+                        </select>
+                    </div>
+
+                    <div class="layout-options">
+                        <label>Physics:</label>
+                        <input type="checkbox" id="physics-enabled" checked>
+                        <span>Enable Physics</span>
+                    </div>
+
+                    <button id="apply-layout-btn" class="btn btn-primary btn-full">
+                        Apply Layout
+                    </button>
+                </div>
+
+                <!-- Statistics Panel -->
+                <div class="panel stats-panel">
+                    <h3><i class="fas fa-chart-bar"></i> Statistics</h3>
+                    <div id="graph-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Nodes:</span>
+                            <span class="stat-value" id="nodes-count">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Edges:</span>
+                            <span class="stat-value" id="edges-count">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Density:</span>
+                            <span class="stat-value" id="graph-density">0.00</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Connected:</span>
+                            <span class="stat-value" id="graph-connected">No</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graph Container -->
+            <div class="graph-container">
+                <div class="graph-header">
+                    <div class="graph-title">
+                        <h2 id="graph-title">Knowledge Graph Visualization</h2>
+                        <span class="graph-subtitle" id="graph-subtitle">Interactive exploration of knowledge relationships</span>
+                    </div>
+                    <div class="graph-controls">
+                        <button id="zoom-in-btn" class="btn btn-sm">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button id="zoom-out-btn" class="btn btn-sm">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <button id="fit-btn" class="btn btn-sm">
+                            <i class="fas fa-expand-arrows-alt"></i>
+                        </button>
+                        <button id="center-btn" class="btn btn-sm">
+                            <i class="fas fa-crosshairs"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="network-container"></div>
+                
+                <div class="graph-loading" id="graph-loading" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p>Loading knowledge graph...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Node Details Panel -->
+        <div class="details-panel" id="details-panel" style="display: none;">
+            <div class="details-header">
+                <h3 id="details-title">Node Details</h3>
+                <button id="close-details-btn" class="btn btn-sm btn-secondary">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="details-content" id="details-content">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <!-- Context Menu -->
+        <div class="context-menu" id="context-menu" style="display: none;">
+            <ul>
+                <li id="menu-explore"><i class="fas fa-search"></i> Explore Neighborhood</li>
+                <li id="menu-details"><i class="fas fa-info-circle"></i> Show Details</li>
+                <li id="menu-center"><i class="fas fa-crosshairs"></i> Center on Node</li>
+                <li id="menu-hide"><i class="fas fa-eye-slash"></i> Hide Node</li>
+                <li id="menu-highlight"><i class="fas fa-highlighter"></i> Highlight Path</li>
+            </ul>
+        </div>
+
+        <!-- Export Modal -->
+        <div class="modal" id="export-modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Export Graph</h3>
+                    <button class="close-modal" id="close-export-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="export-options">
+                        <label>Format:</label>
+                        <select id="export-format">
+                            <option value="png">PNG Image</option>
+                            <option value="svg">SVG Vector</option>
+                            <option value="json">JSON Data</option>
+                            <option value="graphml">GraphML</option>
+                        </select>
+                    </div>
+                    <div class="export-options">
+                        <label>Quality:</label>
+                        <select id="export-quality">
+                            <option value="1">Standard (1x)</option>
+                            <option value="2">High (2x)</option>
+                            <option value="4">Ultra (4x)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="export-confirm-btn" class="btn btn-primary">Export</button>
+                    <button id="export-cancel-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settings-modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Settings</h3>
+                    <button class="close-modal" id="close-settings-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-group">
+                        <h4>Visualization</h4>
+                        <div class="setting-item">
+                            <label>Max Nodes:</label>
+                            <input type="number" id="max-nodes" value="1000" min="10" max="5000">
+                        </div>
+                        <div class="setting-item">
+                            <label>Max Edges:</label>
+                            <input type="number" id="max-edges" value="2000" min="10" max="10000">
+                        </div>
+                        <div class="setting-item">
+                            <label>Node Label Length:</label>
+                            <input type="number" id="label-length" value="30" min="5" max="100">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4>Performance</h4>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="smooth-curves" checked>
+                                Smooth Curves
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="hover-enabled" checked>
+                                Hover Interactions
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="clustering-enabled">
+                                Automatic Clustering
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="settings-save-btn" class="btn btn-primary">Save Settings</button>
+                    <button id="settings-cancel-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <!-- Loading the main JavaScript -->
+    <script src="{{ url_for('static', filename='js/explorer.js') }}"></script>
+</body>
+</html>

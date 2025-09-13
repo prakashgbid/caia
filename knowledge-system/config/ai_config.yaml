@@ -1,0 +1,258 @@
+# AI-First Agentic System Configuration
+# Production-ready configuration for local AI infrastructure
+
+system:
+  name: "CAIA Knowledge System - AI Core"
+  version: "1.0.0"
+  environment: "production"
+  debug: true
+  async_mode: true
+  max_concurrent_agents: 10
+
+# Local LLM Configuration (Ollama)
+llm:
+  default_provider: "ollama"
+  providers:
+    ollama:
+      base_url: "http://localhost:11434"
+      timeout: 300
+      models:
+        primary: "llama3.1:8b"
+        reasoning: "qwen2.5:14b"
+        coding: "codellama:13b"
+        embedding: "nomic-embed-text:latest"
+      auto_pull: true
+      max_retries: 3
+      
+    openai:  # Fallback
+      api_key: "${OPENAI_API_KEY}"
+      model: "gpt-4-turbo-preview"
+      max_tokens: 4000
+      temperature: 0.7
+      
+    anthropic:  # Fallback
+      api_key: "${ANTHROPIC_API_KEY}"
+      model: "claude-3-sonnet-20240229"
+      max_tokens: 4000
+
+# Vector Database Configuration
+vector_db:
+  default_provider: "chroma"
+  providers:
+    chroma:
+      persist_directory: "./data/chroma_db"
+      collection_name: "caia_knowledge"
+      distance_metric: "cosine"
+      embedding_function: "sentence-transformers"
+      
+    qdrant:
+      host: "localhost"
+      port: 6333
+      collection_name: "caia_vectors"
+      vector_size: 384
+      distance: "Cosine"
+      
+    faiss:
+      index_path: "./data/faiss_index"
+      dimension: 384
+      index_type: "IndexFlatIP"
+
+# Embedding Configuration
+embeddings:
+  default_model: "all-MiniLM-L6-v2"
+  models:
+    general: "all-MiniLM-L6-v2"           # 384 dim, fast
+    code: "microsoft/codebert-base"        # 768 dim, code-specific
+    semantic: "all-mpnet-base-v2"         # 768 dim, best quality
+    multilingual: "paraphrase-multilingual-MiniLM-L12-v2"
+  batch_size: 32
+  cache_embeddings: true
+  cache_directory: "./cache/embeddings"
+
+# RAG Configuration
+rag:
+  retrieval:
+    top_k: 10
+    similarity_threshold: 0.7
+    retrieval_strategy: "hybrid"  # semantic, keyword, hybrid
+    rerank: true
+    rerank_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    
+  generation:
+    max_context_length: 8192
+    overlap_tokens: 200
+    chunk_size: 1000
+    temperature: 0.7
+    stream_response: true
+
+# Agent Framework
+agents:
+  framework: "langgraph"
+  max_agents: 10
+  agent_timeout: 300
+  
+  types:
+    knowledge_agent:
+      llm_model: "llama3.1:8b"
+      memory_type: "conversation_buffer_window"
+      memory_size: 10
+      tools: ["knowledge_search", "vector_query", "graph_traverse"]
+      
+    reasoning_agent:
+      llm_model: "qwen2.5:14b"
+      reasoning_type: "chain_of_thought"
+      max_iterations: 5
+      tools: ["logical_reasoning", "fact_checking"]
+      
+    coding_agent:
+      llm_model: "codellama:13b"
+      code_execution: true
+      sandbox: "docker"
+      tools: ["code_analysis", "test_generation", "refactoring"]
+      
+    orchestrator_agent:
+      llm_model: "llama3.1:8b"
+      role: "supervisor"
+      coordination_strategy: "hierarchical"
+      delegation_rules: "./config/delegation_rules.yaml"
+
+# Memory & State Management
+memory:
+  type: "hybrid"  # redis, sqlite, hybrid
+  
+  redis:
+    host: "localhost"
+    port: 6379
+    db: 0
+    ttl: 86400  # 24 hours
+    
+  sqlite:
+    database_path: "./data/memory.db"
+    table_name: "agent_memory"
+    
+  conversation:
+    max_history: 100
+    summarization_threshold: 50
+    summary_model: "llama3.1:8b"
+
+# Knowledge Graph
+knowledge_graph:
+  backend: "networkx"  # networkx, neo4j, rdflib
+  
+  networkx:
+    graph_file: "./data/knowledge_graph.gpickle"
+    node_types: ["entity", "concept", "relation"]
+    edge_types: ["related_to", "instance_of", "part_of"]
+    
+  neo4j:
+    uri: "bolt://localhost:7687"
+    username: "neo4j"
+    password: "${NEO4J_PASSWORD}"
+    
+  reasoning:
+    inference_rules: "./config/inference_rules.yaml"
+    max_hops: 3
+    confidence_threshold: 0.6
+
+# Learning & Training
+learning:
+  active_learning: true
+  feedback_loop: true
+  
+  training:
+    batch_size: 16
+    learning_rate: 0.001
+    epochs: 10
+    validation_split: 0.2
+    
+  reinforcement:
+    reward_model: "preference_based"
+    exploration_rate: 0.1
+    discount_factor: 0.95
+    
+  continual:
+    method: "ewc"  # elastic weight consolidation
+    importance_weighting: 1000
+    memory_strength: 0.5
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 5555
+  workers: 4
+  
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 100
+    burst_size: 10
+    
+  cors:
+    enabled: true
+    origins: ["http://localhost:3000", "http://localhost:8080"]
+    
+  authentication:
+    enabled: false  # For local development
+    method: "api_key"
+    
+  endpoints:
+    health: "/health"
+    chat: "/chat"
+    agents: "/agents"
+    knowledge: "/knowledge"
+    embeddings: "/embeddings"
+
+# Monitoring & Logging
+monitoring:
+  enabled: true
+  
+  metrics:
+    provider: "prometheus"
+    host: "localhost"
+    port: 9090
+    
+  logging:
+    level: "INFO"
+    format: "json"
+    file: "./logs/ai_system.log"
+    rotation: "daily"
+    retention: 30  # days
+    
+  health_checks:
+    interval: 30  # seconds
+    timeout: 10
+    endpoints: ["llm", "vector_db", "redis"]
+
+# Docker Services
+docker:
+  compose_file: "./docker/docker-compose.yml"
+  
+  services:
+    - name: "qdrant"
+      image: "qdrant/qdrant:latest"
+      ports: ["6333:6333"]
+      
+    - name: "redis"
+      image: "redis:7-alpine"
+      ports: ["6379:6379"]
+      
+    - name: "neo4j"
+      image: "neo4j:5.15"
+      ports: ["7474:7474", "7687:7687"]
+      
+    - name: "prometheus"
+      image: "prom/prometheus:latest"
+      ports: ["9090:9090"]
+
+# Security
+security:
+  sandbox_agents: true
+  max_execution_time: 300
+  allowed_imports: ["os", "sys", "json", "requests", "numpy", "pandas"]
+  blocked_operations: ["file_write", "network_access", "subprocess"]
+  
+# Development
+development:
+  auto_reload: true
+  debug_agents: true
+  profile_performance: true
+  export_traces: true

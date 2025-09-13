@@ -1,0 +1,30 @@
+# CAIA Phase 3 Learning System Requirements
+
+# Core dependencies
+numpy>=1.21.0
+sqlite3  # Built into Python
+asyncio  # Built into Python
+logging  # Built into Python
+json     # Built into Python
+pathlib  # Built into Python
+
+# Optional ML dependencies (install only if you need full training)
+# torch>=1.9.0
+# transformers>=4.20.0
+# datasets>=2.0.0
+# peft>=0.3.0
+# bitsandbytes>=0.35.0
+# scipy>=1.7.0
+# scikit-learn>=1.0.0
+
+# Web and API dependencies
+httpx>=0.24.0
+pyyaml>=6.0
+psutil>=5.8.0
+schedule>=1.1.0
+
+# Optional GPU acceleration
+# accelerate>=0.20.0
+
+# Development and testing
+unittest  # Built into Python

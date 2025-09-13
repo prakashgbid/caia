@@ -1,0 +1,273 @@
+# Knowledge Graph Configuration - Phase 4
+# Advanced Semantic Knowledge Representation System
+
+# Neo4j Database Configuration
+neo4j:
+  uri: "bolt://localhost:7687"
+  user: "neo4j"
+  password: "knowledge_graph"
+  database: "caia_knowledge"
+  max_connection_lifetime: 3600
+  max_connection_pool_size: 50
+  connection_acquisition_timeout: 60
+  trust: "TRUST_SYSTEM_CA_SIGNED_CERTIFICATES"
+
+# Node Types and Schema
+node_types:
+  # Core Knowledge Entities
+  Concept:
+    properties: [name, description, domain, confidence, created_at, updated_at]
+    indexes: [name, domain]
+  
+  Entity:
+    properties: [name, type, value, confidence, source, created_at]
+    indexes: [name, type, source]
+  
+  CodeElement:
+    properties: [name, type, language, file_path, line_start, line_end, complexity]
+    indexes: [name, type, language, file_path]
+  
+  Pattern:
+    properties: [name, description, frequency, confidence, pattern_type]
+    indexes: [name, pattern_type]
+  
+  User:
+    properties: [id, name, preferences, behavior_profile, created_at]
+    indexes: [id, name]
+  
+  Session:
+    properties: [id, start_time, end_time, duration, quality_score]
+    indexes: [id, start_time]
+  
+  Decision:
+    properties: [id, description, context, reasoning, outcome, confidence]
+    indexes: [id, context]
+  
+  Knowledge:
+    properties: [content, type, domain, reliability, source, timestamp]
+    indexes: [type, domain, source]
+
+# Relationship Types
+relationship_types:
+  # Semantic Relationships
+  RELATES_TO:
+    properties: [strength, confidence, type, created_at]
+  
+  IS_A:
+    properties: [confidence, inheritance_type]
+  
+  PART_OF:
+    properties: [composition_type, importance]
+  
+  SIMILAR_TO:
+    properties: [similarity_score, similarity_type]
+  
+  DEPENDS_ON:
+    properties: [dependency_type, strength]
+  
+  # Code Relationships
+  CALLS:
+    properties: [frequency, importance]
+  
+  IMPORTS:
+    properties: [import_type, necessity]
+  
+  INHERITS_FROM:
+    properties: [inheritance_depth]
+  
+  IMPLEMENTS:
+    properties: [implementation_type]
+  
+  # Learning Relationships
+  LEARNS_FROM:
+    properties: [learning_strength, method]
+  
+  INFLUENCES:
+    properties: [influence_strength, influence_type]
+  
+  CONTRADICTS:
+    properties: [contradiction_strength, resolution_status]
+  
+  SUPPORTS:
+    properties: [support_strength, evidence_type]
+  
+  # User Relationships
+  PREFERS:
+    properties: [preference_strength, context]
+  
+  USES:
+    properties: [usage_frequency, proficiency]
+  
+  CREATED:
+    properties: [creation_time, purpose]
+
+# Semantic Processing Configuration
+semantic:
+  # Entity Extraction
+  entity_extraction:
+    models:
+      - name: "spacy_en_core_web_lg"
+        enabled: true
+        confidence_threshold: 0.7
+      - name: "custom_code_entities"
+        enabled: true
+        confidence_threshold: 0.8
+    
+    entity_types:
+      - PERSON
+      - ORG
+      - GPE
+      - PRODUCT
+      - EVENT
+      - CODE_FUNCTION
+      - CODE_CLASS
+      - CODE_VARIABLE
+      - CONCEPT
+      - PATTERN
+  
+  # Relationship Extraction
+  relationship_extraction:
+    methods:
+      - dependency_parsing
+      - pattern_matching
+      - semantic_similarity
+      - code_analysis
+    
+    confidence_threshold: 0.6
+    max_distance: 3  # Maximum token distance for relationships
+  
+  # Embeddings
+  embeddings:
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    dimension: 384
+    batch_size: 32
+    cache_embeddings: true
+    update_frequency: "daily"
+
+# Reasoning Engine Configuration
+reasoning:
+  inference:
+    max_depth: 5  # Maximum reasoning chain depth
+    confidence_threshold: 0.5
+    methods:
+      - transitive_closure
+      - pattern_completion
+      - analogical_reasoning
+      - contradiction_resolution
+  
+  pattern_mining:
+    min_support: 0.1
+    min_confidence: 0.6
+    max_pattern_length: 5
+  
+  knowledge_completion:
+    similarity_threshold: 0.8
+    max_suggestions: 10
+    use_embeddings: true
+
+# Visualization Configuration
+visualization:
+  default_layout: "force"  # force, hierarchical, circular
+  max_nodes: 1000
+  max_relationships: 2000
+  node_size_property: "importance"
+  edge_width_property: "strength"
+  
+  colors:
+    Concept: "#FF6B6B"
+    Entity: "#4ECDC4"
+    CodeElement: "#45B7D1"
+    Pattern: "#96CEB4"
+    User: "#FFEAA7"
+    Session: "#DDA0DD"
+    Decision: "#98D8C8"
+    Knowledge: "#F7DC6F"
+  
+  clustering:
+    enabled: true
+    algorithm: "louvain"
+    resolution: 1.0
+
+# Integration Configuration
+integration:
+  # CKS Integration
+  cks:
+    enabled: true
+    sync_frequency: "realtime"
+    bidirectional: true
+  
+  # Learning System Integration
+  learning:
+    enabled: true
+    feedback_loop: true
+    automatic_updates: true
+  
+  # Agent Integration
+  agents:
+    enabled: true
+    knowledge_sharing: true
+    decision_tracking: true
+  
+  # External APIs
+  external:
+    openai:
+      enabled: false
+      api_key: "${OPENAI_API_KEY}"
+    
+    huggingface:
+      enabled: true
+      api_key: "${HUGGINGFACE_API_KEY}"
+
+# Performance Configuration
+performance:
+  caching:
+    enabled: true
+    ttl: 3600  # Cache TTL in seconds
+    max_size: 10000  # Maximum cache entries
+  
+  indexing:
+    auto_create: true
+    rebuild_frequency: "weekly"
+  
+  batch_processing:
+    batch_size: 100
+    max_concurrent: 10
+  
+  query_optimization:
+    use_query_planner: true
+    cache_query_plans: true
+    max_query_time: 30  # seconds
+
+# Monitoring and Logging
+monitoring:
+  metrics:
+    enabled: true
+    export_prometheus: false
+    log_level: "INFO"
+  
+  health_checks:
+    database_connection: true
+    query_performance: true
+    memory_usage: true
+  
+  alerts:
+    slow_queries: 10  # seconds
+    high_memory: 80   # percentage
+    connection_failures: 5  # count
+
+# Data Management
+data:
+  backup:
+    enabled: true
+    frequency: "daily"
+    retention: 30  # days
+    location: "./data/backups"
+  
+  cleanup:
+    old_sessions: 90  # days
+    low_confidence: 0.3  # threshold
+    orphaned_nodes: true
+  
+  export:
+    formats: ["graphml", "json", "rdf"]
+    include_metadata: true
