@@ -1,0 +1,101 @@
+{
+  "functional": [
+    {
+      "name": "Page Load",
+      "status": "passed",
+      "message": "Page loaded successfully with title: \"CAIA Feature Browser Dashboard\""
+    },
+    {
+      "name": "Interactive Elements",
+      "status": "passed",
+      "details": {
+        "buttons": 8,
+        "links": 0
+      },
+      "message": "Found 8 buttons and 0 links"
+    },
+    {
+      "name": "Form Testing",
+      "status": "passed",
+      "details": {
+        "forms": 0,
+        "inputs": 5
+      },
+      "message": "Tested 0 forms with 5 inputs"
+    },
+    {
+      "name": "Navigation Testing",
+      "status": "passed",
+      "message": "Navigation working for 6 tabs"
+    },
+    {
+      "name": "API Response Testing",
+      "status": "passed",
+      "message": "All 0 API calls successful",
+      "details": []
+    }
+  ],
+  "visual": [
+    {
+      "name": "Full Page Screenshot",
+      "status": "passed",
+      "message": "Visual test passed: 0.00% difference"
+    },
+    {
+      "name": "Element Screenshots",
+      "status": "passed",
+      "message": "Captured 3 element screenshots"
+    },
+    {
+      "name": "Responsive Design",
+      "status": "passed",
+      "message": "Tested 3 viewport sizes"
+    },
+    {
+      "name": "CSS Validation",
+      "status": "passed",
+      "message": "CSS validation passed"
+    }
+  ],
+  "performance": [
+    {
+      "name": "Performance Metrics",
+      "status": "passed",
+      "metrics": {
+        "loadTime": "403ms",
+        "domContentLoaded": "264ms",
+        "firstPaint": "8ms",
+        "JSHeapUsedSize": "1.48 MB",
+        "nodes": 377,
+        "layoutCount": 16
+      }
+    }
+  ],
+  "accessibility": [
+    {
+      "name": "Accessibility Audit",
+      "violations": 2,
+      "passes": 20,
+      "status": "failed",
+      "details": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "description": "Ensure the document has a main landmark",
+          "nodes": 1
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "description": "Ensure all page content is contained by landmarks",
+          "nodes": 2
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "passed": 10,
+    "failed": 1,
+    "warnings": 0
+  }
+}

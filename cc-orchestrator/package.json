@@ -1,0 +1,21 @@
+{
+  "name": "@caia/cc-orchestrator",
+  "version": "1.0.0",
+  "description": "AI-driven Claude Code Orchestrator for autonomous improvement and context enhancement",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "daemon": "node src/daemon.js",
+    "test": "node tests/test-suite.js",
+    "analyze": "node src/gap-analysis.js",
+    "update-configs": "node src/config-updater.js"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.6",
+    "chokidar": "^3.5.3",
+    "natural": "^6.10.0",
+    "chalk": "^4.1.2",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.2"
+  }
+}
