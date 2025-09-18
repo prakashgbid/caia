@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAIA Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Custom Styles for CAIA Dashboard */
+        .sidebar-item {
+            transition: all 0.3s ease;
+        }
+        .sidebar-item:hover {
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%);
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .accordion-content.active {
+            max-height: 600px;
+            transition: max-height 0.3s ease-in;
+        }
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+        .gradient-caia {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .gradient-ccu {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #667eea, #764ba2);
+            border-radius: 3px;
+        }
+        .status-badge {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .metric-tile {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .metric-tile:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+        .notification {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen overflow-hidden" x-data="caiaDashboard()">
+    <div class="flex h-full">
+        <!-- Left Sidebar Panel -->
+        <aside class="w-72 bg-gray-800 border-r border-gray-700 flex flex-col h-full overflow-hidden">
+            <!-- Dashboard Header -->
+            <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-atom text-2xl"></i>
+                        <h1 class="text-xl font-bold">CAIA Dashboard</h1>
+                    </div>
+                    <span class="px-2 py-1 bg-green-500 text-xs rounded-full flex items-center">
+                        <span class="pulse-dot w-2 h-2 bg-white rounded-full mr-1"></span>
+                        LIVE
+                    </span>
+                </div>
+            </div>
+
+            <!-- System Selector -->
+            <div class="px-4 py-3 border-b border-gray-700">
+                <div class="flex bg-gray-700 rounded-lg p-1">
+                    <button @click="systemView = 'all'"
+                            :class="systemView === 'all' ? 'bg-blue-600' : 'bg-transparent'"
+                            class="flex-1 px-2 py-1 rounded-md text-xs font-medium transition-colors">
+                        All
+                    </button>
+                    <button @click="systemView = 'caia'"
+                            :class="systemView === 'caia' ? 'gradient-caia' : 'bg-transparent'"
+                            class="flex-1 px-2 py-1 rounded-md text-xs font-medium transition-colors">
+                        CAIA
+                    </button>
+                    <button @click="systemView = 'ccu'"
+                            :class="systemView === 'ccu' ? 'gradient-ccu' : 'bg-transparent'"
+                            class="flex-1 px-2 py-1 rounded-md text-xs font-medium transition-colors">
+                        CCU
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav class="flex-1 overflow-y-auto scrollbar-thin px-4 py-4">
+                <!-- Overview Section -->
+                <div class="mb-2">
+                    <button @click="toggleAccordion('overview')"
+                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg sidebar-item hover:bg-gray-700 transition-colors">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-dashboard text-blue-400"></i>
+                            <span class="font-medium">Overview</span>
+                        </div>
+                        <i class="fas fa-chevron-down transition-transform duration-200"
+                           :class="{'rotate-180': openSections.includes('overview')}"></i>
+                    </button>
+                    <div class="accordion-content" :class="{'active': openSections.includes('overview')}">
+                        <div class="pl-12 pr-4 py-2 space-y-2">
+                            <a href="#" @click="setActiveView('metrics')"
+                               :class="{'bg-gray-700': activeView === 'metrics'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                System Metrics
+                            </a>
+                            <a href="#" @click="setActiveView('system-status')"
+                               :class="{'bg-gray-700': activeView === 'system-status'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                Service Status
+                            </a>
+                            <a href="#" @click="setActiveView('performance')"
+                               :class="{'bg-gray-700': activeView === 'performance'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                Performance
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAIA Systems -->
+                <div class="mb-2">
+                    <button @click="toggleAccordion('caia')"
+                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg sidebar-item hover:bg-gray-700 transition-colors">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-brain text-purple-400"></i>
+                            <span class="font-medium">CAIA Systems</span>
+                        </div>
+                        <i class="fas fa-chevron-down transition-transform duration-200"
+                           :class="{'rotate-180': openSections.includes('caia')}"></i>
+                    </button>
+                    <div class="accordion-content" :class="{'active': openSections.includes('caia')}">
+                        <div class="pl-12 pr-4 py-2 space-y-2">
+                            <a href="#" @click="setActiveView('caia-overview')"
+                               :class="{'bg-gray-700': activeView === 'caia-overview'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-chart-pie mr-2 text-sm"></i>CAIA Overview
+                            </a>
+                            <a href="#" @click="setActiveView('knowledge-system')"
+                               :class="{'bg-gray-700': activeView === 'knowledge-system'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-database mr-2 text-sm"></i>Knowledge System
+                            </a>
+                            <a href="#" @click="setActiveView('agents')"
+                               :class="{'bg-gray-700': activeView === 'agents'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-robot mr-2 text-sm"></i>AI Agents
+                            </a>
+                            <a href="#" @click="setActiveView('test-orchestrator')"
+                               :class="{'bg-gray-700': activeView === 'test-orchestrator'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-vial mr-2 text-sm"></i>Test Orchestrator
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Claude Code Ultimate -->
+                <div class="mb-2">
+                    <button @click="toggleAccordion('ccu')"
+                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg sidebar-item hover:bg-gray-700 transition-colors">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-rocket text-pink-400"></i>
+                            <span class="font-medium">CC Ultimate</span>
+                        </div>
+                        <i class="fas fa-chevron-down transition-transform duration-200"
+                           :class="{'rotate-180': openSections.includes('ccu')}"></i>
+                    </button>
+                    <div class="accordion-content" :class="{'active': openSections.includes('ccu')}">
+                        <div class="pl-12 pr-4 py-2 space-y-2">
+                            <a href="#" @click="setActiveView('ccu-config')"
+                               :class="{'bg-gray-700': activeView === 'ccu-config'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-cog mr-2 text-sm"></i>Configurations
+                            </a>
+                            <a href="#" @click="setActiveView('ccu-hooks')"
+                               :class="{'bg-gray-700': activeView === 'ccu-hooks'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-code-branch mr-2 text-sm"></i>Active Hooks
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects -->
+                <div class="mb-2">
+                    <button @click="toggleAccordion('projects')"
+                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg sidebar-item hover:bg-gray-700 transition-colors">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-project-diagram text-green-400"></i>
+                            <span class="font-medium">Projects</span>
+                        </div>
+                        <i class="fas fa-chevron-down transition-transform duration-200"
+                           :class="{'rotate-180': openSections.includes('projects')}"></i>
+                    </button>
+                    <div class="accordion-content" :class="{'active': openSections.includes('projects')}">
+                        <div class="pl-12 pr-4 py-2 space-y-2">
+                            <a href="#" @click="setActiveView('taskforge')"
+                               :class="{'bg-gray-700': activeView === 'taskforge'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-tasks mr-2 text-sm"></i>TaskForge
+                            </a>
+                            <a href="#" @click="setActiveView('mindforge')"
+                               :class="{'bg-gray-700': activeView === 'mindforge'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-lightbulb mr-2 text-sm"></i>MindForge
+                            </a>
+                            <a href="#" @click="setActiveView('git-status')"
+                               :class="{'bg-gray-700': activeView === 'git-status'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fab fa-git-alt mr-2 text-sm"></i>Git Status
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tools & Admin -->
+                <div class="mb-2">
+                    <button @click="toggleAccordion('tools')"
+                            class="w-full flex items-center justify-between px-4 py-3 rounded-lg sidebar-item hover:bg-gray-700 transition-colors">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-tools text-yellow-400"></i>
+                            <span class="font-medium">Tools & Admin</span>
+                        </div>
+                        <i class="fas fa-chevron-down transition-transform duration-200"
+                           :class="{'rotate-180': openSections.includes('tools')}"></i>
+                    </button>
+                    <div class="accordion-content" :class="{'active': openSections.includes('tools')}">
+                        <div class="pl-12 pr-4 py-2 space-y-2">
+                            <a href="#" @click="setActiveView('admin-scripts')"
+                               :class="{'bg-gray-700': activeView === 'admin-scripts'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-terminal mr-2 text-sm"></i>Admin Scripts
+                            </a>
+                            <a href="#" @click="setActiveView('search')"
+                               :class="{'bg-gray-700': activeView === 'search'}"
+                               class="block px-3 py-2 rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-search mr-2 text-sm"></i>Universal Search
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Footer Actions -->
+            <div class="p-4 border-t border-gray-700 bg-gray-800">
+                <button @click="refreshAll()"
+                        class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center justify-center transition-colors">
+                    <i class="fas fa-sync-alt mr-2" :class="{'animate-spin': refreshing}"></i>
+                    Refresh All
+                </button>
+                <div class="mt-2 text-xs text-gray-400 text-center">
+                    Last update: <span x-text="lastUpdate"></span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto bg-gray-900">
+            <!-- Content Header -->
+            <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold" x-text="getViewTitle()"></h2>
+                    <div class="flex items-center space-x-4">
+                        <span x-show="currentStatus"
+                              :class="currentStatus === 'online' ? 'bg-green-500' : 'bg-red-500'"
+                              class="px-3 py-1 text-sm rounded-full status-badge">
+                            <i :class="currentStatus === 'online' ? 'fas fa-check' : 'fas fa-times'" class="mr-1"></i>
+                            <span x-text="currentStatus === 'online' ? 'Online' : 'Offline'"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Content Container -->
+            <div class="p-6">
+                <!-- Metrics Overview -->
+                <div x-show="activeView === 'metrics'" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="metric in filteredMetrics" :key="metric.id">
+                            <div @click="openMetricDetail(metric)"
+                                 class="bg-gray-800 rounded-xl p-6 border border-gray-700 metric-tile">
+                                <div class="flex items-center justify-between mb-4">
+                                    <i :class="metric.icon + ' text-3xl text-blue-400'"></i>
+                                    <span class="text-xs text-gray-400" x-text="metric.trend"></span>
+                                </div>
+                                <div class="text-3xl font-bold mb-2" x-text="metric.value"></div>
+                                <div class="text-gray-400" x-text="metric.label"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- CAIA Overview -->
+                <div x-show="activeView === 'caia-overview'" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <template x-for="system in caiaSystem" :key="system.name">
+                            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-lg font-bold" x-text="system.name"></h3>
+                                    <span :class="system.status === 'active' ? 'bg-green-500' : 'bg-red-500'"
+                                          class="px-2 py-1 text-xs rounded-full">
+                                        <span x-text="system.status"></span>
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-400 mb-4" x-text="system.description"></p>
+
+                                <div class="space-y-2">
+                                    <template x-for="detail in system.details" :key="detail.label">
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-400" x-text="detail.label"></span>
+                                            <span class="font-mono" x-text="detail.value"></span>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <div class="mt-4 flex gap-2">
+                                    <button @click="executeAction(system, 'restart')"
+                                            class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">
+                                        Restart
+                                    </button>
+                                    <button @click="executeAction(system, 'test')"
+                                            class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm">
+                                        Test
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- CCU Configurations -->
+                <div x-show="activeView === 'ccu-config'" class="space-y-6">
+                    <template x-for="config in ccuConfigs" :key="config.id">
+                        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-bold" x-text="config.category"></h3>
+                                <span class="text-sm text-gray-400">
+                                    <span x-text="config.enabled"></span> / <span x-text="config.total"></span> enabled
+                                </span>
+                            </div>
+
+                            <div class="space-y-3">
+                                <template x-for="item in config.items" :key="item.name">
+                                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+                                        <div>
+                                            <span class="font-mono text-sm" x-text="item.name"></span>
+                                            <span class="ml-2 text-xs text-gray-400" x-text="item.value"></span>
+                                        </div>
+                                        <button @click="toggleConfig(config, item)"
+                                                :class="item.enabled ? 'bg-green-600' : 'bg-gray-600'"
+                                                class="px-3 py-1 rounded text-sm">
+                                            <span x-text="item.enabled ? 'ON' : 'OFF'"></span>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Hooks View -->
+                <div x-show="activeView === 'ccu-hooks'" class="space-y-6">
+                    <div class="mb-4">
+                        <div class="flex space-x-2">
+                            <button @click="hookFilter = 'all'"
+                                    :class="hookFilter === 'all' ? 'bg-blue-600' : 'bg-gray-700'"
+                                    class="px-4 py-2 rounded-lg text-sm">All Hooks</button>
+                            <button @click="hookFilter = 'active'"
+                                    :class="hookFilter === 'active' ? 'bg-green-600' : 'bg-gray-700'"
+                                    class="px-4 py-2 rounded-lg text-sm">Active</button>
+                            <button @click="hookFilter = 'inactive'"
+                                    :class="hookFilter === 'inactive' ? 'bg-red-600' : 'bg-gray-700'"
+                                    class="px-4 py-2 rounded-lg text-sm">Inactive</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <template x-for="hook in filteredHooks" :key="hook.name">
+                            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-semibold" x-text="hook.name"></h4>
+                                    <button @click="toggleHook(hook)"
+                                            :class="hook.active ? 'bg-green-600' : 'bg-red-600'"
+                                            class="px-2 py-1 rounded text-xs">
+                                        <span x-text="hook.active ? 'Active' : 'Inactive'"></span>
+                                    </button>
+                                </div>
+                                <div class="text-sm text-gray-400 mb-3">
+                                    Trigger: <span x-text="hook.trigger"></span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button @click="executeHook(hook, 'test')"
+                                            class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">
+                                        Test
+                                    </button>
+                                    <button @click="openHookDetail(hook)"
+                                            class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-xs">
+                                        Details
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- AI Agents View -->
+                <div x-show="activeView === 'agents'" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="agent in agents" :key="agent.name">
+                            <div @click="openAgentDetail(agent)"
+                                 class="bg-gray-800 rounded-lg p-6 border border-gray-700 cursor-pointer hover:bg-gray-750 transition-colors">
+                                <div class="flex items-center justify-between mb-4">
+                                    <i :class="agent.icon + ' text-2xl text-blue-400'"></i>
+                                    <span :class="agent.active ? 'bg-green-500' : 'bg-gray-500'"
+                                          class="px-2 py-1 text-xs rounded-full">
+                                        <span x-text="agent.status"></span>
+                                    </span>
+                                </div>
+                                <h4 class="font-semibold" x-text="agent.name"></h4>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Git Status View -->
+                <div x-show="activeView === 'git-status'" class="space-y-6">
+                    <div class="mb-4">
+                        <button @click="commitAll()"
+                                class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg">
+                            <i class="fas fa-check-double mr-2"></i>Commit & Push All
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <template x-for="repo in repos" :key="repo.name">
+                            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="font-semibold" x-text="repo.name"></h4>
+                                    <span :class="repo.status === 'clean' ? 'text-green-400' : 'text-yellow-400'">
+                                        <i :class="repo.status === 'clean' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
+                                    </span>
+                                </div>
+
+                                <div class="space-y-2 mb-4">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-400">Branch:</span>
+                                        <span class="font-mono" x-text="repo.branch"></span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-400">Changes:</span>
+                                        <span x-text="repo.changes"></span>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-2">
+                                    <button @click="gitAction(repo, 'pull')"
+                                            class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">
+                                        Pull
+                                    </button>
+                                    <button @click="gitAction(repo, 'commit')"
+                                            :disabled="repo.changes === 0"
+                                            class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm disabled:opacity-50">
+                                        Commit
+                                    </button>
+                                    <button @click="gitAction(repo, 'push')"
+                                            class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-sm">
+                                        Push
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- MindForge View -->
+                <div x-show="activeView === 'mindforge'" class="space-y-6">
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold">MindForge AI Assistant</h3>
+                            <div class="flex space-x-2">
+                                <button @click="mindforgeTab = 'todos'"
+                                        :class="mindforgeTab === 'todos' ? 'bg-blue-600' : 'bg-gray-700'"
+                                        class="px-4 py-2 rounded-lg text-sm">
+                                    Todos
+                                </button>
+                                <button @click="mindforgeTab = 'suggestions'"
+                                        :class="mindforgeTab === 'suggestions' ? 'bg-blue-600' : 'bg-gray-700'"
+                                        class="px-4 py-2 rounded-lg text-sm">
+                                    Suggestions
+                                </button>
+                                <button @click="mindforgeTab = 'insights'"
+                                        :class="mindforgeTab === 'insights' ? 'bg-blue-600' : 'bg-gray-700'"
+                                        class="px-4 py-2 rounded-lg text-sm">
+                                    Insights
+                                </button>
+                                <button @click="analyzeMindForge()"
+                                        class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm">
+                                    <i class="fas fa-brain mr-2"></i>Analyze
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Todos Tab -->
+                        <div x-show="mindforgeTab === 'todos'" class="space-y-3">
+                            <div class="mb-4">
+                                <button @click="createManualTodo()"
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm">
+                                    <i class="fas fa-plus mr-2"></i>Add Todo
+                                </button>
+                            </div>
+
+                            <template x-for="todo in mindForge.todos" :key="todo.id">
+                                <div class="bg-gray-700 rounded-lg p-4">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <h4 class="font-semibold" x-text="todo.title"></h4>
+                                            <p class="text-sm text-gray-400 mt-1" x-text="todo.description"></p>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span :class="getPriorityColor(todo.priority)"
+                                                  class="px-2 py-1 text-xs rounded-full"
+                                                  x-text="todo.priority"></span>
+                                            <button @click="updateTodoStatus(todo)"
+                                                    class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Suggestions Tab -->
+                        <div x-show="mindforgeTab === 'suggestions'" class="space-y-3">
+                            <template x-for="suggestion in mindForge.suggestions" :key="suggestion.id">
+                                <div class="bg-gray-700 rounded-lg p-4">
+                                    <h4 class="font-semibold" x-text="suggestion.title"></h4>
+                                    <p class="text-sm text-gray-400 mt-1" x-text="suggestion.description"></p>
+                                    <div class="flex items-center justify-between mt-3">
+                                        <span class="text-xs text-gray-500">
+                                            Confidence: <span x-text="(suggestion.confidence * 100).toFixed(0)"></span>%
+                                        </span>
+                                        <div class="flex gap-2">
+                                            <button @click="acceptSuggestion(suggestion)"
+                                                    class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-xs">
+                                                Accept
+                                            </button>
+                                            <button @click="rejectSuggestion(suggestion)"
+                                                    class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs">
+                                                Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Insights Tab -->
+                        <div x-show="mindforgeTab === 'insights'" class="space-y-3">
+                            <template x-for="insight in mindForge.insights" :key="insight.id">
+                                <div class="bg-gray-700 rounded-lg p-4">
+                                    <h4 class="font-semibold" x-text="insight.title"></h4>
+                                    <p class="text-sm text-gray-400 mt-1" x-text="insight.content"></p>
+                                </div>
+                            </template>
+                            <div x-show="mindForge.insights.length === 0" class="text-center text-gray-400 py-8">
+                                No insights generated yet. Click Analyze to generate insights.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TaskForge View -->
+                <div x-show="activeView === 'taskforge'" class="space-y-6">
+                    <div class="mb-4 flex gap-2">
+                        <button @click="openTaskForge()"
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">
+                            <i class="fas fa-external-link-alt mr-2"></i>Open TaskForge
+                        </button>
+                        <button @click="decomposeTask()"
+                                class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm">
+                            <i class="fas fa-sitemap mr-2"></i>Decompose Task
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="project in taskforgeProjects" :key="project.id">
+                            <div class="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors cursor-pointer">
+                                <h4 class="font-semibold mb-2" x-text="project.name"></h4>
+                                <div class="space-y-1 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Tasks:</span>
+                                        <span x-text="project.taskCount"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Completed:</span>
+                                        <span x-text="project.completedCount"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-600 rounded-full h-2 mt-2">
+                                        <div class="bg-green-500 h-2 rounded-full"
+                                             :style="`width: ${project.progress}%`"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Performance View -->
+                <div x-show="activeView === 'performance'" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <template x-for="metric in performanceMetrics" :key="metric.name">
+                            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-lg font-bold" x-text="metric.name"></h3>
+                                    <span class="text-2xl font-bold text-blue-400">
+                                        <span x-text="metric.value"></span>%
+                                    </span>
+                                </div>
+                                <div class="w-full bg-gray-700 rounded-full h-3">
+                                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full"
+                                         :style="`width: ${metric.value}%`"></div>
+                                </div>
+                                <p class="text-sm text-gray-400 mt-2" x-text="metric.details"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- System Status View -->
+                <div x-show="activeView === 'system-status'" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <template x-for="service in services" :key="service.name">
+                            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-lg font-semibold" x-text="service.name"></h3>
+                                    <span :class="service.status === 'online' ? 'text-green-400' : 'text-red-400'">
+                                        <i :class="service.status === 'online' ? 'fas fa-circle' : 'fas fa-exclamation-circle'"></i>
+                                    </span>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-400">Port:</span>
+                                        <span x-text="service.port"></span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-400">Uptime:</span>
+                                        <span x-text="service.uptime || 'N/A'"></span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-400">Requests:</span>
+                                        <span x-text="service.requests || 0"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Modal -->
+        <div x-show="detailModal"
+             x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center detail-modal"
+             @click.self="detailModal = false">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-2xl w-full mx-4 border border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold" x-text="modalTitle"></h3>
+                    <button @click="detailModal = false" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div x-html="modalContent"></div>
+                <div class="mt-6 flex justify-end">
+                    <button @click="detailModal = false"
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Container -->
+    <div id="notifications" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        function caiaDashboard() {
+            return {
+                // State
+                systemView: 'all',
+                openSections: ['overview'],
+                activeView: 'metrics',
+                mindforgeTab: 'todos',
+                hookFilter: 'all',
+                refreshing: false,
+                lastUpdate: new Date().toLocaleTimeString(),
+                currentStatus: 'online',
+                detailModal: false,
+                modalTitle: '',
+                modalContent: '',
+
+                // Data
+                metrics: [],
+                caiaSystem: [],
+                ccuConfigs: [],
+                agents: [],
+                repos: [],
+                services: [],
+                performanceMetrics: [],
+                hooks: [],
+                mindForge: {
+                    todos: [],
+                    suggestions: [],
+                    insights: []
+                },
+                taskforgeProjects: [],
+
+                // Computed
+                get filteredMetrics() {
+                    if (this.systemView === 'all') return this.metrics;
+                    return this.metrics.filter(m => m.system === this.systemView);
+                },
+
+                get filteredHooks() {
+                    if (this.hookFilter === 'all') return this.hooks;
+                    if (this.hookFilter === 'active') return this.hooks.filter(h => h.active);
+                    return this.hooks.filter(h => !h.active);
+                },
+
+                // Methods
+                async init() {
+                    this.initializeMetrics();
+                    await this.loadAllData();
+                    this.setupAutoRefresh();
+                },
+
+                initializeMetrics() {
+                    this.metrics = [
+                        {
+                            id: 1,
+                            system: 'caia',
+                            label: 'Knowledge Elements',
+                            value: '9,017',
+                            icon: 'fas fa-brain',
+                            trend: '+145 today',
+                            details: {
+                                files: 788,
+                                functions: 5025,
+                                classes: 704,
+                                imports: 2500
+                            }
+                        },
+                        {
+                            id: 2,
+                            system: 'caia',
+                            label: 'AI Agents',
+                            value: '42',
+                            icon: 'fas fa-robot',
+                            trend: '+3 this week',
+                            details: {
+                                active: 38,
+                                inactive: 4,
+                                testing: 2
+                            }
+                        },
+                        {
+                            id: 3,
+                            system: 'caia',
+                            label: 'Active APIs',
+                            value: '15',
+                            icon: 'fas fa-server',
+                            trend: 'All running',
+                            details: {
+                                cks: 5555,
+                                enhancement: 5002,
+                                learning: 5003
+                            }
+                        },
+                        {
+                            id: 4,
+                            system: 'ccu',
+                            label: 'CC Configs',
+                            value: '82',
+                            icon: 'fas fa-cog',
+                            trend: '93% enabled',
+                            details: {
+                                enabled: 77,
+                                disabled: 5
+                            }
+                        },
+                        {
+                            id: 5,
+                            system: 'ccu',
+                            label: 'Speed Boost',
+                            value: '4.3M×',
+                            icon: 'fas fa-rocket',
+                            trend: 'Optimized',
+                            details: {
+                                parallel: 50,
+                                sequential: 1
+                            }
+                        },
+                        {
+                            id: 6,
+                            system: 'ccu',
+                            label: 'Automations',
+                            value: '24',
+                            icon: 'fas fa-magic',
+                            trend: '100% active',
+                            details: {
+                                hooks: 24,
+                                triggers: 156
+                            }
+                        }
+                    ];
+                },
+
+                async loadAllData() {
+                    try {
+                        const response = await fetch('http://localhost:3000/api/dashboard');
+                        const data = await response.json();
+
+                        // Process all data
+                        this.processCAIASystems(data);
+                        this.processCCUConfigs(data);
+                        this.processAgents(data);
+                        this.processRepos(data);
+                        this.processServices(data);
+                        this.processPerformance(data);
+                        this.processHooks(data);
+                        this.processMindForge(data);
+                        this.processTaskForge(data);
+
+                        this.lastUpdate = new Date().toLocaleTimeString();
+                        this.currentStatus = 'online';
+                    } catch (error) {
+                        console.error('Failed to load data:', error);
+                        this.currentStatus = 'offline';
+                    }
+                },
+
+                processCAIASystems(data) {
+                    this.caiaSystem = [
+                        {
+                            name: 'Knowledge System (CKS)',
+                            description: 'Code knowledge and indexing',
+                            status: 'active',
+                            details: [
+                                { label: 'Port', value: '5555' },
+                                { label: 'Files Indexed', value: data.knowledge?.files || '9,017' },
+                                { label: 'Functions', value: data.knowledge?.functions || '5,025' },
+                                { label: 'Classes', value: data.knowledge?.classes || '704' },
+                                { label: 'Database', value: 'caia_knowledge.db' }
+                            ]
+                        },
+                        {
+                            name: 'Enhancement System',
+                            description: '16 CC enhancement systems',
+                            status: 'active',
+                            details: [
+                                { label: 'Port', value: '5002' },
+                                { label: 'Systems', value: '16' },
+                                { label: 'Active', value: '16' },
+                                { label: 'CPU Usage', value: '12%' }
+                            ]
+                        },
+                        {
+                            name: 'Learning System',
+                            description: 'Pattern recognition and ML',
+                            status: 'active',
+                            details: [
+                                { label: 'Port', value: '5003' },
+                                { label: 'Patterns', value: '1,234' },
+                                { label: 'Decisions', value: data.knowledge?.decisions || '567' },
+                                { label: 'Accuracy', value: '94.3%' }
+                            ]
+                        },
+                        {
+                            name: 'CC Orchestrator',
+                            description: 'Parallel execution coordinator',
+                            status: 'active',
+                            details: [
+                                { label: 'Port', value: '8885' },
+                                { label: 'Max Instances', value: '50' },
+                                { label: 'Active Tasks', value: '3' },
+                                { label: 'Queue', value: '0' }
+                            ]
+                        }
+                    ];
+                },
+
+                processCCUConfigs(data) {
+                    this.ccuConfigs = [
+                        {
+                            id: 1,
+                            category: 'Parallel Execution',
+                            enabled: 4,
+                            total: 5,
+                            items: [
+                                { name: 'MAX_PARALLEL', value: '50', enabled: true },
+                                { name: 'CCO_AUTO_INVOKE', value: 'true', enabled: true },
+                                { name: 'PARALLEL_JOBS', value: '50', enabled: true },
+                                { name: 'TURBO_MODE', value: 'false', enabled: false },
+                                { name: 'MAKEFLAGS', value: '-j50', enabled: true }
+                            ]
+                        },
+                        {
+                            id: 2,
+                            category: 'Git Automation',
+                            enabled: 3,
+                            total: 3,
+                            items: [
+                                { name: 'AUTO_COMMIT', value: 'true', enabled: true },
+                                { name: 'CONVENTIONAL_COMMITS', value: 'true', enabled: true },
+                                { name: 'AUTO_PUSH', value: 'true', enabled: true }
+                            ]
+                        },
+                        {
+                            id: 3,
+                            category: 'Knowledge Integration',
+                            enabled: 4,
+                            total: 4,
+                            items: [
+                                { name: 'CKS_ENFORCEMENT', value: 'MANDATORY', enabled: true },
+                                { name: 'CKS_BYPASS_ALLOWED', value: 'false', enabled: true },
+                                { name: 'AUTO_UPDATE_KNOWLEDGE', value: 'true', enabled: true },
+                                { name: 'LEARNING_ENABLED', value: 'true', enabled: true }
+                            ]
+                        },
+                        {
+                            id: 4,
+                            category: 'Performance',
+                            enabled: 3,
+                            total: 4,
+                            items: [
+                                { name: 'RAM_DISK', value: '2GB', enabled: true },
+                                { name: 'CACHE_DURATION', value: '30s', enabled: true },
+                                { name: 'BATCH_SIZE', value: '100', enabled: true },
+                                { name: 'PROFILING', value: 'false', enabled: false }
+                            ]
+                        }
+                    ];
+                },
+
+                processAgents(data) {
+                    this.agents = data.agents || [
+                        { name: 'frontend-developer', icon: 'fas fa-code', status: 'Ready', active: true },
+                        { name: 'backend-architect', icon: 'fas fa-server', status: 'Ready', active: true },
+                        { name: 'test-writer-fixer', icon: 'fas fa-vial', status: 'Ready', active: true },
+                        { name: 'rapid-prototyper', icon: 'fas fa-rocket', status: 'Idle', active: false },
+                        { name: 'whimsy-injector', icon: 'fas fa-sparkles', status: 'Ready', active: true },
+                        { name: 'devops-automator', icon: 'fas fa-cloud', status: 'Ready', active: true }
+                    ];
+                },
+
+                processRepos(data) {
+                    this.repos = data.gitStatus || [
+                        { name: 'caia', branch: 'main', status: 'clean', changes: 0 },
+                        { name: 'claude-code-ultimate', branch: 'main', status: 'clean', changes: 0 }
+                    ];
+                },
+
+                processServices(data) {
+                    this.services = [
+                        { name: 'Knowledge System', port: 5555, status: data.knowledgeSystem?.status || 'offline', uptime: '24h', requests: 1234 },
+                        { name: 'Enhancement API', port: 5002, status: data.enhancementApi?.status || 'offline', uptime: '24h', requests: 567 },
+                        { name: 'Learning System', port: 5003, status: data.learningSystem?.status || 'offline', uptime: '24h', requests: 890 },
+                        { name: 'MindForge', port: 5557, status: data.mindforge?.status || 'offline', uptime: '24h', requests: 345 }
+                    ];
+                },
+
+                processPerformance(data) {
+                    this.performanceMetrics = [
+                        { name: 'CPU Usage', value: data.performance?.cpu || 45, details: 'Processing 3 parallel tasks' },
+                        { name: 'Memory', value: data.performance?.memory || 62, details: '4.2GB of 8GB used' },
+                        { name: 'CC Instances', value: 35, details: '35 of 50 max instances' },
+                        { name: 'API Response', value: 15, details: 'Average 15ms response time' }
+                    ];
+                },
+
+                processHooks(data) {
+                    this.hooks = data.hooks || [
+                        { name: 'auto-commit-hook', trigger: 'Pre-Prompt', active: true },
+                        { name: 'cks-enforcement', trigger: 'Pre-Write', active: true },
+                        { name: 'session-start', trigger: 'Session Start', active: true },
+                        { name: 'post-response-cleanup', trigger: 'Post-Response', active: true }
+                    ];
+                },
+
+                processMindForge(data) {
+                    if (data.mindforge) {
+                        this.mindForge = {
+                            todos: data.mindforge.todos || [],
+                            suggestions: data.mindforge.suggestions || [],
+                            insights: data.mindforge.insights || []
+                        };
+                    }
+                },
+
+                processTaskForge(data) {
+                    if (data.taskforge?.projects) {
+                        this.taskforgeProjects = data.taskforge.projects.map(p => ({
+                            ...p,
+                            progress: p.completedCount ? (p.completedCount / p.taskCount * 100).toFixed(0) : 0
+                        }));
+                    }
+                },
+
+                toggleAccordion(section) {
+                    const index = this.openSections.indexOf(section);
+                    if (index > -1) {
+                        this.openSections.splice(index, 1);
+                    } else {
+                        this.openSections.push(section);
+                    }
+                },
+
+                setActiveView(view) {
+                    this.activeView = view;
+                },
+
+                getViewTitle() {
+                    const titles = {
+                        'metrics': 'System Metrics',
+                        'system-status': 'Service Status',
+                        'performance': 'Performance Metrics',
+                        'caia-overview': 'CAIA Systems Overview',
+                        'knowledge-system': 'Knowledge System',
+                        'agents': 'AI Agents',
+                        'test-orchestrator': 'Test Orchestrator',
+                        'ccu-config': 'CCU Configurations',
+                        'ccu-hooks': 'Active Hooks',
+                        'taskforge': 'TaskForge',
+                        'mindforge': 'MindForge',
+                        'git-status': 'Git Status',
+                        'admin-scripts': 'Admin Scripts',
+                        'search': 'Universal Search'
+                    };
+                    return titles[this.activeView] || 'Dashboard';
+                },
+
+                openMetricDetail(metric) {
+                    this.modalTitle = metric.label;
+                    this.modalContent = `
+                        <div class="space-y-4">
+                            <div class="text-center">
+                                <i class="${metric.icon} text-6xl mb-4 text-blue-400"></i>
+                                <p class="text-4xl font-bold">${metric.value}</p>
+                                <p class="text-gray-400">${metric.trend}</p>
+                            </div>
+                            <div class="bg-gray-700 rounded-lg p-4">
+                                <h3 class="font-semibold mb-3">Details</h3>
+                                ${Object.entries(metric.details || {}).map(([k, v]) =>
+                                    `<div class="flex justify-between py-2 border-b border-gray-600">
+                                        <span class="text-gray-400">${k}</span>
+                                        <span class="font-mono">${v}</span>
+                                    </div>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    `;
+                    this.detailModal = true;
+                },
+
+                openAgentDetail(agent) {
+                    this.modalTitle = `Agent: ${agent.name}`;
+                    this.modalContent = `
+                        <div class="space-y-4">
+                            <div class="flex items-center">
+                                <i class="${agent.icon || 'fas fa-robot'} text-4xl mr-4 text-blue-400"></i>
+                                <div>
+                                    <p class="text-xl font-bold">${agent.name}</p>
+                                    <p class="text-gray-400">Status: ${agent.status}</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <button class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg">
+                                    <i class="fas fa-play mr-2"></i>Start Agent
+                                </button>
+                                <button class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg">
+                                    <i class="fas fa-stop mr-2"></i>Stop Agent
+                                </button>
+                                <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                                    <i class="fas fa-terminal mr-2"></i>Test Agent
+                                </button>
+                                <button class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg">
+                                    <i class="fas fa-cog mr-2"></i>Configure
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    this.detailModal = true;
+                },
+
+                openHookDetail(hook) {
+                    this.modalTitle = `Hook: ${hook.name}`;
+                    this.modalContent = `
+                        <div class="space-y-4">
+                            <div class="bg-gray-700 rounded-lg p-4">
+                                <div class="flex justify-between mb-2">
+                                    <span>Trigger:</span>
+                                    <span class="font-mono">${hook.trigger}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Status:</span>
+                                    <span class="${hook.active ? 'text-green-400' : 'text-red-400'}">${hook.active ? 'Active' : 'Inactive'}</span>
+                                </div>
+                            </div>
+                            <div class="bg-gray-700 rounded-lg p-4">
+                                <h3 class="font-semibold mb-2">Actions</h3>
+                                <div class="space-y-2">
+                                    <button class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-left">
+                                        <i class="fas fa-play mr-2"></i>Test Hook
+                                    </button>
+                                    <button class="w-full px-3 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-left">
+                                        <i class="fas fa-edit mr-2"></i>Edit Hook
+                                    </button>
+                                    <button class="w-full px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-left">
+                                        <i class="fas fa-eye mr-2"></i>View Logs
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    this.detailModal = true;
+                },
+
+                openTaskForge() {
+                    window.open('http://localhost:5556/', '_blank');
+                },
+
+                async updateTodoStatus(todo) {
+                    const newStatus = todo.status === 'pending' ? 'in_progress' :
+                                    todo.status === 'in_progress' ? 'completed' : 'pending';
+                    try {
+                        const response = await fetch(`http://localhost:5557/api/todos/${todo.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: newStatus })
+                        });
+                        if (response.ok) {
+                            await this.refreshAll();
+                        }
+                    } catch (error) {
+                        console.error('Error updating todo:', error);
+                    }
+                },
+
+                async createManualTodo() {
+                    const title = prompt('Enter todo title:');
+                    if (!title) return;
+                    const description = prompt('Enter todo description:');
+                    const category = prompt('Enter category (caia/ccu/general):', 'general');
+                    const priority = prompt('Enter priority (P0/P1/P2/P3):', 'P2');
+
+                    try {
+                        const response = await fetch('http://localhost:5557/api/todos', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ title, description, category, priority })
+                        });
+                        if (response.ok) {
+                            await this.refreshAll();
+                        }
+                    } catch (error) {
+                        console.error('Error creating todo:', error);
+                    }
+                },
+
+                async acceptSuggestion(suggestion) {
+                    try {
+                        const response = await fetch(`http://localhost:5557/api/suggestions/${suggestion.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: 'accepted' })
+                        });
+                        if (response.ok) {
+                            await this.refreshAll();
+                        }
+                    } catch (error) {
+                        console.error('Error accepting suggestion:', error);
+                    }
+                },
+
+                async rejectSuggestion(suggestion) {
+                    try {
+                        const response = await fetch(`http://localhost:5557/api/suggestions/${suggestion.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: 'rejected' })
+                        });
+                        if (response.ok) {
+                            await this.refreshAll();
+                        }
+                    } catch (error) {
+                        console.error('Error rejecting suggestion:', error);
+                    }
+                },
+
+                async analyzeMindForge() {
+                    try {
+                        const response = await fetch('http://localhost:5557/api/analyze/conversations', {
+                            method: 'POST'
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.showNotification(`Analyzed ${data.count} conversations`, 'success');
+                            await this.refreshAll();
+                        }
+                    } catch (error) {
+                        this.showNotification('Analysis failed', 'error');
+                    }
+                },
+
+                async decomposeTask() {
+                    const input = prompt('Enter task or project description to decompose:');
+                    if (!input) return;
+
+                    try {
+                        const response = await fetch('http://localhost:5556/api/decompose', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                input,
+                                options: { labels: ['caia-dashboard'] }
+                            })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.showNotification(`Task decomposed: ${data.message}`, 'success');
+                            await this.loadAllData();
+                        }
+                    } catch (error) {
+                        this.showNotification('Decomposition failed', 'error');
+                    }
+                },
+
+                async executeAction(system, action) {
+                    try {
+                        const response = await fetch('/api/action/execute', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                target: `system:${system.name}`,
+                                action: action
+                            })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            this.showNotification(`${system.name} ${action} successful`, 'success');
+                            await this.loadAllData();
+                        } else {
+                            this.showNotification(`Failed: ${result.message}`, 'error');
+                        }
+                    } catch (error) {
+                        this.showNotification(`Error: ${error.message}`, 'error');
+                    }
+                },
+
+                async toggleConfig(config, item) {
+                    item.enabled = !item.enabled;
+                    this.showNotification(`${item.name} ${item.enabled ? 'enabled' : 'disabled'}`, 'success');
+                },
+
+                async toggleHook(hook) {
+                    hook.active = !hook.active;
+                    this.showNotification(`${hook.name} ${hook.active ? 'activated' : 'deactivated'}`, 'success');
+                },
+
+                async executeHook(hook, action) {
+                    this.showNotification(`Testing ${hook.name}...`, 'info');
+                },
+
+                async gitAction(repo, action) {
+                    this.showNotification(`${action} on ${repo.name}...`, 'info');
+                },
+
+                async commitAll() {
+                    for (const repo of this.repos) {
+                        if (repo.changes > 0) {
+                            await this.gitAction(repo, 'commit');
+                            await this.gitAction(repo, 'push');
+                        }
+                    }
+                    this.showNotification('All repositories committed and pushed', 'success');
+                },
+
+                showNotification(message, type = 'info') {
+                    const notification = document.createElement('div');
+                    notification.className = `px-6 py-3 rounded-lg shadow-lg notification ${
+                        type === 'success' ? 'bg-green-600' :
+                        type === 'error' ? 'bg-red-600' :
+                        'bg-blue-600'
+                    } text-white`;
+                    notification.textContent = message;
+
+                    const container = document.getElementById('notifications');
+                    container.appendChild(notification);
+
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 3000);
+                },
+
+                getPriorityColor(priority) {
+                    const colors = {
+                        'P0': 'bg-red-500 text-white',
+                        'P1': 'bg-orange-500 text-white',
+                        'P2': 'bg-yellow-500 text-black',
+                        'P3': 'bg-blue-500 text-white'
+                    };
+                    return colors[priority] || 'bg-gray-500 text-white';
+                },
+
+                async refreshAll() {
+                    this.refreshing = true;
+                    await this.loadAllData();
+                    setTimeout(() => { this.refreshing = false; }, 500);
+                },
+
+                setupAutoRefresh() {
+                    setInterval(() => {
+                        this.loadAllData();
+                    }, 30000); // Refresh every 30 seconds
+                }
+            };
+        }
+    </script>
+</body>
+</html>

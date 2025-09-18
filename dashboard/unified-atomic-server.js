@@ -42,7 +42,9 @@ const PATHS = {
     TOOLS: '/Users/MAC/Documents/projects/caia/tools',
     HAS_UI: '/Users/MAC/Documents/projects/caia/packages/hierarchical-agent-system/ui',
     EXPLORER_UI: '/Users/MAC/Documents/projects/caia/knowledge-system/knowledge_explorer_ui',
-    TEST_ORCHESTRATOR: '/Users/MAC/Documents/projects/caia/dist/packages/tools-unified/src/testing/monorepo-test-orchestrator'
+    TEST_ORCHESTRATOR: '/Users/MAC/Documents/projects/caia/dist/packages/tools-unified/src/testing/monorepo-test-orchestrator',
+    TASKFORGE: '/Users/MAC/Documents/projects/caia/taskforge',
+    MINDFORGE: '/Users/MAC/Documents/projects/caia/mindforge'
 };
 
 // API endpoints for all systems
@@ -51,7 +53,9 @@ const APIS = {
     ENHANCEMENT: 'http://localhost:5002',
     LEARNING: 'http://localhost:5003',
     CCO: 'http://localhost:8885',
-    KS: 'http://localhost:5000'
+    KS: 'http://localhost:5000',
+    TASKFORGE: 'http://localhost:5556',
+    MINDFORGE: 'http://localhost:5557'
 };
 
 // Cache management
@@ -460,7 +464,9 @@ app.get('/api/dashboard', async (req, res) => {
         agents,
         configs,
         hooks,
-        gitStatus
+        gitStatus,
+        taskforge,
+        mindforge
     ] = await Promise.all([
         scanCodebase(),
         getKnowledgeStats(),
@@ -471,7 +477,9 @@ app.get('/api/dashboard', async (req, res) => {
         getAllAgents(),
         getAllConfigs(),
         getAllHooks(),
-        getGitStatus()
+        getGitStatus(),
+        getTaskForgeStats(),
+        getMindForgeStats()
     ]);
 
     res.json({
@@ -485,8 +493,10 @@ app.get('/api/dashboard', async (req, res) => {
         configs,
         hooks,
         gitStatus,
+        taskforge,
+        mindforge,
         timestamp: new Date(),
-        version: '2.0.0' // Unified dashboard version
+        version: '2.2.0' // Updated with MindForge integration
     });
 });
 
@@ -763,6 +773,146 @@ app.get('/api/hooks', async (req, res) => {
 });
 
 // Git status endpoint
+/**
+ * ============================================
+ * FEATURE 11: TaskForge Integration
+ * ============================================
+ */
+
+async function getTaskForgeStats() {
+    const now = Date.now();
+    if (cachedData.taskforge && (now - lastScanTime.taskforge < CACHE_DURATION)) {
+        return cachedData.taskforge;
+    }
+
+    const taskforgeData = {
+        status: 'offline',
+        stats: {},
+        recentTasks: [],
+        hierarchy: [],
+        activeProjects: [],
+        error: null
+    };
+
+    try {
+        // Check if TaskForge is running
+        const healthResponse = await axios.get(`${APIS.TASKFORGE}/api/health`, {
+            timeout: 2000
+        }).catch(() => null);
+
+        if (healthResponse && healthResponse.data) {
+            taskforgeData.status = 'online';
+            taskforgeData.version = healthResponse.data.version;
+
+            // Get statistics
+            const [statsRes, hierarchyRes] = await Promise.all([
+                axios.get(`${APIS.TASKFORGE}/api/stats`, { timeout: 2000 }).catch(() => null),
+                axios.get(`${APIS.TASKFORGE}/api/tasks/hierarchy`, { timeout: 2000 }).catch(() => null)
+            ]);
+
+            if (statsRes && statsRes.data) {
+                taskforgeData.stats = statsRes.data.stats || {};
+            }
+
+            if (hierarchyRes && hierarchyRes.data) {
+                taskforgeData.hierarchy = hierarchyRes.data.hierarchy || [];
+
+                // Extract active projects (root level tasks with label "caia-dashboard")
+                taskforgeData.activeProjects = (hierarchyRes.data.hierarchy || [])
+                    .filter(task => !task.parent_id)
+                    .slice(0, 5); // Get top 5 root tasks
+            }
+
+            // Get recent tasks from database directly if API fails
+            if (!taskforgeData.stats.totalTasks) {
+                const dbPath = path.join(PATHS.TASKFORGE, 'data', 'taskforge.db');
+                const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY);
+
+                await new Promise((resolve) => {
+                    db.get('SELECT COUNT(*) as count FROM tasks', (err, row) => {
+                        if (!err && row) {
+                            taskforgeData.stats.totalTasks = row.count;
+                        }
+                        resolve();
+                    });
+                });
+
+                db.close();
+            }
+        }
+    } catch (error) {
+        taskforgeData.error = error.message;
+        console.error('TaskForge integration error:', error);
+    }
+
+    cachedData.taskforge = taskforgeData;
+    lastScanTime.taskforge = now;
+    return taskforgeData;
+}
+
+/**
+ * ============================================
+ * MINDFORGE INTEGRATION
+ * ============================================
+ */
+async function getMindForgeStats() {
+    const now = Date.now();
+    if (cachedData.mindforge && (now - lastScanTime.mindforge < CACHE_DURATION)) {
+        return cachedData.mindforge;
+    }
+
+    const mindforgeData = {
+        status: 'offline',
+        stats: {},
+        todos: [],
+        suggestions: [],
+        insights: [],
+        error: null
+    };
+
+    try {
+        // Check if MindForge is running
+        const healthResponse = await axios.get(`${APIS.MINDFORGE}/api/health`, {
+            timeout: 2000
+        }).catch(() => null);
+
+        if (healthResponse && healthResponse.data) {
+            mindforgeData.status = 'online';
+
+            // Get stats
+            const statsResponse = await axios.get(`${APIS.MINDFORGE}/api/stats`);
+            if (statsResponse.data.success) {
+                mindforgeData.stats = statsResponse.data.stats;
+            }
+
+            // Get recent todos
+            const todosResponse = await axios.get(`${APIS.MINDFORGE}/api/todos?status=pending`);
+            if (todosResponse.data.success) {
+                mindforgeData.todos = todosResponse.data.todos.slice(0, 5);
+            }
+
+            // Get new suggestions
+            const suggestionsResponse = await axios.get(`${APIS.MINDFORGE}/api/suggestions?status=new`);
+            if (suggestionsResponse.data.success) {
+                mindforgeData.suggestions = suggestionsResponse.data.suggestions.slice(0, 5);
+            }
+
+            // Get recent insights
+            const insightsResponse = await axios.get(`${APIS.MINDFORGE}/api/insights`);
+            if (insightsResponse.data.success) {
+                mindforgeData.insights = insightsResponse.data.insights.slice(0, 3);
+            }
+        }
+    } catch (error) {
+        mindforgeData.error = error.message;
+        console.error('MindForge integration error:', error);
+    }
+
+    cachedData.mindforge = mindforgeData;
+    lastScanTime.mindforge = now;
+    return mindforgeData;
+}
+
 async function getGitStatus() {
     const repos = [];
     const repoPaths = [
@@ -886,15 +1036,11 @@ app.get('/api/learning-events', async (req, res) => {
     res.json(events);
 });
 
-// Serve the unified dashboard (use atomic-dashboard.html as the main UI)
+// Serve the CAIA dashboard
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'atomic-dashboard.html'));
+    res.sendFile(path.join(__dirname, 'caia-dashboard.html'));
 });
 
-// Legacy route compatibility
-app.get('/atomic', (req, res) => {
-    res.sendFile(path.join(__dirname, 'atomic-dashboard.html'));
-});
 
 app.get('/feature-browser', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -908,6 +1054,356 @@ app.get('/health', (req, res) => {
         memory: process.memoryUsage(),
         version: '2.0.0'
     });
+});
+
+/**
+ * ============================================
+ * ACTION HANDLERS - MAKE DASHBOARD INTERACTIVE
+ * ============================================
+ */
+
+// Enable JSON body parsing for POST requests
+app.use(express.json());
+
+// Execute action on services/agents
+app.post('/api/action/execute', async (req, res) => {
+    const { target, action, params = {} } = req.body;
+
+    try {
+        let result = { success: false, message: '', data: null };
+
+        // Handle system actions (start/stop services)
+        if (target.startsWith('system:')) {
+            const systemName = target.replace('system:', '');
+
+            if (action === 'start') {
+                // Start the service based on system name
+                if (systemName === 'CKS') {
+                    const { stdout } = await execPromise(`${PATHS.CKS}/scripts/start_all_services.sh`);
+                    result = { success: true, message: 'CKS started successfully', data: stdout };
+                } else if (systemName === 'Enhancement') {
+                    const { stdout } = await execPromise(`${PATHS.CKS}/cc-enhancement/start-daemon.sh`);
+                    result = { success: true, message: 'Enhancement system started', data: stdout };
+                } else if (systemName === 'Learning') {
+                    const { stdout } = await execPromise(`cd ${PATHS.CKS}/learning && python3 api_server.py &`);
+                    result = { success: true, message: 'Learning system started', data: stdout };
+                }
+            } else if (action === 'stop') {
+                // Stop the service
+                const port = systemName === 'CKS' ? '5555' : systemName === 'Enhancement' ? '5002' : '5003';
+                await execPromise(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
+                result = { success: true, message: `${systemName} stopped` };
+            } else if (action === 'restart') {
+                // Restart = stop then start
+                const port = systemName === 'CKS' ? '5555' : systemName === 'Enhancement' ? '5002' : '5003';
+                await execPromise(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
+                await new Promise(r => setTimeout(r, 1000)); // Wait 1 second
+
+                if (systemName === 'CKS') {
+                    await execPromise(`${PATHS.CKS}/scripts/start_all_services.sh`);
+                } else if (systemName === 'Enhancement') {
+                    await execPromise(`${PATHS.CKS}/cc-enhancement/start-daemon.sh`);
+                } else if (systemName === 'Learning') {
+                    await execPromise(`cd ${PATHS.CKS}/learning && python3 api_server.py &`);
+                }
+                result = { success: true, message: `${systemName} restarted` };
+            }
+        }
+
+        // Handle agent actions
+        else if (target.startsWith('agent:')) {
+            const agentName = target.replace('agent:', '');
+            const agentPath = `${PATHS.AGENTS}/${agentName}`;
+
+            if (action === 'test') {
+                const { stdout } = await execPromise(`cd ${agentPath} && npm test 2>&1`);
+                result = { success: true, message: 'Test completed', data: stdout };
+            } else if (action === 'install') {
+                const { stdout } = await execPromise(`cd ${agentPath} && npm install`);
+                result = { success: true, message: 'Dependencies installed', data: stdout };
+            } else if (action === 'open') {
+                await execPromise(`code ${agentPath}`);
+                result = { success: true, message: 'Opened in VS Code' };
+            }
+        }
+
+        // Handle script executions
+        else if (target.startsWith('script:')) {
+            const scriptPath = target.replace('script:', '');
+            const { stdout } = await execPromise(`bash ${scriptPath} ${params.args || ''}`);
+            result = { success: true, message: 'Script executed', data: stdout };
+        }
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+            error: error.toString()
+        });
+    }
+});
+
+// Git actions handler
+app.post('/api/action/git', async (req, res) => {
+    const { repo, action, params = {} } = req.body;
+
+    try {
+        let result = { success: false, message: '', data: null };
+        const repoPath = repo === 'caia' ? PATHS.CAIA : `${PATHS.CAIA}/../claude-code-ultimate`;
+
+        switch (action) {
+            case 'commit':
+                const message = params.message || 'Dashboard commit';
+                await execPromise(`git add -A`, { cwd: repoPath });
+                const { stdout: commitOut } = await execPromise(`git commit -m "${message}"`, { cwd: repoPath });
+                result = { success: true, message: 'Committed successfully', data: commitOut };
+                break;
+
+            case 'push':
+                const { stdout: pushOut } = await execPromise(`git push origin HEAD`, { cwd: repoPath });
+                result = { success: true, message: 'Pushed to origin', data: pushOut };
+                break;
+
+            case 'pull':
+                const { stdout: pullOut } = await execPromise(`git pull`, { cwd: repoPath });
+                result = { success: true, message: 'Pulled latest changes', data: pullOut };
+                break;
+
+            case 'status':
+                const { stdout: statusOut } = await execPromise(`git status`, { cwd: repoPath });
+                result = { success: true, message: 'Git status', data: statusOut };
+                break;
+
+            case 'diff':
+                const { stdout: diffOut } = await execPromise(`git diff --stat`, { cwd: repoPath });
+                result = { success: true, message: 'Git diff', data: diffOut };
+                break;
+
+            case 'log':
+                const { stdout: logOut } = await execPromise(`git log --oneline -10`, { cwd: repoPath });
+                result = { success: true, message: 'Git log', data: logOut };
+                break;
+        }
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+            error: error.toString()
+        });
+    }
+});
+
+// Configuration toggle handler
+app.post('/api/action/config', async (req, res) => {
+    const { config, enabled } = req.body;
+
+    try {
+        let result = { success: false, message: '' };
+
+        // Handle CC configuration toggles
+        if (config.startsWith('CC_')) {
+            const claudeRC = `${process.env.HOME}/.clauderc`;
+
+            // Read current config
+            let configContent = '';
+            try {
+                configContent = await fs.readFile(claudeRC, 'utf-8');
+            } catch (e) {
+                configContent = '';
+            }
+
+            // Update the specific config
+            const configLine = `export ${config}=${enabled ? 'true' : 'false'}`;
+            const configRegex = new RegExp(`^export ${config}=.*$`, 'm');
+
+            if (configContent.match(configRegex)) {
+                configContent = configContent.replace(configRegex, configLine);
+            } else {
+                configContent += `\n${configLine}`;
+            }
+
+            // Write back
+            await fs.writeFile(claudeRC, configContent);
+
+            // Apply immediately to current shell
+            process.env[config] = enabled ? 'true' : 'false';
+
+            result = {
+                success: true,
+                message: `${config} ${enabled ? 'enabled' : 'disabled'}`
+            };
+        }
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Hook toggle handler
+app.post('/api/action/hook', async (req, res) => {
+    const { hook, enabled } = req.body;
+
+    try {
+        const hookPath = `${process.env.HOME}/.claude/hooks/${hook}`;
+
+        if (enabled) {
+            // Make hook executable
+            await execPromise(`chmod +x ${hookPath}`);
+
+            // Remove .disabled suffix if present
+            if (hookPath.endsWith('.disabled')) {
+                const enabledPath = hookPath.replace('.disabled', '');
+                await fs.rename(hookPath, enabledPath);
+            }
+        } else {
+            // Remove execute permission
+            await execPromise(`chmod -x ${hookPath}`);
+
+            // Add .disabled suffix if not present
+            if (!hookPath.endsWith('.disabled')) {
+                await fs.rename(hookPath, `${hookPath}.disabled`);
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Hook ${hook} ${enabled ? 'enabled' : 'disabled'}`
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Universal search endpoint
+app.get('/api/search', async (req, res) => {
+    const { query, type = 'all' } = req.query;
+
+    if (!query) {
+        return res.json({ results: [], query: '', type });
+    }
+
+    const results = [];
+
+    try {
+        // Search in code using ripgrep
+        if (type === 'all' || type === 'code') {
+            const { stdout } = await execPromise(
+                `rg -l "${query}" ${PATHS.CAIA} --max-count=20 2>/dev/null | head -20`
+            );
+            const files = stdout.split('\n').filter(Boolean);
+
+            for (const file of files) {
+                results.push({
+                    type: 'code',
+                    path: file,
+                    name: path.basename(file),
+                    match: `Found in ${path.relative(PATHS.CAIA, file)}`
+                });
+            }
+        }
+
+        // Search in knowledge system
+        if (type === 'all' || type === 'knowledge') {
+            try {
+                const response = await axios.get(`${APIS.CKS}/search/function?query=${query}`);
+                if (response.data && response.data.functions) {
+                    response.data.functions.slice(0, 10).forEach(func => {
+                        results.push({
+                            type: 'knowledge',
+                            name: func.name,
+                            path: func.file_path,
+                            match: `Function in ${func.file_path}`
+                        });
+                    });
+                }
+            } catch (e) {}
+        }
+
+        // Search in agents
+        if (type === 'all' || type === 'agents') {
+            const agents = await getAllAgents();
+            const matchingAgents = agents.filter(a =>
+                a.name.toLowerCase().includes(query.toLowerCase()) ||
+                (a.description && a.description.toLowerCase().includes(query.toLowerCase()))
+            );
+
+            matchingAgents.forEach(agent => {
+                results.push({
+                    type: 'agent',
+                    name: agent.name,
+                    path: agent.path,
+                    match: agent.description || 'AI Agent'
+                });
+            });
+        }
+
+        res.json({ results, query, type });
+    } catch (error) {
+        res.json({ results: [], query, type, error: error.message });
+    }
+});
+
+// Get learning system events
+app.get('/api/learning-events', async (req, res) => {
+    try {
+        const response = await axios.get(`${APIS.Learning}/events/recent?limit=50`);
+        res.json(response.data);
+    } catch (error) {
+        // Fallback to mock data if learning system is not running
+        res.json({
+            events: [
+                { timestamp: new Date(), type: 'pattern_learned', description: 'New coding pattern identified' },
+                { timestamp: new Date(Date.now() - 3600000), type: 'decision_captured', description: 'Architectural decision logged' },
+                { timestamp: new Date(Date.now() - 7200000), type: 'context_saved', description: 'Session context preserved' }
+            ]
+        });
+    }
+});
+
+// CC Orchestrator control
+app.post('/api/action/cco', async (req, res) => {
+    const { action, params = {} } = req.body;
+
+    try {
+        let result = { success: false, message: '' };
+        const ccoPath = '/Users/MAC/Documents/projects/caia/utils/parallel/cc-orchestrator';
+
+        switch (action) {
+            case 'launch':
+                const { stdout } = await execPromise(
+                    `cd ${ccoPath} && node src/index.js launch --tasks "${params.tasks || ''}" --instances ${params.instances || 5}`
+                );
+                result = { success: true, message: 'CCO launched', data: stdout };
+                break;
+
+            case 'status':
+                const { stdout: statusOut } = await execPromise(`cd ${ccoPath} && node src/index.js status`);
+                result = { success: true, message: 'CCO status', data: statusOut };
+                break;
+
+            case 'kill':
+                await execPromise(`pkill -f "cc-orchestrator"`);
+                result = { success: true, message: 'CCO instances terminated' };
+                break;
+        }
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 });
 
 // Start server
