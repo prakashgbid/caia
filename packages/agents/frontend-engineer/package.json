@@ -51,7 +51,7 @@
     "react-dom": "^18.2.0",
     "vue": "^3.3.8",
     "@angular/core": "^17.0.8",
-    "@angular/common": "^17.0.8",
+    "@angular/common": "^19.2.16",
     "styled-components": "^6.1.6",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
