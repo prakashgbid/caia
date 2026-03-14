@@ -11,11 +11,11 @@
     "update-configs": "node src/config-updater.js"
   },
   "dependencies": {
-    "sqlite3": "^5.1.6",
+    "sqlite3": "^6.0.1",
     "chokidar": "^3.5.3",
     "natural": "^6.10.0",
     "chalk": "^4.1.2",
     "node-cron": "^3.0.3",
-    "axios": "^1.6.2"
+    "axios": "^1.13.5"
   }
 }
