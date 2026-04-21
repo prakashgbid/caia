@@ -143,6 +143,71 @@ function installLaunchdWatchdog(): void {
   }
 }
 
+export async function installExecutorLaunchd(): Promise<void> {
+  if (process.platform !== 'darwin') {
+    console.error('❌ launchd is macOS-only');
+    process.exit(1);
+  }
+
+  const logDir = path.join(os.homedir(), 'Documents', 'conductor-logs');
+  fs.mkdirSync(logDir, { recursive: true });
+
+  const conductorBin = path.join(PACKAGE_ROOT, 'dist', 'cli', 'index.js');
+  const nodeBin = process.execPath;
+
+  const plistPath = path.join(
+    os.homedir(), 'Library', 'LaunchAgents', 'com.conductor.executor.plist',
+  );
+
+  const plistContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.conductor.executor</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${nodeBin}</string>
+    <string>${conductorBin}</string>
+    <string>exec</string>
+    <string>daemon</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CONDUCTOR_API</key>
+    <string>http://localhost:7776</string>
+    <key>HOME</key>
+    <string>${os.homedir()}</string>
+  </dict>
+  <key>KeepAlive</key>
+  <true/>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>${logDir}/executor.log</string>
+  <key>StandardErrorPath</key>
+  <string>${logDir}/executor.err.log</string>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+</dict>
+</plist>`;
+
+  fs.writeFileSync(plistPath, plistContent);
+  console.log(`✅ Executor launchd plist written to ${plistPath}`);
+  console.log('');
+  console.log('To start the daemon:');
+  console.log(`  launchctl load ${plistPath}`);
+  console.log('');
+  console.log('To stop it:');
+  console.log(`  launchctl unload ${plistPath}`);
+  console.log('');
+  console.log('Logs:');
+  console.log(`  ${logDir}/executor.log`);
+  console.log(`  ${logDir}/executor.err.log`);
+  console.log('');
+  console.log('⚠️  Remember to enable the executor first: conductor exec start');
+}
+
 export async function installClaudeMd(targetDir: string): Promise<void> {
   const templatePath = path.join(PACKAGE_ROOT, 'templates', 'CLAUDE.md');
   const targetPath = path.join(targetDir, 'CONDUCTOR.md');

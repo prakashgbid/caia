@@ -180,9 +180,13 @@ program
   .command('dashboard')
   .description('Start dashboard server')
   .action(async () => {
-    const conductor = await getConductor();
-    const server: http.Server = createHealthServer(conductor, HTTP_PORT);
-    server.listen(HTTP_PORT, () => {
+    const { runMigrations, getDb } = await import('../db/connection');
+    runMigrations();
+    const db = getDb();
+    const { createApp } = await import('../api/app');
+    const { serve } = await import('@hono/node-server');
+    const app = createApp(db);
+    serve({ fetch: app.fetch, port: HTTP_PORT }, () => {
       console.log(`Conductor HTTP server running on http://localhost:${HTTP_PORT}`);
       console.log('Start dashboard with: cd dashboard && npm run dev');
     });
@@ -202,6 +206,258 @@ program
   .action(async (dir?: string) => {
     const { installClaudeMd } = await import('../install');
     await installClaudeMd(dir ?? process.cwd());
+  });
+
+// ─── db:export — VACUUM INTO a file ────────────────────────────────────────
+program
+  .command('db:export <outPath>')
+  .description('Export conductor DB to a new SQLite file (VACUUM INTO)')
+  .action(async (outPath: string) => {
+    const { getSqliteRaw, getDb } = await import('../db/connection');
+    const { runMigrations } = await import('../db/connection');
+    runMigrations();
+    const sqlite = getSqliteRaw();
+    const resolved = path.resolve(outPath);
+    const { mkdirSync } = await import('fs');
+    mkdirSync(path.dirname(resolved), { recursive: true });
+    sqlite.exec(`VACUUM INTO '${resolved.replace(/'/g, "''")}'`);
+    const { statSync } = await import('fs');
+    const size = statSync(resolved).size;
+    console.log(`✅ Exported to ${resolved} (${(size / 1024).toFixed(1)}KB)`);
+  });
+
+// ─── db:import — restore from an exported file ─────────────────────────────
+program
+  .command('db:import <srcPath>')
+  .description('Restore conductor DB from a backup SQLite file (copies file, replaces current DB)')
+  .action(async (srcPath: string) => {
+    const resolved = path.resolve(srcPath);
+    const { existsSync, copyFileSync } = await import('fs');
+    if (!existsSync(resolved)) {
+      console.error(`❌ File not found: ${resolved}`);
+      process.exit(1);
+    }
+    const dbPath = path.join(os.homedir(), '.conductor', 'db.sqlite');
+    const backupPath = dbPath + '.pre-import-' + Date.now();
+    if (existsSync(dbPath)) copyFileSync(dbPath, backupPath);
+    copyFileSync(resolved, dbPath);
+    console.log(`✅ Restored from ${resolved}`);
+    if (existsSync(backupPath)) console.log(`   (Previous DB saved to ${backupPath})`);
+  });
+
+// ─── memory:sync — sync .md files to lock_contracts + memory_anchors ───────
+program
+  .command('memory:sync [memoryDir]')
+  .description('Sync memory .md files to DB lock_contracts + memory_anchors')
+  .action(async (memoryDir?: string) => {
+    const { existsSync, readdirSync, readFileSync } = await import('fs');
+    const { createHash } = await import('crypto');
+    const { getDb, runMigrations } = await import('../db/connection');
+    const { getSqliteRaw } = await import('../db/connection');
+    const { nanoid } = await import('nanoid');
+
+    runMigrations();
+    const db = getDb();
+    const { lockContracts: lcTable, memoryAnchors: maTable } = await import('../db/schema');
+    const { eq } = await import('drizzle-orm');
+
+    const dir = memoryDir ?? path.join(os.homedir(), '.claude', 'projects', '-Users-MAC-Documents-projects', 'memory');
+    if (!existsSync(dir)) {
+      console.error(`❌ Memory dir not found: ${dir}`);
+      process.exit(1);
+    }
+
+    const files = readdirSync(dir).filter(f => f.endsWith('.md') && f !== 'MEMORY.md');
+    let synced = 0, drifted = 0, created = 0;
+
+    for (const file of files) {
+      const filePath = path.join(dir, file);
+      const content = readFileSync(filePath, 'utf8');
+      const checksum = createHash('sha256').update(content).digest('hex');
+      const slug = file.replace(/\.md$/, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+
+      // Determine kind from frontmatter or filename
+      const kindMatch = content.match(/^type:\s*(\w+)/m);
+      const kind = kindMatch?.[1] ?? 'standard';
+      const titleMatch = content.match(/^name:\s*(.+)/m);
+      const title = titleMatch?.[1]?.trim() ?? slug;
+
+      // Upsert lock_contract
+      const existing = db.select().from(lcTable).where(eq(lcTable.slug, slug)).all()[0];
+      let contractId: string;
+      const now = new Date().toISOString();
+      const sqlite = getSqliteRaw();
+
+      if (existing) {
+        const bodyChanged = existing.checksum !== checksum;
+        if (bodyChanged) {
+          const nextVersion = existing.version + 1;
+          sqlite.transaction(() => {
+            db.update(lcTable).set({ bodyMd: content, version: nextVersion, updatedAt: now, checksum }).where(eq(lcTable.slug, slug)).run();
+            sqlite.prepare('INSERT INTO lock_contract_revisions (contract_id, version, body_md, changed_at, changed_by) VALUES (?, ?, ?, ?, ?)').run(existing.id, nextVersion, content, now, 'memory:sync');
+          })();
+          drifted++;
+        }
+        contractId = existing.id;
+      } else {
+        contractId = 'lc_' + nanoid(10);
+        sqlite.transaction(() => {
+          db.insert(lcTable).values({ id: contractId, slug, kind, title, bodyMd: content, version: 1, active: true, createdAt: now, updatedAt: now, checksum }).run();
+          sqlite.prepare('INSERT INTO lock_contract_revisions (contract_id, version, body_md, changed_at, changed_by) VALUES (?, 1, ?, ?, ?)').run(contractId, content, now, 'memory:sync');
+        })();
+        created++;
+      }
+
+      // Upsert memory_anchor
+      db.insert(maTable).values({ path: filePath, kind: 'lock_contract', refId: contractId, refTable: 'lock_contracts', lastSyncedAt: now, checksumAtSync: checksum })
+        .onConflictDoUpdate({ target: maTable.path, set: { checksumAtSync: checksum, lastSyncedAt: now } }).run();
+      synced++;
+    }
+
+    console.log(`✅ memory:sync complete: ${files.length} files — ${created} created, ${drifted} updated, ${synced - created - drifted} unchanged`);
+  });
+
+// ─── exec — autonomous executor commands ───────────────────────────────────
+const execCmd = program.command('exec').description('Autonomous executor engine commands');
+
+execCmd
+  .command('start')
+  .description('Enable the executor daemon (sets executor_config.enabled=true). You must start the daemon separately with `conductor exec daemon`.')
+  .action(async () => {
+    const { runMigrations, getDb } = await import('../db/connection');
+    runMigrations();
+    const db = getDb();
+    const { executorConfig } = await import('../db/schema');
+    const { eq } = await import('drizzle-orm');
+    const cfg = db.select().from(executorConfig).all()[0];
+    if (!cfg) { console.error('❌ executor_config not seeded — run `conductor dashboard` once first'); process.exit(1); }
+    db.update(executorConfig).set({ enabled: true, updatedAt: new Date().toISOString() }).where(eq(executorConfig.id, cfg.id)).run();
+    console.log('✅ Executor enabled. Start the daemon with: conductor exec daemon');
+    console.log('   Or install launchd: conductor exec install-launchd');
+  });
+
+execCmd
+  .command('stop')
+  .description('Disable the executor (running workers finish naturally)')
+  .action(async () => {
+    const { runMigrations, getDb } = await import('../db/connection');
+    runMigrations();
+    const db = getDb();
+    const { executorConfig } = await import('../db/schema');
+    const { eq } = await import('drizzle-orm');
+    const cfg = db.select().from(executorConfig).all()[0];
+    if (!cfg) { console.error('❌ executor_config not seeded'); process.exit(1); }
+    db.update(executorConfig).set({ enabled: false, updatedAt: new Date().toISOString() }).where(eq(executorConfig.id, cfg.id)).run();
+    console.log('✅ Executor disabled. Queued tasks will remain queued until re-enabled.');
+  });
+
+execCmd
+  .command('status')
+  .description('Show executor status')
+  .action(async () => {
+    const API_BASE = process.env['CONDUCTOR_API'] ?? `http://localhost:${HTTP_PORT}`;
+    try {
+      const res = await fetch(`${API_BASE}/executor/status`);
+      if (!res.ok) { console.error('❌ API not reachable — is `conductor dashboard` running?'); process.exit(1); }
+      const data = await res.json() as Record<string, unknown>;
+      console.log(JSON.stringify(data, null, 2));
+    } catch {
+      console.error('❌ Could not reach API at', API_BASE);
+      process.exit(1);
+    }
+  });
+
+execCmd
+  .command('pause')
+  .description('Pause executor (stop picking up new tasks)')
+  .action(async () => {
+    const API_BASE = process.env['CONDUCTOR_API'] ?? `http://localhost:${HTTP_PORT}`;
+    const res = await fetch(`${API_BASE}/executor/pause`, { method: 'POST' });
+    console.log(res.ok ? '✅ Executor paused' : '❌ Failed');
+  });
+
+execCmd
+  .command('resume')
+  .description('Resume executor')
+  .action(async () => {
+    const API_BASE = process.env['CONDUCTOR_API'] ?? `http://localhost:${HTTP_PORT}`;
+    const res = await fetch(`${API_BASE}/executor/resume`, { method: 'POST' });
+    console.log(res.ok ? '✅ Executor resumed' : '❌ Failed');
+  });
+
+execCmd
+  .command('drain')
+  .description('Disable executor and kill all in-flight workers')
+  .action(async () => {
+    const API_BASE = process.env['CONDUCTOR_API'] ?? `http://localhost:${HTTP_PORT}`;
+    const res = await fetch(`${API_BASE}/executor/drain`, { method: 'POST' });
+    console.log(res.ok ? '✅ Drain initiated' : '❌ Failed');
+  });
+
+execCmd
+  .command('attempt')
+  .description('Manage task execution attempts')
+  .option('--task <id>', 'Task ID')
+  .option('--reset-breaker', 'Reset circuit breaker and unpause task')
+  .option('--list', 'List attempts for the task')
+  .action(async (opts: { task?: string; resetBreaker?: boolean; list?: boolean }) => {
+    if (!opts.task) { console.error('❌ --task <id> required'); process.exit(1); }
+    const API_BASE = process.env['CONDUCTOR_API'] ?? `http://localhost:${HTTP_PORT}`;
+
+    if (opts.list) {
+      const res = await fetch(`${API_BASE}/tasks/${opts.task}/attempts`);
+      console.log(JSON.stringify(await res.json(), null, 2));
+      return;
+    }
+
+    if (opts.resetBreaker) {
+      const res = await fetch(`${API_BASE}/executor/tasks/${opts.task}/unpause`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reset_attempts: true }),
+      });
+      console.log(res.ok ? `✅ Circuit breaker reset for task ${opts.task}` : '❌ Failed');
+      return;
+    }
+
+    const res = await fetch(`${API_BASE}/executor/tasks/${opts.task}/run-now`, { method: 'POST' });
+    console.log(res.ok ? `✅ Task ${opts.task} nudged to run on next tick` : '❌ Failed');
+  });
+
+execCmd
+  .command('daemon')
+  .description('Start the executor daemon in the foreground (for manual use; use launchd for 24/7)')
+  .action(async () => {
+    const { runMigrations } = await import('../db/connection');
+    runMigrations();
+    console.log('[conductor] Starting executor daemon...');
+    const { spawn } = await import('child_process');
+    const { existsSync } = await import('fs');
+    // apps/executor builds its own dist/ inside apps/executor/dist/
+    // PACKAGE_ROOT is inferred from this file's location: dist/cli/index.js -> ../../ = project root
+    const pkgRoot = path.resolve(path.dirname(process.argv[1]), '..', '..');
+    const appDist = path.join(pkgRoot, 'apps', 'executor', 'dist', 'executor-daemon.js');
+    const globalDist = path.join(path.dirname(process.execPath), '..', 'lib', 'node_modules', 'conductor', 'dist', 'apps', 'executor', 'executor-daemon.js');
+    const fallback = path.join(os.homedir(), '.conductor', 'executor-daemon.js');
+
+    const targetPath = existsSync(appDist) ? appDist : existsSync(globalDist) ? globalDist : fallback;
+
+    if (!existsSync(targetPath)) {
+      console.error(`❌ Executor daemon not found at ${targetPath}`);
+      console.error('   Build first: npm run build');
+      process.exit(1);
+    }
+
+    const proc = spawn('node', [targetPath], { stdio: 'inherit', env: { ...process.env } });
+    proc.on('exit', (code) => process.exit(code ?? 0));
+  });
+
+execCmd
+  .command('install-launchd')
+  .description('Install macOS launchd plist for 24/7 executor daemon')
+  .action(async () => {
+    const { installExecutorLaunchd } = await import('../install');
+    await installExecutorLaunchd();
   });
 
 program.parse(process.argv);
