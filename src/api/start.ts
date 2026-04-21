@@ -8,6 +8,7 @@ import { migrateFromJsonl } from '../db/migrate-from-jsonl';
 import { attachWsServer } from '../ws/index';
 import { createApp } from './app';
 import { wireEventBus, eventBus } from '../events/bus-adapter';
+import { subscribeToEvents as subscribePriorityEvents, scoreAll } from '../prioritization/reprioritizer';
 
 const HTTP_PORT = parseInt(process.env['CONDUCTOR_HTTP_PORT'] ?? '7776', 10);
 
@@ -27,6 +28,12 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
   }
 
   const app = createApp(db);
+
+  // Wire continuous reprioritization before server starts handling requests
+  subscribePriorityEvents(db);
+
+  // Initial batch score of all unscored/stale tasks (fire-and-forget)
+  scoreAll(db, 'system').catch(() => {});
 
   const server = serve({ fetch: app.fetch, port: HTTP_PORT }) as ServerType;
 
