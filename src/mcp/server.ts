@@ -16,10 +16,11 @@ import type { BlockerState, CreateBlockerParams } from '../blockers/types';
 import { QuestionsManager } from '../questions/manager';
 import type { CreateQuestionParams, QuestionAnswer, QuestionState } from '../questions/types';
 import { seedData } from './seed';
-import { getDb } from '../db/connection';
-import { adrs, businessFeatures, proactiveSuggestions, timelineEvents, auditLog, projects, tasks as dbTasks, blockers as dbBlockers, requirements as dbRequirements, domains, entityDomains } from '../db/schema';
+import { getDb, getSqliteRaw } from '../db/connection';
+import { adrs, businessFeatures, proactiveSuggestions, timelineEvents, auditLog, projects, tasks as dbTasks, blockers as dbBlockers, requirements as dbRequirements, domains, entityDomains, taskRuns, taskSubtasks, taskRunEvents, behaviorTests, behaviorTestRuns, behaviorTestFailures } from '../db/schema';
 import { desc, eq, and, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { bus } from '../ws/bus';
 
 const HTTP_PORT = parseInt(process.env['CONDUCTOR_HTTP_PORT'] ?? '7776', 10);
 
@@ -724,6 +725,170 @@ export async function startMcpServer(conductorDir?: string): Promise<void> {
           required: ['domainSlug'],
         },
       },
+      // ─── Task Run History tools ────────────────────────────────────────────
+      {
+        name: 'task_run_record',
+        description: 'Record a new orchestrator task run. Call immediately when spawning a new code task or cowork task. Returns the task_run row.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            session_id: { type: 'string', description: 'The local_xxx session ID from dispatch' },
+            title: { type: 'string', description: 'Human-readable title for the task' },
+            kind: { type: 'string', description: 'code-task | task' },
+            cwd: { type: 'string' },
+            prompt: { type: 'string', description: 'Full initial prompt text' },
+            project_slug: { type: 'string' },
+            domain_slugs: { type: 'array', items: { type: 'string' } },
+            parent_session_id: { type: 'string', description: 'For sub-spawns, the parent session ID' },
+            respawn_of_session_id: { type: 'string', description: 'When respawning a stalled task, the original session ID' },
+            started_at: { type: 'string', description: 'ISO timestamp; defaults to now' },
+          },
+          required: ['session_id', 'title', 'kind'],
+        },
+      },
+      {
+        name: 'task_run_update',
+        description: 'Update status/progress of a running task. Use on every status change and after completion.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            session_id: { type: 'string' },
+            patch: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', description: 'pending|running|idle|completed|stalled|aborted|failed' },
+                turn_count: { type: 'number' },
+                last_activity_at: { type: 'string' },
+                completion_summary: { type: 'string' },
+                ended_at: { type: 'string' },
+                result_ok: { type: 'boolean' },
+              },
+            },
+          },
+          required: ['session_id', 'patch'],
+        },
+      },
+      {
+        name: 'task_run_subtask_upsert',
+        description: 'Create or update a subtask within a task run. Use for todo items, sub-agent calls, and commits.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            session_id: { type: 'string' },
+            ordinal: { type: 'number', description: 'Position within run (optional; used as upsert key)' },
+            title: { type: 'string' },
+            status: { type: 'string', description: 'pending|in_progress|done|failed' },
+            source: { type: 'string', description: 'todo|sub_agent|commit|manual' },
+            evidence_kind: { type: 'string', description: 'commit_sha|file_path|test_result|url|none' },
+            evidence_value: { type: 'string' },
+            detail: { type: 'string', description: 'JSON string with extra data' },
+          },
+          required: ['session_id', 'title', 'status'],
+        },
+      },
+      {
+        name: 'task_run_event_append',
+        description: 'Append an event to a task run timeline. Use for stall detection, respawn events, subtask transitions.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            session_id: { type: 'string' },
+            event_kind: { type: 'string', description: 'poll_snapshot|subtask_started|subtask_done|respawn|abort|stall_detected' },
+            excerpt: { type: 'string', description: 'Last assistant message excerpt (~500 chars max)' },
+            payload: { type: 'object', description: 'Additional JSON payload' },
+          },
+          required: ['session_id', 'event_kind'],
+        },
+      },
+      {
+        name: 'task_run_list',
+        description: 'List task runs with optional filters. Returns rows with subtask_progress.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', description: 'Filter by status (or comma-separated list)' },
+            project: { type: 'string' },
+            domain: { type: 'string' },
+            since: { type: 'string', description: 'ISO timestamp — only runs started after this' },
+            limit: { type: 'number' },
+          },
+        },
+      },
+      {
+        name: 'task_run_get',
+        description: 'Get full detail of a task run including subtasks, events, and respawn chain info.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            session_id: { type: 'string' },
+          },
+          required: ['session_id'],
+        },
+      },
+
+      // ─── Behavior Test tools ─────────────────────────────────────────────────
+      {
+        name: 'behavior_test_upsert',
+        description: 'Upsert a behavioral test definition. Idempotent by (name, feature). Use after writing a new *.behavior.ts to register it in Conductor.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            name:              { type: 'string', description: 'Human-readable test name matching the test() title' },
+            feature:           { type: 'string', description: 'Feature slug: home|play|publications|layout-contract|etc.' },
+            scope:             { type: 'string', description: 'Scope string: site:poker-zeno or site:poker-zeno feature:play' },
+            project_slug:      { type: 'string' },
+            domain_slugs:      { type: 'array', items: { type: 'string' } },
+            source_path:       { type: 'string', description: 'Relative path to the .behavior.ts file' },
+            expected_behavior: { type: 'string', description: 'One-line plain-English statement of expected behavior' },
+            layout_contract:   { type: 'object', description: 'JSON layout contract (must_have, footer_link_groups, etc.)' },
+            notes:             { type: 'string' },
+          },
+          required: ['name', 'feature', 'scope'],
+        },
+      },
+      {
+        name: 'behavior_run_record',
+        description: 'Record the result of a single behavior test execution. Call after each test run.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            test_id:         { type: 'string', description: 'ID from behavior_test_upsert' },
+            status:          { type: 'string', enum: ['pass', 'fail', 'skip', 'flaky'] },
+            duration_ms:     { type: 'number' },
+            evidence_url:    { type: 'string' },
+            failure_excerpt: { type: 'string' },
+            git_sha:         { type: 'string' },
+            ci:              { type: 'boolean' },
+          },
+          required: ['test_id', 'status'],
+        },
+      },
+      {
+        name: 'behavior_failure_file',
+        description: 'File a structured failure record for a failed test run. Optionally links to a Conductor blocker.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            test_run_id:           { type: 'number', description: 'ID from behavior_run_record' },
+            kind:                  { type: 'string', enum: ['regression', 'new-bug', 'flake'] },
+            message:               { type: 'string' },
+            stack_excerpt:         { type: 'string' },
+            conductor_blocker_id:  { type: 'string', description: 'If a blocker was created for this failure, link it here' },
+          },
+          required: ['test_run_id', 'kind', 'message'],
+        },
+      },
+      {
+        name: 'behavior_coverage',
+        description: 'Get coverage rollup: total tests, pass rate, flaky tests, per-feature/project breakdown, 7-day trend.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            project_slug: { type: 'string' },
+            feature:      { type: 'string' },
+          },
+        },
+      },
     ],
   }));
 
@@ -1281,6 +1446,298 @@ export async function startMcpServer(conductorDir?: string): Promise<void> {
             result[type] = rows;
           }
           return toolResult(result);
+        }
+
+        // ─── Task Run History tools ──────────────────────────────────────────
+        case 'task_run_record': {
+          const db = getDb();
+          const sessionId = a['session_id'] as string;
+          const now = new Date().toISOString();
+          const startedAt = (a['started_at'] as string) ?? now;
+
+          const existing = db.select().from(taskRuns).where(eq(taskRuns.sessionId, sessionId)).all()[0];
+          if (existing) return toolResult(existing);
+
+          const row = {
+            sessionId,
+            title: a['title'] as string,
+            kind: (a['kind'] as string) ?? 'task',
+            cwd: a['cwd'] as string | undefined,
+            prompt: a['prompt'] as string | undefined,
+            status: 'pending' as const,
+            projectSlug: a['project_slug'] as string | undefined,
+            domainSlugs: JSON.stringify(a['domain_slugs'] ?? []),
+            parentSessionId: a['parent_session_id'] as string | undefined,
+            respawnOfSessionId: a['respawn_of_session_id'] as string | undefined,
+            startedAt,
+            lastActivityAt: startedAt,
+            turnCount: 0,
+          };
+          db.insert(taskRuns).values(row).run();
+          const inserted = db.select().from(taskRuns).where(eq(taskRuns.sessionId, sessionId)).all()[0];
+          if (!inserted) return toolError('Insert failed');
+          bus.push({ kind: 'task_run.upserted', id: sessionId, payload: inserted, ts: now });
+          return toolResult(inserted);
+        }
+
+        case 'task_run_update': {
+          const db = getDb();
+          const sessionId = a['session_id'] as string;
+          const patch = (a['patch'] ?? {}) as Record<string, unknown>;
+          const now = new Date().toISOString();
+
+          const existing = db.select().from(taskRuns).where(eq(taskRuns.sessionId, sessionId)).all()[0];
+          if (!existing) return toolError(`task_run not found: ${sessionId}`);
+
+          const update: Record<string, unknown> = {};
+          if (patch['status'] !== undefined) update['status'] = patch['status'];
+          if (patch['turn_count'] !== undefined) update['turnCount'] = patch['turn_count'];
+          if (patch['last_activity_at'] !== undefined) update['lastActivityAt'] = patch['last_activity_at'];
+          if (patch['completion_summary'] !== undefined) update['completionSummary'] = patch['completion_summary'];
+          if (patch['ended_at'] !== undefined) update['endedAt'] = patch['ended_at'];
+          if (patch['result_ok'] !== undefined) update['resultOk'] = patch['result_ok'];
+          if (!update['lastActivityAt']) update['lastActivityAt'] = now;
+
+          if (Object.keys(update).length > 0) {
+            db.update(taskRuns).set(update as Parameters<ReturnType<typeof db.update>['set']>[0])
+              .where(eq(taskRuns.sessionId, sessionId)).run();
+          }
+          const updated = db.select().from(taskRuns).where(eq(taskRuns.sessionId, sessionId)).all()[0];
+          bus.push({ kind: 'task_run.upserted', id: sessionId, payload: updated, ts: now });
+          return toolResult(updated);
+        }
+
+        case 'task_run_subtask_upsert': {
+          const db = getDb();
+          const sessionId = a['session_id'] as string;
+          const now = new Date().toISOString();
+
+          const run = db.select().from(taskRuns).where(eq(taskRuns.sessionId, sessionId)).all()[0];
+          if (!run) return toolError(`task_run not found: ${sessionId}`);
+
+          const ordinal = a['ordinal'] !== undefined ? (a['ordinal'] as number) : undefined;
+          const source = (a['source'] as string) ?? 'manual';
+          const evidenceValue = a['evidence_value'] as string | undefined;
+          const status = (a['status'] as string) ?? 'pending';
+
+          let existing: typeof taskSubtasks.$inferSelect | undefined;
+          if (ordinal !== undefined) {
+            existing = db.select().from(taskSubtasks).where(
+              and(eq(taskSubtasks.taskRunId, run.id), eq(taskSubtasks.ordinal, ordinal))
+            ).all()[0];
+          } else if (evidenceValue) {
+            existing = db.select().from(taskSubtasks).where(
+              and(eq(taskSubtasks.taskRunId, run.id), eq(taskSubtasks.source, source), eq(taskSubtasks.evidenceValue, evidenceValue))
+            ).all()[0];
+          }
+
+          if (existing) {
+            const upd: Record<string, unknown> = { status };
+            if (a['title']) upd['title'] = a['title'];
+            if (a['evidence_kind']) upd['evidenceKind'] = a['evidence_kind'];
+            if (a['evidence_value']) upd['evidenceValue'] = a['evidence_value'];
+            if (a['detail']) upd['detail'] = a['detail'];
+            if (status === 'in_progress' && !existing.startedAt) upd['startedAt'] = now;
+            if ((status === 'done' || status === 'failed') && !existing.completedAt) upd['completedAt'] = now;
+            db.update(taskSubtasks).set(upd as Parameters<ReturnType<typeof db.update>['set']>[0]).where(eq(taskSubtasks.id, existing.id)).run();
+            const updated = db.select().from(taskSubtasks).where(eq(taskSubtasks.id, existing.id)).all()[0];
+            bus.push({ kind: 'task_run.subtask_changed', id: sessionId, payload: updated, ts: now });
+            return toolResult(updated);
+          }
+
+          const newRow: typeof taskSubtasks.$inferInsert = {
+            taskRunId: run.id,
+            ordinal,
+            title: a['title'] as string,
+            status,
+            source,
+            evidenceKind: a['evidence_kind'] as string | undefined,
+            evidenceValue,
+            detail: a['detail'] as string | undefined,
+          };
+          if (status === 'in_progress') newRow.startedAt = now;
+          if (status === 'done' || status === 'failed') { newRow.startedAt = now; newRow.completedAt = now; }
+          db.insert(taskSubtasks).values(newRow).run();
+          const inserted = db.select().from(taskSubtasks).where(and(eq(taskSubtasks.taskRunId, run.id))).orderBy(desc(taskSubtasks.id)).all()[0];
+          bus.push({ kind: 'task_run.subtask_changed', id: sessionId, payload: inserted, ts: now });
+          return toolResult(inserted);
+        }
+
+        case 'task_run_event_append': {
+          const db = getDb();
+          const sessionId = a['session_id'] as string;
+          const now = new Date().toISOString();
+
+          const run = db.select().from(taskRuns).where(eq(taskRuns.sessionId, sessionId)).all()[0];
+          if (!run) return toolError(`task_run not found: ${sessionId}`);
+
+          const row = {
+            taskRunId: run.id,
+            at: now,
+            turnCount: a['turn_count'] as number | undefined,
+            eventKind: a['event_kind'] as string,
+            excerpt: a['excerpt'] ? String(a['excerpt']).slice(0, 500) : undefined,
+            payload: JSON.stringify(a['payload'] ?? {}),
+          };
+          db.insert(taskRunEvents).values(row).run();
+          const inserted = db.select().from(taskRunEvents).where(eq(taskRunEvents.taskRunId, run.id)).orderBy(desc(taskRunEvents.id)).all()[0];
+          bus.push({ kind: 'task_run.event_appended', id: sessionId, payload: inserted, ts: now });
+          return toolResult(inserted);
+        }
+
+        case 'task_run_list': {
+          const db = getDb();
+          const limitN = Math.min(parseInt(String(a['limit'] ?? '100'), 10), 500);
+          let rows = db.select().from(taskRuns).orderBy(desc(taskRuns.startedAt)).all();
+          if (a['status']) {
+            const statuses = String(a['status']).split(',');
+            rows = rows.filter(r => statuses.includes(r.status));
+          }
+          if (a['project']) rows = rows.filter(r => r.projectSlug === String(a['project']));
+          if (a['domain']) {
+            rows = rows.filter(r => {
+              try { return (JSON.parse(r.domainSlugs) as string[]).includes(String(a['domain'])); } catch { return false; }
+            });
+          }
+          if (a['since']) rows = rows.filter(r => r.startedAt >= String(a['since']));
+          rows = rows.slice(0, limitN);
+          const sqlite = getSqliteRaw();
+          const result = rows.map(r => {
+            const subtasksRaw = sqlite.prepare('SELECT status FROM task_subtasks WHERE task_run_id = ?').all(r.id) as Array<{ status: string }>;
+            return { ...r, subtask_progress: { done: subtasksRaw.filter(s => s.status === 'done').length, total: subtasksRaw.length } };
+          });
+          return toolResult(result);
+        }
+
+        case 'task_run_get': {
+          const db = getDb();
+          const sessionId = a['session_id'] as string;
+          const run = db.select().from(taskRuns).where(eq(taskRuns.sessionId, sessionId)).all()[0];
+          if (!run) return toolError(`task_run not found: ${sessionId}`);
+          const subtasks = db.select().from(taskSubtasks).where(eq(taskSubtasks.taskRunId, run.id)).orderBy(taskSubtasks.ordinal, taskSubtasks.id).all();
+          const events = db.select().from(taskRunEvents).where(eq(taskRunEvents.taskRunId, run.id)).orderBy(desc(taskRunEvents.at)).all();
+          let prior = null;
+          if (run.respawnOfSessionId) {
+            prior = db.select().from(taskRuns).where(eq(taskRuns.sessionId, run.respawnOfSessionId)).all()[0] ?? null;
+          }
+          const next = db.select().from(taskRuns).where(eq(taskRuns.respawnOfSessionId, sessionId)).all()[0] ?? null;
+          return toolResult({ ...run, subtask_progress: { done: subtasks.filter(s => s.status === 'done').length, total: subtasks.length }, subtasks, events, respawn: { prior, next } });
+        }
+
+        // ─── Behavior Test tools ──────────────────────────────────────────────
+        case 'behavior_test_upsert': {
+          const db = getDb();
+          const name2 = a['name'] as string;
+          const feature = a['feature'] as string;
+          const now = new Date().toISOString();
+
+          const existing = db.select().from(behaviorTests)
+            .where(and(eq(behaviorTests.name, name2), eq(behaviorTests.feature, feature)))
+            .all()[0];
+
+          if (existing) {
+            db.update(behaviorTests).set({ lastSeenAt: now }).where(eq(behaviorTests.id, existing.id)).run();
+            return toolResult({ ...existing, _action: 'existing' });
+          }
+
+          const id = 'bt_' + nanoid(8);
+          const row = {
+            id,
+            name: name2,
+            feature,
+            scope: a['scope'] as string,
+            projectSlug: a['project_slug'] as string | undefined,
+            domainSlugs: JSON.stringify(a['domain_slugs'] ?? []),
+            sourcePath: a['source_path'] as string | undefined,
+            firstSeenAt: now,
+            lastSeenAt: now,
+            expectedBehavior: (a['expected_behavior'] as string) ?? name2,
+            layoutContract: a['layout_contract'] ? JSON.stringify(a['layout_contract']) : undefined,
+            notes: a['notes'] as string | undefined,
+          };
+          db.insert(behaviorTests).values(row).run();
+          const inserted = db.select().from(behaviorTests).where(eq(behaviorTests.id, id)).all()[0];
+          return toolResult(inserted);
+        }
+
+        case 'behavior_run_record': {
+          const db = getDb();
+          const testId = a['test_id'] as string;
+          const test = db.select().from(behaviorTests).where(eq(behaviorTests.id, testId)).all()[0];
+          if (!test) return toolError(`behavior_test not found: ${testId}`);
+
+          const now = new Date().toISOString();
+          const row = {
+            testId,
+            runAt: now,
+            durationMs: a['duration_ms'] as number | undefined,
+            status: (a['status'] as string) ?? 'skip',
+            evidenceUrl: a['evidence_url'] as string | undefined,
+            failureExcerpt: a['failure_excerpt'] ? String(a['failure_excerpt']).slice(0, 1000) : undefined,
+            gitSha: a['git_sha'] as string | undefined,
+            ci: Boolean(a['ci']),
+          };
+          db.insert(behaviorTestRuns).values(row).run();
+          db.update(behaviorTests).set({ lastSeenAt: now }).where(eq(behaviorTests.id, testId)).run();
+          const inserted = db.select().from(behaviorTestRuns)
+            .where(eq(behaviorTestRuns.testId, testId))
+            .orderBy(desc(behaviorTestRuns.id))
+            .all()[0];
+          return toolResult(inserted);
+        }
+
+        case 'behavior_failure_file': {
+          const db = getDb();
+          const runId = a['test_run_id'] as number;
+          const run = db.select().from(behaviorTestRuns).where(eq(behaviorTestRuns.id, runId)).all()[0];
+          if (!run) return toolError(`behavior_test_run not found: ${runId}`);
+
+          const row = {
+            testRunId: runId,
+            conductorBlockerId: a['conductor_blocker_id'] as string | undefined,
+            kind: (a['kind'] as string) ?? 'regression',
+            message: (a['message'] as string) ?? '',
+            stackExcerpt: a['stack_excerpt'] ? String(a['stack_excerpt']).slice(0, 2000) : undefined,
+          };
+          db.insert(behaviorTestFailures).values(row).run();
+          const inserted = db.select().from(behaviorTestFailures)
+            .where(eq(behaviorTestFailures.testRunId, runId))
+            .orderBy(desc(behaviorTestFailures.id))
+            .all()[0];
+          return toolResult(inserted);
+        }
+
+        case 'behavior_coverage': {
+          const db = getDb();
+          const sqlite = getSqliteRaw();
+          let tests = db.select().from(behaviorTests).all();
+          if (a['project_slug']) tests = tests.filter(t => t.projectSlug === String(a['project_slug']));
+          if (a['feature'])      tests = tests.filter(t => t.feature === String(a['feature']));
+
+          const withStatus = tests.map(t => {
+            const lastRun = sqlite.prepare(
+              'SELECT status FROM behavior_test_runs WHERE test_id = ? ORDER BY run_at DESC LIMIT 1'
+            ).get(t.id) as { status: string } | undefined;
+            return { ...t, last_status: lastRun?.status ?? 'never' };
+          });
+
+          const total   = withStatus.length;
+          const passing = withStatus.filter(t => t.last_status === 'pass').length;
+          const failing = withStatus.filter(t => t.last_status === 'fail').length;
+
+          const byFeature: Record<string, { total: number; passing: number; failing: number }> = {};
+          for (const t of withStatus) {
+            if (!byFeature[t.feature]) byFeature[t.feature] = { total: 0, passing: 0, failing: 0 };
+            byFeature[t.feature].total++;
+            if (t.last_status === 'pass')       byFeature[t.feature].passing++;
+            else if (t.last_status === 'fail')  byFeature[t.feature].failing++;
+          }
+
+          return toolResult({
+            total, passing, failing,
+            pass_rate: total > 0 ? Math.round((passing / total) * 100) : 0,
+            byFeature,
+          });
         }
 
         default:

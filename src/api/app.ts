@@ -10,6 +10,8 @@ import { registerAuditRoutes } from './routes/audit';
 import { registerMetricsRoutes } from './routes/metrics';
 import { registerLegacyRoutes } from './routes/legacy';
 import { registerDomainRoutes } from './routes/domains';
+import { registerTaskRunRoutes } from './routes/task-runs';
+import { registerBehaviorTestRoutes } from './routes/behavior-tests';
 
 export function createApp(db: Db): Hono {
   const app = new Hono();
@@ -27,6 +29,8 @@ export function createApp(db: Db): Hono {
   registerAuditRoutes(app, db);
   registerMetricsRoutes(app, db);
   registerLegacyRoutes(app, db);
+  registerTaskRunRoutes(app, db);
+  registerBehaviorTestRoutes(app, db);
 
   return app;
 }

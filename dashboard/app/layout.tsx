@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { path: '/domains', label: 'Domains', icon: '🏷️', tabKey: 'domains' },
   { path: '/projects', label: 'Projects', icon: '📁', tabKey: 'projects' },
   { path: '/tasks', label: 'Tasks', icon: '📋', tabKey: 'tasks' },
+  { path: '/task-runs', label: 'Task Runs', icon: '📡', tabKey: 'task_runs' },
   { path: '/requirements', label: 'Requirements', icon: '📝', tabKey: 'requirements' },
   { path: '/blockers', label: 'Blockers', icon: '🚨', tabKey: 'blockers' },
   { path: '/questions', label: 'Questions', icon: '❓', tabKey: 'questions' },
@@ -19,12 +20,15 @@ const NAV_ITEMS = [
   { path: '/features', label: 'Features', icon: '🎯', tabKey: 'features' },
   { path: '/suggestions', label: 'Suggestions', icon: '💡', tabKey: 'suggestions' },
   { path: '/audit', label: 'Audit', icon: '🔍', tabKey: 'audit' },
+  { path: '/tests', label: 'Tests', icon: '🧪', tabKey: 'tests' },
   { path: '/metrics', label: 'Metrics', icon: '📊', tabKey: 'metrics' },
   { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
 ] as const;
 
 // Map WS event kind prefix → tab key
 function kindToTab(kind: string): string {
+  if (kind.startsWith('task_run.')) return 'task_runs';
+  if (kind.startsWith('behavior_test.')) return 'tests';
   if (kind.startsWith('task.') || kind.startsWith('task_')) return 'tasks';
   if (kind.startsWith('requirement.')) return 'requirements';
   if (kind.startsWith('blocker.')) return 'blockers';
