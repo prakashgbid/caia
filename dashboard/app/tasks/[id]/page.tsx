@@ -18,6 +18,9 @@ interface Task {
   createdAt: string;
   startedAt?: string | null;
   completedAt?: string | null;
+  rootPromptId?: string | null;
+  parentEntityType?: string | null;
+  parentEntityId?: string | null;
 }
 
 export default function TaskDetailPage({ params }: { params: { id: string } }) {
@@ -52,6 +55,20 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
   return (
     <div style={{ maxWidth: 800 }}>
       <div style={{ fontSize: 13, color: '#718096', marginBottom: 16 }}>
+        {task.rootPromptId && (
+          <>
+            <Link href={`/prompts/${task.rootPromptId}`} style={{ color: '#63b3ed', textDecoration: 'none' }}>
+              Prompt #{task.rootPromptId.slice(0, 14)}
+            </Link>
+            {task.parentEntityType && task.parentEntityId && (
+              <>
+                {' → '}
+                <span style={{ color: '#a0aec0', textTransform: 'capitalize' }}>{task.parentEntityType}</span>
+              </>
+            )}
+            {' → '}
+          </>
+        )}
         <Link href="/tasks" style={{ color: '#63b3ed', textDecoration: 'none' }}>Tasks</Link>
         {' / '}
         <span style={{ fontFamily: 'monospace', color: '#a0aec0' }}>{id}</span>

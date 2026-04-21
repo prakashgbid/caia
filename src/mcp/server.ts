@@ -21,6 +21,11 @@ import { adrs, businessFeatures, proactiveSuggestions, timelineEvents, auditLog,
 import { desc, eq, and, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { bus } from '../ws/bus';
+import {
+  createPrompt, getPrompt, getPromptDescendants, getPromptJourney,
+  listPrompts, recordTaskTransition,
+} from '../prompts/manager';
+import type { PromptReceivedVia, PromptStatus, TransitionActor } from '../prompts/types';
 
 const HTTP_PORT = parseInt(process.env['CONDUCTOR_HTTP_PORT'] ?? '7776', 10);
 
@@ -889,6 +894,87 @@ export async function startMcpServer(conductorDir?: string): Promise<void> {
           },
         },
       },
+
+      // ─── Prompt traceability tools ────────────────────────────────────────────
+      {
+        name: 'prompt_create',
+        description: 'Record a user prompt as the root of a traceability lineage. Idempotent by SHA-256 hash within a 10-second window. Returns prompt_id and correlation_id to thread through all descendant tasks.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            body:         { type: 'string', description: 'Full text of the user prompt' },
+            received_via: { type: 'string', description: 'chat | api | cli | scheduled-task (default: chat)' },
+            session_id:   { type: 'string', description: 'Claude Code session ID if available' },
+            user_id:      { type: 'string' },
+            tokens_in:    { type: 'number', description: 'Token count if known' },
+            metadata:     { type: 'object', description: 'Additional JSON metadata' },
+          },
+          required: ['body'],
+        },
+      },
+      {
+        name: 'prompt_get',
+        description: 'Get a prompt with its response and top-level descendant count.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Prompt ID (prm_...)' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'prompt_descendants',
+        description: 'Recursive tree of all entities spawned from a prompt: stories, requirements, tasks, task runs, blockers, questions — each with current status and timing.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Prompt ID' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'prompt_journey',
+        description: 'Aggregated reporting view for a prompt: time_to_first_task, time_to_all_done, count_by_status, circuit_breaker_trips, re_execution_count, total_events.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Prompt ID' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'prompt_list',
+        description: 'List prompts with optional filters. Paginated by cursor (received_at timestamp).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            since:   { type: 'string', description: 'ISO timestamp — only prompts received after this' },
+            user_id: { type: 'string' },
+            status:  { type: 'string', description: 'received | analyzing | decomposed | answered | failed' },
+            limit:   { type: 'number', description: 'Max results (default 50, max 200)' },
+            cursor:  { type: 'string', description: 'Pagination cursor (received_at of last row from previous page)' },
+          },
+        },
+      },
+      {
+        name: 'task_transition',
+        description: 'Record a task status machine transition. Writes one task_status_transitions row and emits a task.status_changed event.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            task_id:          { type: 'string', description: 'Task ID' },
+            to_status:        { type: 'string', description: 'Target status: queued|ready|dispatched|running|gate_pending|gate_passed|sentinel_pending|sentinel_passed|done|gate_failed|rework_queued|sentinel_flagged|bug_filed|paused|blocked|cancelled' },
+            actor:            { type: 'string', description: 'user | executor | sentinel | worker | scheduler | breaker' },
+            trigger_event_id: { type: 'string', description: 'ID of the event that caused this transition (links to events table)' },
+            notes:            { type: 'string', description: 'Free-form notes about this transition' },
+            root_prompt_id:   { type: 'string', description: 'Override root prompt ID (auto-detected from task if omitted)' },
+          },
+          required: ['task_id', 'to_status', 'actor'],
+        },
+      },
     ],
   }));
 
@@ -1738,6 +1824,72 @@ export async function startMcpServer(conductorDir?: string): Promise<void> {
             pass_rate: total > 0 ? Math.round((passing / total) * 100) : 0,
             byFeature,
           });
+        }
+
+        // ─── Prompt traceability tools ───────────────────────────────────────
+        case 'prompt_create': {
+          const db = getDb();
+          const prompt = createPrompt(db, {
+            body: a['body'] as string,
+            receivedVia: (a['received_via'] as PromptReceivedVia) ?? 'chat',
+            sessionId: a['session_id'] as string | undefined,
+            userId: a['user_id'] as string | undefined,
+            tokensIn: a['tokens_in'] as number | undefined,
+            metadata: a['metadata'] as Record<string, unknown> | undefined,
+          });
+          return toolResult({ prompt_id: prompt.id, correlation_id: prompt.correlationId });
+        }
+
+        case 'prompt_get': {
+          const db = getDb();
+          const result = getPrompt(db, a['id'] as string);
+          if (!result) return toolError(`prompt not found: ${a['id']}`);
+          const descendants = getPromptDescendants(db, a['id'] as string);
+          return toolResult({ ...result, descendants_count: descendants.length });
+        }
+
+        case 'prompt_descendants': {
+          const db = getDb();
+          const id = a['id'] as string;
+          const prompt = getPrompt(db, id);
+          if (!prompt) return toolError(`prompt not found: ${id}`);
+          const descendants = getPromptDescendants(db, id);
+          return toolResult({ prompt_id: id, descendants, total: descendants.length });
+        }
+
+        case 'prompt_journey': {
+          const db = getDb();
+          const journey = getPromptJourney(db, a['id'] as string);
+          if (!journey) return toolError(`prompt not found: ${a['id']}`);
+          return toolResult(journey);
+        }
+
+        case 'prompt_list': {
+          const db = getDb();
+          const results = listPrompts(db, {
+            since: a['since'] as string | undefined,
+            userId: a['user_id'] as string | undefined,
+            status: a['status'] as PromptStatus | undefined,
+            limit: a['limit'] as number | undefined,
+            cursor: a['cursor'] as string | undefined,
+          });
+          return toolResult({ prompts: results, total: results.length });
+        }
+
+        case 'task_transition': {
+          const db = getDb();
+          const transition = recordTaskTransition(
+            db,
+            a['task_id'] as string,
+            a['to_status'] as string,
+            (a['actor'] as TransitionActor) ?? 'system',
+            {
+              triggerEventId: a['trigger_event_id'] as string | undefined,
+              notes: a['notes'] as string | undefined,
+              rootPromptId: a['root_prompt_id'] as string | undefined,
+            },
+          );
+          return toolResult(transition);
         }
 
         default:

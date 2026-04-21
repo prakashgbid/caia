@@ -19,6 +19,7 @@ interface Blocker {
   resolutionNote?: string | null;
   projectId?: string | null;
   createdAt: string;
+  rootPromptId?: string | null;
 }
 
 export default function BlockerDetailPage({ params }: { params: { id: string } }) {
@@ -53,6 +54,14 @@ export default function BlockerDetailPage({ params }: { params: { id: string } }
   return (
     <div style={{ maxWidth: 800 }}>
       <div style={{ fontSize: 13, color: '#718096', marginBottom: 16 }}>
+        {blocker.rootPromptId && (
+          <>
+            <Link href={`/prompts/${blocker.rootPromptId}`} style={{ color: '#63b3ed', textDecoration: 'none' }}>
+              Prompt #{blocker.rootPromptId.slice(0, 14)}
+            </Link>
+            {' → '}
+          </>
+        )}
         <Link href="/blockers" style={{ color: '#63b3ed', textDecoration: 'none' }}>Blockers</Link>
         {' / '}
         <span style={{ color: '#a0aec0' }}>{id.slice(0, 12)}</span>

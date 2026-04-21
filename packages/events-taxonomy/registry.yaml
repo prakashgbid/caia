@@ -267,3 +267,14 @@ events:
     severity: warning
     actor: [build-runner, user]
     payload: [build_run_id, reason, completed_steps]
+
+  # Prompt traceability events (migration 0010)
+  - type: prompt.received
+    severity: info
+    actor: [user, api, mcp, executor]
+    payload: [prompt_id, received_via, session_id, hash]
+
+  - type: prompt.status_changed
+    severity: info
+    actor: [user, api, mcp, executor]
+    payload: [prompt_id, from_status, to_status, elapsed_ms]

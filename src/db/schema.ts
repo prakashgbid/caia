@@ -33,9 +33,14 @@ export const requirements = sqliteTable('requirements', {
   scope: text('scope').notNull().default('global'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  rootPromptId: text('root_prompt_id'),
+  parentEntityType: text('parent_entity_type'),
+  parentEntityId: text('parent_entity_id'),
 }, (t) => [
   index('req_project_idx').on(t.projectId),
   index('req_state_idx').on(t.state),
+  index('req_root_prompt_idx').on(t.rootPromptId),
+  index('req_parent_entity_idx').on(t.parentEntityId),
 ]);
 
 // tasks
@@ -60,10 +65,15 @@ export const tasks = sqliteTable('tasks', {
   paused: integer('paused', { mode: 'boolean' }).notNull().default(false),
   pauseReason: text('pause_reason'),
   domainSlug: text('domain_slug'),
+  rootPromptId: text('root_prompt_id'),
+  parentEntityType: text('parent_entity_type'),
+  parentEntityId: text('parent_entity_id'),
 }, (t) => [
   index('task_project_idx').on(t.projectId),
   index('task_status_idx').on(t.status),
   index('task_paused_idx').on(t.paused, t.status),
+  index('task_root_prompt_idx').on(t.rootPromptId),
+  index('task_parent_entity_idx').on(t.parentEntityId),
 ]);
 
 // blockers
@@ -85,9 +95,14 @@ export const blockers = sqliteTable('blockers', {
   projectId: text('project_id').references(() => projects.id),
   scope: text('scope').notNull().default('global'),
   createdAt: text('created_at').notNull(),
+  rootPromptId: text('root_prompt_id'),
+  parentEntityType: text('parent_entity_type'),
+  parentEntityId: text('parent_entity_id'),
 }, (t) => [
   index('blocker_project_idx').on(t.projectId),
   index('blocker_state_idx').on(t.state),
+  index('blocker_root_prompt_idx').on(t.rootPromptId),
+  index('blocker_parent_entity_idx').on(t.parentEntityId),
 ]);
 
 // questions
@@ -106,9 +121,14 @@ export const questions = sqliteTable('questions', {
   projectId: text('project_id').references(() => projects.id),
   scope: text('scope').notNull().default('global'),
   createdAt: text('created_at').notNull(),
+  rootPromptId: text('root_prompt_id'),
+  parentEntityType: text('parent_entity_type'),
+  parentEntityId: text('parent_entity_id'),
 }, (t) => [
   index('question_project_idx').on(t.projectId),
   index('question_state_idx').on(t.state),
+  index('question_root_prompt_idx').on(t.rootPromptId),
+  index('question_parent_entity_idx').on(t.parentEntityId),
 ]);
 
 // adrs
@@ -245,11 +265,16 @@ export const taskRuns = sqliteTable('task_runs', {
   turnCount: integer('turn_count').notNull().default(0),
   completionSummary: text('completion_summary'),
   resultOk: integer('result_ok', { mode: 'boolean' }),
+  rootPromptId: text('root_prompt_id'),
+  parentEntityType: text('parent_entity_type'),
+  parentEntityId: text('parent_entity_id'),
 }, (t) => [
   index('tr_status_idx').on(t.status),
   index('tr_started_idx').on(t.startedAt),
   index('tr_project_idx').on(t.projectSlug),
   index('tr_respawn_idx').on(t.respawnOfSessionId),
+  index('tr_root_prompt_idx').on(t.rootPromptId),
+  index('tr_parent_entity_idx').on(t.parentEntityId),
 ]);
 
 // task_subtasks — individual work items within a task run
@@ -352,10 +377,15 @@ export const stories = sqliteTable('stories', {
   createdAt: text('created_at').notNull(),
   lastDecomposedAt: text('last_decomposed_at'),
   behaviorTestSkeleton: text('behavior_test_skeleton'),
+  rootPromptId: text('root_prompt_id'),
+  parentEntityType: text('parent_entity_type'),
+  parentEntityId: text('parent_entity_id'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
   index('story_kind_idx').on(t.kind),
+  index('story_root_prompt_idx').on(t.rootPromptId),
+  index('story_parent_entity_idx').on(t.parentEntityId),
 ]);
 
 // story_revisions — append-only history of every story-tree edit
@@ -599,4 +629,56 @@ export const buildRetries = sqliteTable('build_retries', {
   errorSignature: text('error_signature'),
 }, (t) => [
   index('bret_run_idx').on(t.buildRunId),
+]);
+
+// prompts — root entity capturing every user prompt for lineage tracing (migration 0010)
+export const prompts = sqliteTable('prompts', {
+  id: text('id').primaryKey(),
+  body: text('body').notNull(),
+  receivedAt: text('received_at').notNull(),
+  receivedVia: text('received_via').notNull().default('chat'), // chat|api|cli|scheduled-task
+  userId: text('user_id'),
+  sessionId: text('session_id'),
+  correlationId: text('correlation_id').notNull(),
+  hash: text('hash').notNull(), // sha256 of body for dedup
+  tokensIn: integer('tokens_in'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+  status: text('status').notNull().default('received'), // received|analyzing|decomposed|answered|failed
+  completedAt: text('completed_at'),
+  elapsedMs: integer('elapsed_ms'),
+}, (t) => [
+  index('prm_received_idx').on(t.receivedAt),
+  index('prm_user_idx').on(t.userId, t.receivedAt),
+  index('prm_status_idx').on(t.status),
+  index('prm_hash_idx').on(t.hash),
+]);
+
+// prompt_responses — responses attached to a prompt (migration 0010)
+export const promptResponses = sqliteTable('prompt_responses', {
+  id: text('id').primaryKey(),
+  promptId: text('prompt_id').notNull().references(() => prompts.id),
+  responseBody: text('response_body').notNull().default(''),
+  respondedAt: text('responded_at').notNull(),
+  responseKind: text('response_kind').notNull().default('chat'), // decomposition|chat|clarification|error
+  tokensOut: integer('tokens_out'),
+  decompositionTreeJson: text('decomposition_tree_json'),
+}, (t) => [
+  index('pr_prompt_idx').on(t.promptId),
+]);
+
+// task_status_transitions — append-only audit of every task state machine transition (migration 0010)
+export const taskStatusTransitions = sqliteTable('task_status_transitions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  taskId: text('task_id').notNull().references(() => tasks.id),
+  fromStatus: text('from_status'),
+  toStatus: text('to_status').notNull(),
+  transitionedAt: text('transitioned_at').notNull(),
+  actor: text('actor').notNull().default('system'), // user|executor|sentinel|worker|scheduler|breaker
+  triggerEventId: text('trigger_event_id'),
+  notes: text('notes'),
+  rootPromptId: text('root_prompt_id'),
+}, (t) => [
+  index('tst_task_idx').on(t.taskId),
+  index('tst_prompt_idx').on(t.rootPromptId),
+  index('tst_at_idx').on(t.transitionedAt),
 ]);

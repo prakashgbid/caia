@@ -16,6 +16,7 @@ import {
   questions,
 } from '../../src/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../src/db/migrations');
@@ -303,5 +304,49 @@ describe('Blockers table', () => {
     const row = db.select().from(blockers).where(eq(blockers.id, 'blk_001')).all()[0];
     expect(row?.state).toBe('resolved');
     expect(row?.resolvedBy).toBe('user');
+  });
+});
+
+// @no-events — structural schema validation, not a domain operation
+describe('Schema foreign key reference callbacks', () => {
+  it('resolves all .references() lambdas for every table', () => {
+    // Tables that declare .references() columns — calling fk.reference() invokes the
+    // lazy arrow lambdas (e.g. () => projects.id) that drizzle stores for deferred resolution.
+    const tablesWithFKs = [
+      schema.requirements,
+      schema.tasks,
+      schema.blockers,
+      schema.questions,
+      schema.adrs,
+      schema.businessFeatures,
+      schema.proactiveSuggestions,
+      schema.timelineEvents,
+      schema.auditLog,
+      schema.taskSubtasks,
+      schema.behaviorTestRuns,
+      schema.behaviorTestFailures,
+      schema.taskRunEvents,
+      schema.stories,
+      schema.storyRevisions,
+      schema.lockContractRevisions,
+      schema.completenessFindings,
+      schema.executorRuns,
+      schema.taskAttempts,
+      schema.buildSteps,
+      schema.buildRetries,
+      schema.promptResponses,
+      schema.taskStatusTransitions,
+    ];
+
+    for (const table of tablesWithFKs) {
+      const config = getTableConfig(table);
+      for (const fk of config.foreignKeys) {
+        expect(() => fk.reference()).not.toThrow();
+        const ref = fk.reference();
+        expect(ref.foreignTable).toBeDefined();
+        expect(Array.isArray(ref.foreignColumns)).toBe(true);
+        expect(ref.foreignColumns.length).toBeGreaterThan(0);
+      }
+    }
   });
 });

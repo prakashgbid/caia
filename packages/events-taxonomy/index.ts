@@ -11,6 +11,7 @@ export type EventActor =
   | 'executor'
   | 'ci'
   | 'api'
+  | 'mcp'
   | 'system'
   | 'story-decomposer'
   | 'completeness-sentinel'
@@ -135,6 +136,11 @@ export interface BuildStepFailedPayload { build_run_id: string; build_step_id: s
 export interface BuildCompletedPayload { build_run_id: string; outcome: 'success' | 'failure'; duration_ms: number; steps_total: number; steps_failed: number }
 export interface BuildAbortedPayload { build_run_id: string; reason: string; completed_steps: number }
 
+// ─── Prompt traceability (migration 0010) ────────────────────────────────────
+
+export interface PromptReceivedPayload { prompt_id: string; received_via: string; session_id?: string; hash: string }
+export interface PromptStatusChangedPayload { prompt_id: string; from_status: string; to_status: string; elapsed_ms?: number }
+
 // ─── Union type of all valid event types ─────────────────────────────────────
 
 export type EventType =
@@ -154,7 +160,8 @@ export type EventType =
   | 'domain.created' | 'domain.updated'
   | 'lock.acquired' | 'lock.released' | 'lock.expired'
   | 'build.started' | 'build.step_started' | 'build.step_completed'
-  | 'build.step_failed' | 'build.completed' | 'build.aborted';
+  | 'build.step_failed' | 'build.completed' | 'build.aborted'
+  | 'prompt.received' | 'prompt.status_changed';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -175,6 +182,7 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'lock.acquired': 'debug', 'lock.released': 'debug', 'lock.expired': 'warning',
   'build.started': 'info', 'build.step_started': 'info', 'build.step_completed': 'info',
   'build.step_failed': 'error', 'build.completed': 'info', 'build.aborted': 'warning',
+  'prompt.received': 'info', 'prompt.status_changed': 'info',
 };
 
 /** All valid event type strings from the registry */

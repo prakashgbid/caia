@@ -17,6 +17,9 @@ interface Requirement {
   scope: string;
   createdAt: string;
   updatedAt: string;
+  rootPromptId?: string | null;
+  parentEntityType?: string | null;
+  parentEntityId?: string | null;
 }
 
 export default function RequirementDetailPage({ params }: { params: { id: string } }) {
@@ -50,6 +53,14 @@ export default function RequirementDetailPage({ params }: { params: { id: string
   return (
     <div style={{ maxWidth: 800 }}>
       <div style={{ fontSize: 13, color: '#718096', marginBottom: 16 }}>
+        {req.rootPromptId && (
+          <>
+            <Link href={`/prompts/${req.rootPromptId}`} style={{ color: '#63b3ed', textDecoration: 'none' }}>
+              Prompt #{req.rootPromptId.slice(0, 14)}
+            </Link>
+            {' → '}
+          </>
+        )}
         <Link href="/requirements" style={{ color: '#63b3ed', textDecoration: 'none' }}>Requirements</Link>
         {' / '}
         <span style={{ color: '#a0aec0' }}>{id.slice(0, 12)}</span>
