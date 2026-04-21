@@ -278,3 +278,30 @@ events:
     severity: info
     actor: [user, api, mcp, executor]
     payload: [prompt_id, from_status, to_status, elapsed_ms]
+
+  # Priority engine events
+  - type: priority.scored
+    severity: info
+    actor: [prioritizer, system]
+    payload: [task_id, score, bucket, rationale_summary]
+
+  - type: priority.rebucketed
+    severity: info
+    actor: [prioritizer, system]
+    payload: [task_id, old_bucket, new_bucket, score]
+
+  - type: priority.reordered
+    severity: info
+    actor: [prioritizer, system]
+    payload: [task_id, old_ordinal, new_ordinal, bucket]
+
+  - type: priority.user_override
+    severity: info
+    actor: [user, api]
+    payload: [task_id, old_ordinal, new_ordinal, override_reason]
+
+  # System decisions (autonomous authority log)
+  - type: system.decision_made
+    severity: info
+    actor: [system, prioritizer]
+    payload: [component, decision, rationale]

@@ -2,6 +2,8 @@ import picomatch from 'picomatch';
 import { RequirementsManager } from '../requirements/manager';
 import { NotificationQueue } from '../notifications/index';
 import type { PumpTickResult, Requirement } from '../requirements/types';
+import { BUCKET_ORDER } from '../prioritization/bucketer';
+import type { PriorityBucket } from '../prioritization/types';
 
 function buildPrompt(req: Requirement): string {
   const spec = req.spec;
@@ -62,11 +64,20 @@ export class PumpEngine {
     // All executing requirements — used for file conflict check
     const executing = this.reqManager.list({ state: 'executing' });
 
-    // All ready requirements ordered by priority then capturedAt
+    // All ready requirements ordered by priority_bucket + position_ordinal first;
+    // falls back to legacy priority (1-5) + capturedAt when not yet scored.
     const candidates = this.reqManager
       .list({ state: 'ready' })
       .filter((r) => this.reqManager.allDepsDone(r))
       .sort((a, b) => {
+        const aBucket = a.priorityBucket as PriorityBucket | undefined;
+        const bBucket = b.priorityBucket as PriorityBucket | undefined;
+        if (aBucket && bBucket) {
+          const bucketDiff = BUCKET_ORDER[aBucket] - BUCKET_ORDER[bBucket];
+          if (bucketDiff !== 0) return bucketDiff;
+          return (a.positionOrdinal ?? 0) - (b.positionOrdinal ?? 0);
+        }
+        // Legacy fallback: lower priority number = higher priority
         if (a.priority !== b.priority) return a.priority - b.priority;
         return a.capturedAt.localeCompare(b.capturedAt);
       });

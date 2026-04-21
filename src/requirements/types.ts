@@ -46,6 +46,9 @@ export interface Requirement {
   linkedTaskIds: string[];  // conductor task IDs spawned from this
   notes: RequirementNote[];
   notificationsSent: NotificationRecord[];
+  // Set by prioritization engine (migration 0012)
+  priorityBucket?: string;
+  positionOrdinal?: number;
 }
 
 export type RequirementEventType =

@@ -1,5 +1,5 @@
 import type { Hono } from 'hono';
-import { eq, and, desc, inArray } from 'drizzle-orm';
+import { eq, and, desc, inArray, asc } from 'drizzle-orm';
 import type { Db } from '../../db/connection';
 import { getSqliteRaw } from '../../db/connection';
 import {
@@ -185,6 +185,42 @@ export function registerExecutorRoutes(app: Hono, db: Db): void {
       .run();
 
     return c.json({ ok: true, drained: true });
+  });
+
+  // ── Priority-aware next-task selection ──────────────────────────────────────
+  // Returns the highest-priority eligible queued task (not paused, deps satisfied).
+  // Reads priority_bucket + position_ordinal first (migration 0012).
+  app.get('/executor/tasks/next', (c) => {
+    const q = c.req.query() as Record<string, string>;
+    const domainCap = q['domain_slug'] ?? null;
+
+    // Load all queued, unpaused tasks ordered by bucket → ordinal
+    const sqlite = getSqliteRaw();
+    let candidates = db.select().from(tasks)
+      .where(and(eq(tasks.status, 'queued'), eq(tasks.paused, false)))
+      .orderBy(asc(tasks.priorityBucket), asc(tasks.positionOrdinal))
+      .all();
+
+    if (domainCap) candidates = candidates.filter(t => t.domainSlug === domainCap);
+
+    // Dep-aware: skip tasks whose deps are not done/completed
+    const runningIds = db.select({ id: tasks.id }).from(tasks)
+      .where(eq(tasks.status, 'running'))
+      .all()
+      .map(r => r.id);
+
+    const eligible = candidates.find(task => {
+      const depIds = JSON.parse(task.dependsOn) as string[];
+      if (depIds.length === 0) return true;
+      // All deps must be completed/done
+      const depRows = sqlite.prepare(
+        `SELECT id, status FROM tasks WHERE id IN (${depIds.map(() => '?').join(',')})`
+      ).all(...depIds) as Array<{ id: string; status: string }>;
+      return depRows.every(d => ['done', 'completed'].includes(d.status));
+    });
+
+    if (!eligible) return c.json({ task: null, message: 'No eligible tasks queued' });
+    return c.json({ task: eligible });
   });
 
   // ── Task-level pause/unpause ─────────────────────────────────────────────────

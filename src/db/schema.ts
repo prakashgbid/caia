@@ -68,12 +68,18 @@ export const tasks = sqliteTable('tasks', {
   rootPromptId: text('root_prompt_id'),
   parentEntityType: text('parent_entity_type'),
   parentEntityId: text('parent_entity_id'),
+  priorityScore: integer('priority_score').notNull().default(50),
+  priorityBucket: text('priority_bucket').notNull().default('P2'),
+  positionOrdinal: integer('position_ordinal').notNull().default(0),
+  priorityRationaleJson: text('priority_rationale_json'),
+  lastPrioritizedAt: text('last_prioritized_at'),
 }, (t) => [
   index('task_project_idx').on(t.projectId),
   index('task_status_idx').on(t.status),
   index('task_paused_idx').on(t.paused, t.status),
   index('task_root_prompt_idx').on(t.rootPromptId),
   index('task_parent_entity_idx').on(t.parentEntityId),
+  index('task_priority_idx').on(t.priorityBucket, t.positionOrdinal),
 ]);
 
 // blockers
@@ -681,4 +687,20 @@ export const taskStatusTransitions = sqliteTable('task_status_transitions', {
   index('tst_task_idx').on(t.taskId),
   index('tst_prompt_idx').on(t.rootPromptId),
   index('tst_at_idx').on(t.transitionedAt),
+]);
+
+// priority_audit — append-only log of every priority change (migration 0012)
+export const priorityAudit = sqliteTable('priority_audit', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  taskId: text('task_id').notNull(),
+  oldScore: integer('old_score'),
+  newScore: integer('new_score').notNull(),
+  oldBucket: text('old_bucket'),
+  newBucket: text('new_bucket').notNull(),
+  reason: text('reason').notNull().default(''),
+  actor: text('actor').notNull().default('system'),
+  changedAt: text('changed_at').notNull(),
+}, (t) => [
+  index('pa_task_idx').on(t.taskId),
+  index('pa_changed_idx').on(t.changedAt),
 ]);

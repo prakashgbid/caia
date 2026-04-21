@@ -17,7 +17,7 @@ import { QuestionsManager } from '../questions/manager';
 import type { CreateQuestionParams, QuestionAnswer, QuestionState } from '../questions/types';
 import { seedData } from './seed';
 import { getDb, getSqliteRaw } from '../db/connection';
-import { adrs, businessFeatures, proactiveSuggestions, timelineEvents, auditLog, projects, tasks as dbTasks, blockers as dbBlockers, requirements as dbRequirements, domains, entityDomains, taskRuns, taskSubtasks, taskRunEvents, behaviorTests, behaviorTestRuns, behaviorTestFailures } from '../db/schema';
+import { adrs, businessFeatures, proactiveSuggestions, timelineEvents, auditLog, projects, tasks as dbTasks, blockers as dbBlockers, requirements as dbRequirements, domains, entityDomains, taskRuns, taskSubtasks, taskRunEvents, behaviorTests, behaviorTestRuns, behaviorTestFailures, priorityAudit } from '../db/schema';
 import { desc, eq, and, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { bus } from '../ws/bus';
@@ -26,6 +26,8 @@ import {
   listPrompts, recordTaskTransition,
 } from '../prompts/manager';
 import type { PromptReceivedVia, PromptStatus, TransitionActor } from '../prompts/types';
+import { scoreOne, scoreAll } from '../prioritization/reprioritizer';
+import type { PriorityRationale } from '../prioritization/types';
 
 const HTTP_PORT = parseInt(process.env['CONDUCTOR_HTTP_PORT'] ?? '7776', 10);
 
@@ -975,6 +977,35 @@ export async function startMcpServer(conductorDir?: string): Promise<void> {
           required: ['task_id', 'to_status', 'actor'],
         },
       },
+
+      // ─── Priority tools ────────────────────────────────────────────────────
+      {
+        name: 'prioritize_task',
+        description: 'Score a single task and persist its priority_score, priority_bucket, and position_ordinal. Returns score + bucket + ordinal + rationale.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            task_id: { type: 'string', description: 'Task ID to score' },
+          },
+          required: ['task_id'],
+        },
+      },
+      {
+        name: 'prioritize_all',
+        description: 'Batch rescore all non-terminal tasks. Returns array of scored results.',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'priority_explain',
+        description: 'Human-readable breakdown of how a task was scored: each dimension with its weight and contribution.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            task_id: { type: 'string' },
+          },
+          required: ['task_id'],
+        },
+      },
     ],
   }));
 
@@ -1890,6 +1921,62 @@ export async function startMcpServer(conductorDir?: string): Promise<void> {
             },
           );
           return toolResult(transition);
+        }
+
+        // ─── Priority tools ──────────────────────────────────────────────────
+        case 'prioritize_task': {
+          const db = getDb();
+          const result = await scoreOne(a['task_id'] as string, db, 'user');
+          if (!result) return toolError(`Task not found: ${String(a['task_id'])}`);
+          return toolResult(result);
+        }
+
+        case 'prioritize_all': {
+          const db = getDb();
+          const results = await scoreAll(db, 'user');
+          return toolResult({ rescored: results.length, results });
+        }
+
+        case 'priority_explain': {
+          const db = getDb();
+          const task = db.select().from(dbTasks).where(eq(dbTasks.id, a['task_id'] as string)).get();
+          if (!task) return toolError(`Task not found: ${String(a['task_id'])}`);
+
+          const rationale = task.priorityRationaleJson
+            ? JSON.parse(task.priorityRationaleJson) as PriorityRationale
+            : null;
+
+          if (!rationale) {
+            return toolResult({
+              task_id: task.id,
+              message: 'Task has not been scored yet — call prioritize_task first',
+              current_score: task.priorityScore,
+              current_bucket: task.priorityBucket,
+            });
+          }
+
+          const WEIGHTS: Record<string, number> = {
+            urgency: 25, blastRadius: 20, userVisible: 15, riskIfDelayed: 15,
+            domainCriticality: 15, confidence: 10, effortInverse: 10,
+          };
+
+          const breakdown = Object.entries(rationale.dimensions).map(([dim, value]) => ({
+            dimension: dim,
+            rawValue: value,
+            weight: WEIGHTS[dim] ?? 0,
+            contribution: Math.round((value as number) * (WEIGHTS[dim] ?? 0)),
+          }));
+
+          return toolResult({
+            task_id: task.id,
+            title: task.title,
+            score: rationale.score,
+            bucket: rationale.bucket,
+            summary: rationale.summary,
+            hard_blocker_override: rationale.hardBlockerOverride,
+            breakdown,
+            last_prioritized_at: task.lastPrioritizedAt,
+          });
         }
 
         default:

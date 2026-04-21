@@ -18,7 +18,8 @@ export type EventActor =
   | 'db-backup'
   | 'build-runner'
   | 'behavior-runner'
-  | 'worker';
+  | 'worker'
+  | 'prioritizer';
 
 /** Canonical envelope for every event emitted through the bus */
 export interface ConductorEvent {
@@ -141,6 +142,17 @@ export interface BuildAbortedPayload { build_run_id: string; reason: string; com
 export interface PromptReceivedPayload { prompt_id: string; received_via: string; session_id?: string; hash: string }
 export interface PromptStatusChangedPayload { prompt_id: string; from_status: string; to_status: string; elapsed_ms?: number }
 
+// ─── Priority engine ──────────────────────────────────────────────────────────
+
+export interface PriorityScoredPayload { task_id: string; score: number; bucket: string; rationale_summary: string }
+export interface PriorityRebucketedPayload { task_id: string; old_bucket: string; new_bucket: string; score: number }
+export interface PriorityReorderedPayload { task_id: string; old_ordinal: number; new_ordinal: number; bucket: string }
+export interface PriorityUserOverridePayload { task_id: string; old_ordinal: number; new_ordinal: number; override_reason: string }
+
+// ─── System decisions ─────────────────────────────────────────────────────────
+
+export interface SystemDecisionMadePayload { component: string; decision: string; rationale: string }
+
 // ─── Union type of all valid event types ─────────────────────────────────────
 
 export type EventType =
@@ -161,7 +173,9 @@ export type EventType =
   | 'lock.acquired' | 'lock.released' | 'lock.expired'
   | 'build.started' | 'build.step_started' | 'build.step_completed'
   | 'build.step_failed' | 'build.completed' | 'build.aborted'
-  | 'prompt.received' | 'prompt.status_changed';
+  | 'prompt.received' | 'prompt.status_changed'
+  | 'priority.scored' | 'priority.rebucketed' | 'priority.reordered' | 'priority.user_override'
+  | 'system.decision_made';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -183,6 +197,9 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'build.started': 'info', 'build.step_started': 'info', 'build.step_completed': 'info',
   'build.step_failed': 'error', 'build.completed': 'info', 'build.aborted': 'warning',
   'prompt.received': 'info', 'prompt.status_changed': 'info',
+  'priority.scored': 'info', 'priority.rebucketed': 'info',
+  'priority.reordered': 'info', 'priority.user_override': 'info',
+  'system.decision_made': 'info',
 };
 
 /** All valid event type strings from the registry */
