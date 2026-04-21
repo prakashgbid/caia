@@ -305,3 +305,34 @@ events:
     severity: info
     actor: [system, prioritizer]
     payload: [component, decision, rationale]
+
+  # Secrets broker events
+  - type: secret.fetched
+    severity: info
+    actor: [secrets-broker]
+    payload: [secret_key_hash, caller_module, site_slug, ttl_sec, cached]
+
+  - type: secret.cache_hit
+    severity: debug
+    actor: [secrets-broker]
+    payload: [secret_key_hash, caller_module, site_slug, ttl_remaining_sec]
+
+  - type: secret.rotation_triggered
+    severity: info
+    actor: [secrets-broker, user]
+    payload: [secret_key_hash, site_slug, triggered_by]
+
+  - type: secret.rotated
+    severity: info
+    actor: [secrets-broker]
+    payload: [secret_key_hash, site_slug, duration_ms]
+
+  - type: secret.access_denied
+    severity: warning
+    actor: [secrets-broker]
+    payload: [secret_key_hash, caller_ip, reason]
+
+  - type: secret.fetch_failed
+    severity: error
+    actor: [secrets-broker]
+    payload: [secret_key_hash, caller_module, error]

@@ -19,7 +19,8 @@ export type EventActor =
   | 'build-runner'
   | 'behavior-runner'
   | 'worker'
-  | 'prioritizer';
+  | 'prioritizer'
+  | 'secrets-broker';
 
 /** Canonical envelope for every event emitted through the bus */
 export interface ConductorEvent {
@@ -153,6 +154,15 @@ export interface PriorityUserOverridePayload { task_id: string; old_ordinal: num
 
 export interface SystemDecisionMadePayload { component: string; decision: string; rationale: string }
 
+// ─── Secrets broker ──────────────────────────────────────────────────────────
+
+export interface SecretFetchedPayload { secret_key_hash: string; caller_module: string; site_slug: string; ttl_sec: number; cached: boolean }
+export interface SecretCacheHitPayload { secret_key_hash: string; caller_module: string; site_slug: string; ttl_remaining_sec: number }
+export interface SecretRotationTriggeredPayload { secret_key_hash: string; site_slug: string; triggered_by: string }
+export interface SecretRotatedPayload { secret_key_hash: string; site_slug: string; duration_ms: number }
+export interface SecretAccessDeniedPayload { secret_key_hash: string; caller_ip: string; reason: string }
+export interface SecretFetchFailedPayload { secret_key_hash: string; caller_module: string; error: string }
+
 // ─── Union type of all valid event types ─────────────────────────────────────
 
 export type EventType =
@@ -175,7 +185,9 @@ export type EventType =
   | 'build.step_failed' | 'build.completed' | 'build.aborted'
   | 'prompt.received' | 'prompt.status_changed'
   | 'priority.scored' | 'priority.rebucketed' | 'priority.reordered' | 'priority.user_override'
-  | 'system.decision_made';
+  | 'system.decision_made'
+  | 'secret.fetched' | 'secret.cache_hit' | 'secret.rotation_triggered'
+  | 'secret.rotated' | 'secret.access_denied' | 'secret.fetch_failed';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -200,6 +212,12 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'priority.scored': 'info', 'priority.rebucketed': 'info',
   'priority.reordered': 'info', 'priority.user_override': 'info',
   'system.decision_made': 'info',
+  'secret.fetched': 'info',
+  'secret.cache_hit': 'debug',
+  'secret.rotation_triggered': 'info',
+  'secret.rotated': 'info',
+  'secret.access_denied': 'warning',
+  'secret.fetch_failed': 'error',
 };
 
 /** All valid event type strings from the registry */
