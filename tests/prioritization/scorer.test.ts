@@ -88,4 +88,84 @@ describe('scoreTask', () => {
       expect(val).toBeLessThanOrEqual(1);
     }
   });
+
+  it('HIGH_DOMAINS (integrity-check) returns 0.8 criticality', () => {
+    const r = scoreTask(makeCtx({ domainSlug: 'integrity-check' }));
+    expect(r.dimensions.domainCriticality).toBe(0.8);
+  });
+
+  it('MEDIUM_DOMAINS (conductor-architecture) returns 0.6 criticality', () => {
+    const r = scoreTask(makeCtx({ domainSlug: 'conductor-architecture' }));
+    expect(r.dimensions.domainCriticality).toBe(0.6);
+  });
+
+  it('LOW_DOMAINS (content) returns 0.4 criticality', () => {
+    const r = scoreTask(makeCtx({ domainSlug: 'content' }));
+    expect(r.dimensions.domainCriticality).toBe(0.4);
+  });
+
+  it('unknown domain slug returns 0.3 criticality', () => {
+    const r = scoreTask(makeCtx({ domainSlug: 'totally-unknown-domain-xyz' }));
+    expect(r.dimensions.domainCriticality).toBe(0.3);
+  });
+
+  it('RISK_HIGH_DOMAINS (testing-qa) returns 0.8 riskIfDelayed', () => {
+    const r = scoreTask(makeCtx({ domainSlug: 'testing-qa' }));
+    expect(r.dimensions.riskIfDelayed).toBe(0.8);
+  });
+
+  it('non-risk domain returns 0.3 riskIfDelayed', () => {
+    const r = scoreTask(makeCtx({ domainSlug: 'theming-branding' }));
+    expect(r.dimensions.riskIfDelayed).toBe(0.3);
+  });
+
+  it('user-visible domain (conductor-dashboard-features) returns 1.0 userVisible', () => {
+    const r = scoreTask(makeCtx({ domainSlug: 'conductor-dashboard-features' }));
+    expect(r.dimensions.userVisible).toBe(1.0);
+  });
+
+  it('UI keyword in title returns 0.8 userVisible', () => {
+    const r = scoreTask(makeCtx({ title: 'Update dashboard page layout' }));
+    expect(r.dimensions.userVisible).toBe(0.8);
+  });
+
+  it('MEDIUM_DOMAIN returns 0.5 userVisible when not in user-visible set', () => {
+    const r = scoreTask(makeCtx({ domainSlug: 'conductor-architecture' }));
+    expect(r.dimensions.userVisible).toBe(0.5);
+  });
+
+  it('blast radius: dependentCount 3 → 0.8', () => {
+    const r = scoreTask(makeCtx({ dependentCount: 3 }));
+    expect(r.dimensions.blastRadius).toBe(0.8);
+  });
+
+  it('blast radius: dependentCount 2 → 0.6', () => {
+    const r = scoreTask(makeCtx({ dependentCount: 2 }));
+    expect(r.dimensions.blastRadius).toBe(0.6);
+  });
+
+  it('blast radius: dependentCount 1 → 0.4', () => {
+    const r = scoreTask(makeCtx({ dependentCount: 1 }));
+    expect(r.dimensions.blastRadius).toBe(0.4);
+  });
+
+  it('urgency: HIGH_DOMAIN (backend-core) gives 0.6', () => {
+    const r = scoreTask(makeCtx({ domainSlug: 'backend-core' }));
+    expect(r.dimensions.urgency).toBe(0.6);
+  });
+
+  it('urgency: open blocker count > 0 gives 0.8', () => {
+    const r = scoreTask(makeCtx({ openBlockerCount: 1 }));
+    expect(r.dimensions.urgency).toBe(0.8);
+  });
+
+  it('urgency: long notes (>150 chars) gives 0.5', () => {
+    const r = scoreTask(makeCtx({ notes: 'a'.repeat(151) }));
+    expect(r.dimensions.urgency).toBe(0.5);
+  });
+
+  it('buildSummary includes "routine task" for low-scoring tasks', () => {
+    const r = scoreTask(makeCtx({ domainSlug: null, title: 'Ordinary task', declaredFiles: [] }));
+    expect(r.summary).toContain('routine task');
+  });
 });
