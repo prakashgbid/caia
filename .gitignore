@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.js.map
+*.d.ts.map
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+dashboard/.next/
+dashboard/node_modules/
+dashboard/out/
+.env
+.env.local
+*.log
