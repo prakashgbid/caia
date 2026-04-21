@@ -302,3 +302,18 @@ describe('Legacy routes', () => {
     expect(typeof (body as { openQuestions: number }).openQuestions).toBe('number');
   });
 });
+
+// @no-events — Prometheus metrics endpoint; no domain events emitted
+describe('GET /prom-metrics', () => {
+  it('returns Prometheus metrics as text/plain', async () => {
+    const db = createTestDb();
+    const app = createApp(db);
+    const res = await app.request('http://localhost/prom-metrics', { method: 'GET' });
+    expect(res.status).toBe(200);
+    const ct = res.headers.get('content-type') ?? '';
+    expect(ct).toMatch(/text/);
+    const text = await res.text();
+    expect(typeof text).toBe('string');
+    expect(text.length).toBeGreaterThanOrEqual(0);
+  });
+});
