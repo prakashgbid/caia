@@ -21,7 +21,15 @@ const NAV_ITEMS = [
   { path: '/suggestions', label: 'Suggestions', icon: '💡', tabKey: 'suggestions' },
   { path: '/audit', label: 'Audit', icon: '🔍', tabKey: 'audit' },
   { path: '/tests', label: 'Tests', icon: '🧪', tabKey: 'tests' },
+  { path: '/stories', label: 'Stories', icon: '🌳', tabKey: 'stories' },
+  { path: '/completeness', label: 'Completeness', icon: '✅', tabKey: 'completeness' },
+  { path: '/standards', label: 'Standards', icon: '📋', tabKey: 'standards' },
+  { path: '/backups', label: 'Backups', icon: '💾', tabKey: 'backups' },
   { path: '/metrics', label: 'Metrics', icon: '📊', tabKey: 'metrics' },
+  { path: '/events', label: 'Events', icon: '⚡', tabKey: 'events' },
+  { path: '/builds', label: 'Builds', icon: '🔨', tabKey: 'builds' },
+  { path: '/observability/health', label: 'Obs. Health', icon: '👁', tabKey: 'obs_health' },
+  { path: '/coverage', label: 'Coverage', icon: '🎯', tabKey: 'coverage' },
   { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
 ] as const;
 
@@ -40,6 +48,9 @@ function kindToTab(kind: string): string {
   if (kind.startsWith('timeline.')) return 'timeline';
   if (kind.startsWith('audit.')) return 'audit';
   if (kind.startsWith('domain.') || kind.startsWith('entity.tagged') || kind.startsWith('entity.untagged')) return 'domains';
+  if (kind.startsWith('story.')) return 'stories';
+  if (kind.startsWith('completeness.')) return 'completeness';
+  if (kind.startsWith('lock_contract.')) return 'standards';
   return 'timeline';
 }
 

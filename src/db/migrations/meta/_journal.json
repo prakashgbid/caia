@@ -43,6 +43,34 @@
       "when": 1776729970198,
       "tag": "0005_behavior_tests",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1776729970199,
+      "tag": "0006_completeness",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1776729970200,
+      "tag": "0007_executor",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1776729970201,
+      "tag": "0008_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1776729970202,
+      "tag": "0009_build_runs",
+      "breakpoints": true
     }
   ]
 }

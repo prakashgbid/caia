@@ -12,11 +12,29 @@ import { registerLegacyRoutes } from './routes/legacy';
 import { registerDomainRoutes } from './routes/domains';
 import { registerTaskRunRoutes } from './routes/task-runs';
 import { registerBehaviorTestRoutes } from './routes/behavior-tests';
+import { registerStoriesRoutes, registerCompletenessRoutes, registerLockContractRoutes } from './routes/stories';
+import { registerExecutorRoutes } from './routes/executor';
+import { registerEventsRoutes } from './routes/events';
+import { registerBuildsRoutes } from './routes/builds';
+import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
 
 export function createApp(db: Db): Hono {
   const app = new Hono();
 
   app.use('*', cors({ origin: '*', allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] }));
+
+  // Prometheus metrics — separate from the JSON /metrics endpoint
+  app.get('/prom-metrics', async (c) => {
+    const metrics = await promRegistry.metrics();
+    c.header('Content-Type', promRegistry.contentType);
+    return c.body(metrics);
+  });
+
+  // Count all HTTP requests
+  app.use('*', async (c, next) => {
+    await next();
+    httpRequestsTotal.inc({ method: c.req.method, path: c.req.routePath ?? c.req.path, status: String(c.res.status) });
+  });
 
   app.get('/health', (c) => c.json({ ok: true, db: 'connected', schema: 'v2' }));
 
@@ -31,6 +49,12 @@ export function createApp(db: Db): Hono {
   registerLegacyRoutes(app, db);
   registerTaskRunRoutes(app, db);
   registerBehaviorTestRoutes(app, db);
+  registerStoriesRoutes(app, db);
+  registerCompletenessRoutes(app, db);
+  registerLockContractRoutes(app, db);
+  registerExecutorRoutes(app, db);
+  registerEventsRoutes(app, db);
+  registerBuildsRoutes(app, db);
 
   return app;
 }

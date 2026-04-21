@@ -5,6 +5,7 @@ import type { Db } from '../../db/connection';
 import { projects } from '../../db/schema';
 import { bus } from '../../ws/bus';
 
+// @no-events — route registration wrapper, individual handlers emit events
 export function registerProjectRoutes(app: Hono, db: Db): void {
   app.get('/projects', (c) => {
     const { status, kind } = c.req.query() as Record<string, string>;

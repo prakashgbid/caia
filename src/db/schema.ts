@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, index, primaryKey } from 'drizzle-orm/sqlite-core';
 
 // projects
 export const projects = sqliteTable('projects', {
@@ -56,9 +56,14 @@ export const tasks = sqliteTable('tasks', {
   createdAt: text('created_at').notNull(),
   startedAt: text('started_at'),
   completedAt: text('completed_at'),
+  attemptCount: integer('attempt_count').notNull().default(0),
+  paused: integer('paused', { mode: 'boolean' }).notNull().default(false),
+  pauseReason: text('pause_reason'),
+  domainSlug: text('domain_slug'),
 }, (t) => [
   index('task_project_idx').on(t.projectId),
   index('task_status_idx').on(t.status),
+  index('task_paused_idx').on(t.paused, t.status),
 ]);
 
 // blockers
@@ -324,4 +329,274 @@ export const taskRunEvents = sqliteTable('task_run_events', {
 }, (t) => [
   index('tre_task_run_idx').on(t.taskRunId),
   index('tre_at_idx').on(t.at),
+]);
+
+// stories — decomposition tree nodes
+export const stories = sqliteTable('stories', {
+  id: text('id').primaryKey(),
+  parentId: text('parent_id'),
+  prevSiblingId: text('prev_sibling_id'),
+  nextSiblingId: text('next_sibling_id'),
+  ordinal: integer('ordinal').notNull().default(0),
+  kind: text('kind').notNull().default('task'), // epic|story|sub_story|task|sub_task|todo
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  expectedBehavior: text('expected_behavior').notNull().default(''),
+  acceptanceCriteriaJson: text('acceptance_criteria_json').notNull().default('[]'),
+  verificationPlanJson: text('verification_plan_json').notNull().default('[]'),
+  behaviorTestPath: text('behavior_test_path'),
+  dependsOnJson: text('depends_on_json').notNull().default('[]'),
+  projectSlug: text('project_slug'),
+  domainSlugsJson: text('domain_slugs_json').notNull().default('[]'),
+  status: text('status').notNull().default('pending'), // pending|verified|failed|partial
+  createdAt: text('created_at').notNull(),
+  lastDecomposedAt: text('last_decomposed_at'),
+  behaviorTestSkeleton: text('behavior_test_skeleton'),
+}, (t) => [
+  index('story_parent_idx').on(t.parentId),
+  index('story_project_idx').on(t.projectSlug),
+  index('story_kind_idx').on(t.kind),
+]);
+
+// story_revisions — append-only history of every story-tree edit
+export const storyRevisions = sqliteTable('story_revisions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  storyId: text('story_id').notNull(),
+  version: integer('version').notNull().default(1),
+  snapshotJson: text('snapshot_json').notNull().default('{}'),
+  changedAt: text('changed_at').notNull(),
+  changedBy: text('changed_by').notNull().default('system'),
+}, (t) => [
+  index('sr_story_idx').on(t.storyId, t.version),
+]);
+
+// lock_contracts — canonical policy/standard documents; source of truth is DB not .md files
+export const lockContracts = sqliteTable('lock_contracts', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  kind: text('kind').notNull().default('standard'), // brand|a11y|domain|policy|protocol|standard
+  title: text('title').notNull(),
+  bodyMd: text('body_md').notNull().default(''),
+  version: integer('version').notNull().default(1),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+  checksum: text('checksum').notNull().default(''),
+}, (t) => [
+  index('lc_slug_idx').on(t.slug),
+  index('lc_kind_idx').on(t.kind),
+]);
+
+// lock_contract_revisions — append-only version history
+export const lockContractRevisions = sqliteTable('lock_contract_revisions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  contractId: text('contract_id').notNull(),
+  version: integer('version').notNull(),
+  bodyMd: text('body_md').notNull().default(''),
+  changedAt: text('changed_at').notNull(),
+  changedBy: text('changed_by').notNull().default('system'),
+}, (t) => [
+  index('lcr_contract_idx').on(t.contractId, t.version),
+]);
+
+// memory_anchors — maps .md file paths to their canonical DB rows
+export const memoryAnchors = sqliteTable('memory_anchors', {
+  path: text('path').primaryKey(),
+  kind: text('kind').notNull().default('lock_contract'),
+  refId: text('ref_id').notNull(),
+  refTable: text('ref_table').notNull(),
+  lastSyncedAt: text('last_synced_at').notNull(),
+  checksumAtSync: text('checksum_at_sync').notNull().default(''),
+}, (t) => [
+  index('ma_ref_idx').on(t.refTable, t.refId),
+]);
+
+// db_backups — catalog of every SQLite backup taken
+export const dbBackups = sqliteTable('db_backups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  takenAt: text('taken_at').notNull(),
+  path: text('path').notNull(),
+  sizeBytes: integer('size_bytes').notNull().default(0),
+  rowCountsJson: text('row_counts_json').notNull().default('{}'),
+  checksum: text('checksum').notNull().default(''),
+}, (t) => [
+  index('dbb_taken_idx').on(t.takenAt),
+]);
+
+// completeness_runs — one row per entity per verification sweep
+export const completenessRuns = sqliteTable('completeness_runs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  runAt: text('run_at').notNull(),
+  entityKind: text('entity_kind').notNull(),
+  entityId: text('entity_id').notNull(),
+  checksTotal: integer('checks_total').notNull().default(0),
+  checksPassed: integer('checks_passed').notNull().default(0),
+  scorePct: integer('score_pct').notNull().default(0),
+  status: text('status').notNull().default('pending'), // pending|pass|fail|error
+  findingsJson: text('findings_json').notNull().default('[]'),
+  durationMs: integer('duration_ms'),
+}, (t) => [
+  index('cr_entity_idx').on(t.entityKind, t.entityId),
+  index('cr_run_at_idx').on(t.runAt),
+  index('cr_status_idx').on(t.status),
+]);
+
+// completeness_findings — individual check failures within a run
+export const completenessFindings = sqliteTable('completeness_findings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  runId: integer('run_id').notNull().references(() => completenessRuns.id, { onDelete: 'cascade' }),
+  entityKind: text('entity_kind').notNull(),
+  entityId: text('entity_id').notNull(),
+  checkKind: text('check_kind').notNull(), // file_exists|url_200|test_pass|ui_region|behavior_test|commit_sha
+  expected: text('expected').notNull().default(''),
+  actual: text('actual').notNull().default(''),
+  severity: text('severity').notNull().default('warning'), // critical|warning|info
+  message: text('message').notNull().default(''),
+  evidenceUrl: text('evidence_url'),
+}, (t) => [
+  index('cf_run_idx').on(t.runId),
+  index('cf_entity_idx').on(t.entityKind, t.entityId),
+]);
+
+// completeness_schedule — singleton config for the cron daemon
+export const completenessSchedule = sqliteTable('completeness_schedule', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  scheduleCron: text('schedule_cron').notNull().default('0 */2 * * *'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  lastRunAt: text('last_run_at'),
+  nextRunAt: text('next_run_at'),
+});
+
+// executor_runs — one row per dispatched claude -p session
+export const executorRuns = sqliteTable('executor_runs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  taskId: text('task_id').notNull(),
+  attemptN: integer('attempt_n').notNull().default(1),
+  sessionId: text('session_id'),
+  pid: integer('pid'),
+  workerKind: text('worker_kind').notNull().default('claude-p'),
+  worktreePath: text('worktree_path'),
+  startedAt: text('started_at').notNull(),
+  endedAt: text('ended_at'),
+  status: text('status').notNull().default('running'),
+  turnCountAtEnd: integer('turn_count_at_end'),
+  resultSummary: text('result_summary'),
+  failureReason: text('failure_reason'),
+  costUsd: real('cost_usd'),
+}, (t) => [
+  index('er_task_idx').on(t.taskId),
+  index('er_status_idx').on(t.status),
+  index('er_started_idx').on(t.startedAt),
+]);
+
+// executor_config — singleton row controlling the daemon
+export const executorConfig = sqliteTable('executor_config', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+  maxConcurrent: integer('max_concurrent').notNull().default(3),
+  maxPerDomainConcurrent: integer('max_per_domain_concurrent').notNull().default(1),
+  circuitBreakerThreshold: integer('circuit_breaker_threshold').notNull().default(3),
+  pollIntervalMs: integer('poll_interval_ms').notNull().default(10000),
+  monitorIntervalMs: integer('monitor_interval_ms').notNull().default(30000),
+  maxTurns: integer('max_turns').notNull().default(40),
+  permissionMode: text('permission_mode').notNull().default('bypassPermissions'),
+  updatedAt: text('updated_at').notNull(),
+});
+
+// task_attempts — audit trail of every execution attempt per task
+export const taskAttempts = sqliteTable('task_attempts', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  taskId: text('task_id').notNull(),
+  attemptN: integer('attempt_n').notNull(),
+  executorRunId: integer('executor_run_id'),
+  status: text('status').notNull().default('running'),
+  startedAt: text('started_at').notNull(),
+  endedAt: text('ended_at'),
+  failureReason: text('failure_reason'),
+}, (t) => [
+  index('ta_task_idx').on(t.taskId),
+  index('ta_status_idx').on(t.status),
+]);
+
+// events — canonical event store (migration 0008)
+export const events = sqliteTable('events', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  occurredAt: text('occurred_at').notNull(),
+  actor: text('actor').notNull(),
+  correlationId: text('correlation_id'),
+  causationId: text('causation_id'),
+  traceId: text('trace_id'),
+  spanId: text('span_id'),
+  entityType: text('entity_type'),
+  entityId: text('entity_id'),
+  projectSlug: text('project_slug'),
+  domainSlugsJson: text('domain_slugs_json').notNull().default('[]'),
+  payloadJson: text('payload_json').notNull().default('{}'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+  severity: text('severity').notNull().default('info'),
+}, (t) => [
+  index('ev_type_idx').on(t.type),
+  index('ev_correlation_idx').on(t.correlationId),
+  index('ev_entity_idx').on(t.entityId),
+  index('ev_occurred_idx').on(t.occurredAt),
+  index('ev_actor_idx').on(t.actor),
+  index('ev_project_idx').on(t.projectSlug),
+]);
+
+// build_runs — one row per build-runner invocation (migration 0009)
+export const buildRuns = sqliteTable('build_runs', {
+  id: text('id').primaryKey(),
+  trigger: text('trigger').notNull().default('user'),
+  gitSha: text('git_sha'),
+  branch: text('branch'),
+  changedFilesJson: text('changed_files_json').notNull().default('[]'),
+  status: text('status').notNull().default('running'),
+  outcome: text('outcome'),
+  startedAt: text('started_at').notNull(),
+  endedAt: text('ended_at'),
+  durationMs: integer('duration_ms'),
+  stepsTotal: integer('steps_total').notNull().default(0),
+  stepsFailed: integer('steps_failed').notNull().default(0),
+  errorSignature: text('error_signature'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+}, (t) => [
+  index('br_status_idx').on(t.status),
+  index('br_started_idx').on(t.startedAt),
+  index('br_git_sha_idx').on(t.gitSha),
+]);
+
+// build_steps — per-step detail within a build run
+export const buildSteps = sqliteTable('build_steps', {
+  id: text('id').primaryKey(),
+  buildRunId: text('build_run_id').notNull().references(() => buildRuns.id),
+  stepName: text('step_name').notNull(),
+  command: text('command').notNull(),
+  stepOrder: integer('step_order').notNull().default(0),
+  status: text('status').notNull().default('running'),
+  exitCode: integer('exit_code'),
+  startedAt: text('started_at').notNull(),
+  endedAt: text('ended_at'),
+  durationMs: integer('duration_ms'),
+  stdoutTail: text('stdout_tail'),
+  stderrTail: text('stderr_tail'),
+  errorSignature: text('error_signature'),
+  maxRssBytes: integer('max_rss_bytes'),
+}, (t) => [
+  index('bs_run_idx').on(t.buildRunId),
+  index('bs_status_idx').on(t.status),
+]);
+
+// build_retries — per-step retry audit
+export const buildRetries = sqliteTable('build_retries', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  buildRunId: text('build_run_id').notNull().references(() => buildRuns.id),
+  buildStepId: text('build_step_id').notNull().references(() => buildSteps.id),
+  attemptN: integer('attempt_n').notNull().default(1),
+  exitCode: integer('exit_code'),
+  startedAt: text('started_at').notNull(),
+  endedAt: text('ended_at'),
+  errorSignature: text('error_signature'),
+}, (t) => [
+  index('bret_run_idx').on(t.buildRunId),
 ]);

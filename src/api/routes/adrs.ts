@@ -6,6 +6,7 @@ import { adrs } from '../../db/schema';
 import { bus } from '../../ws/bus';
 import { getEntityIdsForDomains } from './domains';
 
+// @no-events — route registration wrapper
 export function registerAdrRoutes(app: Hono, db: Db): void {
   app.get('/adrs', (c) => {
     const { status, projectId, domain } = c.req.query() as Record<string, string>;

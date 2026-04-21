@@ -3,6 +3,7 @@ dist/
 *.js.map
 *.d.ts.map
 coverage/
+!dashboard/app/coverage/
 .nyc_output/
 playwright-report/
 test-results/

@@ -1,72 +1,81 @@
-import { bus } from '../../src/ws/bus';
+import { eventBus } from '../../src/events/bus-adapter';
+import type { ConductorEvent } from '../../packages/event-bus/index';
 
 describe('EventBus', () => {
   it('emits and receives conductor:event', (done) => {
-    const payload = { kind: 'test.event', ts: new Date().toISOString(), id: 'test_1' };
-
-    const listener = (event: typeof payload) => {
-      expect(event.kind).toBe('test.event');
-      expect(event.id).toBe('test_1');
-      bus.off('conductor:event', listener);
+    const listener = (event: ConductorEvent) => {
+      expect(event.type).toBe('task.created');
+      expect(event.entity_id).toBe('tsk_ws_test');
+      eventBus.off('conductor:event', listener);
       done();
     };
 
-    bus.on('conductor:event', listener);
-    bus.push(payload);
+    eventBus.on('conductor:event', listener);
+    eventBus.publish({ type: 'task.created', actor: 'user', entity_id: 'tsk_ws_test', payload: { task_id: 'tsk_ws_test', title: 'test' } });
   });
 
   it('fans out to multiple listeners', (done) => {
     let count = 0;
     const target = 2;
-
     const check = () => {
       count++;
       if (count === target) {
-        bus.off('conductor:event', l1);
-        bus.off('conductor:event', l2);
+        eventBus.off('conductor:event', l1);
+        eventBus.off('conductor:event', l2);
         done();
       }
     };
+    const l1 = check as (e: unknown) => void;
+    const l2 = check as (e: unknown) => void;
 
-    const l1 = check;
-    const l2 = check;
-
-    bus.on('conductor:event', l1);
-    bus.on('conductor:event', l2);
-    bus.push({ kind: 'fanout.test', ts: new Date().toISOString() });
+    eventBus.on('conductor:event', l1);
+    eventBus.on('conductor:event', l2);
+    eventBus.publish({ type: 'system.startup', actor: 'system', payload: { component: 'test', version: '0' } });
   });
 
   it('unsubscribed listeners do not receive events', (done) => {
     let called = false;
     const listener = () => { called = true; };
 
-    bus.on('conductor:event', listener);
-    bus.off('conductor:event', listener);
+    eventBus.on('conductor:event', listener);
+    eventBus.off('conductor:event', listener);
+    eventBus.publish({ type: 'domain.created', actor: 'user', payload: { domain_slug: 'x', name: 'x' } });
 
-    bus.push({ kind: 'unsub.test', ts: new Date().toISOString() });
-
-    // Give async time to fire if it were going to
     setTimeout(() => {
       expect(called).toBe(false);
       done();
     }, 50);
   });
 
-  it('includes projectId in events', (done) => {
-    const event = {
-      kind: 'project.created',
-      id: 'proj_123',
-      projectId: 'proj_abc',
-      ts: new Date().toISOString(),
+  it('includes project_slug in events', (done) => {
+    const listener = (event: ConductorEvent) => {
+      if (event.project_slug === 'proj_abc') {
+        expect(event.project_slug).toBe('proj_abc');
+        eventBus.off('conductor:event', listener);
+        done();
+      }
     };
 
-    const listener = (received: typeof event) => {
-      expect(received.projectId).toBe('proj_abc');
-      bus.off('conductor:event', listener);
+    eventBus.on('conductor:event', listener);
+    eventBus.publish({
+      type: 'story.created', actor: 'api', project_slug: 'proj_abc',
+      payload: { story_id: 's1', title: 'test', kind: 'task' },
+    });
+  });
+
+  it('glob subscribe resolves correct events', (done) => {
+    const received: ConductorEvent[] = [];
+    const unsub = eventBus.subscribe('task.*', (e) => { received.push(e); });
+
+    eventBus.publish({ type: 'task.created', actor: 'user', payload: {} });
+    eventBus.publish({ type: 'story.created', actor: 'user', payload: {} });
+    eventBus.publish({ type: 'task.completed', actor: 'executor', payload: {} });
+
+    setTimeout(() => {
+      unsub();
+      expect(received.length).toBe(2);
+      expect(received.every(e => e.type.startsWith('task.'))).toBe(true);
       done();
-    };
-
-    bus.on('conductor:event', listener);
-    bus.push(event);
+    }, 10);
   });
 });

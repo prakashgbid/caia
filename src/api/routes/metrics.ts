@@ -2,6 +2,7 @@ import type { Hono } from 'hono';
 import type { Db } from '../../db/connection';
 import { tasks, blockers, requirements } from '../../db/schema';
 
+// @no-events — route registration wrapper, individual handlers emit events
 export function registerMetricsRoutes(app: Hono, db: Db): void {
   app.get('/metrics', (c) => {
     const { projectId } = c.req.query() as Record<string, string>;

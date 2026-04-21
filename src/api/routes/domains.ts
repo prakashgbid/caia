@@ -35,6 +35,7 @@ function getDomainCounts(sqlite: ReturnType<typeof getSqliteRaw>): Map<string, R
   return map;
 }
 
+// @no-events — route registration wrapper
 export function registerDomainRoutes(app: Hono, db: Db): void {
   // GET /domains — list all with entity counts per type
   app.get('/domains', (c) => {
@@ -235,7 +236,7 @@ export function registerDomainRoutes(app: Hono, db: Db): void {
   });
 }
 
-// Helper exported for use in other routes — returns Set of entity IDs for a domain+type
+// @no-events — pure query helper, no side effects
 export function getEntityIdsForDomains(db: Db, type: string, domainSlugs: string[]): Set<string> {
   if (!domainSlugs.length) return new Set();
   const rows = db.select({ entityId: entityDomains.entityId })

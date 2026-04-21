@@ -9,6 +9,7 @@ import { getEntityIdsForDomains } from './domains';
 
 type TimelineRow = typeof timelineEvents.$inferSelect;
 
+// @no-events — route registration wrapper, individual handlers emit events
 export function registerTimelineRoutes(app: Hono, db: Db): void {
   app.get('/timeline', (c) => {
     const {

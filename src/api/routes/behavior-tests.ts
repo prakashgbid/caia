@@ -5,6 +5,7 @@ import { getSqliteRaw } from '../../db/connection';
 import { behaviorTests, behaviorTestRuns, behaviorTestFailures } from '../../db/schema';
 import { nanoid } from 'nanoid';
 
+// @no-events — route registration wrapper
 export function registerBehaviorTestRoutes(app: Hono, db: Db): void {
   // GET /behavior-tests — list with optional filters
   app.get('/behavior-tests', (c) => {

@@ -14,6 +14,7 @@ function parseDomainParam(raw: string | undefined): string[] {
   return raw.split(',').map(s => s.trim()).filter(Boolean);
 }
 
+// @no-events — route registration wrapper, individual handlers emit events
 export function registerLegacyRoutes(app: Hono, db: Db): void {
   // Requirements
   app.get('/requirements', (c) => {

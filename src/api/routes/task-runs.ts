@@ -22,6 +22,7 @@ function parseIntParam(s: string | undefined, fallback: number, max: number): nu
   return isNaN(n) ? fallback : Math.min(n, max);
 }
 
+// @no-events — route registration wrapper, individual handlers emit events
 export function registerTaskRunRoutes(app: Hono, db: Db): void {
   // POST /task-runs — upsert by session_id
   app.post('/task-runs', async (c) => {

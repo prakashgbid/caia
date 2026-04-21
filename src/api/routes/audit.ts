@@ -3,6 +3,7 @@ import { desc } from 'drizzle-orm';
 import type { Db } from '../../db/connection';
 import { auditLog } from '../../db/schema';
 
+// @no-events — route registration wrapper
 export function registerAuditRoutes(app: Hono, db: Db): void {
   app.get('/audit', (c) => {
     const { entityKind, entityId, projectId, limit: lim } = c.req.query() as Record<string, string>;

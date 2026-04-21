@@ -6,6 +6,7 @@ import { businessFeatures } from '../../db/schema';
 import { bus } from '../../ws/bus';
 import { getEntityIdsForDomains } from './domains';
 
+// @no-events — route registration wrapper, individual handlers emit events
 export function registerFeatureRoutes(app: Hono, db: Db): void {
   app.get('/features', (c) => {
     const { phase, status, projectId, domain } = c.req.query() as Record<string, string>;
