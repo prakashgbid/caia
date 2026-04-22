@@ -433,9 +433,10 @@ execCmd
     console.log('[conductor] Starting executor daemon...');
     const { spawn } = await import('child_process');
     const { existsSync } = await import('fs');
-    // apps/executor builds its own dist/ inside apps/executor/dist/
-    // PACKAGE_ROOT is inferred from this file's location: dist/cli/index.js -> ../../ = project root
-    const pkgRoot = path.resolve(path.dirname(process.argv[1]), '..', '..');
+    // Probe 3 levels up (dist/src/cli → project root) then 2 levels (dist/cli → project root, legacy layout).
+    const dir3 = path.resolve(path.dirname(process.argv[1]), '..', '..', '..');
+    const dir2 = path.resolve(path.dirname(process.argv[1]), '..', '..');
+    const pkgRoot = existsSync(path.join(dir3, 'apps', 'executor')) ? dir3 : dir2;
     const appDist = path.join(pkgRoot, 'apps', 'executor', 'dist', 'executor-daemon.js');
     const globalDist = path.join(path.dirname(process.execPath), '..', 'lib', 'node_modules', 'conductor', 'dist', 'apps', 'executor', 'executor-daemon.js');
     const fallback = path.join(os.homedir(), '.conductor', 'executor-daemon.js');
