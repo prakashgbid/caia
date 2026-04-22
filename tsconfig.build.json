@@ -5,6 +5,6 @@
     "outDir": "dist",
     "rootDirs": ["src", "packages"]
   },
-  "include": ["src/**/*", "packages/**/*"],
+  "include": ["src/**/*", "packages/**/*", "apps/**/*"],
   "exclude": ["node_modules", "dist", "dashboard", "tests", "scripts"]
 }

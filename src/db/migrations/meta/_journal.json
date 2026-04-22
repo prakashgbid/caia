@@ -85,6 +85,13 @@
       "when": 1776729970212,
       "tag": "0012_prioritization",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1776729970213,
+      "tag": "0013_pulse",
+      "breakpoints": true
     }
   ]
 }

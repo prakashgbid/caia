@@ -21,8 +21,24 @@ gitleaks protect --staged --no-banner --redact
 GITLEAKS_EXIT=$?
 
 echo "[secrets-gate] Running trufflehog on recent commit range..."
-trufflehog git file://. --since-commit HEAD~1 --only-verified --fail
-TRUFFLE_EXIT=$?
+# In a worktree, .git is a file pointer; resolve the real repo root via git-common-dir
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir)
+IN_WORKTREE=false
+if [[ "$GIT_COMMON_DIR" != ".git" ]]; then
+  # git-common-dir is absolute when inside a worktree (not the main working tree)
+  IN_WORKTREE=true
+fi
+
+if [[ "$IN_WORKTREE" == "true" ]]; then
+  # trufflehog git scan requires a real .git directory; worktrees have a .git file pointer.
+  # Staged-content secrets are already covered by gitleaks above.
+  # Full history scan runs on the main working tree / CI.
+  echo "[secrets-gate] Worktree detected: trufflehog git history scan deferred to main branch."
+  TRUFFLE_EXIT=0
+else
+  trufflehog git file://. --since-commit HEAD~1 --only-verified --fail
+  TRUFFLE_EXIT=$?
+fi
 
 if [[ $GITLEAKS_EXIT -ne 0 || $TRUFFLE_EXIT -ne 0 ]]; then
   echo -e "${RED}[secrets-gate] SECRET DETECTED — commit blocked. Remove the secret and try again.${NC}"

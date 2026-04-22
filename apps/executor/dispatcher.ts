@@ -41,7 +41,25 @@ export interface DispatchHandle {
   outputLines: string[];
 }
 
+function isCanaryTask(task: DispatchTask): boolean {
+  if (!task.notes) return false;
+  try {
+    const meta = JSON.parse(task.notes) as Record<string, unknown>;
+    return meta.canary === true;
+  } catch {
+    return false;
+  }
+}
+
 function buildPrompt(task: DispatchTask): string {
+  // Canary bypass: produce a single leaf task that exits immediately.
+  // This avoids full story/epic expansion and keeps canary latency minimal.
+  if (isCanaryTask(task)) {
+    return `You are executing a pipeline health canary (task ${task.id}).
+Run: echo "[result] DONE: canary ok"
+Then stop immediately. Do not do any other work.`;
+  }
+
   const files = task.declaredFiles.length > 0
     ? task.declaredFiles.join(', ')
     : '(not specified — use judgment)';

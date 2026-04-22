@@ -704,3 +704,19 @@ export const priorityAudit = sqliteTable('priority_audit', {
   index('pa_task_idx').on(t.taskId),
   index('pa_changed_idx').on(t.changedAt),
 ]);
+
+// pulse_runs — one row per `conductor pulse` health-check invocation (migration 0013)
+export const pulseRuns = sqliteTable('pulse_runs', {
+  id: text('id').primaryKey(),
+  ranAt: text('ran_at').notNull(),
+  outcome: text('outcome').notNull(), // PASSING | DEGRADED | CRITICAL | AUTO-HEALED
+  canaryId: text('canary_id'),
+  canaryElapsedMs: integer('canary_elapsed_ms'),
+  checksJson: text('checks_json').notNull().default('[]'),
+  invariantsJson: text('invariants_json').notNull().default('[]'),
+  healsJson: text('heals_json').notNull().default('[]'),
+  durationMs: integer('duration_ms').notNull().default(0),
+}, (t) => [
+  index('pulse_runs_ran_at_idx').on(t.ranAt),
+  index('pulse_runs_outcome_idx').on(t.outcome),
+]);

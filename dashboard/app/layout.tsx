@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   { path: '/events', label: 'Events', icon: '⚡', tabKey: 'events' },
   { path: '/builds', label: 'Builds', icon: '🔨', tabKey: 'builds' },
   { path: '/observability/health', label: 'Obs. Health', icon: '👁', tabKey: 'obs_health' },
+  { path: '/health/pulse', label: 'Pulse', icon: '💚', tabKey: 'pulse' },
   { path: '/coverage', label: 'Coverage', icon: '🎯', tabKey: 'coverage' },
   { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
 ] as const;

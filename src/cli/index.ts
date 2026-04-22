@@ -461,4 +461,21 @@ execCmd
     await installExecutorLaunchd();
   });
 
+// ─── Pulse ───────────────────────────────────────────────────────────────────
+
+program
+  .command('pulse')
+  .description('Run the 3-layer pipeline health check (canary + invariants + 15 micro-probes)')
+  .option('--json', 'Output structured JSON result')
+  .option('--no-heal', 'Skip auto-heal phase')
+  .option('--no-canary', 'Skip synthetic canary test (faster, less coverage)')
+  .action(async (opts: { json?: boolean; heal?: boolean; canary?: boolean }) => {
+    const argv: string[] = [];
+    if (opts.json) argv.push('--json');
+    if (opts.heal === false) argv.push('--no-heal');
+    if (opts.canary === false) argv.push('--no-canary');
+    const { runPulseCli } = await import('../../apps/pipeline-pulse/src/cli');
+    await runPulseCli(argv);
+  });
+
 program.parse(process.argv);

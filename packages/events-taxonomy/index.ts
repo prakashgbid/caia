@@ -163,6 +163,44 @@ export interface SecretRotatedPayload { secret_key_hash: string; site_slug: stri
 export interface SecretAccessDeniedPayload { secret_key_hash: string; caller_ip: string; reason: string }
 export interface SecretFetchFailedPayload { secret_key_hash: string; caller_module: string; error: string }
 
+// ─── Pipeline Pulse (migration 0013) ─────────────────────────────────────────
+
+export interface SystemPipelinePulsePayload {
+  run_id: string;
+  outcome: 'PASSING' | 'DEGRADED' | 'CRITICAL' | 'AUTO-HEALED';
+  duration_ms: number;
+  checks_total: number;
+  checks_passed: number;
+  heals_applied: number;
+  canary_elapsed_ms: number | null;
+}
+
+export interface PulseCanaryDispatchedPayload {
+  run_id: string;
+  canary_task_id: string;
+}
+
+export interface PulseCanaryCompletedPayload {
+  run_id: string;
+  canary_task_id: string;
+  elapsed_ms: number;
+  passed: boolean;
+}
+
+export interface PulseHealAppliedPayload {
+  run_id: string;
+  action: string;
+  triggered_by: string;
+  idempotent: boolean;
+}
+
+export interface PulseHealFailedPayload {
+  run_id: string;
+  action: string;
+  triggered_by: string;
+  error: string;
+}
+
 // ─── Union type of all valid event types ─────────────────────────────────────
 
 export type EventType =
@@ -187,7 +225,10 @@ export type EventType =
   | 'priority.scored' | 'priority.rebucketed' | 'priority.reordered' | 'priority.user_override'
   | 'system.decision_made'
   | 'secret.fetched' | 'secret.cache_hit' | 'secret.rotation_triggered'
-  | 'secret.rotated' | 'secret.access_denied' | 'secret.fetch_failed';
+  | 'secret.rotated' | 'secret.access_denied' | 'secret.fetch_failed'
+  | 'system.pipeline_pulse'
+  | 'pulse.canary_dispatched' | 'pulse.canary_completed'
+  | 'pulse.heal_applied' | 'pulse.heal_failed';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -218,6 +259,11 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'secret.rotated': 'info',
   'secret.access_denied': 'warning',
   'secret.fetch_failed': 'error',
+  'system.pipeline_pulse': 'info',
+  'pulse.canary_dispatched': 'debug',
+  'pulse.canary_completed': 'info',
+  'pulse.heal_applied': 'warning',
+  'pulse.heal_failed': 'error',
 };
 
 /** All valid event type strings from the registry */
