@@ -3,6 +3,7 @@
 # Usage: ./scripts/build-runner.sh [--trigger user|pre-commit|ci|executor]
 #
 # Steps run in order:
+#   0. gate:no-secrets (gitleaks + trufflehog — blocks on any finding)
 #   1. typecheck
 #   2. lint  (if available)
 #   3. test
@@ -115,7 +116,10 @@ register_build
 emit_event "build.started" "{\"build_run_id\":\"${BUILD_RUN_ID}\",\"trigger\":\"${TRIGGER}\",\"git_sha\":\"${GIT_SHA}\",\"branch\":\"${BRANCH}\",\"changed_files\":[]}"
 
 # Steps
-run_step "typecheck" "npm run typecheck" || { ABORTED=1; true; }
+run_step "gate:no-secrets" "npm run gate:no-secrets" || { ABORTED=1; true; }
+if [[ ${ABORTED} -eq 0 ]]; then
+  run_step "typecheck" "npm run typecheck" || { ABORTED=1; true; }
+fi
 if [[ ${ABORTED} -eq 0 ]]; then
   run_step "test" "npm test -- --passWithNoTests" || { ABORTED=1; true; }
 fi

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Pre-commit hook: blocks commits containing secrets.
+# Tools required: gitleaks ≥8.18, trufflehog ≥3.x
+set -euo pipefail
+
+RED='\033[0;31m'
+NC='\033[0m'
+
+if ! command -v gitleaks &>/dev/null; then
+  echo -e "${RED}[secrets-gate] gitleaks not found. Install: brew install gitleaks${NC}"
+  exit 1
+fi
+
+if ! command -v trufflehog &>/dev/null; then
+  echo -e "${RED}[secrets-gate] trufflehog not found. Install: brew install trufflehog${NC}"
+  exit 1
+fi
+
+echo "[secrets-gate] Running gitleaks on staged files..."
+gitleaks protect --staged --no-banner --redact
+GITLEAKS_EXIT=$?
+
+echo "[secrets-gate] Running trufflehog on recent commit range..."
+trufflehog git file://. --since-commit HEAD~1 --only-verified --fail
+TRUFFLE_EXIT=$?
+
+if [[ $GITLEAKS_EXIT -ne 0 || $TRUFFLE_EXIT -ne 0 ]]; then
+  echo -e "${RED}[secrets-gate] SECRET DETECTED — commit blocked. Remove the secret and try again.${NC}"
+  exit 1
+fi
+
+echo "[secrets-gate] Clean — no secrets detected."

@@ -1,0 +1,117 @@
+# .gitleaks.toml — Conductor secrets scan rules
+# Extends gitleaks defaults; add project-specific patterns below.
+title = "Conductor Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API key"
+regex = '''sk-ant-api03-[a-zA-Z0-9\-_]{93}'''
+keywords = ["sk-ant-"]
+tags = ["anthropic", "key"]
+
+[[rules]]
+id = "openai-api-key"
+description = "OpenAI API key"
+regex = '''sk-[a-zA-Z0-9]{48}'''
+keywords = ["sk-"]
+tags = ["openai", "key"]
+
+[[rules]]
+id = "cloudflare-global-api-key"
+description = "Cloudflare Global API Key"
+regex = '''(?i)(CF_API_KEY|X-Auth-Key)[=\s:"\'']+([0-9a-f]{37})'''
+keywords = ["CF_API_KEY", "X-Auth-Key"]
+tags = ["cloudflare", "key"]
+
+[[rules]]
+id = "cloudflare-api-token"
+description = "Cloudflare scoped API token"
+regex = '''(?i)(CF_API_TOKEN|CLOUDFLARE_API_TOKEN)[=\s:"\'']+([a-zA-Z0-9\-_]{40})'''
+keywords = ["CF_API_TOKEN", "CLOUDFLARE_API_TOKEN"]
+tags = ["cloudflare", "token"]
+
+[[rules]]
+id = "ga4-service-account"
+description = "GA4 / GCP service account JSON credential shape"
+regex = '''"type"\s*:\s*"service_account"'''
+keywords = ["service_account"]
+tags = ["gcp", "ga4", "service-account"]
+
+[[rules]]
+id = "stripe-live-secret"
+description = "Stripe live secret key"
+regex = '''sk_live_[a-zA-Z0-9]{24,99}'''
+keywords = ["sk_live_"]
+tags = ["stripe", "key"]
+
+[[rules]]
+id = "stripe-restricted-key"
+description = "Stripe restricted key"
+regex = '''rk_live_[a-zA-Z0-9]{24,99}'''
+keywords = ["rk_live_"]
+tags = ["stripe", "key"]
+
+[[rules]]
+id = "sendgrid-api-key"
+description = "SendGrid API key"
+regex = '''SG\.[a-zA-Z0-9\-_]{22}\.[a-zA-Z0-9\-_]{43}'''
+keywords = ["SG."]
+tags = ["sendgrid", "key"]
+
+[[rules]]
+id = "github-pat-classic"
+description = "GitHub Personal Access Token (classic)"
+regex = '''ghp_[a-zA-Z0-9]{36}'''
+keywords = ["ghp_"]
+tags = ["github", "pat"]
+
+[[rules]]
+id = "github-pat-fine-grained"
+description = "GitHub fine-grained PAT"
+regex = '''github_pat_[a-zA-Z0-9_]{82}'''
+keywords = ["github_pat_"]
+tags = ["github", "pat"]
+
+[[rules]]
+id = "cloudinary-url"
+description = "Cloudinary API URL with credentials"
+regex = '''cloudinary://[a-zA-Z0-9_\-]+:[a-zA-Z0-9_\-]+@[a-zA-Z0-9_\-]+'''
+keywords = ["cloudinary://"]
+tags = ["cloudinary", "url"]
+
+[[rules]]
+id = "pixabay-api-key"
+description = "Pixabay API key"
+regex = '''(?i)(PIXABAY_KEY|PIXABAY_API)[=\s:"\'']+([0-9]{7}-[a-f0-9]{32})'''
+keywords = ["PIXABAY_KEY", "PIXABAY_API"]
+tags = ["pixabay", "key"]
+
+[allowlist]
+description = "Test fixtures, example files, and known-safe patterns"
+regexes = [
+  '''sk-ant-EXAMPLE''',
+  '''sk-test-''',
+  '''sk_test_''',
+  '''rk_test_''',
+  '''SG\.EXAMPLE''',
+  '''ghp_EXAMPLE''',
+  '''github_pat_EXAMPLE''',
+  '''cloudinary://example''',
+  '''YOUR_API_KEY''',
+  '''PLACEHOLDER''',
+  '''<your-''',
+  '''INSERT_HERE''',
+]
+paths = [
+  '''.gitleaks.toml''',
+  '''tests/fixtures/.*''',
+  '''__fixtures__/.*''',
+  '''\.example$''',
+  '''\.sample$''',
+  '''README\.md''',
+  '''CHANGELOG\.md''',
+  '''docs/.*\.md''',
+]

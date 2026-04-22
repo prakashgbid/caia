@@ -19,6 +19,7 @@
     "gate:observability": "ts-node scripts/check-observability.ts",
     "gate:events-taxonomy": "ts-node scripts/check-events-taxonomy.ts",
     "gate:coverage": "ts-node scripts/check-coverage-delta.ts",
+    "gate:no-secrets": "gitleaks detect --source . --config .gitleaks.toml --no-banner --redact && trufflehog git file://. --only-verified --fail --no-update",
     "build:run": "bash scripts/build-runner.sh",
     "prepare": "husky"
   },
