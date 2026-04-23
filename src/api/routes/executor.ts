@@ -20,6 +20,53 @@ function now(): string {
 
 export function registerExecutorRoutes(app: Hono, db: Db): void {
 
+  // ── Task creation (used by canary + external callers) ────────────────────────
+
+  app.post('/tasks', async (c) => {
+    const body = await c.req.json() as {
+      title: string;
+      cwd?: string;
+      files?: string[];
+      spawnedBy?: string;
+      notes?: string;
+      projectId?: string;
+      dependsOn?: string[];
+    };
+    const id = nanoid();
+    const now_ = now();
+    db.insert(tasks).values({
+      id,
+      title: body.title,
+      cwd: body.cwd ?? '/',
+      declaredFiles: JSON.stringify(body.files ?? []),
+      dependsOn: JSON.stringify(body.dependsOn ?? []),
+      spawnedBy: body.spawnedBy ?? 'user',
+      notes: body.notes ?? null,
+      projectId: body.projectId ?? null,
+      status: 'queued',
+      createdAt: now_,
+    }).run();
+    eventBus.publish({
+      type: 'task.created',
+      actor: (body.spawnedBy ?? 'user') as import('../../../packages/events-taxonomy/index').EventActor,
+      payload: { task_id: id, title: body.title },
+    });
+    return c.json({ id }, 201);
+  });
+
+  // ── Task list (used by executor daemon for queue polling) ───────────────────
+
+  app.get('/tasks', (c) => {
+    const { status } = c.req.query() as Record<string, string>;
+    let q = db.select().from(tasks);
+    if (status) {
+      const statuses = status.split(',');
+      q = q.where(inArray(tasks.status, statuses)) as typeof q;
+    }
+    const rows = q.all();
+    return c.json(rows);
+  });
+
   // ── Individual task GET/PATCH (needed by completion hook) ───────────────────
 
   app.get('/tasks/:id', (c) => {

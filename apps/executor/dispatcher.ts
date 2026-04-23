@@ -145,9 +145,6 @@ export async function dispatch(
     '--print',
     '--output-format', 'json',
     '--permission-mode', config.permissionMode,
-    '--bare',
-    '--max-turns', String(config.maxTurns),
-    '--cwd', task.cwd,
     prompt,
   ];
 
@@ -169,6 +166,11 @@ export async function dispatch(
     if (process.env['EXECUTOR_DEBUG']) {
       process.stderr.write(`[executor:task-${task.id}] ${text}`);
     }
+  });
+
+  // Prevent unhandled 'error' events from crashing the daemon (e.g. ENOENT)
+  proc.on('error', (err: Error) => {
+    process.stderr.write(`[executor:spawn-error task-${task.id}] ${err.message}\n`);
   });
 
   const pid = proc.pid ?? 0;

@@ -7,8 +7,8 @@
 
 import type { CanaryResult, PulseContext } from './types';
 
-const CANARY_POLL_INTERVAL_MS = 1000;
-const CANARY_TIMEOUT_MS = 25_000;
+const CANARY_POLL_INTERVAL_MS = 2000;
+const CANARY_TIMEOUT_MS = 90_000;
 
 export async function runCanary(ctx: PulseContext): Promise<CanaryResult> {
   const dispatchedAt = new Date().toISOString();

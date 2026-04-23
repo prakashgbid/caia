@@ -20,7 +20,7 @@ import { persistAndEmit, emitCanaryEvent } from './emit';
 import { ALL_CHECKS, CRITICAL_CHECKS } from './checks/index';
 import { ALL_HEALS } from './heal/index';
 
-const PULSE_TIMEOUT_MS = 30_000;
+const PULSE_TIMEOUT_MS = 120_000;
 const CHECK_TIMEOUT_MS = 8_000;
 
 export interface RunPulseOptions {
