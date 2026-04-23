@@ -32,6 +32,7 @@ const NAV_ITEMS = [
   { path: '/observability/health', label: 'Obs. Health', icon: '👁', tabKey: 'obs_health' },
   { path: '/health/pulse', label: 'Pulse', icon: '💚', tabKey: 'pulse' },
   { path: '/coverage', label: 'Coverage', icon: '🎯', tabKey: 'coverage' },
+  { path: '/enforcement', label: 'Enforcement', icon: '🛡️', tabKey: 'enforcement' },
   { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
 ] as const;
 
@@ -54,6 +55,7 @@ function kindToTab(kind: string): string {
   if (kind.startsWith('story.')) return 'stories';
   if (kind.startsWith('completeness.')) return 'completeness';
   if (kind.startsWith('lock_contract.')) return 'standards';
+  if (kind.startsWith('enforcement.')) return 'enforcement';
   return 'timeline';
 }
 

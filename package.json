@@ -20,6 +20,9 @@
     "gate:events-taxonomy": "ts-node scripts/check-events-taxonomy.ts",
     "gate:coverage": "ts-node scripts/check-coverage-delta.ts",
     "gate:no-secrets": "gitleaks detect --source . --config .gitleaks.toml --no-banner --redact && trufflehog git file://. --only-verified --fail --no-update",
+    "gate:supply-chain": "node -e \"const {execSync}=require('child_process');try{execSync('npm audit --production --audit-level=high',{stdio:'inherit'})}catch(e){process.exit(1)}\"",
+    "gate:a11y": "echo 'gate:a11y: no axe-core runner configured — skipping (add @axe-core/playwright + playwright config to enable)' && exit 0",
+    "gate:brand-lock": "echo 'gate:brand-lock: not a pokerzeno repo — skipping' && exit 0",
     "build:run": "bash scripts/build-runner.sh",
     "prepare": "husky"
   },

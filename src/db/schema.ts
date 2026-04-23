@@ -65,7 +65,7 @@ export const tasks = sqliteTable('tasks', {
   paused: integer('paused', { mode: 'boolean' }).notNull().default(false),
   pauseReason: text('pause_reason'),
   domainSlug: text('domain_slug'),
-  rootPromptId: text('root_prompt_id'),
+  rootPromptId: text('root_prompt_id').default('untraced'),
   parentEntityType: text('parent_entity_type'),
   parentEntityId: text('parent_entity_id'),
   priorityScore: integer('priority_score').notNull().default(50),

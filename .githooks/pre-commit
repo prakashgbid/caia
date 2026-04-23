@@ -46,3 +46,36 @@ if [[ $GITLEAKS_EXIT -ne 0 || $TRUFFLE_EXIT -ne 0 ]]; then
 fi
 
 echo "[secrets-gate] Clean — no secrets detected."
+
+# gate:no-env-writes — block staged .env* file changes
+echo "[env-gate] Checking staged files for .env* modifications..."
+ENV_STAGED=$(git diff --cached --name-only | grep -E '^\.env' || true)
+if [[ -n "$ENV_STAGED" ]]; then
+  echo -e "${RED}[env-gate] Blocked: staged .env* files detected: ${ENV_STAGED}${NC}"
+  echo "  Secrets must be provisioned via Vault, not .env files. See SEC-052."
+  exit 1
+fi
+echo "[env-gate] Clean — no .env* file modifications staged."
+
+# gate:decision-autonomy — scan staged TS/JS for banned autonomy-violation phrases in string literals
+echo "[autonomy-gate] Scanning staged files for banned orchestrator phrases..."
+STAGED_TS=$(git diff --cached --name-only | grep -E '\.(ts|tsx|js|jsx)$' || true)
+BANNED_FOUND=""
+if [[ -n "$STAGED_TS" ]]; then
+  while IFS= read -r file; do
+    if [[ -f "$file" ]]; then
+      # Check for banned phrases that indicate autonomy violations in string literals
+      MATCH=$(grep -n -E '"(should I|want me to|let me know if you.d like|please approve|ready when you are|shall I proceed)"' "$file" 2>/dev/null || true)
+      if [[ -n "$MATCH" ]]; then
+        BANNED_FOUND="${BANNED_FOUND}\n${file}:\n${MATCH}"
+      fi
+    fi
+  done <<< "$STAGED_TS"
+fi
+if [[ -n "$BANNED_FOUND" ]]; then
+  echo -e "${RED}[autonomy-gate] BANNED PHRASES found in staged files:${NC}"
+  echo -e "$BANNED_FOUND"
+  echo "  Orchestrator must decide autonomously. See AUTON-001."
+  exit 1
+fi
+echo "[autonomy-gate] Clean — no banned phrases in staged code."

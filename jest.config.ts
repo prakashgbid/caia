@@ -12,6 +12,9 @@ const config: Config = {
     '^@conductor/event-bus$': '<rootDir>/packages/event-bus/index.ts',
     '^@conductor/logger$': '<rootDir>/packages/logger/index.ts',
     '^@conductor/test-kit$': '<rootDir>/packages/test-kit/index.ts',
+    // Remap ESM-style `.js` extension imports to `.ts` sources so ts-jest can
+    // resolve them without requiring Node ESM module resolution.
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {

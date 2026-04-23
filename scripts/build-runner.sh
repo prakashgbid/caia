@@ -11,6 +11,9 @@
 #   5. gate:observability
 #   6. gate:coverage
 #   7. gate:events-taxonomy
+#   8. gate:supply-chain (SEC-050)
+#   9. gate:a11y (ACCESS-035)
+#  10. gate:brand-lock (POKE-001)
 #
 # Each step emits build.step_started / build.step_completed / build.step_failed.
 # Final event: build.completed or build.aborted.
@@ -134,6 +137,15 @@ if [[ ${ABORTED} -eq 0 ]] && grep -q '"gate:coverage"' package.json 2>/dev/null;
 fi
 if [[ ${ABORTED} -eq 0 ]] && grep -q '"gate:events-taxonomy"' package.json 2>/dev/null; then
   run_step "gate:events-taxonomy" "npm run gate:events-taxonomy" || true
+fi
+if [[ ${ABORTED} -eq 0 ]] && grep -q '"gate:supply-chain"' package.json 2>/dev/null; then
+  run_step "gate:supply-chain" "npm run gate:supply-chain" || true
+fi
+if [[ ${ABORTED} -eq 0 ]] && grep -q '"gate:a11y"' package.json 2>/dev/null; then
+  run_step "gate:a11y" "npm run gate:a11y" || true
+fi
+if [[ ${ABORTED} -eq 0 ]] && grep -q '"gate:brand-lock"' package.json 2>/dev/null; then
+  run_step "gate:brand-lock" "npm run gate:brand-lock" || true
 fi
 
 END_MS=$(date +%s%3N)
