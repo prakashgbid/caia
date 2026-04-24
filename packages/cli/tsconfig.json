@@ -2,7 +2,9 @@
   "extends": "@chiefaia/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "lib": ["ES2022"],
+    "types": ["node"]
   },
   "include": ["src"]
 }
