@@ -13,3 +13,8 @@ dashboard/out/
 .env
 .env.local
 *.log
+.claude/
+.claire/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
