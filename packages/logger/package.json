@@ -1,6 +1,6 @@
 {
   "name": "@chiefaia/logger",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Structured logging (Pino-backed) for CAIA applications",
   "type": "module",
   "main": "./dist/index.js",
