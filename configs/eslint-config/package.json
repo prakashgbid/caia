@@ -1,0 +1,18 @@
+{
+  "name": "@chiefaia/eslint-config",
+  "version": "0.1.0",
+  "description": "Shared ESLint configuration for CAIA packages",
+  "main": "index.js",
+  "files": ["index.js"],
+  "license": "MIT",
+  "peerDependencies": {
+    "eslint": ">=8"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

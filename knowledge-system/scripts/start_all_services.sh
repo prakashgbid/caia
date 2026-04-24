@@ -1,1 +1,0 @@
-/Users/MAC/Documents/projects/caia/scripts/start_all_services.sh
