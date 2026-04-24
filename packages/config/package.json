@@ -1,6 +1,6 @@
 {
   "name": "@chiefaia/config",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Validated runtime configuration loading",
   "type": "module",
   "main": "./dist/index.js",
