@@ -17,12 +17,15 @@ export class CaiaError extends Error {
   }
 
   serialize(): SerializedError {
-    return {
+    const base: SerializedError = {
       name: this.name,
       message: this.message,
       code: this.code,
-      cause: this.cause instanceof CaiaError ? this.cause.serialize() : undefined,
     };
+    if (this.cause instanceof CaiaError) {
+      return { ...base, cause: this.cause.serialize() };
+    }
+    return base;
   }
 }
 

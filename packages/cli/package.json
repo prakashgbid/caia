@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/cli",
   "version": "0.1.0",
-  "description": "CAIA CLI — scaffold utilities, sites, and agents",
+  "description": "CAIA CLI \u2014 scaffold utilities, sites, and agents",
   "type": "module",
   "bin": {
     "caia": "./bin/caia.js"
@@ -14,7 +14,10 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist", "bin"],
+  "files": [
+    "dist",
+    "bin"
+  ],
   "scripts": {
     "build": "tsc && node -e \"const fs=require('fs');fs.chmodSync('bin/caia.js','755')\"",
     "typecheck": "tsc --noEmit",

@@ -1,3 +1,11 @@
+import {
+  trace,
+  SpanStatusCode,
+  SpanKind,
+  type Span as OtelSpan,
+  type Tracer as OtelTracer,
+} from '@opentelemetry/api';
+
 export interface SpanContext {
   readonly traceId: string;
   readonly spanId: string;
@@ -21,28 +29,56 @@ export interface Tracer {
   withSpan<T>(name: string, fn: (span: Span) => T | Promise<T>, options?: { parent?: SpanContext }): Promise<T>;
 }
 
+function wrapOtelSpan(otelSpan: OtelSpan, spanCtx: SpanContext): Span {
+  return {
+    context: spanCtx,
+    setAttribute(key, value) { otelSpan.setAttribute(key, value); },
+    addEvent(name, attrs) { otelSpan.addEvent(name, attrs); },
+    setStatus(code, message) {
+      if (message !== undefined) {
+        otelSpan.setStatus({
+          code: code === 'ok' ? SpanStatusCode.OK : SpanStatusCode.ERROR,
+          message,
+        });
+      } else {
+        otelSpan.setStatus({
+          code: code === 'ok' ? SpanStatusCode.OK : SpanStatusCode.ERROR,
+        });
+      }
+    },
+    end() { otelSpan.end(); },
+  };
+}
+
 function randomHex(bytes: number): string {
-  return Array.from({ length: bytes }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
+  return Array.from(
+    { length: bytes },
+    () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0'),
+  ).join('');
+}
+
+function buildSpanContext(otelSpan: OtelSpan, parent: SpanContext | undefined): SpanContext {
+  const sc = otelSpan.spanContext();
+  const traceId = sc.traceId.replace(/^0+$/, '') || parent?.traceId || randomHex(16);
+  const spanId = sc.spanId.replace(/^0+$/, '') || randomHex(8);
+
+  if (parent?.spanId !== undefined) {
+    return { traceId, spanId, parentSpanId: parent.spanId };
+  }
+  return { traceId, spanId };
 }
 
 export function createTracer(name: string): Tracer {
+  const otelTracer: OtelTracer = trace.getTracer(name);
+
   return {
-    startSpan(spanName, options) {
-      const context: SpanContext = {
-        traceId: options?.parent?.traceId ?? randomHex(16),
-        spanId: randomHex(8),
-        parentSpanId: options?.parent?.spanId,
-      };
-      return {
-        context,
-        setAttribute() {},
-        addEvent() {},
-        setStatus() {},
-        end() {},
-      };
+    startSpan(spanName, options): Span {
+      const otelSpan = otelTracer.startSpan(spanName, { kind: SpanKind.INTERNAL });
+      const spanCtx = buildSpanContext(otelSpan, options?.parent);
+      return wrapOtelSpan(otelSpan, spanCtx);
     },
 
-    async withSpan(spanName, fn, options) {
+    async withSpan<T>(spanName: string, fn: (span: Span) => T | Promise<T>, options?: { parent?: SpanContext }): Promise<T> {
       const span = this.startSpan(spanName, options);
       try {
         const result = await fn(span);

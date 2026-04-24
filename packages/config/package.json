@@ -12,7 +12,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
@@ -21,12 +23,14 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@chiefaia/errors": "workspace:*"
+    "@chiefaia/errors": "workspace:*",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
     "@chiefaia/tsconfig": "workspace:*",
     "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   },

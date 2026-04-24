@@ -6,20 +6,20 @@ Tracks the journey of each package from stub → real implementation → publish
 
 | Package | Status | Notes |
 |---------|--------|-------|
-| `@chiefaia/logger` | 🌱 stub | Typed API, 4 unit tests. Real: wire Pino. |
-| `@chiefaia/events` | 🌱 stub | Typed API, 4 unit tests. Real: consider EventEmitter or BullMQ for distributed. |
-| `@chiefaia/metrics` | 🌱 stub | Typed API, 4 unit tests. Real: wire prom-client. |
-| `@chiefaia/tracing` | 🌱 stub | Typed API, 4 unit tests. Real: wire @opentelemetry/sdk-node. |
-| `@chiefaia/errors` | 🌱 stub | Full hierarchy implemented. Ready for integration. |
-| `@chiefaia/config` | 🌱 stub | Schema-based loading implemented. Real: add zod support. |
-| `@chiefaia/secrets` | 🌱 stub | Adapter pattern in place. Real: wire SshFileVaultAdapter from @plugins/secrets-broker. |
-| `@chiefaia/test-kit` | 🌱 stub | Helpers implemented. Grows as other packages ship mocks. |
+| `@chiefaia/logger` | ✅ ready | Pino backend, string-level formatter, child contexts, 11 tests |
+| `@chiefaia/events` | ✅ ready | Pure EventBus, on/off/emit/once, 10 tests |
+| `@chiefaia/metrics` | ✅ ready | prom-client Registry + local value mirrors, Counter/Gauge/Histogram, Prometheus text render, 4 tests |
+| `@chiefaia/tracing` | ✅ ready | OTel SDK backend (trace.getTracer), withSpan context manager, 4 tests |
+| `@chiefaia/errors` | ✅ ready | Full hierarchy (CaiaError/Validation/NotFound/Unauthorized/Configuration), 21 tests |
+| `@chiefaia/config` | ✅ ready | Zod v4 overload added (backward-compatible with record schema), 12 tests |
+| `@chiefaia/secrets` | ✅ ready | FileVaultAdapter (JSON file at VAULT_PATH) + MemorySecretsAdapter, 16 tests |
+| `@chiefaia/test-kit` | ✅ ready | createTestLogger/createSpyLogger/createTestEventBus/createTestSecretsClient/waitFor, 20 tests |
 
 ## CLI
 
 | Package | Status | Notes |
 |---------|--------|-------|
-| `@chiefaia/cli` | 🌱 stub | Commander.js skeleton, all subcommands registered. Real: implement scaffolding logic. |
+| `@chiefaia/cli` | 🌱 stub | Commander.js skeleton, new/doctor subcommands. Fixed parse() guard for test isolation. |
 
 ## Shared Configs
 
@@ -28,6 +28,20 @@ Tracks the journey of each package from stub → real implementation → publish
 | `@chiefaia/eslint-config` | ✅ ready | ESLint 8+, TS-eslint, boundary rules (warnings). |
 | `@chiefaia/tsconfig` | ✅ ready | Strict ES2022/NodeNext baseline. |
 | `@chiefaia/vitest-config` | ✅ ready | Coverage thresholds, node env. |
+
+## Phase 2 Changes
+
+### New dependencies added
+- `@chiefaia/logger`: `pino` (prod), `pino-pretty`, `@types/node` (dev)
+- `@chiefaia/metrics`: `prom-client` (prod)
+- `@chiefaia/tracing`: `@opentelemetry/api`, `@opentelemetry/sdk-node` (prod)
+- `@chiefaia/config`: `zod` (prod), `@types/node` (dev)
+- `@chiefaia/secrets`: `@types/node` (dev)
+- `@chiefaia/test-kit`: `@types/node` (dev)
+
+### Blockers
+- **NPM_TOKEN** secret not configured in repo → `changeset publish` will fail until set
+- Peer dependency warnings: `@typescript-eslint/*` expects ESLint `^8.56.0` but found `10.x` (non-blocking)
 
 ## Status Key
 

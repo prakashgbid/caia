@@ -12,4 +12,10 @@ program
 registerNewCommand(program);
 registerDoctorCommand(program);
 
-program.parse();
+// Only parse when run directly as a script, not when imported in tests
+const isMain = process.argv[1] !== undefined &&
+  (process.argv[1].endsWith('caia.js') || process.argv[1].endsWith('caia'));
+
+if (isMain) {
+  program.parse();
+}

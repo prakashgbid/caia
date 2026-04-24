@@ -1,5 +1,4 @@
 import type { Logger } from '@chiefaia/logger';
-import type { EventBus } from '@chiefaia/events';
 import { MemorySecretsAdapter, createSecretsClient } from '@chiefaia/secrets';
 
 export type { MemorySecretsAdapter };

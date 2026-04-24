@@ -1,18 +1,26 @@
 'use strict';
 
-const tseslint = require('typescript-eslint');
-const eslintJs = require('@eslint/js');
+const { FlatCompat } = require('@eslint/eslintrc');
+const path = require('path');
 
-/**
- * Creates a flat ESLint config for CAIA packages.
- * @param {string} [tsconfigPath] - Path to the package's tsconfig.json
- * @returns {import('eslint').Linter.FlatConfig[]}
- */
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+  recommendedConfig: require('@eslint/js').configs.recommended,
+});
+
+/** @returns {import('eslint').Linter.FlatConfig[]} */
 function createConfig(tsconfigPath) {
-  return tseslint.config(
-    eslintJs.configs.recommended,
-    ...tseslint.configs.recommended,
-    {
+  return [
+    ...compat.config({
+      parser: '@typescript-eslint/parser',
+      plugins: ['@typescript-eslint'],
+      extends: [
+        'eslint:recommended',
+        'plugin:@typescript-eslint/recommended',
+      ],
+      parserOptions: {
+        project: tsconfigPath,
+      },
       rules: {
         'no-restricted-imports': [
           'warn',
@@ -29,16 +37,8 @@ function createConfig(tsconfigPath) {
         '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
         '@typescript-eslint/consistent-type-imports': 'error',
       },
-      ...(tsconfigPath ? {
-        languageOptions: {
-          parserOptions: {
-            project: tsconfigPath,
-            tsconfigRootDir: process.cwd(),
-          },
-        },
-      } : {}),
-    },
-  );
+    }),
+  ];
 }
 
 module.exports = { createConfig };

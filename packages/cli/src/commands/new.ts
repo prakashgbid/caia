@@ -1,6 +1,5 @@
 import type { Command } from 'commander';
-import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 export function registerNewCommand(program: Command): void {
@@ -65,7 +64,7 @@ async function scaffoldUtility(name: string, dryRun: boolean): Promise<void> {
     }, null, 2)],
     ['tsconfig.json', JSON.stringify({ extends: '@chiefaia/tsconfig/base.json', compilerOptions: { outDir: 'dist', rootDir: 'src' }, include: ['src'] }, null, 2)],
     ['vitest.config.ts', `import { defineConfig } from '@chiefaia/vitest-config';\nexport default defineConfig();\n`],
-    ['.eslintrc.cjs', `module.exports = { extends: ['@chiefaia'], parserOptions: { project: './tsconfig.json' } };\n`],
+    ['eslint.config.cjs', `'use strict';\nconst { createConfig } = require('@chiefaia/eslint-config');\nmodule.exports = createConfig('./tsconfig.json');\n`],
     ['src/index.ts', `// TODO: implement ${name}\nexport {};\n`],
     ['tests/index.test.ts', `import { describe, it } from 'vitest';\n\ndescribe('${name}', () => {\n  it('exists', () => { /* TODO */ });\n});\n`],
     ['README.md', `# @chiefaia/${name}\n\n> TODO: describe this package\n`],
@@ -83,7 +82,7 @@ async function scaffoldUtility(name: string, dryRun: boolean): Promise<void> {
   for (const [filePath, content] of files) {
     writeFileSync(join(target, filePath), content, 'utf8');
   }
-  console.log(`✅ Created packages/${name}/`);
+  console.log(`Created packages/${name}/`);
   console.log(`Next: pnpm install && pnpm --filter @chiefaia/${name} build`);
 }
 
@@ -106,7 +105,7 @@ async function scaffoldSite(name: string, domain: string | undefined, dryRun: bo
   mkdirSync(target, { recursive: true });
 
   // Copy template and substitute placeholders
-  console.log(`✅ Scaffolded site at ../${name}/`);
+  console.log(`Scaffolded site at ../${name}/`);
   if (domain) console.log(`   Domain: ${domain}`);
   console.log(`Next: cd ../${name} && pnpm install && pnpm dev`);
 }
