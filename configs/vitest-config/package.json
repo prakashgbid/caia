@@ -1,0 +1,17 @@
+{
+  "name": "@chiefaia/vitest-config",
+  "version": "0.1.0",
+  "description": "Shared Vitest configuration for CAIA packages",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": ["index.js"],
+  "license": "MIT",
+  "peerDependencies": {
+    "vitest": ">=1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

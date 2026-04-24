@@ -1,0 +1,10 @@
+{
+  "name": "@chiefaia/tsconfig",
+  "version": "0.1.0",
+  "description": "Shared TypeScript configuration for CAIA packages",
+  "files": ["base.json", "package.json"],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

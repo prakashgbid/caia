@@ -1,42 +1,20 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
-  "pipeline": {
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**", ".next/**"],
-      "cache": true
-    },
-    "test": {
-      "dependsOn": ["build"],
-      "inputs": ["src/**", "test/**", "tests/**", "*.test.*", "*.spec.*"],
-      "outputs": ["coverage/**"],
-      "cache": true,
-      "env": ["NODE_ENV"]
-    },
-    "lint": {
-      "inputs": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", ".eslintrc*"],
-      "outputs": [".eslintcache"],
-      "cache": true
+      "outputs": ["dist/**"]
     },
     "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
       "dependsOn": ["^build"],
-      "inputs": ["**/*.ts", "**/*.tsx", "tsconfig.json"],
-      "outputs": [".tscache/**"],
-      "cache": true
+      "outputs": ["coverage/**"]
     },
-    "format": {
-      "inputs": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.json", "**/*.md"],
-      "cache": false
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
+    "lint": {},
     "clean": {
       "cache": false
     }
-  },
-  "globalEnv": ["NODE_ENV", "CI"],
-  "globalPassThroughEnv": ["GITHUB_TOKEN", "NPM_TOKEN", "CODECOV_TOKEN"]
+  }
 }
