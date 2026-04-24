@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.conductor.completeness-sentinel</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/MAC/Documents/projects/plugins/completeness-sentinel/dist/daemon.cjs</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CONDUCTOR_API</key>
+        <string>http://localhost:7776</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+        <key>CONDUCTOR_PROJECT_ROOT</key>
+        <string>/Users/MAC/Documents/projects</string>
+    </dict>
+    <key>StartInterval</key>
+    <integer>7200</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>/tmp/conductor-completeness-sentinel.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/conductor-completeness-sentinel.err</string>
+</dict>
+</plist>
