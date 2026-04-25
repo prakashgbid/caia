@@ -14,11 +14,11 @@
 import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
 import picomatch from 'picomatch';
-import type { ConductorEvent, EventType, EventActor, EventSeverity } from '../events-taxonomy/index';
-import { EVENT_SEVERITY } from '../events-taxonomy/index';
+import type { ConductorEvent, EventType, EventActor, EventSeverity } from '@chiefaia/events-taxonomy-internal';
+import { EVENT_SEVERITY } from '@chiefaia/events-taxonomy-internal';
 
 export type { ConductorEvent, EventType, EventActor, EventSeverity };
-export { EVENT_SEVERITY, ALL_EVENT_TYPES, isValidEventType } from '../events-taxonomy/index';
+export { EVENT_SEVERITY, ALL_EVENT_TYPES, isValidEventType } from '@chiefaia/events-taxonomy-internal';
 
 // ─── ID generator ────────────────────────────────────────────────────────────
 

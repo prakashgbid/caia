@@ -205,7 +205,7 @@ export function subscribeToEvents(db: Db): () => void {
   const unsubs: Array<() => void> = [];
 
   // Re-score affected tasks when completeness findings are filed
-  unsubs.push(eventBus.subscribe('completeness.finding_filed', (ev) => {
+  unsubs.push(eventBus.subscribe('completeness.finding_filed', (ev: any) => {
     const entityId = ev.entity_id;
     if (entityId) {
       scoreOne(entityId, db, 'prioritizer').catch(() => {});
@@ -213,7 +213,7 @@ export function subscribeToEvents(db: Db): () => void {
   }));
 
   // Re-score when a task status changes (e.g., a dep completes → unblock others)
-  unsubs.push(eventBus.subscribe('task.status_changed', (ev) => {
+  unsubs.push(eventBus.subscribe('task.status_changed', (ev: any) => {
     const taskId = ev.entity_id;
     if (!taskId) return;
 
@@ -232,7 +232,7 @@ export function subscribeToEvents(db: Db): () => void {
   }));
 
   // Re-score when a new task is created
-  unsubs.push(eventBus.subscribe('task.created', (ev) => {
+  unsubs.push(eventBus.subscribe('task.created', (ev: any) => {
     const taskId = ev.entity_id;
     if (taskId) {
       scoreOne(taskId, db, 'prioritizer').catch(() => {});

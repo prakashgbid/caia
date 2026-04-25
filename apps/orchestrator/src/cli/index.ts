@@ -474,7 +474,7 @@ program
     if (opts.json) argv.push('--json');
     if (opts.heal === false) argv.push('--no-heal');
     if (opts.canary === false) argv.push('--no-canary');
-    const { runPulseCli } = await import('../../apps/pipeline-pulse/src/cli');
+    const { runPulseCli } = await import('@caia-app/pipeline-pulse');
     await runPulseCli(argv);
   });
 

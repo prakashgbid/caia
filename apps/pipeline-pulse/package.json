@@ -3,5 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Pipeline pulse health checker.",
-  "main": "src/index.ts"
+  "main": "src/cli.ts",
+  "types": "src/cli.ts",
+  "exports": {
+    ".": "./src/cli.ts"
+  }
 }

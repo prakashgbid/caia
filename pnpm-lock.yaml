@@ -88,6 +88,15 @@ importers:
 
   apps/orchestrator:
     dependencies:
+      '@caia-app/pipeline-pulse':
+        specifier: workspace:*
+        version: link:../pipeline-pulse
+      '@chiefaia/event-bus-internal':
+        specifier: workspace:*
+        version: link:../../packages/event-bus-internal
+      '@chiefaia/events-taxonomy-internal':
+        specifier: workspace:*
+        version: link:../../packages/events-taxonomy-internal
       '@hono/node-server':
         specifier: ^1.19.14
         version: 1.19.14(hono@4.12.15)
@@ -528,7 +537,18 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
 
-  packages/event-bus-internal: {}
+  packages/event-bus-internal:
+    dependencies:
+      '@chiefaia/events-taxonomy-internal':
+        specifier: workspace:*
+        version: link:../events-taxonomy-internal
+      picomatch:
+        specifier: ^4.0.0
+        version: 4.0.4
+    devDependencies:
+      '@types/picomatch':
+        specifier: ^2.3.4
+        version: 2.3.4
 
   packages/events:
     devDependencies:

@@ -1,7 +1,7 @@
 import * as http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { eventBus } from '../events/bus-adapter';
-import type { ConductorEvent } from '../../packages/event-bus/index';
+import type { ConductorEvent } from '@chiefaia/event-bus-internal';
 
 export function attachWsServer(httpServer: http.Server): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer, path: '/events' });

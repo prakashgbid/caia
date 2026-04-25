@@ -1,7 +1,7 @@
 import type { Hono } from 'hono';
 import type { Db } from '../../db/connection';
 import { eventBus } from '../../events/bus-adapter';
-import { isValidEventType } from '../../../packages/events-taxonomy/index';
+import { isValidEventType } from '@chiefaia/events-taxonomy-internal';
 
 export function registerEventsRoutes(app: Hono, _db: Db): void {
   // Recent events with optional filters
@@ -22,7 +22,7 @@ export function registerEventsRoutes(app: Hono, _db: Db): void {
 
   // List all valid event types
   app.get('/events/types', (c) => {
-    const { ALL_EVENT_TYPES, EVENT_SEVERITY } = require('../../../packages/events-taxonomy/index') as typeof import('../../../packages/events-taxonomy/index');
+    const { ALL_EVENT_TYPES, EVENT_SEVERITY } = require('@chiefaia/events-taxonomy-internal') as typeof import('@chiefaia/events-taxonomy-internal');
     return c.json({
       types: ALL_EVENT_TYPES.map(t => ({ type: t, severity: EVENT_SEVERITY[t] })),
     });
@@ -46,7 +46,7 @@ export function registerEventsRoutes(app: Hono, _db: Db): void {
 
     const event = eventBus.publish({
       type: body.type,
-      actor: (body.actor ?? 'api') as import('../../../packages/events-taxonomy/index').EventActor,
+      actor: (body.actor ?? 'api') as import('@chiefaia/events-taxonomy-internal').EventActor,
       payload: body.payload ?? {},
       correlation_id: body.correlation_id,
       entity_id: body.entity_id,

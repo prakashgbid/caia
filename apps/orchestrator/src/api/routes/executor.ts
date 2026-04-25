@@ -48,7 +48,7 @@ export function registerExecutorRoutes(app: Hono, db: Db): void {
     }).run();
     eventBus.publish({
       type: 'task.created',
-      actor: (body.spawnedBy ?? 'user') as import('../../../packages/events-taxonomy/index').EventActor,
+      actor: (body.spawnedBy ?? 'user') as import('@chiefaia/events-taxonomy-internal').EventActor,
       payload: { task_id: id, title: body.title },
     });
     return c.json({ id }, 201);
