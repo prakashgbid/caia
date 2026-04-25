@@ -1,0 +1,413 @@
+{
+  "url": "http://localhost:3001",
+  "timestamp": "2026-04-20T18:38:35.988Z",
+  "ttfb": 94,
+  "statusCode": 200,
+  "composite": 82,
+  "grade": "B",
+  "dimensions": [
+    {
+      "key": "technical",
+      "label": "Technical SEO",
+      "score": 76,
+      "weight": 0.25,
+      "findings": [
+        {
+          "id": "canonical-missing",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "http://localhost:3001",
+          "message": "No canonical URL specified",
+          "suggestedFix": "Add <link rel=\"canonical\" href=\"…\"> to avoid duplicate content",
+          "estimatedImpact": 5,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "schema-no-website",
+          "dimension": "technical",
+          "severity": "minor",
+          "url": "http://localhost:3001",
+          "message": "No WebSite schema found (misses SiteLinksSearchBox opportunity)",
+          "suggestedFix": "Add WebSite JSON-LD with name, url, potentialAction SearchAction",
+          "estimatedImpact": 3,
+          "estimatedEffort": "M"
+        },
+        {
+          "id": "sitemap-invalid-xml",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "http://localhost:3001",
+          "message": "sitemap.xml does not appear to be valid XML",
+          "evidence": "<!DOCTYPE html><html><head><style data-next-hide-fouc=\"true\">body{display:none}</style><noscript dat",
+          "suggestedFix": "Fix sitemap generation to produce valid XML",
+          "estimatedImpact": 6,
+          "estimatedEffort": "M"
+        }
+      ]
+    },
+    {
+      "key": "on-page",
+      "label": "On-Page SEO",
+      "score": 78,
+      "weight": 0.25,
+      "findings": [
+        {
+          "id": "meta-desc-short",
+          "dimension": "on-page",
+          "severity": "major",
+          "url": "http://localhost:3001",
+          "message": "Meta description too short (60 chars)",
+          "evidence": "Master poker with intelligent training and competitive play.",
+          "suggestedFix": "Expand to 120–160 characters with primary keyword and CTA",
+          "estimatedImpact": 3,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "meta-keywords-missing",
+          "dimension": "on-page",
+          "severity": "minor",
+          "url": "http://localhost:3001",
+          "message": "No keywords meta tag",
+          "suggestedFix": "Add keywords meta tag (low impact but helps site search engines)",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "img-alt-empty",
+          "dimension": "on-page",
+          "severity": "minor",
+          "url": "http://localhost:3001",
+          "message": "16 images have empty alt text (may be intentional for decorative images)",
+          "evidence": [
+            "https://pub-ceeb8a412d2a49248da54897e3d44472.r2.dev/poker-table-dramatic-night-lights-chips--fei4/desktop.webp",
+            "https://pub-ceeb8a412d2a49248da54897e3d44472.r2.dev/poker-players-community-social-gathering-a2ma/desktop.webp",
+            "https://api.dicebear.com/7.x/personas/svg?seed=CardShark92&backgroundColor=1a0f35"
+          ],
+          "suggestedFix": "Verify decorative images have role=\"presentation\"; add alt text to content images",
+          "estimatedImpact": 2,
+          "estimatedEffort": "M"
+        },
+        {
+          "id": "favicon-missing",
+          "dimension": "on-page",
+          "severity": "minor",
+          "url": "http://localhost:3001",
+          "message": "No favicon found",
+          "suggestedFix": "Add favicon.svg or favicon.ico",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        }
+      ]
+    },
+    {
+      "key": "content",
+      "label": "Content",
+      "score": 90,
+      "weight": 0.2,
+      "findings": [
+        {
+          "id": "analytics-missing",
+          "dimension": "content",
+          "severity": "major",
+          "url": "http://localhost:3001",
+          "message": "No analytics script detected (Cloudflare, Plausible, or GA4)",
+          "suggestedFix": "Add Cloudflare Web Analytics (free, privacy-first) — add the beacon script to layout",
+          "estimatedImpact": 5,
+          "estimatedEffort": "S"
+        }
+      ]
+    },
+    {
+      "key": "performance",
+      "label": "Performance",
+      "score": 100,
+      "weight": 0.15,
+      "findings": []
+    },
+    {
+      "key": "social",
+      "label": "Social / OG",
+      "score": 82,
+      "weight": 0.1,
+      "findings": [
+        {
+          "id": "og-image-missing",
+          "dimension": "social",
+          "severity": "major",
+          "url": "http://localhost:3001",
+          "message": "Missing og:image — links shared on social will have no preview image",
+          "suggestedFix": "Add og:image (1200×630px) for rich social sharing previews",
+          "estimatedImpact": 5,
+          "estimatedEffort": "M"
+        },
+        {
+          "id": "og-type-missing",
+          "dimension": "social",
+          "severity": "minor",
+          "url": "http://localhost:3001",
+          "message": "Missing og:type",
+          "suggestedFix": "Add <meta property=\"og:type\" content=\"website\">",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "og-url-missing",
+          "dimension": "social",
+          "severity": "minor",
+          "url": "http://localhost:3001",
+          "message": "Missing og:url",
+          "suggestedFix": "Add <meta property=\"og:url\" content=\"…page URL…\">",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        }
+      ]
+    },
+    {
+      "key": "security",
+      "label": "Security",
+      "score": 40,
+      "weight": 0.05,
+      "findings": [
+        {
+          "id": "sec-no-https",
+          "dimension": "security",
+          "severity": "critical",
+          "url": "http://localhost:3001",
+          "message": "Site not served over HTTPS",
+          "suggestedFix": "Enable HTTPS and redirect HTTP→HTTPS",
+          "estimatedImpact": 10,
+          "estimatedEffort": "M"
+        },
+        {
+          "id": "sec-no-hsts",
+          "dimension": "security",
+          "severity": "major",
+          "url": "http://localhost:3001",
+          "message": "Missing Strict-Transport-Security header",
+          "suggestedFix": "Add \"Strict-Transport-Security: max-age=63072000; includeSubDomains; preload\"",
+          "estimatedImpact": 4,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-xcto",
+          "dimension": "security",
+          "severity": "major",
+          "url": "http://localhost:3001",
+          "message": "Missing X-Content-Type-Options header",
+          "suggestedFix": "Add \"X-Content-Type-Options: nosniff\"",
+          "estimatedImpact": 3,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-frame-options",
+          "dimension": "security",
+          "severity": "major",
+          "url": "http://localhost:3001",
+          "message": "Missing clickjacking protection (X-Frame-Options or CSP frame-ancestors)",
+          "suggestedFix": "Add \"X-Frame-Options: SAMEORIGIN\" or CSP frame-ancestors directive",
+          "estimatedImpact": 3,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-referrer-policy",
+          "dimension": "security",
+          "severity": "minor",
+          "url": "http://localhost:3001",
+          "message": "Missing Referrer-Policy header",
+          "suggestedFix": "Add \"Referrer-Policy: strict-origin-when-cross-origin\"",
+          "estimatedImpact": 2,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-permissions-policy",
+          "dimension": "security",
+          "severity": "info",
+          "url": "http://localhost:3001",
+          "message": "No Permissions-Policy header (optional but best practice)",
+          "suggestedFix": "Add Permissions-Policy to restrict camera/mic/geolocation access",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "meta-desc-short",
+      "dimension": "on-page",
+      "severity": "major",
+      "url": "http://localhost:3001",
+      "message": "Meta description too short (60 chars)",
+      "evidence": "Master poker with intelligent training and competitive play.",
+      "suggestedFix": "Expand to 120–160 characters with primary keyword and CTA",
+      "estimatedImpact": 3,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "meta-keywords-missing",
+      "dimension": "on-page",
+      "severity": "minor",
+      "url": "http://localhost:3001",
+      "message": "No keywords meta tag",
+      "suggestedFix": "Add keywords meta tag (low impact but helps site search engines)",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "canonical-missing",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "http://localhost:3001",
+      "message": "No canonical URL specified",
+      "suggestedFix": "Add <link rel=\"canonical\" href=\"…\"> to avoid duplicate content",
+      "estimatedImpact": 5,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "img-alt-empty",
+      "dimension": "on-page",
+      "severity": "minor",
+      "url": "http://localhost:3001",
+      "message": "16 images have empty alt text (may be intentional for decorative images)",
+      "evidence": [
+        "https://pub-ceeb8a412d2a49248da54897e3d44472.r2.dev/poker-table-dramatic-night-lights-chips--fei4/desktop.webp",
+        "https://pub-ceeb8a412d2a49248da54897e3d44472.r2.dev/poker-players-community-social-gathering-a2ma/desktop.webp",
+        "https://api.dicebear.com/7.x/personas/svg?seed=CardShark92&backgroundColor=1a0f35"
+      ],
+      "suggestedFix": "Verify decorative images have role=\"presentation\"; add alt text to content images",
+      "estimatedImpact": 2,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "schema-no-website",
+      "dimension": "technical",
+      "severity": "minor",
+      "url": "http://localhost:3001",
+      "message": "No WebSite schema found (misses SiteLinksSearchBox opportunity)",
+      "suggestedFix": "Add WebSite JSON-LD with name, url, potentialAction SearchAction",
+      "estimatedImpact": 3,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "sec-no-https",
+      "dimension": "security",
+      "severity": "critical",
+      "url": "http://localhost:3001",
+      "message": "Site not served over HTTPS",
+      "suggestedFix": "Enable HTTPS and redirect HTTP→HTTPS",
+      "estimatedImpact": 10,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "sec-no-hsts",
+      "dimension": "security",
+      "severity": "major",
+      "url": "http://localhost:3001",
+      "message": "Missing Strict-Transport-Security header",
+      "suggestedFix": "Add \"Strict-Transport-Security: max-age=63072000; includeSubDomains; preload\"",
+      "estimatedImpact": 4,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-xcto",
+      "dimension": "security",
+      "severity": "major",
+      "url": "http://localhost:3001",
+      "message": "Missing X-Content-Type-Options header",
+      "suggestedFix": "Add \"X-Content-Type-Options: nosniff\"",
+      "estimatedImpact": 3,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-frame-options",
+      "dimension": "security",
+      "severity": "major",
+      "url": "http://localhost:3001",
+      "message": "Missing clickjacking protection (X-Frame-Options or CSP frame-ancestors)",
+      "suggestedFix": "Add \"X-Frame-Options: SAMEORIGIN\" or CSP frame-ancestors directive",
+      "estimatedImpact": 3,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-referrer-policy",
+      "dimension": "security",
+      "severity": "minor",
+      "url": "http://localhost:3001",
+      "message": "Missing Referrer-Policy header",
+      "suggestedFix": "Add \"Referrer-Policy: strict-origin-when-cross-origin\"",
+      "estimatedImpact": 2,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-permissions-policy",
+      "dimension": "security",
+      "severity": "info",
+      "url": "http://localhost:3001",
+      "message": "No Permissions-Policy header (optional but best practice)",
+      "suggestedFix": "Add Permissions-Policy to restrict camera/mic/geolocation access",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "og-image-missing",
+      "dimension": "social",
+      "severity": "major",
+      "url": "http://localhost:3001",
+      "message": "Missing og:image — links shared on social will have no preview image",
+      "suggestedFix": "Add og:image (1200×630px) for rich social sharing previews",
+      "estimatedImpact": 5,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "og-type-missing",
+      "dimension": "social",
+      "severity": "minor",
+      "url": "http://localhost:3001",
+      "message": "Missing og:type",
+      "suggestedFix": "Add <meta property=\"og:type\" content=\"website\">",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "og-url-missing",
+      "dimension": "social",
+      "severity": "minor",
+      "url": "http://localhost:3001",
+      "message": "Missing og:url",
+      "suggestedFix": "Add <meta property=\"og:url\" content=\"…page URL…\">",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "analytics-missing",
+      "dimension": "content",
+      "severity": "major",
+      "url": "http://localhost:3001",
+      "message": "No analytics script detected (Cloudflare, Plausible, or GA4)",
+      "suggestedFix": "Add Cloudflare Web Analytics (free, privacy-first) — add the beacon script to layout",
+      "estimatedImpact": 5,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "favicon-missing",
+      "dimension": "on-page",
+      "severity": "minor",
+      "url": "http://localhost:3001",
+      "message": "No favicon found",
+      "suggestedFix": "Add favicon.svg or favicon.ico",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sitemap-invalid-xml",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "http://localhost:3001",
+      "message": "sitemap.xml does not appear to be valid XML",
+      "evidence": "<!DOCTYPE html><html><head><style data-next-hide-fouc=\"true\">body{display:none}</style><noscript dat",
+      "suggestedFix": "Fix sitemap generation to produce valid XML",
+      "estimatedImpact": 6,
+      "estimatedEffort": "M"
+    }
+  ]
+}

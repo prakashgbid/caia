@@ -1,0 +1,42 @@
+{
+  "name": "@pokerzeno/integrity-check",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Link & Action Integrity checker for Next.js sites. Guarantees zero broken links and zero dead click handlers.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "integrity": "bin/integrity.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.24.0",
+    "@babel/traverse": "^7.24.0",
+    "@babel/types": "^7.24.0",
+    "chalk": "^4.1.2",
+    "fast-glob": "^3.3.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "@types/babel__traverse": "^7.20.6",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": { "optional": true }
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  }
+}

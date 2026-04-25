@@ -1,0 +1,8 @@
+{
+  "name": "@chiefaia/events-taxonomy-internal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Internal events taxonomy registry shared by orchestrator apps. Not published.",
+  "main": "index.ts",
+  "types": "index.ts"
+}

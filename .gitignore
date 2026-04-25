@@ -1,12 +1,45 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build outputs
 dist/
-.turbo/
+build/
+.next/
+out/
 *.tsbuildinfo
+
+# Test outputs
 coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Turbo
+.turbo/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+*.swp
+
+# Editor
+.vscode/
+.idea/
+*.iml
+
+# Env files (per-package; root has nothing sensitive)
 .env
 .env.local
 .env.*.local
-*.log
-.DS_Store
-.vitepress/cache/
-.vitepress/dist/
+
+# Lockfiles per package (workspace lockfile is at root)
+**/package-lock.json
+**/yarn.lock

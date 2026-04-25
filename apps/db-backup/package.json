@@ -1,0 +1,9 @@
+{
+  "name": "@caia-app/db-backup",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hourly conductor SQLite DB backup with retention.",
+  "scripts": {
+    "start": "bash run-backup.sh"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@chiefaia/event-bus-internal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Internal event bus shared by orchestrator apps. Not published.",
+  "main": "index.ts",
+  "types": "index.ts"
+}

@@ -1,0 +1,6 @@
+export { signUpWithEmail } from './signup.js'
+export { signInWithEmail } from './signin.js'
+export { signOut } from './signout.js'
+export { signInWithOAuth, type OAuthProvider } from './oauth.js'
+export { sendMagicLink } from './magic-link.js'
+export { getSession, getUserFromToken } from './session.js'

@@ -1,0 +1,77 @@
+{
+  "projectDir": "/Users/MAC/Documents/projects/poker-zeno",
+  "timestamp": "2026-04-20T23:31:33.211Z",
+  "issues": [
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 36,
+      "col": 18,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 37,
+      "col": 18,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 38,
+      "col": 18,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 45,
+      "col": 12,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 46,
+      "col": 12,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 47,
+      "col": 12,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "button-without-action",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/app/shop/product/[slug]/page.tsx",
+      "line": 46,
+      "col": 10,
+      "message": "<button> has no onClick, no type=\"submit\", and is not in a <form>",
+      "fix": "Add onClick handler, set type=\"submit\", or change to a non-interactive element"
+    }
+  ],
+  "stats": {
+    "filesScanned": 158,
+    "routesChecked": 0,
+    "issuesFound": 7,
+    "errors": 0,
+    "warnings": 7,
+    "fixed": 0
+  }
+}

@@ -1,0 +1,298 @@
+{
+  "url": "https://pokerzeno.com",
+  "timestamp": "2026-04-20T18:38:56.674Z",
+  "ttfb": 182,
+  "statusCode": 200,
+  "composite": 84,
+  "grade": "B",
+  "dimensions": [
+    {
+      "key": "technical",
+      "label": "Technical SEO",
+      "score": 56,
+      "weight": 0.25,
+      "findings": [
+        {
+          "id": "canonical-missing",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "https://pokerzeno.com",
+          "message": "No canonical URL specified",
+          "suggestedFix": "Add <link rel=\"canonical\" href=\"…\"> to avoid duplicate content",
+          "estimatedImpact": 5,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "schema-missing",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "https://pokerzeno.com",
+          "message": "No JSON-LD structured data found",
+          "suggestedFix": "Add Organization, WebSite, and page-specific JSON-LD (Article, FAQPage, etc.)",
+          "estimatedImpact": 6,
+          "estimatedEffort": "M"
+        },
+        {
+          "id": "robots-no-sitemap",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "https://pokerzeno.com",
+          "message": "robots.txt does not reference the sitemap",
+          "suggestedFix": "Add \"Sitemap: https://pokerzeno.com/sitemap.xml\" to robots.txt",
+          "estimatedImpact": 4,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "robots-no-user-agent",
+          "dimension": "technical",
+          "severity": "minor",
+          "url": "https://pokerzeno.com",
+          "message": "robots.txt has no User-agent directive",
+          "suggestedFix": "Add \"User-agent: *\" with appropriate Allow/Disallow rules",
+          "estimatedImpact": 2,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sitemap-missing",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "https://pokerzeno.com",
+          "message": "sitemap.xml returns 404",
+          "suggestedFix": "Create src/app/sitemap.ts (Next.js) to auto-generate sitemap",
+          "estimatedImpact": 6,
+          "estimatedEffort": "M"
+        }
+      ]
+    },
+    {
+      "key": "on-page",
+      "label": "On-Page SEO",
+      "score": 100,
+      "weight": 0.25,
+      "findings": []
+    },
+    {
+      "key": "content",
+      "label": "Content",
+      "score": 86,
+      "weight": 0.2,
+      "findings": [
+        {
+          "id": "content-short",
+          "dimension": "content",
+          "severity": "minor",
+          "url": "https://pokerzeno.com",
+          "message": "Page has 333 words — consider expanding for better topical depth",
+          "suggestedFix": "Aim for 600–1200 words on key pages for topical authority",
+          "estimatedImpact": 3,
+          "estimatedEffort": "L"
+        },
+        {
+          "id": "analytics-missing",
+          "dimension": "content",
+          "severity": "major",
+          "url": "https://pokerzeno.com",
+          "message": "No analytics script detected (Cloudflare, Plausible, or GA4)",
+          "suggestedFix": "Add Cloudflare Web Analytics (free, privacy-first) — add the beacon script to layout",
+          "estimatedImpact": 5,
+          "estimatedEffort": "S"
+        }
+      ]
+    },
+    {
+      "key": "performance",
+      "label": "Performance",
+      "score": 100,
+      "weight": 0.15,
+      "findings": []
+    },
+    {
+      "key": "social",
+      "label": "Social / OG",
+      "score": 86,
+      "weight": 0.1,
+      "findings": [
+        {
+          "id": "og-image-missing",
+          "dimension": "social",
+          "severity": "major",
+          "url": "https://pokerzeno.com",
+          "message": "Missing og:image — links shared on social will have no preview image",
+          "suggestedFix": "Add og:image (1200×630px) for rich social sharing previews",
+          "estimatedImpact": 5,
+          "estimatedEffort": "M"
+        },
+        {
+          "id": "og-url-missing",
+          "dimension": "social",
+          "severity": "minor",
+          "url": "https://pokerzeno.com",
+          "message": "Missing og:url",
+          "suggestedFix": "Add <meta property=\"og:url\" content=\"…page URL…\">",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        }
+      ]
+    },
+    {
+      "key": "security",
+      "label": "Security",
+      "score": 79,
+      "weight": 0.05,
+      "findings": [
+        {
+          "id": "sec-no-hsts",
+          "dimension": "security",
+          "severity": "major",
+          "url": "https://pokerzeno.com",
+          "message": "Missing Strict-Transport-Security header",
+          "suggestedFix": "Add \"Strict-Transport-Security: max-age=63072000; includeSubDomains; preload\"",
+          "estimatedImpact": 4,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-frame-options",
+          "dimension": "security",
+          "severity": "major",
+          "url": "https://pokerzeno.com",
+          "message": "Missing clickjacking protection (X-Frame-Options or CSP frame-ancestors)",
+          "suggestedFix": "Add \"X-Frame-Options: SAMEORIGIN\" or CSP frame-ancestors directive",
+          "estimatedImpact": 3,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-permissions-policy",
+          "dimension": "security",
+          "severity": "info",
+          "url": "https://pokerzeno.com",
+          "message": "No Permissions-Policy header (optional but best practice)",
+          "suggestedFix": "Add Permissions-Policy to restrict camera/mic/geolocation access",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "canonical-missing",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "https://pokerzeno.com",
+      "message": "No canonical URL specified",
+      "suggestedFix": "Add <link rel=\"canonical\" href=\"…\"> to avoid duplicate content",
+      "estimatedImpact": 5,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "schema-missing",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "https://pokerzeno.com",
+      "message": "No JSON-LD structured data found",
+      "suggestedFix": "Add Organization, WebSite, and page-specific JSON-LD (Article, FAQPage, etc.)",
+      "estimatedImpact": 6,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "sec-no-hsts",
+      "dimension": "security",
+      "severity": "major",
+      "url": "https://pokerzeno.com",
+      "message": "Missing Strict-Transport-Security header",
+      "suggestedFix": "Add \"Strict-Transport-Security: max-age=63072000; includeSubDomains; preload\"",
+      "estimatedImpact": 4,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-frame-options",
+      "dimension": "security",
+      "severity": "major",
+      "url": "https://pokerzeno.com",
+      "message": "Missing clickjacking protection (X-Frame-Options or CSP frame-ancestors)",
+      "suggestedFix": "Add \"X-Frame-Options: SAMEORIGIN\" or CSP frame-ancestors directive",
+      "estimatedImpact": 3,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-permissions-policy",
+      "dimension": "security",
+      "severity": "info",
+      "url": "https://pokerzeno.com",
+      "message": "No Permissions-Policy header (optional but best practice)",
+      "suggestedFix": "Add Permissions-Policy to restrict camera/mic/geolocation access",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "og-image-missing",
+      "dimension": "social",
+      "severity": "major",
+      "url": "https://pokerzeno.com",
+      "message": "Missing og:image — links shared on social will have no preview image",
+      "suggestedFix": "Add og:image (1200×630px) for rich social sharing previews",
+      "estimatedImpact": 5,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "og-url-missing",
+      "dimension": "social",
+      "severity": "minor",
+      "url": "https://pokerzeno.com",
+      "message": "Missing og:url",
+      "suggestedFix": "Add <meta property=\"og:url\" content=\"…page URL…\">",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "content-short",
+      "dimension": "content",
+      "severity": "minor",
+      "url": "https://pokerzeno.com",
+      "message": "Page has 333 words — consider expanding for better topical depth",
+      "suggestedFix": "Aim for 600–1200 words on key pages for topical authority",
+      "estimatedImpact": 3,
+      "estimatedEffort": "L"
+    },
+    {
+      "id": "analytics-missing",
+      "dimension": "content",
+      "severity": "major",
+      "url": "https://pokerzeno.com",
+      "message": "No analytics script detected (Cloudflare, Plausible, or GA4)",
+      "suggestedFix": "Add Cloudflare Web Analytics (free, privacy-first) — add the beacon script to layout",
+      "estimatedImpact": 5,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "robots-no-sitemap",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "https://pokerzeno.com",
+      "message": "robots.txt does not reference the sitemap",
+      "suggestedFix": "Add \"Sitemap: https://pokerzeno.com/sitemap.xml\" to robots.txt",
+      "estimatedImpact": 4,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "robots-no-user-agent",
+      "dimension": "technical",
+      "severity": "minor",
+      "url": "https://pokerzeno.com",
+      "message": "robots.txt has no User-agent directive",
+      "suggestedFix": "Add \"User-agent: *\" with appropriate Allow/Disallow rules",
+      "estimatedImpact": 2,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sitemap-missing",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "https://pokerzeno.com",
+      "message": "sitemap.xml returns 404",
+      "suggestedFix": "Create src/app/sitemap.ts (Next.js) to auto-generate sitemap",
+      "estimatedImpact": 6,
+      "estimatedEffort": "M"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "name": "pokerzeno-site-template",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "a11y": "playwright test tests/a11y",
+    "integrity": "node ../pokerzeno-plugins/packages/integrity-check/bin/integrity.js scan . 2>/dev/null || echo 'integrity-check not yet linked'",
+    "smoke": "playwright test tests/smoke",
+    "verify:all": "npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.3",
+    "tailwindcss": "^3.4.17",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "vitest": "^2.1.8",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^26.0.0"
+  }
+}

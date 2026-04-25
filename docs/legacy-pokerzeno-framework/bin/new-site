@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# new-site — scaffold a new vertical site from pokerzeno-site-template
+#
+# Usage:
+#   ./framework/bin/new-site <slug> [options]
+#
+# Options:
+#   --name    <display name>   Human-readable site name (default: slug title-cased)
+#   --domain  <domain.tld>     Production domain (default: <slug>.pages.dev)
+#   --dest    <path>           Output directory (default: ../<slug> relative to framework/)
+#   --dry-run                  Print what would happen; create nothing
+#
+# Examples:
+#   ./framework/bin/new-site blackjack-pro
+#   ./framework/bin/new-site blackjack-pro --name "BlackJack Pro" --domain blackjackpro.com
+#   ./framework/bin/new-site test-site --dry-run
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FRAMEWORK_DIR="$(dirname "$SCRIPT_DIR")"
+PROJECTS_DIR="$(dirname "$FRAMEWORK_DIR")"
+TEMPLATE_DIR="${PROJECTS_DIR}/pokerzeno-site-template"
+
+# ── Defaults ─────────────────────────────────────────────────────────────────
+SLUG=""
+SITE_NAME=""
+DOMAIN=""
+DEST=""
+DRY_RUN=false
+
+# ── Argument parsing ──────────────────────────────────────────────────────────
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)   DRY_RUN=true; shift ;;
+    --name)      SITE_NAME="$2"; shift 2 ;;
+    --domain)    DOMAIN="$2"; shift 2 ;;
+    --dest)      DEST="$2"; shift 2 ;;
+    -*)          echo "Unknown flag: $1" >&2; exit 1 ;;
+    *)
+      if [[ -z "$SLUG" ]]; then
+        SLUG="$1"
+      else
+        echo "Unexpected argument: $1" >&2; exit 1
+      fi
+      shift
+      ;;
+  esac
+done
+
+# ── Validate ──────────────────────────────────────────────────────────────────
+if [[ -z "$SLUG" ]]; then
+  echo "Error: <slug> is required." >&2
+  echo "Usage: new-site <slug> [--name <name>] [--domain <domain>] [--dry-run]" >&2
+  exit 1
+fi
+
+if [[ ! "$SLUG" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+  echo "Error: slug must be lowercase alphanumeric with hyphens (e.g. my-site)." >&2
+  exit 1
+fi
+
+# ── Derive defaults ───────────────────────────────────────────────────────────
+if [[ -z "$SITE_NAME" ]]; then
+  # title-case the slug: "poker-pro" → "Poker Pro"
+  SITE_NAME="$(echo "$SLUG" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}')"
+fi
+
+if [[ -z "$DOMAIN" ]]; then
+  DOMAIN="${SLUG}.pages.dev"
+fi
+
+if [[ -z "$DEST" ]]; then
+  DEST="${PROJECTS_DIR}/${SLUG}"
+fi
+
+# ── Pre-flight checks ─────────────────────────────────────────────────────────
+if [[ ! -d "$TEMPLATE_DIR" ]]; then
+  echo "Error: template not found at $TEMPLATE_DIR" >&2
+  exit 1
+fi
+
+# ── Dry-run print ─────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo " new-site scaffold plan"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  slug      : $SLUG"
+echo "  name      : $SITE_NAME"
+echo "  domain    : $DOMAIN"
+echo "  template  : $TEMPLATE_DIR"
+echo "  dest      : $DEST"
+echo "  dry-run   : $DRY_RUN"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+if [[ "$DRY_RUN" == "true" ]]; then
+  echo ""
+  echo "[dry-run] Steps that would execute:"
+  echo "  1. cp -r $TEMPLATE_DIR $DEST"
+  echo "  2. rm -rf $DEST/.git $DEST/node_modules $DEST/.next $DEST/out"
+  echo "  3. sed: replace SITE_NAME → '$SITE_NAME' in all .ts/.tsx/.json"
+  echo "  4. sed: replace SITE_SLUG → '$SLUG' in all .ts/.tsx/.json"
+  echo "  5. sed: replace SITE_DOMAIN → '$DOMAIN' in all .ts/.tsx/.json"
+  echo "  6. sed: replace 'pokerzeno-site-template' → '$SLUG' in package.json"
+  echo "  7. git init $DEST && initial commit"
+  echo "  8. Print next-steps checklist"
+  echo ""
+  echo "[dry-run] No files were created."
+  exit 0
+fi
+
+# ── Guard against overwrite ───────────────────────────────────────────────────
+if [[ -e "$DEST" ]]; then
+  echo "Error: destination already exists: $DEST" >&2
+  echo "Remove it first or choose a different --dest." >&2
+  exit 1
+fi
+
+# ── Execute ───────────────────────────────────────────────────────────────────
+
+echo ""
+echo "Step 1/5  Copying template..."
+cp -r "$TEMPLATE_DIR" "$DEST"
+
+echo "Step 2/5  Cleaning up template artifacts..."
+rm -rf "$DEST/.git" "$DEST/node_modules" "$DEST/.next" "$DEST/out" "$DEST/.turbo"
+
+echo "Step 3/5  Replacing placeholder tokens..."
+# macOS sed requires '' after -i; GNU sed accepts -i without argument
+_sed() { sed -i.bak "$@" && find "$DEST" -name "*.bak" -delete 2>/dev/null || true; }
+
+# Replace in all text files (exclude binary/lockfiles)
+find "$DEST" \
+  \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.json" \
+     -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.toml" \) \
+  -not -path "*/node_modules/*" | while read -r f; do
+    sed -i.bak \
+      "s/SITE_NAME/${SITE_NAME}/g;s/SITE_SLUG/${SLUG}/g;s/SITE_DOMAIN/${DOMAIN}/g;s/pokerzeno-site-template/${SLUG}/g" \
+      "$f"
+    rm -f "${f}.bak"
+  done
+
+echo "Step 4/5  Initialising git repo..."
+git -C "$DEST" init -q
+git -C "$DEST" add -A
+git -C "$DEST" commit -q -m "chore: initial scaffold from pokerzeno-site-template (slug: ${SLUG})"
+
+echo "Step 5/5  Done."
+echo ""
+echo "✅ New site created at: $DEST"
+echo ""
+echo "Next steps:"
+echo "  1. cd $DEST"
+echo "  2. Edit SITE_BRAND_LOCK.md — fill in brand palette, fonts, tone"
+echo "  3. cp .env.example .env.local && fill in secrets"
+echo "  4. npm install"
+echo "  5. npm run dev"
+echo "  6. Create GitHub repo + push:"
+echo "       git remote add origin git@github.com:YOUR_ORG/${SLUG}.git"
+echo "       git push -u origin main"
+echo "  7. Enable Cloudflare Pages with custom domain: $DOMAIN"
+echo "  8. Review framework/locks/NEW_SITE_CHECKLIST.md before go-live"

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.conductor.db-backup</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/MAC/Documents/projects/conductor/apps/db-backup/run-backup.sh</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CONDUCTOR_API</key>
+        <string>http://localhost:7776</string>
+        <key>CONDUCTOR_DB</key>
+        <string>/Users/MAC/.conductor/db.sqlite</string>
+        <key>BACKUP_DIR</key>
+        <string>/Users/MAC/Documents/conductor-backups</string>
+        <key>STATE_REPO</key>
+        <string>/Users/MAC/Documents/projects/conductor-state</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>/tmp/conductor-db-backup.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/conductor-db-backup.err</string>
+</dict>
+</plist>

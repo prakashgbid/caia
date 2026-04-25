@@ -1,0 +1,39 @@
+{
+  "site_slug": "poker-zeno",
+  "secrets": {
+    "NEXT_PUBLIC_GA4_MEASUREMENT_ID": {
+      "path": "kv/ga4/pokerzeno",
+      "public": true,
+      "ttl_sec": 3600,
+      "comment": "Public identifier — ships in page HTML. Broker handles for consistency."
+    },
+    "CLOUDFLARE_API_TOKEN": {
+      "path": "kv/cloudflare/pokerzeno",
+      "public": false,
+      "ttl_sec": 300
+    },
+    "NEXT_PUBLIC_SUPABASE_URL": {
+      "path": "kv/supabase/pokerzeno",
+      "key": "SUPABASE_URL",
+      "public": true,
+      "ttl_sec": 3600
+    },
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": {
+      "path": "kv/supabase/pokerzeno",
+      "key": "SUPABASE_ANON_KEY",
+      "public": true,
+      "ttl_sec": 3600
+    },
+    "SUPABASE_SERVICE_ROLE_KEY": {
+      "path": "kv/supabase/pokerzeno",
+      "key": "SUPABASE_SERVICE_KEY",
+      "public": false,
+      "ttl_sec": 300
+    },
+    "GITHUB_DEPLOY_PAT": {
+      "path": "kv/github/deploy",
+      "public": false,
+      "ttl_sec": 900
+    }
+  }
+}

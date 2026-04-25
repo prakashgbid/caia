@@ -1,0 +1,15 @@
+{
+  "site_slug": "roulette-community",
+  "secrets": {
+    "NEXT_PUBLIC_GA4_MEASUREMENT_ID": {
+      "path": "kv/ga4/roulette-community",
+      "public": true,
+      "ttl_sec": 3600
+    },
+    "CLOUDFLARE_API_TOKEN": {
+      "path": "kv/cloudflare/roulette-community",
+      "public": false,
+      "ttl_sec": 300
+    }
+  }
+}

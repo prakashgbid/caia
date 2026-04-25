@@ -1,0 +1,194 @@
+{
+  "projectDir": "/Users/MAC/Documents/projects/poker-zeno",
+  "timestamp": "2026-04-20T23:29:55.222Z",
+  "issues": [
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 36,
+      "col": 18,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 37,
+      "col": 18,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 38,
+      "col": 18,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 45,
+      "col": 12,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 46,
+      "col": 12,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "missing-href",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/layout/Footer.tsx",
+      "line": 47,
+      "col": 12,
+      "message": "<a href=\"#\"> — placeholder href (goes to page top, not a real destination)",
+      "fix": "Replace with the real URL or convert to a <button> if no navigation is intended"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/play/CoachOverlay.tsx",
+      "line": 27,
+      "col": 69,
+      "message": "onClick={onClose} — \"onClose\" is not defined in this file",
+      "fix": "Declare \"onClose\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/play/CoachOverlay.tsx",
+      "line": 36,
+      "col": 12,
+      "message": "onClick={onClose} — \"onClose\" is not defined in this file",
+      "fix": "Declare \"onClose\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/play/GearRow.tsx",
+      "line": 14,
+      "col": 8,
+      "message": "onClick={onFullscreenClick} — \"onFullscreenClick\" is not defined in this file",
+      "fix": "Declare \"onFullscreenClick\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/play/GearRow.tsx",
+      "line": 22,
+      "col": 8,
+      "message": "onClick={onSettingsClick} — \"onSettingsClick\" is not defined in this file",
+      "fix": "Declare \"onSettingsClick\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/play/SettingsMenu.tsx",
+      "line": 75,
+      "col": 69,
+      "message": "onClick={onClose} — \"onClose\" is not defined in this file",
+      "fix": "Declare \"onClose\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/play/SettingsMenu.tsx",
+      "line": 82,
+      "col": 18,
+      "message": "onClick={onClose} — \"onClose\" is not defined in this file",
+      "fix": "Declare \"onClose\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/play/SettingsMenu.tsx",
+      "line": 114,
+      "col": 12,
+      "message": "onClick={onClose} — \"onClose\" is not defined in this file",
+      "fix": "Declare \"onClose\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/play/WinRevealOverlay.tsx",
+      "line": 70,
+      "col": 10,
+      "message": "onClick={onContinue} — \"onContinue\" is not defined in this file",
+      "fix": "Declare \"onContinue\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/table/ActionBar.tsx",
+      "line": 75,
+      "col": 10,
+      "message": "onClick={onFold} — \"onFold\" is not defined in this file",
+      "fix": "Declare \"onFold\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/table/ActionBar.tsx",
+      "line": 83,
+      "col": 12,
+      "message": "onClick={onCheck} — \"onCheck\" is not defined in this file",
+      "fix": "Declare \"onCheck\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/table/ActionBar.tsx",
+      "line": 90,
+      "col": 12,
+      "message": "onClick={onCall} — \"onCall\" is not defined in this file",
+      "fix": "Declare \"onCall\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/ui/PrimaryCTA.tsx",
+      "line": 29,
+      "col": 12,
+      "message": "onClick={onClick} — \"onClick\" is not defined in this file",
+      "fix": "Declare \"onClick\" or import it, or remove the handler"
+    },
+    {
+      "rule": "unknown-handler",
+      "severity": "error",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/components/ui/SecondaryCTA.tsx",
+      "line": 29,
+      "col": 12,
+      "message": "onClick={onClick} — \"onClick\" is not defined in this file",
+      "fix": "Declare \"onClick\" or import it, or remove the handler"
+    },
+    {
+      "rule": "button-without-action",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/app/shop/product/[slug]/page.tsx",
+      "line": 46,
+      "col": 10,
+      "message": "<button> has no onClick, no type=\"submit\", and is not in a <form>",
+      "fix": "Add onClick handler, set type=\"submit\", or change to a non-interactive element"
+    }
+  ],
+  "stats": {
+    "filesScanned": 158,
+    "routesChecked": 0,
+    "issuesFound": 20,
+    "errors": 13,
+    "warnings": 7,
+    "fixed": 0
+  }
+}

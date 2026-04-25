@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# Conductor pre-commit gate — runs quality checks before every commit.
+# Gates run in order: typecheck → events-taxonomy → observability.
+
+echo "=== Conductor pre-commit gates ==="
+
+# 1. TypeScript typecheck
+echo "▶ typecheck"
+npm run typecheck || exit 1
+
+# 2. Events taxonomy — no unknown event types
+echo "▶ gate:events-taxonomy"
+npm run gate:events-taxonomy || exit 1
+
+# 3. Observability gate — exported functions have events or annotations
+echo "▶ gate:observability"
+npm run gate:observability || exit 1
+
+echo "✓ All pre-commit gates passed"

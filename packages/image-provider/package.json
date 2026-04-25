@@ -1,0 +1,60 @@
+{
+  "name": "@chiefaia/image-provider",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Supply real photo-quality imagery to roulette-community and poker-zeno sites",
+  "type": "module",
+  "bin": {
+    "image-provider": "./dist/cli/index.js"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "manifest",
+    "budget",
+    "config"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "check:uniqueness": "tsx scripts/check-uniqueness.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@fal-ai/client": "^1.0.0",
+    "@xenova/transformers": "^2.17.2",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "picocolors": "^1.0.1",
+    "sharp": "^0.33.4",
+    "tesseract.js": "^5.1.0",
+    "undici": "^6.18.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "glob": "^11.1.0",
+    "tsup": "^8.1.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.5.0",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

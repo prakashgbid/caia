@@ -1,0 +1,23 @@
+{
+  "projectDir": "/Users/MAC/Documents/projects/poker-zeno",
+  "timestamp": "2026-04-20T23:33:15.804Z",
+  "issues": [
+    {
+      "rule": "button-without-action",
+      "severity": "warning",
+      "file": "/Users/MAC/Documents/projects/poker-zeno/src/app/shop/product/[slug]/AddToCart.tsx",
+      "line": 30,
+      "col": 6,
+      "message": "<button> has no onClick, no type=\"submit\", and is not in a <form>",
+      "fix": "Add onClick handler, set type=\"submit\", or change to a non-interactive element"
+    }
+  ],
+  "stats": {
+    "filesScanned": 162,
+    "routesChecked": 34,
+    "issuesFound": 1,
+    "errors": 0,
+    "warnings": 1,
+    "fixed": 0
+  }
+}

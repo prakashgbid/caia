@@ -1,0 +1,12 @@
+# CI workflow template for Pokerzeno site repos.
+# Copy to .github/workflows/ci.yml in each site and adjust as needed.
+# This file is the canonical reference — see pokerzeno-site-template for live usage.
+#
+# Jobs:
+#   typecheck → lint → test → integrity → a11y → build
+#
+# Required repo secrets:
+#   none (CI only; see workflow-deploy.yml for CF Pages secrets)
+#
+# Required package.json scripts:
+#   typecheck, lint, test, integrity, a11y, build
