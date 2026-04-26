@@ -41,41 +41,96 @@ export interface DispatchHandle {
   outputLines: string[];
 }
 
-function isCanaryTask(task: DispatchTask): boolean {
-  if (!task.notes) return false;
+// Phase-2 token optimization: model IDs for tiered routing.
+// OAuth via CLAUDE_CODE_OAUTH_TOKEN inherited from launchd plist; never API key.
+export const MODEL_HAIKU = 'claude-haiku-4-5-20251001';
+export const MODEL_SONNET = 'claude-sonnet-4-6';
+export const MODEL_OPUS = 'claude-opus-4-6';
+
+const HAIKU_KEYWORDS = [
+  'status', 'verify', 'check', 'lookup', 'rename', 'rename-only',
+  'trivial', '1-line', 'one-line', 'boilerplate',
+];
+const OPUS_KEYWORDS = [
+  'architecture', 'design', 'debug-complex', 'refactor-multi', 'p0',
+];
+
+function parseNotes(notes: string | null): Record<string, unknown> | null {
+  if (!notes) return null;
   try {
-    const meta = JSON.parse(task.notes) as Record<string, unknown>;
-    return meta.canary === true;
+    return JSON.parse(notes) as Record<string, unknown>;
   } catch {
-    return false;
+    return null;
   }
 }
 
-function buildPrompt(task: DispatchTask): string {
-  // Canary bypass: produce a single leaf task that exits immediately.
-  // This avoids full story/epic expansion and keeps canary latency minimal.
+function isCanaryTask(task: DispatchTask): boolean {
+  const meta = parseNotes(task.notes);
+  return meta?.canary === true;
+}
+
+/**
+ * Pick a model based on task signals. Default Sonnet 4.6.
+ * Order: explicit notes.model override → canary (Haiku) → keyword match → default.
+ */
+export function selectModel(task: DispatchTask): string {
+  const meta = parseNotes(task.notes);
+  const override = meta && typeof meta.model === 'string' ? meta.model : null;
+  if (override === 'haiku') return MODEL_HAIKU;
+  if (override === 'sonnet') return MODEL_SONNET;
+  if (override === 'opus') return MODEL_OPUS;
+  if (override) return override; // raw model id passthrough
+
+  if (isCanaryTask(task)) return MODEL_HAIKU;
+
+  const haystack = [
+    task.title || '',
+    typeof meta?.kind === 'string' ? meta.kind : '',
+    typeof meta?.complexity === 'string' ? meta.complexity : '',
+    typeof meta?.priority === 'string' ? meta.priority : '',
+  ].join(' ').toLowerCase();
+
+  for (const kw of OPUS_KEYWORDS) {
+    if (haystack.includes(kw)) return MODEL_OPUS;
+  }
+  for (const kw of HAIKU_KEYWORDS) {
+    if (haystack.includes(kw)) return MODEL_HAIKU;
+  }
+  return MODEL_SONNET;
+}
+
+// Stable prefix — identical across worker invocations for prompt-cache reuse.
+// Anything variable (task id, title, notes) goes in the tail.
+const STABLE_WORKER_PREFIX = `You are a Conductor worker.
+
+Rules:
+- End with "[result] DONE: <summary>" or "[result] FAILED: <reason>".
+- Max 3min per bash command, 15s per network call.
+- Do not ask clarifying questions — make reasonable assumptions and proceed.
+- For investigations, audits, or read-only exploration that don't need the worker's main context, spawn a subagent with the Task tool. Reserve main context for the actual change.
+- After the result line, stop.
+
+---
+`;
+
+export function buildPrompt(task: DispatchTask): string {
   if (isCanaryTask(task)) {
-    return `You are executing a pipeline health canary (task ${task.id}).
+    return `Canary task ${task.id}.
 Run: echo "[result] DONE: canary ok"
-Then stop immediately. Do not do any other work.`;
+Then stop.`;
   }
 
   const files = task.declaredFiles.length > 0
     ? task.declaredFiles.join(', ')
-    : '(not specified — use judgment)';
+    : '(use judgment)';
 
-  return `You are executing task ${task.id}: ${task.title}
+  // Variable tail — task-specific. Order matters: stable prefix above is identical
+  // per-worker-invocation, so prefix-cache hits compound across the 5-min window.
+  let tail = `Task ${task.id}: ${task.title}\nCwd: ${task.cwd}\nFiles: ${files}`;
+  if (task.domainSlug) tail += `\nDomain: ${task.domainSlug}`;
+  if (task.notes) tail += `\nNotes: ${task.notes}`;
 
-Working directory: ${task.cwd}
-Expected files to touch: ${files}
-${task.notes ? `\nNotes:\n${task.notes}` : ''}
-${task.domainSlug ? `\nDomain: ${task.domainSlug}` : ''}
-
-Complete this task fully. When done, write a brief completion summary starting with "[result] DONE:" (or "[result] FAILED: <reason>" if it could not be completed). Include what was changed and any evidence (file paths, test results).
-
-Anti-hang rules: max 3 min per bash command, max 15s network. Do not ask clarifying questions — make reasonable assumptions and proceed.
-
-After writing the result line, stop.`;
+  return STABLE_WORKER_PREFIX + tail;
 }
 
 async function createWorktree(
@@ -139,14 +194,20 @@ export async function dispatch(
 ): Promise<DispatchHandle> {
   const worktreePath = await createWorktree(task.id, config);
   const prompt = buildPrompt(task);
+  const model = selectModel(task);
   const now = new Date().toISOString();
 
   const claudeArgs = [
     '--print',
     '--output-format', 'json',
     '--permission-mode', config.permissionMode,
+    '--model', model,
     prompt,
   ];
+
+  if (process.env['EXECUTOR_DEBUG']) {
+    process.stderr.write(`[executor:task-${task.id}] model=${model}\n`);
+  }
 
   const proc = child_process.spawn('claude', claudeArgs, {
     cwd: task.cwd,
