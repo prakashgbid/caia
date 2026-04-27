@@ -1,9 +1,8 @@
 import type { Hono } from 'hono';
-import type { Db } from '../../db/connection';
 import { eventBus } from '../../events/bus-adapter';
-import { isValidEventType } from '../../../packages/events-taxonomy/index';
+import { isValidEventType, ALL_EVENT_TYPES, EVENT_SEVERITY } from '../../../packages/events-taxonomy/index';
 
-export function registerEventsRoutes(app: Hono, _db: Db): void {
+export function registerEventsRoutes(app: Hono): void {
   // Recent events with optional filters
   app.get('/events', (c) => {
     const { type, actor, entity_id, project_slug, correlation_id, limit } = c.req.query() as Record<string, string>;
@@ -22,7 +21,6 @@ export function registerEventsRoutes(app: Hono, _db: Db): void {
 
   // List all valid event types
   app.get('/events/types', (c) => {
-    const { ALL_EVENT_TYPES, EVENT_SEVERITY } = require('../../../packages/events-taxonomy/index') as typeof import('../../../packages/events-taxonomy/index');
     return c.json({
       types: ALL_EVENT_TYPES.map(t => ({ type: t, severity: EVENT_SEVERITY[t] })),
     });

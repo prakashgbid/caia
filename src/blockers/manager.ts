@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { execSync } from 'child_process';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { nanoid } = require('nanoid') as { nanoid: (size?: number) => string };
 
 import { assertBlockerTransition } from './state-machine';
@@ -233,7 +233,7 @@ export class BlockersManager {
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
 
-  private sendNativeNotification(title: string, id: string): void {
+  private sendNativeNotification(title: string, _id: string): void {
     try {
       const safeTitle = title.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
       execSync(

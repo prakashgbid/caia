@@ -12,6 +12,7 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { publishEvent } from './publish-event';
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 
@@ -23,6 +24,7 @@ export interface DispatchTask {
   declaredFiles: string[];
   domainSlug: string | null;
   projectId: string | null;
+  rootPromptId?: string | null;
 }
 
 export interface DispatchConfig {
@@ -258,6 +260,17 @@ export async function dispatch(
       }),
     });
   } catch { /* non-fatal */ }
+
+  // Emit structured pick-up event for observability pipeline
+  await publishEvent('executor.task.picked_up', {
+    taskId: task.id,
+    rootPromptId: task.rootPromptId ?? null,
+    executorRunId,
+    executorPid: pid,
+    worktreePath,
+    model,
+    attemptN,
+  });
 
   return {
     taskId: task.id,

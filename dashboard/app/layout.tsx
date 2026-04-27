@@ -1,14 +1,17 @@
 'use client';
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useEventStream } from '../hooks/useEventStream';
 import { useUnseenBadges } from '../hooks/useUnseenBadges';
 import { NavProjectSelector } from '../components/NavProjectSelector';
 import './globals.css';
 
 const NAV_ITEMS = [
   { path: '/timeline', label: 'Timeline', icon: '🕒', tabKey: 'timeline' },
+  { path: '/pipeline', label: 'Pipeline', icon: '⇢', tabKey: 'pipeline' },
+  { path: '/platform-status', label: 'Platform Status', icon: '⬡', tabKey: 'platform_status' },
+  { path: '/prompts', label: 'Prompts', icon: '✦', tabKey: 'prompts' },
   { path: '/domains', label: 'Domains', icon: '🏷️', tabKey: 'domains' },
   { path: '/projects', label: 'Projects', icon: '📁', tabKey: 'projects' },
   { path: '/queue', label: 'Queue', icon: '🎯', tabKey: 'queue' },
@@ -38,6 +41,8 @@ const NAV_ITEMS = [
 
 // Map WS event kind prefix → tab key
 function kindToTab(kind: string): string {
+  if (kind.startsWith('pipeline.')) return 'pipeline';
+  if (kind.startsWith('prompt.')) return 'prompts';
   if (kind.startsWith('task_run.')) return 'task_runs';
   if (kind.startsWith('behavior_test.')) return 'tests';
   if (kind.startsWith('priority.')) return 'queue';
@@ -79,18 +84,105 @@ function updateFavicon(totalUnseen: number) {
       ctx.fill();
       favicon.href = canvas.toDataURL('image/png');
     };
-    img.onerror = () => {}; // ignore missing favicon
+    img.onerror = () => {};
     img.src = '/favicon.ico';
   } else {
     favicon.href = '/favicon.ico';
   }
 }
 
+// ─── Toast system ─────────────────────────────────────────────────────────────
+
+interface Toast {
+  id: number;
+  text: string;
+  color: string;
+  bg: string;
+  border: string;
+}
+
+let _toastCounter = 0;
+
+function ToastContainer() {
+  const { lastEvent } = useEventStream();
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = useCallback((text: string, color: string, bg: string, border: string) => {
+    const id = ++_toastCounter;
+    setToasts(prev => {
+      const next = [...prev, { id, text, color, bg, border }];
+      return next.slice(-3); // keep max 3
+    });
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  }, []);
+
+  useEffect(() => {
+    if (!lastEvent) return;
+    const kind = lastEvent.kind;
+    const payload = lastEvent.payload as Record<string, unknown> | undefined;
+    const name = (payload?.['title'] as string | undefined) ?? (payload?.['name'] as string | undefined) ?? '';
+    const trunc = (s: string, n = 40) => s.length > n ? s.slice(0, n) + '…' : s;
+
+    if (kind === 'executor.task.picked_up') {
+      addToast(`▶ Task started: ${trunc(name)}`, '#f0f4f8', '#1a3330', '#68d391');
+    } else if (kind === 'executor.claude.completed') {
+      addToast(`✅ Task complete: ${trunc(name)}`, '#f0f4f8', '#1a3320', '#68d391');
+    } else if (kind === 'executor.task.failed') {
+      addToast(`❌ Task failed: ${trunc(name)}`, '#fed7d7', '#3d1515', '#fc8181');
+    }
+  }, [lastEvent, addToast]);
+
+  if (toasts.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 24,
+        right: 24,
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        pointerEvents: 'none',
+      }}
+      aria-live="polite"
+      aria-label="Notifications"
+    >
+      {toasts.map(t => (
+        <div
+          key={t.id}
+          style={{
+            background: t.bg,
+            color: t.color,
+            border: `1px solid ${t.border}`,
+            borderRadius: 8,
+            padding: '10px 16px',
+            fontSize: 13,
+            fontWeight: 500,
+            maxWidth: 320,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            animation: 'slideInToast 0.2s ease',
+          }}
+        >
+          {t.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+
 function SidebarInner() {
   const pathname = usePathname();
-  const { lastEvent, connected } = useWebSocket('ws://localhost:7776/events');
+  const { lastEvent, connected } = useEventStream();
   const { unseen, increment, markSeen, totalUnseen } = useUnseenBadges();
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
+  // Flash state for pipeline tab
+  const [pipelineFlash, setPipelineFlash] = useState(false);
 
   // Current active tab key
   const currentTab = NAV_ITEMS.find(n => pathname.startsWith(n.path))?.tabKey ?? 'timeline';
@@ -100,12 +192,17 @@ function SidebarInner() {
     markSeen(currentTab);
   }, [currentTab, markSeen]);
 
-  // Increment unseen when WS event arrives for a non-active tab
+  // Increment unseen / flash when WS event arrives
   useEffect(() => {
     if (!lastEvent?.kind) return;
     const tab = kindToTab(lastEvent.kind);
     if (tab !== currentTab) {
       increment(tab);
+    }
+    // Flash pipeline nav item on pipeline.stage.advanced
+    if (lastEvent.kind === 'pipeline.stage.advanced') {
+      setPipelineFlash(true);
+      setTimeout(() => setPipelineFlash(false), 800);
     }
   }, [lastEvent, currentTab, increment]);
 
@@ -152,6 +249,7 @@ function SidebarInner() {
         const href = projectFilter
           ? `${item.path}?project=${projectFilter}`
           : item.path;
+        const isFlashing = item.tabKey === 'pipeline' && pipelineFlash;
 
         return (
           <Link
@@ -162,13 +260,13 @@ function SidebarInner() {
               alignItems: 'center',
               gap: 8,
               padding: '8px 16px',
-              background: isActive ? '#2d3748' : 'transparent',
+              background: isFlashing ? '#2b4a6a' : isActive ? '#2d3748' : 'transparent',
               color: isActive ? '#90cdf4' : '#a0aec0',
               textDecoration: 'none',
               fontSize: 14,
               fontWeight: isActive ? 600 : 400,
               borderLeft: isActive ? '2px solid #63b3ed' : '2px solid transparent',
-              transition: 'all 0.15s',
+              transition: isFlashing ? 'background 0.1s ease' : 'all 0.15s',
             }}
             aria-label={count > 0 ? `${item.label} — ${count} unseen updates` : item.label}
             aria-current={isActive ? 'page' : undefined}
@@ -210,6 +308,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" id="favicon" />
         <title>Conductor</title>
+        <style>{`
+          @keyframes slideInToast {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes pulse-running {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+          }
+        `}</style>
       </head>
       <body
         style={{
@@ -232,6 +340,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
           {children}
         </main>
+
+        {/* Toast notifications */}
+        <ToastContainer />
       </body>
     </html>
   );

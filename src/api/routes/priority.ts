@@ -1,5 +1,5 @@
 import type { Hono } from 'hono';
-import { eq, desc, asc, and, notInArray } from 'drizzle-orm';
+import { eq, desc, asc, notInArray } from 'drizzle-orm';
 import type { Db } from '../../db/connection';
 import { tasks, priorityAudit } from '../../db/schema';
 import { scoreOne, scoreAll } from '../../prioritization/reprioritizer';

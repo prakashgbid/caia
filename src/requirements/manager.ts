@@ -5,6 +5,9 @@ import * as os from 'os';
 const { nanoid } = require('nanoid') as { nanoid: (size?: number) => string };
 
 import { assertTransition } from './state-machine';
+import { eventBus } from '../../packages/event-bus/index';
+import { getDb } from '../db/connection';
+import { timelineEvents } from '../db/schema';
 import type {
   ListRequirementsFilter,
   Requirement,
@@ -238,7 +241,62 @@ export class RequirementsManager {
   async setState(id: string, newState: RequirementState): Promise<Requirement> {
     const req = this.getOrThrow(id);
     assertTransition(req.state, newState);
+    const previousState = req.state;
     await this.appendEvent('REQ_STATE_CHANGED', id, { state: newState });
+
+    // Emit requirement.state.transitioned event — must never break core flow
+    try {
+      eventBus.publish({
+        type: 'requirement.state.transitioned',
+        actor: 'system',
+        entity_type: 'requirement',
+        entity_id: id,
+        payload: {
+          requirementId: id,
+          rootPromptId: null,
+          fromState: previousState,
+          toState: newState,
+          reason: 'orchestrator',
+        },
+      });
+    } catch { /* ignore */ }
+
+    // Emit pipeline.stage.advanced when reaching key stages
+    if (newState === 'executing' || newState === 'done') {
+      try {
+        eventBus.publish({
+          type: 'pipeline.stage.advanced',
+          actor: 'system',
+          entity_type: 'requirement',
+          entity_id: id,
+          payload: {
+            promptId: null,
+            stage: newState === 'executing' ? 'requirement_executing' : 'requirement_done',
+            entityKind: 'requirement',
+            entityId: id,
+            durationFromStartMs: null,
+          },
+        });
+      } catch { /* ignore */ }
+    }
+
+    // Insert timeline event into DB (best-effort)
+    try {
+      const db = getDb();
+      const now = new Date().toISOString();
+      db.insert(timelineEvents).values({
+        id: 'tl_' + nanoid(8),
+        kind: 'requirement.state.transitioned',
+        actor: 'orchestrator',
+        summary: `Requirement "${req.title ?? id}" → ${newState}`,
+        subjectId: id,
+        subjectKind: 'requirement',
+        payload: JSON.stringify({ fromState: previousState, toState: newState }),
+        projectId: undefined,
+        createdAt: now,
+      }).run();
+    } catch { /* ignore — DB may not be initialized in tests */ }
+
     return this.state.requirements[id]!;
   }
 
@@ -320,9 +378,11 @@ export class RequirementsManager {
       throw new Error(`Cannot mark done from state: ${req.state}`);
     }
     if (req.state === 'executing') {
-      await this.appendEvent('REQ_STATE_CHANGED', id, { state: 'verifying' });
+      // Goes through verifying first — events emitted by setState()
+      await this.setState(id, 'verifying');
     }
-    await this.appendEvent('REQ_STATE_CHANGED', id, { state: 'done' });
+    // Final transition to done — events emitted by setState()
+    await this.setState(id, 'done');
     return this.state.requirements[id]!;
   }
 

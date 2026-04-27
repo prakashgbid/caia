@@ -93,7 +93,7 @@ export function TimelineFeed({ events, wsEvents = [] }: Props) {
               {e.subjectId}
             </span>
           )}
-          {'_live' in e && e._live && (
+          {'_live' in e && !!(e as { _live?: unknown })._live && (
             <span style={{
               marginLeft: 'auto',
               padding: '1px 6px',

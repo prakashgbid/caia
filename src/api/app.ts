@@ -19,6 +19,8 @@ import { registerBuildsRoutes } from './routes/builds';
 import { registerPromptsRoutes } from './routes/prompts';
 import { registerPriorityRoutes } from './routes/priority';
 import { registerPulseRoutes } from './routes/pulse';
+import { registerStatsRoutes } from './routes/stats';
+import { registerAgentRoutes } from './routes/agents';
 import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
 
 export function createApp(db: Db): Hono {
@@ -56,11 +58,13 @@ export function createApp(db: Db): Hono {
   registerCompletenessRoutes(app, db);
   registerLockContractRoutes(app, db);
   registerExecutorRoutes(app, db);
-  registerEventsRoutes(app, db);
+  registerEventsRoutes(app);
   registerBuildsRoutes(app, db);
   registerPromptsRoutes(app, db);
   registerPriorityRoutes(app, db);
   registerPulseRoutes(app, db);
+  registerStatsRoutes(app);
+  registerAgentRoutes(app, db);
 
   return app;
 }

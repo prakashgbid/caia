@@ -274,6 +274,14 @@ export const taskRuns = sqliteTable('task_runs', {
   rootPromptId: text('root_prompt_id'),
   parentEntityType: text('parent_entity_type'),
   parentEntityId: text('parent_entity_id'),
+  executorPid: integer('executor_pid'),
+  worktreePath: text('worktree_path'),
+  toolCallCount: integer('tool_call_count').default(0),
+  inputTokens: integer('input_tokens').default(0),
+  outputTokens: integer('output_tokens').default(0),
+  filesChanged: text('files_changed').default('[]'),
+  durationMs: integer('duration_ms'),
+  rawClaudeOutput: text('raw_claude_output'),
 }, (t) => [
   index('tr_status_idx').on(t.status),
   index('tr_started_idx').on(t.startedAt),
@@ -719,4 +727,92 @@ export const pulseRuns = sqliteTable('pulse_runs', {
 }, (t) => [
   index('pulse_runs_ran_at_idx').on(t.ranAt),
   index('pulse_runs_outcome_idx').on(t.outcome),
+]);
+
+// agent_registry — canonical registry of all CAIA agents (migration 0017)
+export const agentRegistry = sqliteTable('agent_registry', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  displayName: text('display_name').notNull(),
+  tier: text('tier').notNull(), // 'strategic'|'planning'|'engineering'|'quality'|'growth'|'maintenance'
+  description: text('description').notNull(),
+  version: text('version').notNull().default('0.1.0'),
+  status: text('status').notNull().default('registered'), // 'registered'|'active'|'disabled'|'error'
+  endpointUrl: text('endpoint_url'),
+  modelRecommendation: text('model_recommendation').notNull(), // 'opus'|'sonnet'|'haiku'|'local'
+  capabilities: text('capabilities').notNull().default('[]'), // JSON array
+  toolManifest: text('tool_manifest').notNull().default('[]'), // JSON array
+  triggerEvents: text('trigger_events').notNull().default('[]'), // JSON array
+  inputSchema: text('input_schema'),
+  outputSchema: text('output_schema'),
+  systemPromptId: text('system_prompt_id'),
+  lastHeartbeat: integer('last_heartbeat'),
+  metadata: text('metadata'), // JSON
+  createdAt: integer('created_at').notNull().$defaultFn(() => Date.now()),
+  updatedAt: integer('updated_at').notNull().$defaultFn(() => Date.now()),
+}, (t) => [
+  index('ar_tier_idx').on(t.tier),
+  index('ar_status_idx').on(t.status),
+]);
+
+// agent_system_prompts — versioned system prompts for each agent (migration 0017)
+export const agentSystemPrompts = sqliteTable('agent_system_prompts', {
+  id: text('id').primaryKey(),
+  agentName: text('agent_name').notNull(),
+  version: text('version').notNull(),
+  promptText: text('prompt_text').notNull(),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at').notNull().$defaultFn(() => Date.now()),
+}, (t) => [
+  index('asp_agent_idx').on(t.agentName, t.isActive),
+]);
+
+// agent_artifacts — outputs produced by agents (migration 0017)
+export const agentArtifacts = sqliteTable('agent_artifacts', {
+  id: text('id').primaryKey(),
+  agentName: text('agent_name').notNull(),
+  artifactType: text('artifact_type').notNull(), // 'architecture-plan'|'api-spec'|'db-schema'|'wireframe'|'test-plan'|'deployment-config'
+  promptId: text('prompt_id').references(() => prompts.id),
+  requirementId: text('requirement_id'),
+  content: text('content').notNull(), // JSON or markdown
+  contentType: text('content_type').notNull().default('application/json'),
+  status: text('status').notNull().default('draft'), // 'draft'|'approved'|'superseded'
+  createdAt: integer('created_at').notNull().$defaultFn(() => Date.now()),
+}, (t) => [
+  index('aa_agent_idx').on(t.agentName),
+  index('aa_prompt_idx').on(t.promptId),
+  index('aa_type_idx').on(t.artifactType),
+]);
+
+// agent_messages — inter-agent communication log (migration 0017)
+export const agentMessages = sqliteTable('agent_messages', {
+  id: text('id').primaryKey(),
+  fromAgent: text('from_agent').notNull(),
+  toAgent: text('to_agent').notNull(),
+  messageType: text('message_type').notNull(), // 'context-broadcast'|'task-delegation'|'result'|'escalation'
+  correlationId: text('correlation_id').notNull(),
+  payload: text('payload').notNull(), // JSON
+  status: text('status').notNull().default('pending'), // 'pending'|'delivered'|'processed'|'failed'
+  createdAt: integer('created_at').notNull().$defaultFn(() => Date.now()),
+  processedAt: integer('processed_at'),
+}, (t) => [
+  index('am_from_idx').on(t.fromAgent),
+  index('am_to_idx').on(t.toAgent),
+  index('am_correlation_idx').on(t.correlationId),
+  index('am_status_idx').on(t.status),
+]);
+
+// prompt_pipeline_stages — tracks stage advancement for each prompt through the pipeline (migration 0015)
+export const promptPipelineStages = sqliteTable('prompt_pipeline_stages', {
+  id: text('id').primaryKey(),
+  promptId: text('prompt_id').notNull().references(() => prompts.id),
+  stage: text('stage').notNull(), // ingested|requirement_created|story_decomposed|task_queued|task_running|task_completed|verified
+  entityKind: text('entity_kind'),
+  entityId: text('entity_id'),
+  enteredAt: integer('entered_at').notNull(),
+  durationMs: integer('duration_ms'),
+  metadata: text('metadata'), // JSON
+}, (t) => [
+  index('pps_prompt_idx').on(t.promptId),
+  index('pps_stage_idx').on(t.stage),
 ]);
