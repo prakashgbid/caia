@@ -53,9 +53,9 @@ describe('PumpEngine.tick', () => {
   });
 
   it('picks highest priority first (lower number = higher priority)', async () => {
-    const p3 = await makeReadyReq(mgr, { title: 'P3', priority: 3 });
+    await makeReadyReq(mgr, { title: 'P3', priority: 3 });
     const p1 = await makeReadyReq(mgr, { title: 'P1', priority: 1 });
-    const p2 = await makeReadyReq(mgr, { title: 'P2', priority: 2 });
+    await makeReadyReq(mgr, { title: 'P2', priority: 2 });
 
     const result = await pump.tick();
     expect(result.picked!.id).toBe(p1.id);
@@ -65,7 +65,7 @@ describe('PumpEngine.tick', () => {
     const a = await makeReadyReq(mgr, { title: 'A', priority: 2 });
     // Small delay to ensure different timestamps
     await new Promise(r => setTimeout(r, 5));
-    const b = await makeReadyReq(mgr, { title: 'B', priority: 2 });
+    await makeReadyReq(mgr, { title: 'B', priority: 2 });
 
     const result = await pump.tick();
     expect(result.picked!.id).toBe(a.id);
@@ -103,7 +103,7 @@ describe('PumpEngine.tick', () => {
     const r1 = await makeReadyReq(mgr, { title: 'R1', files: ['src/api/**'] });
     await mgr.setState(r1.id, 'executing');
 
-    const r2 = await makeReadyReq(mgr, { title: 'R2', files: ['src/api/**'] });
+    await makeReadyReq(mgr, { title: 'R2', files: ['src/api/**'] });
 
     const result = await pump.tick();
     expect(result.picked).toBeNull();

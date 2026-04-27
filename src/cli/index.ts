@@ -2,9 +2,7 @@
 import { Command } from 'commander';
 import * as path from 'path';
 import * as os from 'os';
-import * as http from 'http';
 import { Conductor } from '../index';
-import { createHealthServer } from '../http/health';
 
 const program = new Command();
 
@@ -213,8 +211,7 @@ program
   .command('db:export <outPath>')
   .description('Export conductor DB to a new SQLite file (VACUUM INTO)')
   .action(async (outPath: string) => {
-    const { getSqliteRaw, getDb } = await import('../db/connection');
-    const { runMigrations } = await import('../db/connection');
+    const { getSqliteRaw, runMigrations } = await import('../db/connection');
     runMigrations();
     const sqlite = getSqliteRaw();
     const resolved = path.resolve(outPath);

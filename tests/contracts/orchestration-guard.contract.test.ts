@@ -10,19 +10,6 @@ import {
 } from '../../apps/orchestrator-middleware/src/index';
 import { BannedPhraseError, MissingRootPromptError } from '../../apps/orchestrator-middleware/src/errors';
 import type { OrchestrationGuard } from '../../apps/orchestrator-middleware/src/index';
-import type { TaskSpawnRecord } from '../../apps/orchestrator-middleware/src/types';
-
-function makeRecord(overrides: Partial<TaskSpawnRecord> = {}): TaskSpawnRecord {
-  return {
-    sessionId: 'sess-guard-001',
-    title: 'Guard test task',
-    kind: 'task',
-    cwd: '/tmp',
-    prompt: 'Work with files',
-    startedAt: new Date().toISOString(),
-    ...overrides,
-  };
-}
 
 describe('createOrchestrationGuard integration contract', () => {
   let guard: OrchestrationGuard;

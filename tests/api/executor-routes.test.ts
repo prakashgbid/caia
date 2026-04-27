@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as path from 'path';
 import * as schema from '../../src/db/schema';
-import { tasks, executorConfig, executorRuns, taskAttempts } from '../../src/db/schema';
+import { tasks, executorConfig, executorRuns } from '../../src/db/schema';
 import { createApp } from '../../src/api/app';
 import type { Db } from '../../src/db/connection';
 

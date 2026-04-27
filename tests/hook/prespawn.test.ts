@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as http from 'http';
-import { execSync, spawnSync } from 'child_process';
+import { spawnSync } from 'child_process';
 
 const HOOK_PATH = path.resolve(__dirname, '../../hooks/prespawn.sh');
 
@@ -156,14 +156,7 @@ describe('prespawn hook', () => {
     });
 
     server.on('listening', () => {
-      const input = {
-        tool_name: 'mcp__dispatch__start_task',
-        tool_input: {
-          prompt: '<conductor files="src/auth/login.ts"/> Do auth work',
-          cwd: '/tmp',
-          title: 'Conflicting task',
-        },
-      };
+      // input payload would be: { tool_name: 'mcp__dispatch__start_task', tool_input: { prompt: '...', cwd: '/tmp', title: '...' } }
       // Hook uses port 7776 — we can't easily override that without modifying the hook
       // So we skip the actual conflict test when server isn't on 7776
       server.close();

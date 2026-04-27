@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { StateManager } from '../../src/core/state';
-import type { ConductorState, Task } from '../../src/core/types';
+import type { Task } from '../../src/core/types';
 
 function makeTempDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'conductor-test-'));
@@ -54,7 +54,7 @@ describe('StateManager', () => {
   describe('appendEvent', () => {
     it('creates events.jsonl file with correct content', async () => {
       const task = makeTask();
-      const event = await manager.appendEvent({
+      await manager.appendEvent({
         type: 'TASK_ADDED',
         taskId: task.id,
         payload: { task },

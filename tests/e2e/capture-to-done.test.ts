@@ -95,7 +95,7 @@ describe('E2E: capture → done lifecycle', () => {
     // 7. Notification was enqueued (completed)
     // The queue may have been drained by osascript (which fails in test env)
     // Verify via log file fallback
-    const logPath = path.join(tmpDir, 'notifications.log');
+    // logPath: path.join(tmpDir, 'notifications.log') — kept for reference
     // Check that done state is correct regardless of notification delivery
     expect(done.state).toBe('done');
   });

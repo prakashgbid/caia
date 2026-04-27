@@ -44,7 +44,7 @@ function parseQs(url: string): Record<string, string> {
 
 export function createHealthServer(
   conductor: Conductor,
-  port: number = 7776,
+  _port: number = 7776,
   reqManager?: RequirementsManager,
   blockersManager?: BlockersManager,
   questionsManager?: QuestionsManager,

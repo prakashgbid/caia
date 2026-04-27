@@ -175,9 +175,9 @@ describe('getPromptDescendants', () => {
     expect(getPromptDescendants(db, p.id)).toEqual([]);
   });
 
-  it('returns tasks linked to the prompt', () => {
+  it('returns tasks linked to the prompt', async () => {
     const db = createTestDb();
-    const { eq: drizzleEq } = require('drizzle-orm') as typeof import('drizzle-orm');
+    const { eq: drizzleEq } = await import('drizzle-orm');
     const p = createPrompt(db, { body: 'Task prompt' });
     insertTask(db, 'task_linked_1', 'Descendant task');
     db.update(schema.tasks).set({ rootPromptId: p.id })

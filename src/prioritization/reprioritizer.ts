@@ -41,7 +41,7 @@ function buildContext(
   };
 }
 
-function countDependents(taskId: string, db: Db): number {
+function countDependents(taskId: string, _db: Db): number {
   const sqlite = getSqliteRaw();
   const row = sqlite.prepare(
     `SELECT COUNT(*) as cnt FROM tasks WHERE json_extract(depends_on, '$') IS NOT NULL AND depends_on LIKE ?`

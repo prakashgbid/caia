@@ -13,11 +13,9 @@ import {
   requirements,
   tasks,
   blockers,
-  questions,
 } from '../../src/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
-import { nanoid } from 'nanoid';
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../src/db/migrations');
 

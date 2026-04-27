@@ -49,7 +49,7 @@ function httpPost(url: string, data: unknown): Promise<{ status: number; body: s
 describe('Conductor HTTP + API', () => {
   let tmpDir: string;
   let conductor: Conductor;
-  const TEST_PORT = 17776;
+  // const TEST_PORT = 17776; // reserved for future port-binding tests
 
   beforeEach(async () => {
     tmpDir = makeTempDir();

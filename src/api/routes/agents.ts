@@ -21,7 +21,7 @@ export function registerAgentRoutes(app: Hono, db: Db): void {
   app.get('/agents', (c) => {
     const { tier, status } = c.req.query() as Record<string, string>;
 
-    let query = db.select().from(agentRegistry);
+    const query = db.select().from(agentRegistry);
 
     // Apply filters in-memory after fetch (Drizzle SQLite doesn't chain .where easily here)
     const rows = query.orderBy(agentRegistry.tier, agentRegistry.name).all();

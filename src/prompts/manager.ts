@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { randomUUID } from 'crypto';
-import { eq, desc, and, gte, lt, count } from 'drizzle-orm';
+import { eq, desc, and, gte, lt } from 'drizzle-orm';
 import type { Db } from '../db/connection';
 import {
   prompts, promptResponses, taskStatusTransitions,

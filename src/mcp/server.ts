@@ -17,8 +17,8 @@ import { QuestionsManager } from '../questions/manager';
 import type { CreateQuestionParams, QuestionAnswer, QuestionState } from '../questions/types';
 import { seedData } from './seed';
 import { getDb, getSqliteRaw } from '../db/connection';
-import { adrs, businessFeatures, proactiveSuggestions, timelineEvents, auditLog, projects, tasks as dbTasks, blockers as dbBlockers, requirements as dbRequirements, domains, entityDomains, taskRuns, taskSubtasks, taskRunEvents, behaviorTests, behaviorTestRuns, behaviorTestFailures, priorityAudit } from '../db/schema';
-import { desc, eq, and, inArray } from 'drizzle-orm';
+import { adrs, businessFeatures, proactiveSuggestions, timelineEvents, auditLog, projects, tasks as dbTasks, blockers as dbBlockers, requirements as dbRequirements, domains, entityDomains, taskRuns, taskSubtasks, taskRunEvents, behaviorTests, behaviorTestRuns, behaviorTestFailures } from '../db/schema';
+import { desc, eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { bus } from '../ws/bus';
 import {
@@ -29,7 +29,8 @@ import type { PromptReceivedVia, PromptStatus, TransitionActor } from '../prompt
 import { scoreOne, scoreAll } from '../prioritization/reprioritizer';
 import type { PriorityRationale } from '../prioritization/types';
 
-const HTTP_PORT = parseInt(process.env['CONDUCTOR_HTTP_PORT'] ?? '7776', 10);
+// HTTP_PORT reserved for future use
+// const HTTP_PORT = parseInt(process.env['CONDUCTOR_HTTP_PORT'] ?? '7776', 10);
 
 function toolResult(data: unknown): { content: Array<{ type: 'text'; text: string }> } {
   return {

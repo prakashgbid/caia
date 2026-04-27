@@ -177,7 +177,7 @@ describe('RequirementsManager', () => {
         await mgr.setState(r.id, 'ready');
         return r;
       };
-      const p3 = await advance('P3', 3);
+      await advance('P3', 3);
       const p1 = await advance('P1', 1);
       const picked = await mgr.pickupNext();
       expect(picked!.id).toBe(p1.id);

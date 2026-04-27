@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as path from 'path';
 import * as schema from '../../src/db/schema';
+import { eq } from 'drizzle-orm';
 import type { Db } from '../../src/db/connection';
 import { tasks } from '../../src/db/schema';
 
@@ -103,7 +104,7 @@ describe('scoreOne', () => {
     await scoreOne('task_persist_1', db, 'user');
 
     const updated = db.select().from(tasks).where(
-      (require('drizzle-orm') as typeof import('drizzle-orm')).eq(tasks.id, 'task_persist_1'),
+      eq(tasks.id, 'task_persist_1'),
     ).get();
     expect(updated).toBeDefined();
     expect(updated!.priorityRationaleJson).not.toBeNull();

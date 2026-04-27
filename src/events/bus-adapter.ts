@@ -6,7 +6,7 @@
 import { eq, desc } from 'drizzle-orm';
 import type { Db } from '../db/connection';
 import { events } from '../db/schema';
-import { eventBus, type EventDb, type DbEventRow, type EventQueryOpts, type EventType } from '../../packages/event-bus/index';
+import { eventBus, type EventDb, type DbEventRow, type EventQueryOpts } from '../../packages/event-bus/index';
 
 // @no-events — infrastructure startup wiring, not a domain operation
 export function wireEventBus(db: Db): void {

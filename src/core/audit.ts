@@ -27,7 +27,7 @@ export class AuditManager {
   async getActualChangedFiles(cwd: string, since: string): Promise<string[]> {
     try {
       // Try to find the git commit at or after the given timestamp
-      const sinceDate = new Date(since).toISOString();
+      void new Date(since).toISOString(); // since param kept for API compatibility
       const output = execSync(
         `git -C "${cwd}" diff --name-only HEAD 2>/dev/null || true`,
         { encoding: 'utf8', timeout: 10000 },

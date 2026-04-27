@@ -6,7 +6,6 @@
 
 import { getDb } from '../connection';
 import { agentRegistry, agentSystemPrompts } from '../schema';
-import { nanoid } from 'nanoid';
 
 const now = Date.now();
 
