@@ -1,0 +1,11 @@
+{
+  "name": "@chiefaia/decomposer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-driven hierarchy decomposer — breaks natural language into Initiative → Epic → Module → Story → Task.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "nanoid": "^5.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@chiefaia/classifier",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Domain taxonomy engine — classifies text into functional domains and assigns labels.",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

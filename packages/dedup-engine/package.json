@@ -1,0 +1,8 @@
+{
+  "name": "@chiefaia/dedup-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deduplication engine — Jaccard similarity with temporal decay.",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}
