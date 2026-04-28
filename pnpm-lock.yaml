@@ -97,6 +97,9 @@ importers:
       '@chiefaia/events-taxonomy-internal':
         specifier: workspace:*
         version: link:../../packages/events-taxonomy-internal
+      '@chiefaia/local-llm-router':
+        specifier: workspace:*
+        version: link:../../packages/local-llm-router
       '@hono/node-server':
         specifier: ^1.19.14
         version: 1.19.14(hono@4.12.15)
@@ -654,6 +657,27 @@ importers:
         version: 7.28.0
       '@types/node':
         specifier: ^20.14.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/local-llm-router:
+    devDependencies:
+      '@chiefaia/eslint-config':
+        specifier: workspace:*
+        version: link:../../configs/eslint-config
+      '@chiefaia/tsconfig':
+        specifier: workspace:*
+        version: link:../../configs/tsconfig
+      '@chiefaia/vitest-config':
+        specifier: workspace:*
+        version: link:../../configs/vitest-config
+      '@types/node':
+        specifier: ^20
         version: 20.19.39
       typescript:
         specifier: ^5.4.5
