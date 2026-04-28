@@ -1,6 +1,6 @@
 {
   "name": "@chiefaia/local-llm-router",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "LLM routing layer — dispatches tasks to local Ollama models or Claude API based on complexity and cost rules",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
