@@ -1,13 +1,22 @@
 'use client';
+/**
+ * DASH-315 — singleton-WS event stream consolidated onto parseWsMessage.
+ *
+ * Before this rewrite, useEventStream and useWebSocket implemented two
+ * different message-shape parsers (one assumed `data.kind`, the other
+ * `parseWsMessage` from useWebSocket.ts handled both legacy `kind` and
+ * canonical `type` envelopes). The duplication caused subtle bugs
+ * (DASH-101: layout badges silently dropping events emitted with `type`).
+ *
+ * This module now delegates parsing to `parseWsMessage` and re-exports
+ * the same `WsEvent` shape, with the only meaningful difference being
+ * that this hook maintains a process-singleton WebSocket so multiple
+ * components can share one connection.
+ */
 import { useEffect, useState } from 'react';
+import { parseWsMessage, type WsEvent } from './useWebSocket';
 
-export interface WsEvent {
-  kind: string;
-  id?: string;
-  projectId?: string;
-  payload?: unknown;
-  ts: string;
-}
+export type { WsEvent } from './useWebSocket';
 
 type EventListener = (event: WsEvent) => void;
 type ConnectedListener = (connected: boolean) => void;
@@ -46,12 +55,8 @@ function connectSingleton(url: string) {
     _ws.onerror = () => _ws?.close();
 
     _ws.onmessage = (msg) => {
-      try {
-        const data = JSON.parse(msg.data as string) as WsEvent;
-        if (data.kind !== 'connected') {
-          notifyEvent(data);
-        }
-      } catch { /* ignore parse errors */ }
+      const evt = parseWsMessage(msg.data as string);
+      if (evt) notifyEvent(evt);
     };
   } catch {
     _reconnectTimer = setTimeout(() => connectSingleton(url), 3000);
@@ -74,7 +79,6 @@ export function useEventStream() {
     _eventListeners.add(onEvent);
     _connectedListeners.add(onConnected);
 
-    // Sync initial state
     setConnected(_connected);
 
     return () => {
