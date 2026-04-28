@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ../../apps/frontend
+      dockerfile: ../../infrastructure/docker/frontend.Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../apps/frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:5000/api
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ../../apps/backend
+      dockerfile: ../../infrastructure/docker/backend.Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../../apps/backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/roulette_advisor
+      - JWT_SECRET=dev_secret_replace_in_production
+      - JWT_EXPIRES_IN=7d
+      - CORS_ORIGIN=http://localhost:3000
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=roulette_advisor
+
+volumes:
+  mongo_data:
