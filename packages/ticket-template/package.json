@@ -1,0 +1,20 @@
+{
+  "name": "@chiefaia/ticket-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Strict, Zod-validated ticket template (v1) — the contract between Phase 1 agents (PO, BA, EA, DBA, BFF, UI, Security, Testing, Release) and the executor.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
