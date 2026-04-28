@@ -398,12 +398,20 @@ export const stories = sqliteTable('stories', {
   implementationNotes: text('implementation_notes'),
   updatedAt: integer('updated_at'),
   enrichedAt: integer('enriched_at'),
+  // Phase-1 ticket-template + bucket linkage (migration 0021)
+  agentContributionsJson: text('agent_contributions_json').notNull().default('{}'),
+  bucketId: text('bucket_id'),
+  templateVersion: text('template_version').notNull().default('v1'),
+  templateValidationStatus: text('template_validation_status').notNull().default('pending'), // 'pending'|'valid'|'invalid'
+  templateValidationErrors: text('template_validation_errors'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
   index('story_kind_idx').on(t.kind),
   index('story_root_prompt_idx').on(t.rootPromptId),
   index('story_parent_entity_idx').on(t.parentEntityId),
+  index('story_bucket_idx').on(t.bucketId),
+  index('story_template_status_idx').on(t.templateValidationStatus),
 ]);
 
 // story_revisions — append-only history of every story-tree edit
@@ -853,4 +861,22 @@ export const dedupResults = sqliteTable('dedup_results', {
 }, (t) => [
   index('idx_dr_entity').on(t.entityKind, t.entityId),
   index('idx_dr_decision').on(t.decision),
+]);
+
+// task_buckets — Phase-1 scheduling buckets (migration 0021)
+// Sequential buckets are partitioned by domain_slug per prompt; one parallel
+// bucket per prompt holds tickets that have no cross-domain upstream deps.
+export const taskBuckets = sqliteTable('task_buckets', {
+  id: text('id').primaryKey().notNull(),
+  kind: text('kind').notNull(),                 // 'sequential' | 'parallel'
+  domainSlug: text('domain_slug'),              // non-null for sequential, null for parallel
+  promptId: text('prompt_id').notNull().references(() => prompts.id),
+  createdAt: integer('created_at').notNull(),   // epoch ms
+  sequenceIndex: integer('sequence_index'),     // 0,1,2... for sequential, null for parallel
+  status: text('status').notNull().default('open'), // 'open'|'in_progress'|'drained'
+  metadata: text('metadata'),                   // JSON: bucket_label, predicted_concurrency, etc.
+}, (t) => [
+  index('idx_tb_prompt').on(t.promptId),
+  index('idx_tb_kind_domain').on(t.kind, t.domainSlug),
+  index('idx_tb_status').on(t.status),
 ]);
