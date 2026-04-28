@@ -322,6 +322,8 @@ export type EventType =
   | 'ba-agent.input-requested'
   | 'ba-agent.input-received'
   | 'task-scheduler.scheduling.complete'
+  // ─── Task Scheduler bucket placement (migration 0021) ────────────────────
+  | 'task-scheduler.bucket-placed'
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   | 'testing-agent.validation.complete'
   | 'release-agent.report.ready'
@@ -385,6 +387,8 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'ba-agent.input-requested': 'info',
   'ba-agent.input-received': 'info',
   'task-scheduler.scheduling.complete': 'info',
+  // ─── Task Scheduler bucket placement (migration 0021) ────────────────────
+  'task-scheduler.bucket-placed': 'info',
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   'testing-agent.validation.complete': 'info',
   'release-agent.report.ready': 'info',

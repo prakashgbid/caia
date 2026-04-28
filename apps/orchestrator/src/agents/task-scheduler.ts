@@ -15,6 +15,7 @@ import { eventBus } from '../events/bus-adapter';
 import { getDb } from '../db/connection';
 import { tasks } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { placeStoriesInBuckets, type BucketPlacement } from './bucket-placer';
 
 export interface SchedulerInput {
   promptId: string;
@@ -27,6 +28,12 @@ export interface SchedulerOutput {
   parallelBuckets: string[][];  // sub-groups that can run concurrently per level
   totalTasks: number;
   estimatedWallclockHours: number;
+  /** Story-level bucket placements written to task_buckets + stories.bucket_id. */
+  storyPlacements: BucketPlacement[];
+  /** New sequential buckets created in this run (re-uses existing ones for the prompt). */
+  sequentialBucketsCreated: number;
+  /** Number of stories placed into the prompt's parallel bucket. */
+  parallelBucketSize: number;
 }
 
 // ─── Dependency Graph ─────────────────────────────────────────────────────────
@@ -137,19 +144,47 @@ export async function runTaskScheduler(
 ): Promise<SchedulerOutput> {
   const { promptId, correlationId } = input;
 
-  // Fetch all tasks for this prompt directly via rootPromptId
+  // Phase 1: place enriched stories (tickets) into task_buckets first. This
+  // is the directive's bucket model: sequential-per-domain + 1 parallel
+  // bucket per prompt. Tickets are scheduled before tasks so the executor
+  // can pick up enriched stories even when no tasks have been spawned yet.
+  const placement = placeStoriesInBuckets({ promptId, correlationId }, db);
+
+  // Then schedule tasks (executor work-items) using the existing
+  // topological-sort logic — task-level scheduling complements story-level
+  // bucket placement.
   const allTasks = await db
     .select()
     .from(tasks)
     .where(eq(tasks.rootPromptId, promptId));
 
   if (allTasks.length === 0) {
+    eventBus.publish({
+      type: 'task-scheduler.scheduling.complete',
+      actor: 'task-scheduler',
+      correlation_id: correlationId,
+      entity_type: 'prompt',
+      entity_id: promptId,
+      payload: {
+        promptId,
+        correlationId,
+        totalTasks: 0,
+        sequentialCount: 0,
+        parallelBucketCount: 0,
+        estimatedWallclockHours: 0,
+        sequentialBucketsCreated: placement.sequentialBucketsCreated,
+        parallelBucketSize: placement.parallelBucketSize,
+      },
+    });
     return {
       promptId,
       sequentialTasks: [],
       parallelBuckets: [],
       totalTasks: 0,
       estimatedWallclockHours: 0,
+      storyPlacements: placement.placements,
+      sequentialBucketsCreated: placement.sequentialBucketsCreated,
+      parallelBucketSize: placement.parallelBucketSize,
     };
   }
 
@@ -182,6 +217,8 @@ export async function runTaskScheduler(
       sequentialCount: sequential.length,
       parallelBucketCount: parallelBuckets.length,
       estimatedWallclockHours,
+      sequentialBucketsCreated: placement.sequentialBucketsCreated,
+      parallelBucketSize: placement.parallelBucketSize,
     },
   });
 
@@ -191,5 +228,8 @@ export async function runTaskScheduler(
     parallelBuckets,
     totalTasks: allTasks.length,
     estimatedWallclockHours,
+    storyPlacements: placement.placements,
+    sequentialBucketsCreated: placement.sequentialBucketsCreated,
+    parallelBucketSize: placement.parallelBucketSize,
   };
 }

@@ -411,4 +411,10 @@ events:
   - type: task-scheduler.scheduling.complete
     severity: info
     actor: [task-scheduler]
-    payload: [promptId, correlationId, totalTasks, sequentialCount, parallelBucketCount, estimatedWallclockHours]
+    payload: [promptId, correlationId, totalTasks, sequentialCount, parallelBucketCount, estimatedWallclockHours, sequentialBucketsCreated, parallelBucketSize]
+
+  # Task Scheduler bucket placement (migration 0021)
+  - type: task-scheduler.bucket-placed
+    severity: info
+    actor: [task-scheduler]
+    payload: [promptId, correlationId, storyId, bucketId, bucketKind, domainSlug, positionInBucket]
