@@ -20,6 +20,7 @@ caia/
 │   ├── cli, config, errors, events, logger, metrics, secrets, test-kit, tracing  # @chiefaia/* — published
 │   ├── image-provider          # @chiefaia/image-provider — published v0.1.0
 │   ├── secrets-broker, story-decomposer, dead-shell-detector, behavior-suite  # lifted from plugins/
+│   ├── local-llm-router        # @chiefaia/local-llm-router — routes simple tasks to local Ollama, complex to Claude
 │   ├── analytics, backend-core, cast-bridge, content-engine, dev-inspector, integrity-check, seo-program  # @pokerzeno/* — sites consume from npm
 │   └── *-internal/             # Private, not published (event-bus-internal, events-taxonomy-internal)
 ├── templates/                  # Project templates
