@@ -195,7 +195,9 @@ function BucketDetailPanel({ id }: { id: string }) {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <span style={{ color: '#a0aec0', fontSize: 11 }}>#{s.ordinal}</span>
-              <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{s.title}</span>
+              <Link href={`/stories/${encodeURIComponent(s.id)}`} style={{ color: '#e2e8f0', fontWeight: 600, textDecoration: 'none' }}>
+                {s.title}
+              </Link>
               <ValidityPill status={s.templateValidationStatus} />
             </div>
             <div style={{ color: '#718096', fontSize: 11 }}>
