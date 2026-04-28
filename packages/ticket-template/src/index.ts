@@ -22,6 +22,12 @@ export {
   PRIORITY_VALUES,
   QUALITY_TAGS,
   TECH_SUB_DOMAINS,
+  // TEST-001 testing framework taxonomy + bounds
+  TEST_CASE_CATEGORIES,
+  TEST_CASE_STATUSES,
+  TEST_CASE_LAYERS,
+  MIN_TEST_CASES,
+  MAX_TEST_CASES,
 } from './schema';
 export type {
   TicketTemplateV1,
@@ -33,6 +39,11 @@ export type {
   PriorityValue,
   QualityTag,
   TechSubDomain,
+  // TEST-001 test case types
+  TestCase,
+  TestCaseCategory,
+  TestCaseStatus,
+  TestCaseLayer,
 } from './schema';
 
 export {
