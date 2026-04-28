@@ -17,6 +17,7 @@ const config: Config = {
     '^@chiefaia/classifier$': '<rootDir>/../../packages/classifier/src/index.ts',
     '^@chiefaia/decomposer$': '<rootDir>/../../packages/decomposer/src/index.ts',
     '^@chiefaia/dedup-engine$': '<rootDir>/../../packages/dedup-engine/src/index.ts',
+    '^@chiefaia/ticket-template$': '<rootDir>/../../packages/ticket-template/src/index.ts',
     // Remap ESM-style `.js` extension imports to `.ts` sources so ts-jest can
     // resolve them without requiring Node ESM module resolution.
     '^(\\.{1,2}/.*)\\.js$': '$1',

@@ -109,6 +109,9 @@ importers:
       '@chiefaia/local-llm-router':
         specifier: workspace:*
         version: link:../../packages/local-llm-router
+      '@chiefaia/ticket-template':
+        specifier: workspace:*
+        version: link:../../packages/ticket-template
       '@hono/node-server':
         specifier: ^1.19.14
         version: 1.19.14(hono@4.12.15)

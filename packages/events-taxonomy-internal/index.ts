@@ -318,6 +318,9 @@ export type EventType =
   | 'po-agent.decomposition.complete'
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   | 'ba-agent.enrichment.complete'
+  // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
+  | 'ba-agent.input-requested'
+  | 'ba-agent.input-received'
   | 'task-scheduler.scheduling.complete'
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   | 'testing-agent.validation.complete'
@@ -378,6 +381,9 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'po-agent.decomposition.complete': 'info',
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   'ba-agent.enrichment.complete': 'info',
+  // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
+  'ba-agent.input-requested': 'info',
+  'ba-agent.input-received': 'info',
   'task-scheduler.scheduling.complete': 'info',
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   'testing-agent.validation.complete': 'info',

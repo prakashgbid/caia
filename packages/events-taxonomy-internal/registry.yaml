@@ -394,7 +394,18 @@ events:
   - type: ba-agent.enrichment.complete
     severity: info
     actor: [ba-agent]
-    payload: [promptId, correlationId, enrichedStories, storiesWithAcceptanceCriteria]
+    payload: [promptId, correlationId, enrichedStories, storiesWithAcceptanceCriteria, ticketsValid, ticketsInvalid]
+
+  # BA cross-agent collaboration protocol (migration 0022)
+  - type: ba-agent.input-requested
+    severity: info
+    actor: [ba-agent]
+    payload: [promptId, correlationId, storyId, requestingAgent, requestedFrom, deadlineMs]
+
+  - type: ba-agent.input-received
+    severity: info
+    actor: [ba-agent]
+    payload: [promptId, correlationId, storyId, repliesReceived, repliesTimedOut]
 
   # Task Scheduler Agent events (migration 0018)
   - type: task-scheduler.scheduling.complete
