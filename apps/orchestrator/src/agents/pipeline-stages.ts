@@ -3,14 +3,19 @@
  *
  * Phase 1 advances every prompt through this canonical sequence:
  *
- *   ingested → scaffolded → po_decomposed → ba_enriched → bucket_placed
- *   → ready_for_pickup
+ *   ingested → scaffolded → po_decomposed → ba_enriched → test_designed
+ *   → bucket_placed → ready_for_pickup
  *
  * Each transition is recorded in `prompt_pipeline_stages` (one row per
  * advancement, with epoch-ms `enteredAt`) and reflected on
  * `prompts.status` so consumers (the dashboard, the E2E test) can poll a
  * single field. A `pipeline.stage.advanced` event is emitted alongside
  * each transition so subscribers can track progression in real time.
+ *
+ * TEST-002 inserted `test_designed` between `ba_enriched` and
+ * `bucket_placed`: after BA finishes its cross-agent enrichment, the
+ * Testing Agent designs the story-driven test cases (see TEST-004), then
+ * the Task Manager places the ticket into a bucket.
  */
 
 import { nanoid } from 'nanoid';
@@ -25,6 +30,7 @@ export const PIPELINE_STAGE_ORDER = [
   'scaffolded',
   'po_decomposed',
   'ba_enriched',
+  'test_designed', // TEST-002 — Testing Agent generated test_cases.
   'bucket_placed',
   'ready_for_pickup',
 ] as const;

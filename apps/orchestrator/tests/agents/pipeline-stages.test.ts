@@ -46,16 +46,59 @@ function seedPrompt(db: ReturnType<typeof createTestDb>, id: string) {
 }
 
 describe('PIPELINE_STAGE_ORDER', () => {
-  it('locks the canonical Phase-1 progression', () => {
+  it('locks the canonical Phase-1 progression with TEST-002 test_designed inserted', () => {
     expect([...PIPELINE_STAGE_ORDER]).toEqual([
       'received',
       'ingested',
       'scaffolded',
       'po_decomposed',
       'ba_enriched',
+      'test_designed', // TEST-002
       'bucket_placed',
       'ready_for_pickup',
     ]);
+  });
+
+  it('places test_designed strictly between ba_enriched and bucket_placed', () => {
+    const arr = [...PIPELINE_STAGE_ORDER];
+    expect(arr.indexOf('test_designed')).toBeGreaterThan(arr.indexOf('ba_enriched'));
+    expect(arr.indexOf('test_designed')).toBeLessThan(arr.indexOf('bucket_placed'));
+  });
+});
+
+describe('TEST-002 — test_designed stage', () => {
+  it('advances a prompt from ba_enriched to test_designed and mirrors status', () => {
+    const db = createTestDb();
+    seedPrompt(db, 'prm_test_002');
+
+    advancePipelineStage(
+      { promptId: 'prm_test_002', stage: 'ba_enriched', correlationId: 'cor_t' },
+      db,
+    );
+    advancePipelineStage(
+      {
+        promptId: 'prm_test_002',
+        stage: 'test_designed',
+        correlationId: 'cor_t',
+        metadata: { totalCases: 5 },
+      },
+      db,
+    );
+
+    const rows = db
+      .select()
+      .from(promptPipelineStages)
+      .where(eq(promptPipelineStages.promptId, 'prm_test_002'))
+      .orderBy(asc(promptPipelineStages.enteredAt))
+      .all();
+    const stages = rows.map((r) => r.stage);
+    expect(stages).toContain('ba_enriched');
+    expect(stages).toContain('test_designed');
+    // test_designed must come after ba_enriched.
+    expect(stages.lastIndexOf('test_designed')).toBeGreaterThan(stages.indexOf('ba_enriched'));
+
+    const promptRow = db.select().from(prompts).where(eq(prompts.id, 'prm_test_002')).get();
+    expect(promptRow!.status).toBe('test_designed');
   });
 });
 
