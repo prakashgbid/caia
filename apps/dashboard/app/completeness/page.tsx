@@ -1,8 +1,19 @@
 'use client';
 import useSWR from 'swr';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
+
+// DASH-305: kinds that should trigger a /completeness mutate when seen on
+// the WS. Covers the full sentinel lifecycle so users see fresh data
+// within ~250 ms of a run completing instead of up to a minute later.
+const COMPLETENESS_REFRESH_KINDS = new Set<string>([
+  'completeness.run_started',
+  'completeness.run_completed',
+  'completeness.finding_filed',
+  'completeness.check.completed',
+]);
 
 interface RunSummary {
   id: number;
@@ -62,12 +73,37 @@ function ScoreBar({ pct, status }: { pct: number; status: string }) {
 }
 
 export default function CompletenessPage() {
-  const { data: summary, isLoading: loadingSummary } = useSWR<SummaryData>('/api/completeness-summary-proxy', fetcher, { refreshInterval: 60000 });
-  const { data: findings } = useSWR<Finding[]>('/api/completeness-findings-proxy', fetcher, { refreshInterval: 60000 });
-  const { data: runs } = useSWR<RunSummary[]>('/api/completeness-runs-proxy', fetcher, { refreshInterval: 60000 });
+  // DASH-305: WS-driven refresh replaces 60s polling. Drop the SWR
+  // refreshInterval and instead call mutate() when a completeness.* event
+  // arrives. Keep a long fallback interval (5 min) only as a belt-and-
+  // braces guard for the WS being down for an extended period.
+  const FALLBACK_MS = 5 * 60 * 1000;
+  const { data: summary, isLoading: loadingSummary, mutate: mutateSummary } = useSWR<SummaryData>('/api/completeness-summary-proxy', fetcher, { refreshInterval: FALLBACK_MS });
+  const { data: findings, mutate: mutateFindings } = useSWR<Finding[]>('/api/completeness-findings-proxy', fetcher, { refreshInterval: FALLBACK_MS });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { data: runs, mutate: mutateRuns } = useSWR<RunSummary[]>('/api/completeness-runs-proxy', fetcher, { refreshInterval: FALLBACK_MS });
 
   const [severityFilter, setSeverityFilter] = useState('');
   const [entityKindFilter, setEntityKindFilter] = useState('');
+  const [liveTick, setLiveTick] = useState(0);
+
+  const { lastEvent, connected } = useWebSocket('ws://localhost:7776/events');
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!lastEvent?.kind) return;
+    if (!COMPLETENESS_REFRESH_KINDS.has(lastEvent.kind)) return;
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => {
+      setLiveTick(t => t + 1);
+      void mutateSummary();
+      void mutateFindings();
+      void mutateRuns();
+    }, 250);
+    return () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    };
+  }, [lastEvent, mutateSummary, mutateFindings, mutateRuns]);
 
   const allFindings = findings ?? [];
   const filteredFindings = allFindings
@@ -86,6 +122,14 @@ export default function CompletenessPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: 24, color: '#90cdf4' }}>✅ Completeness</h1>
         <span style={{ color: '#718096', fontSize: 14 }}>trust-nothing verification</span>
+        <span
+          data-test-live-indicator
+          data-live-tick={liveTick}
+          title={connected ? 'Subscribed to completeness.* events' : 'Reconnecting to event stream'}
+          style={{ color: connected ? '#68d391' : '#fc8181', fontSize: 11, marginLeft: 'auto' }}
+        >
+          {connected ? '● live' : '○ reconnecting'}
+        </span>
       </div>
 
       {/* Overall score card */}
