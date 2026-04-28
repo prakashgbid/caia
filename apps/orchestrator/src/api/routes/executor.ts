@@ -313,6 +313,7 @@ export function registerExecutorRoutes(app: Hono, db: Db): void {
   app.post('/executor/tasks/:id/unpause', async (c) => {
     const { id } = c.req.param();
     const body = await c.req.json<Record<string, unknown>>().catch(() => ({} as Record<string, unknown>));
+    const before = db.select().from(tasks).where(eq(tasks.id, id)).get();
     const update: Record<string, unknown> = { paused: false, pauseReason: null };
     if (body['reset_attempts']) update['attemptCount'] = 0;
     db.update(tasks)
@@ -320,6 +321,18 @@ export function registerExecutorRoutes(app: Hono, db: Db): void {
       .where(eq(tasks.id, id))
       .run();
     bus.push({ kind: 'task.unpaused', id, payload: {}, ts: now() });
+    // DASH-103: emit canonical task.resumed event (paired with task.paused on
+    // PATCH /tasks/:id) so dashboard subscribers can track the full pause /
+    // resume lifecycle from a single event stream.
+    if (before?.paused) {
+      eventBus.publish({
+        type: 'task.resumed',
+        actor: 'executor',
+        entity_type: 'task',
+        entity_id: id,
+        payload: { task_id: id, reset_attempts: Boolean(body['reset_attempts']) },
+      });
+    }
     return c.json({ ok: true });
   });
 
