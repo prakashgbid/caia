@@ -1,0 +1,13 @@
+{
+  "name": "@caia-app/roulette-backend",
+  "version": "0.0.0-preserved",
+  "private": true,
+  "description": "DORMANT — Preserved Express/Mongoose backend ported from prakashgbid/roulette-advisor-ai (REM-001, 2026-04-28). Not actively running. See README.md.",
+  "main": "src/server.js",
+  "scripts": {
+    "test": "node tests/preservation-smoke.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

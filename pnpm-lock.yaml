@@ -207,6 +207,8 @@ importers:
 
   apps/pipeline-pulse: {}
 
+  apps/roulette-backend: {}
+
   apps/stolution-mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
