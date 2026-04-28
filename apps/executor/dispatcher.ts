@@ -249,17 +249,15 @@ export async function dispatch(
 
   const executorRunId = await registerExecutorRun(task.id, pid, worktreePath, attemptN);
 
-  // Emit worker.spawned via API
-  try {
-    await fetch(`${API_BASE}/events`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'worker.spawned', actor: 'executor',
-        payload: { executor_run_id: executorRunId, task_id: task.id, pid, worktree_path: worktreePath },
-      }),
-    });
-  } catch { /* non-fatal */ }
+  // Emit worker.spawned via API.
+  // DASH-107: stamp correlation_id (task.rootPromptId) and entity attribution
+  // so /prompts/:id/journey can attribute the spawned worker to the originating
+  // prompt across the executor → worker boundary.
+  await publishEvent(
+    'worker.spawned',
+    { executor_run_id: executorRunId, task_id: task.id, pid, worktree_path: worktreePath },
+    { correlationId: task.rootPromptId ?? null, entityType: 'task', entityId: task.id },
+  );
 
   // Emit structured pick-up event for observability pipeline
   await publishEvent('executor.task.picked_up', {
@@ -270,7 +268,7 @@ export async function dispatch(
     worktreePath,
     model,
     attemptN,
-  });
+  }, { correlationId: task.rootPromptId ?? null, entityType: 'task', entityId: task.id });
 
   return {
     taskId: task.id,

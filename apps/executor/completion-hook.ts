@@ -151,8 +151,8 @@ export async function handleCompletion(
     await markTaskDone(handle.taskId, parsed.sessionId);
 
     // Legacy events (retained for existing consumers)
-    await publishEvent('task.completed', { task_id: handle.taskId, duration_ms: durationMs, result_summary: parsed.summary });
-    await publishEvent('worker.completed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? 0, turn_count: parsed.turnCount });
+    await publishEvent('task.completed', { task_id: handle.taskId, duration_ms: durationMs, result_summary: parsed.summary }, { correlationId: task.rootPromptId, entityType: 'task', entityId: handle.taskId });
+    await publishEvent('worker.completed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? 0, turn_count: parsed.turnCount }, { correlationId: task.rootPromptId, entityType: 'task', entityId: handle.taskId });
 
     // Per-tool-call events (fire-and-forget — no await)
     for (const tc of rich.toolCalls) {
@@ -283,8 +283,8 @@ export async function handleCompletion(
     );
 
     // Legacy events (retained for existing consumers)
-    await publishEvent('task.failed', { task_id: handle.taskId, failure_reason: reason, attempt_n: newAttemptCount });
-    await publishEvent('worker.failed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? -1, failure_reason: reason });
+    await publishEvent('task.failed', { task_id: handle.taskId, failure_reason: reason, attempt_n: newAttemptCount }, { correlationId: task.rootPromptId, entityType: 'task', entityId: handle.taskId });
+    await publishEvent('worker.failed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? -1, failure_reason: reason }, { correlationId: task.rootPromptId, entityType: 'task', entityId: handle.taskId });
 
     // Structured failure event
     await publishEvent('executor.task.failed', {
