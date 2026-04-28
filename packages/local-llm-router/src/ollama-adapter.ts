@@ -68,6 +68,7 @@ export class OllamaAdapter {
     } catch (err) {
       throw new Error(
         `Ollama request failed (is Ollama running?): ${String(err)}`,
+        { cause: err },
       );
     }
 

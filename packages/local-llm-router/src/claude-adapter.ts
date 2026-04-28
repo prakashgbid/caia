@@ -55,7 +55,7 @@ export class ClaudeAdapter {
         signal: AbortSignal.timeout(120_000),
       });
     } catch (err) {
-      throw new Error(`Claude API request failed: ${String(err)}`);
+      throw new Error(`Claude API request failed: ${String(err)}`, { cause: err });
     }
 
     if (!res.ok) {

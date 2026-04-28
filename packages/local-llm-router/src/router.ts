@@ -71,7 +71,6 @@ export async function route(
       return await dispatchLocal(rule.localModel, request);
     } catch (localErr) {
       if (fallbackEnabled && rule.claudeModel) {
-        // eslint-disable-next-line no-console
         console.warn(
           `[local-llm-router] Local model "${rule.localModel}" failed ` +
             `for task "${taskType}"; falling back to Claude (${rule.claudeModel}). ` +
@@ -87,7 +86,6 @@ export async function route(
       return await dispatchClaude(claudeModel, request);
     } catch (claudeErr) {
       if (fallbackEnabled) {
-        // eslint-disable-next-line no-console
         console.warn(
           `[local-llm-router] Claude model "${claudeModel}" failed ` +
             `for task "${taskType}"; falling back to local (${rule.localModel}). ` +
