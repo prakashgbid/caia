@@ -6,7 +6,14 @@ const config: Config = {
   roots: ['<rootDir>/tests', '<rootDir>/packages', '<rootDir>/apps'],
   testMatch: ['**/*.test.ts'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/dashboard/'],
+  // nanoid v5 (used by @chiefaia/decomposer) ships ESM-only and breaks
+  // ts-jest's CJS transformer. Allow node_modules/nanoid to be transformed.
+  transformIgnorePatterns: ['/node_modules/(?!(nanoid|.pnpm/nanoid))'],
   moduleNameMapper: {
+    // Force decomposer (which depends on nanoid v5) to use the orchestrator's
+    // nanoid v3 (CJS-friendly) so jest can parse the package without a custom
+    // ESM transform.
+    '^nanoid$': '<rootDir>/node_modules/nanoid',
     '^@/(.*)$': '<rootDir>/src/$1',
     // Workspace packages live two levels up at <repo>/packages/* in the CAIA
     // monorepo (orchestrator is at apps/orchestrator/). When orchestrator
