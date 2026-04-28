@@ -15,6 +15,7 @@ vi.mock('@aws-sdk/client-s3', () => {
 
 beforeEach(() => {
   process.env.CLOUDFLARE_ACCOUNT_ID = 'test-account-id';
+  process.env.CLOUDFLARE_API_TOKEN = 'test-cloudflare-api-token';
   process.env.R2_ACCESS_KEY_ID = 'test-r2-key';
   process.env.R2_SECRET_ACCESS_KEY = 'test-r2-secret';
   process.env.R2_BUCKET = 'test-bucket';
