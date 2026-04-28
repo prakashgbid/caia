@@ -376,6 +376,8 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)(jsdom@24.1.3)
 
+  packages/classifier: {}
+
   packages/cli:
     dependencies:
       commander:
@@ -478,6 +480,14 @@ importers:
       typescript:
         specifier: ^5.4.0
         version: 5.9.3
+
+  packages/decomposer:
+    dependencies:
+      nanoid:
+        specifier: ^5.0.0
+        version: 5.1.9
+
+  packages/dedup-engine: {}
 
   packages/dev-inspector:
     dependencies:
