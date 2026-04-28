@@ -21,9 +21,11 @@ function parseDomainParam(raw: string | undefined): string[] {
 
 // @no-events — route registration wrapper, individual handlers emit events
 export function registerLegacyRoutes(app: Hono, db: Db): void {
-  // Requirements
+  // Requirements (DASH-301: paginated; returns {requirements, nextCursor, total}
+  // when ?limit is provided, falls back to legacy bare array shape otherwise
+  // for backward compat with older dashboard versions).
   app.get('/requirements', (c) => {
-    const { state, priority, labels, projectId, domain } = c.req.query() as Record<string, string>;
+    const { state, priority, labels, projectId, domain, limit, cursor } = c.req.query() as Record<string, string>;
     let rows = db.select().from(requirements).all();
     if (state) rows = rows.filter(r => r.state === state);
     if (priority) rows = rows.filter(r => r.priority === parseInt(priority, 10));
@@ -40,14 +42,57 @@ export function registerLegacyRoutes(app: Hono, db: Db): void {
       const ids = getEntityIdsForDomains(db, 'requirement', domainSlugs);
       rows = rows.filter(r => ids.has(r.id));
     }
-    return c.json(rows.map(r => ({
+
+    // Stable order for cursor pagination: by createdAt ASC then id ASC.
+    rows.sort((a, b) => {
+      const ca = a.createdAt ?? '';
+      const cb = b.createdAt ?? '';
+      if (ca !== cb) return ca < cb ? -1 : 1;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+
+    const total = rows.length;
+
+    const hydrate = (r: typeof rows[number]) => ({
       ...r,
       labels: parseJson(r.labels),
       estimatedFiles: parseJson(r.estimatedFiles),
       dependsOn: parseJson(r.dependsOn),
       linkedTaskIds: parseJson(r.linkedTaskIds),
       spec: r.spec ? parseJson(r.spec) : undefined,
-    })));
+    });
+
+    // Backward-compat: when no `limit` query param, return the legacy bare
+    // array shape. Dashboards on older builds keep working.
+    if (!limit) {
+      return c.json(rows.map(hydrate));
+    }
+
+    const lim = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 500);
+
+    let startIdx = 0;
+    if (cursor) {
+      // Cursor format: opaque \`<createdAt>|<id>\` base64 token; if not found
+      // fall back to start.
+      try {
+        const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
+        const [cAt, cId] = decoded.split('|');
+        const idx = rows.findIndex(r => (r.createdAt ?? '') === cAt && r.id === cId);
+        if (idx >= 0) startIdx = idx + 1;
+      } catch { /* ignore — start from 0 */ }
+    }
+
+    const slice = rows.slice(startIdx, startIdx + lim);
+    const last = slice[slice.length - 1];
+    const nextCursor = (startIdx + lim < total && last)
+      ? Buffer.from(`${last.createdAt ?? ''}|${last.id}`, 'utf-8').toString('base64')
+      : null;
+
+    return c.json({
+      requirements: slice.map(hydrate),
+      nextCursor,
+      total,
+    });
   });
 
   app.get('/requirements/:id', (c) => {

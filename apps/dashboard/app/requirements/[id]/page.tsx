@@ -28,15 +28,12 @@ export default function RequirementDetailPage({ params }: { params: { id: string
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/requirements')
-      .then(r => r.json())
-      .then((data: unknown) => {
-        if (Array.isArray(data)) {
-          const found = (data as Requirement[]).find(r => r.id === id);
-          setReq(found ?? null);
-        }
-      })
-      .catch(() => {})
+    // DASH-301: fetch single record via proxy instead of pulling the full
+    // collection (which had grown to 14 MB at production scale).
+    fetch(`/api/requirements/${encodeURIComponent(id)}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: Requirement | null) => setReq(data))
+      .catch(() => setReq(null))
       .finally(() => setLoading(false));
   }, [id]);
 
