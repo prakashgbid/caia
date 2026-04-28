@@ -26,6 +26,11 @@ events:
     actor: [story-decomposer]
     payload: [story_id, children_count]
 
+  - type: pipeline.stage.advanced
+    severity: info
+    actor: [executor, system, user]
+    payload: [promptId, stage, entityKind, entityId, durationFromStartMs]
+
   # Story events
   - type: story.created
     severity: info
@@ -119,6 +124,26 @@ events:
     actor: [executor]
     payload: [pid, active_workers, queued_tasks]
 
+  - type: executor.task.picked_up
+    severity: info
+    actor: [executor]
+    payload: [taskId, taskRunId, rootPromptId, executorPid, worktreePath]
+
+  - type: executor.claude.tool_call
+    severity: debug
+    actor: [executor]
+    payload: [taskRunId, toolName, inputSummary, durationMs, sequenceIndex]
+
+  - type: executor.claude.completed
+    severity: info
+    actor: [executor]
+    payload: [taskRunId, taskId, rootPromptId, exitCode, inputTokens, outputTokens, filesChanged, toolCallCount, durationMs]
+
+  - type: executor.task.failed
+    severity: error
+    actor: [executor]
+    payload: [taskRunId, taskId, rootPromptId, error, retryCount, circuitBreakerTripped]
+
   # Worker events
   - type: worker.spawned
     severity: info
@@ -171,6 +196,11 @@ events:
     severity: warning
     actor: [completeness-sentinel]
     payload: [run_id, entity_id, finding_code, severity]
+
+  - type: completeness.check.completed
+    severity: info
+    actor: [completeness-sentinel]
+    payload: [taskId, taskRunId, rootPromptId, passed, findingCount, criticalCount, score]
 
   # Backup events
   - type: backup.started
@@ -279,6 +309,17 @@ events:
     actor: [user, api, mcp, executor]
     payload: [prompt_id, from_status, to_status, elapsed_ms]
 
+  - type: prompt.ingested
+    severity: info
+    actor: [user, api, mcp, executor]
+    payload: [promptId, text, projectId, source]
+
+  # Requirement events
+  - type: requirement.state.transitioned
+    severity: info
+    actor: [executor, user, api, system]
+    payload: [requirementId, rootPromptId, fromState, toState, reason]
+
   # Priority engine events
   - type: priority.scored
     severity: info
@@ -336,3 +377,27 @@ events:
     severity: error
     actor: [secrets-broker]
     payload: [secret_key_hash, caller_module, error]
+
+  # Scaffolder agent events
+  - type: scaffolder.team.assembled
+    severity: info
+    actor: [api]
+    payload: [promptId, requestType, agentsActivated, correlationId, projectId]
+
+  # PO Agent events (migration 0019)
+  - type: po-agent.decomposition.complete
+    severity: info
+    actor: [po-agent]
+    payload: [promptId, correlationId, requirementsCreated, storiesCreated, totalNodes, summary, primaryDomain]
+
+  # BA Agent events (migration 0018)
+  - type: ba-agent.enrichment.complete
+    severity: info
+    actor: [ba-agent]
+    payload: [promptId, correlationId, enrichedStories, storiesWithAcceptanceCriteria]
+
+  # Task Scheduler Agent events (migration 0018)
+  - type: task-scheduler.scheduling.complete
+    severity: info
+    actor: [task-scheduler]
+    payload: [promptId, correlationId, totalTasks, sequentialCount, parallelBucketCount, estimatedWallclockHours]
