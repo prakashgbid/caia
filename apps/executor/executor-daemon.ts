@@ -47,6 +47,7 @@ interface TaskRow {
   notes: string | null;
   projectId: string | null;
   domainSlug: string | null;
+  rootPromptId: string | null;
   attemptCount: number;
   paused: boolean;
   createdAt: string;
@@ -211,6 +212,7 @@ async function tick(
           declaredFiles: safeParseJson<string[]>(task.declaredFiles, []),
           domainSlug: task.domainSlug,
           projectId: task.projectId,
+          rootPromptId: task.rootPromptId ?? null,
         },
         {
           maxTurns: config.maxTurns,
