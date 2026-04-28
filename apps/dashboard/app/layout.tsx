@@ -25,14 +25,23 @@ const NAV_ITEMS = [
   { path: '/stories', label: 'Stories', icon: '🌳', tabKey: 'stories' },
   { path: '/completeness', label: 'Completeness', icon: '✅', tabKey: 'completeness' },
   { path: '/standards', label: 'Standards', icon: '📋', tabKey: 'standards' },
-  { path: '/backups', label: 'Backups', icon: '💾', tabKey: 'backups' },
+  // /backups retired from nav: GET /db-backups returns [] in CAIA (no backup
+  //   runs scheduled). The route still works if hit directly; once a backup
+  //   subsystem is wired up we can re-add this nav item.
+  // { path: '/backups', label: 'Backups', icon: '💾', tabKey: 'backups' },
   { path: '/metrics', label: 'Metrics', icon: '📊', tabKey: 'metrics' },
   { path: '/events', label: 'Events', icon: '⚡', tabKey: 'events' },
   { path: '/builds', label: 'Builds', icon: '🔨', tabKey: 'builds' },
   { path: '/observability/health', label: 'Obs. Health', icon: '👁', tabKey: 'obs_health' },
   { path: '/health/pulse', label: 'Pulse', icon: '💚', tabKey: 'pulse' },
-  { path: '/coverage', label: 'Coverage', icon: '🎯', tabKey: 'coverage' },
-  { path: '/enforcement', label: 'Enforcement', icon: '🛡️', tabKey: 'enforcement' },
+  // /coverage retired from nav: conductor-specific Jest/Istanbul artifact
+  //   path. Replace with a CAIA-wide /quality page (DASH-314) once per-package
+  //   coverage aggregation is in place.
+  // { path: '/coverage', label: 'Coverage', icon: '🎯', tabKey: 'coverage' },
+  // /enforcement retired from nav: page is currently mocked (no
+  //   enforcement_rules table or backend route). Re-enable when DASH-308
+  //   ships the real backend.
+  // { path: '/enforcement', label: 'Enforcement', icon: '🛡️', tabKey: 'enforcement' },
   { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
 ] as const;
 
