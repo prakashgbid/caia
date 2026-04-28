@@ -321,7 +321,11 @@ export type EventType =
   | 'task-scheduler.scheduling.complete'
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   | 'testing-agent.validation.complete'
-  | 'release-agent.report.ready';
+  | 'release-agent.report.ready'
+  // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
+  | 'blocker.created' | 'blocker.resolved'
+  | 'question.created' | 'question.answered'
+  | 'requirement.created';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -376,6 +380,12 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   'testing-agent.validation.complete': 'info',
   'release-agent.report.ready': 'info',
+  // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
+  'blocker.created': 'warning',
+  'blocker.resolved': 'info',
+  'question.created': 'info',
+  'question.answered': 'info',
+  'requirement.created': 'info',
 };
 
 /** All valid event type strings from the registry */
