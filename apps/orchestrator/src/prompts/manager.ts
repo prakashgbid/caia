@@ -73,6 +73,23 @@ export function createPrompt(db: Db, params: CreatePromptParams): Prompt {
     },
   });
 
+  // DASH-104: emit canonical pipeline lifecycle event alongside the
+  // domain-specific prompt.received. pipeline.started fires once per new
+  // prompt and pairs with pipeline.completed / pipeline.failed in
+  // updatePromptStatus, giving the dashboard a coarse-grained signal
+  // independent of the fine-grained pipeline.stage.advanced stream.
+  eventBus.publish({
+    type: 'pipeline.started',
+    actor: 'mcp',
+    correlation_id: id,
+    entity_type: 'prompt',
+    entity_id: id,
+    payload: {
+      promptId: id,
+      receivedVia: row.receivedVia,
+    },
+  });
+
   return row as Prompt;
 }
 
@@ -115,6 +132,38 @@ export function updatePromptStatus(db: Db, id: string, status: PromptStatus): Pr
       elapsed_ms: patch.elapsedMs ?? undefined,
     },
   });
+
+  // DASH-104: emit pipeline.completed / pipeline.failed when the prompt
+  // reaches a terminal status, giving the dashboard a coarse-grained
+  // outcome signal that pairs with the pipeline.started fired at
+  // creation time.
+  if (status === 'answered') {
+    eventBus.publish({
+      type: 'pipeline.completed',
+      actor: 'mcp',
+      correlation_id: existing.correlationId,
+      entity_type: 'prompt',
+      entity_id: id,
+      payload: {
+        promptId: id,
+        elapsed_ms: patch.elapsedMs ?? undefined,
+      },
+    });
+  } else if (status === 'failed') {
+    eventBus.publish({
+      type: 'pipeline.failed',
+      actor: 'mcp',
+      correlation_id: existing.correlationId,
+      entity_type: 'prompt',
+      entity_id: id,
+      severity: 'error',
+      payload: {
+        promptId: id,
+        elapsed_ms: patch.elapsedMs ?? undefined,
+        from_status: existing.status,
+      },
+    });
+  }
 
   return db.select().from(prompts).where(eq(prompts.id, id)).get() as Prompt;
 }

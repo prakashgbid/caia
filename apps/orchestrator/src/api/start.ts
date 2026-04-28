@@ -9,6 +9,9 @@ import { attachWsServer } from '../ws/index';
 import { createApp } from './app';
 import { wireEventBus, eventBus } from '../events/bus-adapter';
 import { subscribeToEvents as subscribePriorityEvents, scoreAll } from '../prioritization/reprioritizer';
+import { logger as rootLogger } from '../observability/logger';
+
+const log = rootLogger.child({ component: 'api-start' });
 
 const HTTP_PORT = parseInt(process.env['CONDUCTOR_HTTP_PORT'] ?? '7776', 10);
 
@@ -24,7 +27,7 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
 
   const { migrated } = await migrateFromJsonl(db, conductorDir);
   if (migrated > 0) {
-    console.error(`[conductor] Migrated ${migrated} records from JSONL to SQLite`);
+    log.info('migrated records from jsonl to sqlite', { migrated });
   }
 
   const app = createApp(db);
@@ -45,7 +48,7 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
     payload: { component: 'conductor-api', version: '0.1.0', port: HTTP_PORT },
   });
 
-  console.error(`[conductor] API + WS listening on port ${HTTP_PORT}`);
+  log.info('api + ws listening', { port: HTTP_PORT });
 
   return {
     stop: () => {
