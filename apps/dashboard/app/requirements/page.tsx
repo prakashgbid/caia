@@ -36,16 +36,41 @@ function RequirementsContent() {
 
   useEffect(() => {
     setLoading(true);
-    const p = new URLSearchParams();
-    if (project) p.set('projectId', project);
-    if (state) p.set('state', state);
-    fetch(`/api/requirements?${p.toString()}`)
-      .then(r => r.json())
-      .then((data: unknown) => {
-        if (Array.isArray(data)) setItems(data as Requirement[]);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    // DASH-301: paginated fetch — page through nextCursor until exhausted or
+    // we hit the safety cap. Default page size is 200 rows (server clamps to
+    // 500 max). Without `limit`, the server still returns the legacy bare
+    // array shape, but we always set it here so the client gets the new
+    // envelope.
+    const collected: Requirement[] = [];
+    let cursor: string | null = null;
+    let pages = 0;
+    const PAGE_LIMIT = 200;
+    const SAFETY_CAP = 200; // max pages before bail (40_000 rows)
+
+    async function loadAll(): Promise<void> {
+      while (pages++ < SAFETY_CAP) {
+        const p = new URLSearchParams();
+        if (project) p.set('projectId', project);
+        if (state) p.set('state', state);
+        p.set('limit', String(PAGE_LIMIT));
+        if (cursor) p.set('cursor', cursor);
+        const res = await fetch(`/api/requirements?${p.toString()}`);
+        if (!res.ok) break;
+        const data = await res.json() as { requirements?: Requirement[]; nextCursor?: string | null } | Requirement[];
+        if (Array.isArray(data)) {
+          // legacy shape (back-compat) — single page, all rows
+          collected.push(...data);
+          cursor = null;
+        } else {
+          collected.push(...(data.requirements ?? []));
+          cursor = data.nextCursor ?? null;
+        }
+        if (!cursor) break;
+      }
+      setItems(collected);
+    }
+
+    loadAll().catch(() => { /* swallow */ }).finally(() => setLoading(false));
   }, [project, state]);
 
   function setFilter(key: string, value: string) {
