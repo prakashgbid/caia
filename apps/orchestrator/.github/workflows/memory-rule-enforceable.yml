@@ -1,0 +1,79 @@
+name: gate:memory-rule-enforceable
+
+on:
+  pull_request:
+    paths:
+      - '.auto-memory/**/*.md'
+      - 'reports/memory-rule-inventory.md'
+
+jobs:
+  check-rules:
+    name: Verify new memory rules have enforcement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract new rule lines from diff
+        id: extract-rules
+        run: |
+          # Get added lines from .auto-memory .md files
+          ADDED_LINES=$(git diff origin/${{ github.base_ref }}...HEAD -- '.auto-memory/**/*.md' | grep '^+' | grep -v '^+++' | grep -iE '\b(must|never|always|required|mandatory|forbidden|locked)\b' || true)
+          echo "added_rules<<EOF" >> $GITHUB_OUTPUT
+          echo "$ADDED_LINES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          LINE_COUNT=$(echo "$ADDED_LINES" | grep -c . || echo 0)
+          echo "line_count=$LINE_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Check inventory is updated for new rules
+        run: |
+          ADDED="${{ steps.extract-rules.outputs.added_rules }}"
+          COUNT="${{ steps.extract-rules.outputs.line_count }}"
+
+          if [[ "$COUNT" -eq 0 ]]; then
+            echo "No new rule lines detected — skipping enforcement check."
+            exit 0
+          fi
+
+          echo "Found $COUNT new rule line(s) in .auto-memory files."
+          echo ""
+          echo "Verifying reports/memory-rule-inventory.md covers these new rules..."
+
+          # Check that the inventory file was also updated in this PR
+          INVENTORY_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep 'memory-rule-inventory.md' || true)
+
+          if [[ -z "$INVENTORY_CHANGED" ]]; then
+            echo "::error::New rule lines were added to .auto-memory but reports/memory-rule-inventory.md was NOT updated."
+            echo "::error::Every new rule must be added to the inventory with either:"
+            echo "::error::  (a) a concrete proposed_mechanism and proposed_implementation"
+            echo "::error::  (b) proposed_mechanism=advisory and advisory_reason"
+            echo "::error::See enforcement_hardening.md for the protocol."
+            exit 1
+          fi
+
+          echo "✅ Inventory was updated in this PR — new rules have enforcement coverage."
+
+      - name: Check advisory rules have advisory_reason
+        run: |
+          # Scan memory files changed in this PR for new advisory=true frontmatter without advisory_reason
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- '.auto-memory/**/*.md' || true)
+
+          MISSING_REASON=0
+          for f in $CHANGED_FILES; do
+            if [[ -f "$f" ]]; then
+              HAS_ADVISORY=$(grep -c 'advisory: true' "$f" || true)
+              HAS_REASON=$(grep -c 'advisory_reason:' "$f" || true)
+              if [[ "$HAS_ADVISORY" -gt 0 && "$HAS_REASON" -eq 0 ]]; then
+                echo "::error file=$f::File has advisory: true but missing advisory_reason field."
+                MISSING_REASON=1
+              fi
+            fi
+          done
+
+          if [[ "$MISSING_REASON" -eq 1 ]]; then
+            exit 1
+          fi
+
+          echo "✅ All advisory rules have advisory_reason."

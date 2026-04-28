@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  // scripts/ is intentionally excluded from the typecheck/build:
+  // scripts/scope-tests.ts is a standalone CLI run via `npx tsx` (used by
+  // gate-publish.sh), not a library source. Including it conflicts with
+  // rootDir: "src" (TS6059).
+  "include": ["src"]
+}

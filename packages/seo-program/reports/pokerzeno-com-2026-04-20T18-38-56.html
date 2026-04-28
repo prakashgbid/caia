@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SEO Report — https://pokerzeno.com</title>
+<style>
+  :root{--bg:#0f172a;--surface:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--green:#22c55e;--yellow:#eab308;--orange:#f97316;--red:#ef4444}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;padding:2rem}
+  h1{font-size:1.5rem;margin-bottom:.5rem}
+  .meta{color:var(--muted);font-size:.875rem;margin-bottom:2rem}
+  .score-hero{font-size:4rem;font-weight:700;line-height:1}
+  .grade{font-size:2rem;font-weight:700;margin-left:.5rem}
+  .dims{display:flex;flex-wrap:wrap;gap:1rem;margin:1.5rem 0}
+  .dim-card{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:1rem;min-width:160px}
+  .dim-score{font-size:2rem;font-weight:700}
+  .dim-label{font-size:.75rem;color:var(--muted);margin:.25rem 0 .5rem}
+  .dim-bar{background:var(--border);border-radius:9999px;height:6px}
+  .dim-fill{background:var(--green);border-radius:9999px;height:6px}
+  table{width:100%;border-collapse:collapse;font-size:.875rem}
+  th{background:var(--surface);text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--border);color:var(--muted)}
+  td{padding:.5rem .75rem;border-bottom:1px solid var(--border);vertical-align:top}
+  .badge{display:inline-block;padding:.125rem .375rem;border-radius:.25rem;font-size:.75rem;font-weight:600;text-transform:uppercase}
+  .badge.critical{background:var(--red);color:#fff}
+  .badge.major{background:var(--orange);color:#fff}
+  .badge.minor{background:var(--yellow);color:#000}
+  .badge.info{background:var(--muted);color:#000}
+  .sev-critical td:first-child{border-left:3px solid var(--red)}
+  .sev-major td:first-child{border-left:3px solid var(--orange)}
+</style>
+</head>
+<body>
+<h1>SEO Audit Report</h1>
+<div class="meta">https://pokerzeno.com &middot; 2026-04-20T18:38:56.674Z &middot; TTFB: 182ms</div>
+<div class="score-hero">84<span class="grade">B</span></div>
+<div class="dims">
+    <div class="dim-card">
+      <div class="dim-score">56</div>
+      <div class="dim-label">Technical SEO</div>
+      <div class="dim-bar"><div class="dim-fill" style="width:56%"></div></div>
+    </div>
+    <div class="dim-card">
+      <div class="dim-score">100</div>
+      <div class="dim-label">On-Page SEO</div>
+      <div class="dim-bar"><div class="dim-fill" style="width:100%"></div></div>
+    </div>
+    <div class="dim-card">
+      <div class="dim-score">86</div>
+      <div class="dim-label">Content</div>
+      <div class="dim-bar"><div class="dim-fill" style="width:86%"></div></div>
+    </div>
+    <div class="dim-card">
+      <div class="dim-score">100</div>
+      <div class="dim-label">Performance</div>
+      <div class="dim-bar"><div class="dim-fill" style="width:100%"></div></div>
+    </div>
+    <div class="dim-card">
+      <div class="dim-score">86</div>
+      <div class="dim-label">Social / OG</div>
+      <div class="dim-bar"><div class="dim-fill" style="width:86%"></div></div>
+    </div>
+    <div class="dim-card">
+      <div class="dim-score">79</div>
+      <div class="dim-label">Security</div>
+      <div class="dim-bar"><div class="dim-fill" style="width:79%"></div></div>
+    </div></div>
+<table>
+  <thead><tr><th>Severity</th><th>Dimension</th><th>Finding</th><th>Fix</th><th>Impact</th></tr></thead>
+  <tbody>
+    <tr class="sev-major">
+      <td><span class="badge major">major</span></td>
+      <td>technical</td>
+      <td>No canonical URL specified</td>
+      <td>Add <link rel="canonical" href="…"> to avoid duplicate content</td>
+      <td>5/10</td>
+    </tr>
+    <tr class="sev-major">
+      <td><span class="badge major">major</span></td>
+      <td>technical</td>
+      <td>No JSON-LD structured data found</td>
+      <td>Add Organization, WebSite, and page-specific JSON-LD (Article, FAQPage, etc.)</td>
+      <td>6/10</td>
+    </tr>
+    <tr class="sev-major">
+      <td><span class="badge major">major</span></td>
+      <td>security</td>
+      <td>Missing Strict-Transport-Security header</td>
+      <td>Add "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload"</td>
+      <td>4/10</td>
+    </tr>
+    <tr class="sev-major">
+      <td><span class="badge major">major</span></td>
+      <td>security</td>
+      <td>Missing clickjacking protection (X-Frame-Options or CSP frame-ancestors)</td>
+      <td>Add "X-Frame-Options: SAMEORIGIN" or CSP frame-ancestors directive</td>
+      <td>3/10</td>
+    </tr>
+    <tr class="sev-info">
+      <td><span class="badge info">info</span></td>
+      <td>security</td>
+      <td>No Permissions-Policy header (optional but best practice)</td>
+      <td>Add Permissions-Policy to restrict camera/mic/geolocation access</td>
+      <td>1/10</td>
+    </tr>
+    <tr class="sev-major">
+      <td><span class="badge major">major</span></td>
+      <td>social</td>
+      <td>Missing og:image — links shared on social will have no preview image</td>
+      <td>Add og:image (1200×630px) for rich social sharing previews</td>
+      <td>5/10</td>
+    </tr>
+    <tr class="sev-minor">
+      <td><span class="badge minor">minor</span></td>
+      <td>social</td>
+      <td>Missing og:url</td>
+      <td>Add <meta property="og:url" content="…page URL…"></td>
+      <td>1/10</td>
+    </tr>
+    <tr class="sev-minor">
+      <td><span class="badge minor">minor</span></td>
+      <td>content</td>
+      <td>Page has 333 words — consider expanding for better topical depth</td>
+      <td>Aim for 600–1200 words on key pages for topical authority</td>
+      <td>3/10</td>
+    </tr>
+    <tr class="sev-major">
+      <td><span class="badge major">major</span></td>
+      <td>content</td>
+      <td>No analytics script detected (Cloudflare, Plausible, or GA4)</td>
+      <td>Add Cloudflare Web Analytics (free, privacy-first) — add the beacon script to layout</td>
+      <td>5/10</td>
+    </tr>
+    <tr class="sev-major">
+      <td><span class="badge major">major</span></td>
+      <td>technical</td>
+      <td>robots.txt does not reference the sitemap</td>
+      <td>Add "Sitemap: https://pokerzeno.com/sitemap.xml" to robots.txt</td>
+      <td>4/10</td>
+    </tr>
+    <tr class="sev-minor">
+      <td><span class="badge minor">minor</span></td>
+      <td>technical</td>
+      <td>robots.txt has no User-agent directive</td>
+      <td>Add "User-agent: *" with appropriate Allow/Disallow rules</td>
+      <td>2/10</td>
+    </tr>
+    <tr class="sev-major">
+      <td><span class="badge major">major</span></td>
+      <td>technical</td>
+      <td>sitemap.xml returns 404</td>
+      <td>Create src/app/sitemap.ts (Next.js) to auto-generate sitemap</td>
+      <td>6/10</td>
+    </tr></tbody>
+</table>
+</body>
+</html>

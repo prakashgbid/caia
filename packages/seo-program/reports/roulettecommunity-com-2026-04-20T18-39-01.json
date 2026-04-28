@@ -1,0 +1,554 @@
+{
+  "url": "https://roulettecommunity.com",
+  "timestamp": "2026-04-20T18:39:01.209Z",
+  "ttfb": 1066,
+  "statusCode": 200,
+  "composite": 71,
+  "grade": "C",
+  "dimensions": [
+    {
+      "key": "technical",
+      "label": "Technical SEO",
+      "score": 60,
+      "weight": 0.25,
+      "findings": [
+        {
+          "id": "canonical-missing",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "No canonical URL specified",
+          "suggestedFix": "Add <link rel=\"canonical\" href=\"…\"> to avoid duplicate content",
+          "estimatedImpact": 5,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "schema-missing",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "No JSON-LD structured data found",
+          "suggestedFix": "Add Organization, WebSite, and page-specific JSON-LD (Article, FAQPage, etc.)",
+          "estimatedImpact": 6,
+          "estimatedEffort": "M"
+        },
+        {
+          "id": "robots-missing",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "robots.txt returns 404 — crawlers get no guidance",
+          "suggestedFix": "Create robots.txt at public/robots.txt with Sitemap reference",
+          "estimatedImpact": 5,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sitemap-missing",
+          "dimension": "technical",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "sitemap.xml returns 404",
+          "suggestedFix": "Create src/app/sitemap.ts (Next.js) to auto-generate sitemap",
+          "estimatedImpact": 6,
+          "estimatedEffort": "M"
+        }
+      ]
+    },
+    {
+      "key": "on-page",
+      "label": "On-Page SEO",
+      "score": 84,
+      "weight": 0.25,
+      "findings": [
+        {
+          "id": "meta-desc-long",
+          "dimension": "on-page",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "Meta description too long (176 chars)",
+          "evidence": "Master roulette strategy and mathematics through comprehensive educational cours…",
+          "suggestedFix": "Trim to ≤160 characters",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "heading-hierarchy-skip",
+          "dimension": "on-page",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "Heading hierarchy skips 1 level(s) (e.g., H1→H3)",
+          "suggestedFix": "Use sequential heading levels (H1→H2→H3) without gaps",
+          "estimatedImpact": 2,
+          "estimatedEffort": "M"
+        },
+        {
+          "id": "links-no-text",
+          "dimension": "on-page",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "4 link(s) have no anchor text",
+          "evidence": [
+            "https://twitter.com/roulettecommunity",
+            "https://facebook.com/roulettecommunity",
+            "https://instagram.com/roulettecommunity"
+          ],
+          "suggestedFix": "Add descriptive anchor text to all links",
+          "estimatedImpact": 2,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "favicon-missing",
+          "dimension": "on-page",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "No favicon found",
+          "suggestedFix": "Add favicon.svg or favicon.ico",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        }
+      ]
+    },
+    {
+      "key": "content",
+      "label": "Content",
+      "score": 65,
+      "weight": 0.2,
+      "findings": [
+        {
+          "id": "content-thin",
+          "dimension": "content",
+          "severity": "critical",
+          "url": "https://roulettecommunity.com",
+          "message": "Thin content: only 63 words on page (min 300 recommended)",
+          "suggestedFix": "Expand content to at least 300 words with relevant keywords and value",
+          "estimatedImpact": 7,
+          "estimatedEffort": "L"
+        },
+        {
+          "id": "analytics-missing",
+          "dimension": "content",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "No analytics script detected (Cloudflare, Plausible, or GA4)",
+          "suggestedFix": "Add Cloudflare Web Analytics (free, privacy-first) — add the beacon script to layout",
+          "estimatedImpact": 5,
+          "estimatedEffort": "S"
+        }
+      ]
+    },
+    {
+      "key": "performance",
+      "label": "Performance",
+      "score": 96,
+      "weight": 0.15,
+      "findings": [
+        {
+          "id": "perf-ttfb-moderate",
+          "dimension": "performance",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "TTFB 1066ms (good target <800ms)",
+          "suggestedFix": "Consider edge caching or CDN to reduce TTFB",
+          "estimatedImpact": 2,
+          "estimatedEffort": "M"
+        }
+      ]
+    },
+    {
+      "key": "social",
+      "label": "Social / OG",
+      "score": 44,
+      "weight": 0.1,
+      "findings": [
+        {
+          "id": "og-title-missing",
+          "dimension": "social",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing og:title",
+          "suggestedFix": "Add <meta property=\"og:title\"> for social sharing",
+          "estimatedImpact": 4,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "og-description-missing",
+          "dimension": "social",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing og:description",
+          "suggestedFix": "Add <meta property=\"og:description\">",
+          "estimatedImpact": 3,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "og-image-missing",
+          "dimension": "social",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing og:image — links shared on social will have no preview image",
+          "suggestedFix": "Add og:image (1200×630px) for rich social sharing previews",
+          "estimatedImpact": 5,
+          "estimatedEffort": "M"
+        },
+        {
+          "id": "og-type-missing",
+          "dimension": "social",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing og:type",
+          "suggestedFix": "Add <meta property=\"og:type\" content=\"website\">",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "og-url-missing",
+          "dimension": "social",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing og:url",
+          "suggestedFix": "Add <meta property=\"og:url\" content=\"…page URL…\">",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "twitter-card-missing",
+          "dimension": "social",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing twitter:card meta tag",
+          "suggestedFix": "Add <meta name=\"twitter:card\" content=\"summary_large_image\">",
+          "estimatedImpact": 4,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "twitter-title-missing",
+          "dimension": "social",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing twitter:title",
+          "suggestedFix": "Add <meta name=\"twitter:title\">",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "twitter-desc-missing",
+          "dimension": "social",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing twitter:description",
+          "suggestedFix": "Add <meta name=\"twitter:description\">",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        }
+      ]
+    },
+    {
+      "key": "security",
+      "label": "Security",
+      "score": 71,
+      "weight": 0.05,
+      "findings": [
+        {
+          "id": "sec-hsts-no-subdomains",
+          "dimension": "security",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "HSTS does not include subdomains",
+          "evidence": "max-age=63072000",
+          "suggestedFix": "Add includeSubDomains to HSTS header",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-xcto",
+          "dimension": "security",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing X-Content-Type-Options header",
+          "suggestedFix": "Add \"X-Content-Type-Options: nosniff\"",
+          "estimatedImpact": 3,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-frame-options",
+          "dimension": "security",
+          "severity": "major",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing clickjacking protection (X-Frame-Options or CSP frame-ancestors)",
+          "suggestedFix": "Add \"X-Frame-Options: SAMEORIGIN\" or CSP frame-ancestors directive",
+          "estimatedImpact": 3,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-referrer-policy",
+          "dimension": "security",
+          "severity": "minor",
+          "url": "https://roulettecommunity.com",
+          "message": "Missing Referrer-Policy header",
+          "suggestedFix": "Add \"Referrer-Policy: strict-origin-when-cross-origin\"",
+          "estimatedImpact": 2,
+          "estimatedEffort": "S"
+        },
+        {
+          "id": "sec-no-permissions-policy",
+          "dimension": "security",
+          "severity": "info",
+          "url": "https://roulettecommunity.com",
+          "message": "No Permissions-Policy header (optional but best practice)",
+          "suggestedFix": "Add Permissions-Policy to restrict camera/mic/geolocation access",
+          "estimatedImpact": 1,
+          "estimatedEffort": "S"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "meta-desc-long",
+      "dimension": "on-page",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "Meta description too long (176 chars)",
+      "evidence": "Master roulette strategy and mathematics through comprehensive educational cours…",
+      "suggestedFix": "Trim to ≤160 characters",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "canonical-missing",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "No canonical URL specified",
+      "suggestedFix": "Add <link rel=\"canonical\" href=\"…\"> to avoid duplicate content",
+      "estimatedImpact": 5,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "heading-hierarchy-skip",
+      "dimension": "on-page",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "Heading hierarchy skips 1 level(s) (e.g., H1→H3)",
+      "suggestedFix": "Use sequential heading levels (H1→H2→H3) without gaps",
+      "estimatedImpact": 2,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "links-no-text",
+      "dimension": "on-page",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "4 link(s) have no anchor text",
+      "evidence": [
+        "https://twitter.com/roulettecommunity",
+        "https://facebook.com/roulettecommunity",
+        "https://instagram.com/roulettecommunity"
+      ],
+      "suggestedFix": "Add descriptive anchor text to all links",
+      "estimatedImpact": 2,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "schema-missing",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "No JSON-LD structured data found",
+      "suggestedFix": "Add Organization, WebSite, and page-specific JSON-LD (Article, FAQPage, etc.)",
+      "estimatedImpact": 6,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "sec-hsts-no-subdomains",
+      "dimension": "security",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "HSTS does not include subdomains",
+      "evidence": "max-age=63072000",
+      "suggestedFix": "Add includeSubDomains to HSTS header",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-xcto",
+      "dimension": "security",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing X-Content-Type-Options header",
+      "suggestedFix": "Add \"X-Content-Type-Options: nosniff\"",
+      "estimatedImpact": 3,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-frame-options",
+      "dimension": "security",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing clickjacking protection (X-Frame-Options or CSP frame-ancestors)",
+      "suggestedFix": "Add \"X-Frame-Options: SAMEORIGIN\" or CSP frame-ancestors directive",
+      "estimatedImpact": 3,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-referrer-policy",
+      "dimension": "security",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing Referrer-Policy header",
+      "suggestedFix": "Add \"Referrer-Policy: strict-origin-when-cross-origin\"",
+      "estimatedImpact": 2,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sec-no-permissions-policy",
+      "dimension": "security",
+      "severity": "info",
+      "url": "https://roulettecommunity.com",
+      "message": "No Permissions-Policy header (optional but best practice)",
+      "suggestedFix": "Add Permissions-Policy to restrict camera/mic/geolocation access",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "og-title-missing",
+      "dimension": "social",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing og:title",
+      "suggestedFix": "Add <meta property=\"og:title\"> for social sharing",
+      "estimatedImpact": 4,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "og-description-missing",
+      "dimension": "social",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing og:description",
+      "suggestedFix": "Add <meta property=\"og:description\">",
+      "estimatedImpact": 3,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "og-image-missing",
+      "dimension": "social",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing og:image — links shared on social will have no preview image",
+      "suggestedFix": "Add og:image (1200×630px) for rich social sharing previews",
+      "estimatedImpact": 5,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "og-type-missing",
+      "dimension": "social",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing og:type",
+      "suggestedFix": "Add <meta property=\"og:type\" content=\"website\">",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "og-url-missing",
+      "dimension": "social",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing og:url",
+      "suggestedFix": "Add <meta property=\"og:url\" content=\"…page URL…\">",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "twitter-card-missing",
+      "dimension": "social",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing twitter:card meta tag",
+      "suggestedFix": "Add <meta name=\"twitter:card\" content=\"summary_large_image\">",
+      "estimatedImpact": 4,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "twitter-title-missing",
+      "dimension": "social",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing twitter:title",
+      "suggestedFix": "Add <meta name=\"twitter:title\">",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "twitter-desc-missing",
+      "dimension": "social",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "Missing twitter:description",
+      "suggestedFix": "Add <meta name=\"twitter:description\">",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "content-thin",
+      "dimension": "content",
+      "severity": "critical",
+      "url": "https://roulettecommunity.com",
+      "message": "Thin content: only 63 words on page (min 300 recommended)",
+      "suggestedFix": "Expand content to at least 300 words with relevant keywords and value",
+      "estimatedImpact": 7,
+      "estimatedEffort": "L"
+    },
+    {
+      "id": "analytics-missing",
+      "dimension": "content",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "No analytics script detected (Cloudflare, Plausible, or GA4)",
+      "suggestedFix": "Add Cloudflare Web Analytics (free, privacy-first) — add the beacon script to layout",
+      "estimatedImpact": 5,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "favicon-missing",
+      "dimension": "on-page",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "No favicon found",
+      "suggestedFix": "Add favicon.svg or favicon.ico",
+      "estimatedImpact": 1,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "robots-missing",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "robots.txt returns 404 — crawlers get no guidance",
+      "suggestedFix": "Create robots.txt at public/robots.txt with Sitemap reference",
+      "estimatedImpact": 5,
+      "estimatedEffort": "S"
+    },
+    {
+      "id": "sitemap-missing",
+      "dimension": "technical",
+      "severity": "major",
+      "url": "https://roulettecommunity.com",
+      "message": "sitemap.xml returns 404",
+      "suggestedFix": "Create src/app/sitemap.ts (Next.js) to auto-generate sitemap",
+      "estimatedImpact": 6,
+      "estimatedEffort": "M"
+    },
+    {
+      "id": "perf-ttfb-moderate",
+      "dimension": "performance",
+      "severity": "minor",
+      "url": "https://roulettecommunity.com",
+      "message": "TTFB 1066ms (good target <800ms)",
+      "suggestedFix": "Consider edge caching or CDN to reduce TTFB",
+      "estimatedImpact": 2,
+      "estimatedEffort": "M"
+    }
+  ]
+}

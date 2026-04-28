@@ -1,0 +1,279 @@
+import type { VoiceStyle } from './types';
+
+export interface VoiceProfile {
+  id: VoiceStyle;
+  sentenceVariants: {
+    opener: string[];
+    transition: string[];
+    closer: string[];
+  };
+  adjectives: string[];
+  hedges: string[];
+  enthusiasm: 'low' | 'medium' | 'high';
+}
+
+export const VOICE_PROFILES: Record<VoiceStyle, VoiceProfile> = {
+  casual: {
+    id: 'casual',
+    enthusiasm: 'high',
+    sentenceVariants: {
+      opener: [
+        "So I've been thinking about this a lot lately and",
+        "Okay hear me out —",
+        "This happened to me just last week and I had to share:",
+        "Not sure if anyone else has noticed this but",
+        "Been playing for a while now and I keep coming back to this:",
+        "Had a really interesting session yesterday that got me thinking.",
+        "Dropped into the local cardroom last night and",
+        "Wanted to get the community's take on something:",
+        "This might be a hot take but",
+        "Anyone else feel like",
+        "Quick question for the regulars here:",
+        "So funny story from my home game —",
+      ],
+      transition: [
+        "Anyway, the point is",
+        "But here's the thing:",
+        "Which got me wondering:",
+        "So I tried something different:",
+        "Long story short:",
+        "The weird part was",
+        "What surprised me was",
+        "And then it clicked:",
+        "Turns out",
+        "So yeah,",
+      ],
+      closer: [
+        "Let me know what you guys think!",
+        "Would love to hear how you handle this.",
+        "Curious if anyone else has run into this.",
+        "Drop your thoughts below!",
+        "Happy to discuss further in the comments.",
+        "What's your take?",
+        "Appreciate any input!",
+        "Hope this helps someone.",
+        "Cheers everyone.",
+        "See you at the tables!",
+      ],
+    },
+    adjectives: [
+      'wild', 'interesting', 'tricky', 'fun', 'sneaky', 'solid', 'rough',
+      'decent', 'weird', 'classic', 'legit', 'tight', 'loose', 'sick', 'juicy',
+    ],
+    hedges: [
+      'I think', 'maybe', 'could be wrong but', 'just my take',
+      'not 100% sure but', 'in my experience', 'seems like', 'might be',
+    ],
+  },
+
+  analytical: {
+    id: 'analytical',
+    enthusiasm: 'low',
+    sentenceVariants: {
+      opener: [
+        "After reviewing the relevant data on this topic,",
+        "From a probability standpoint,",
+        "Looking at this from a first-principles perspective:",
+        "The evidence here points in an interesting direction.",
+        "A careful analysis of the available data suggests",
+        "Let's break this down methodically.",
+        "The key variables to consider here are",
+        "When we model this scenario correctly,",
+        "Examining the underlying mechanics:",
+        "The numbers on this are pretty clear:",
+        "Running the math on this scenario reveals",
+        "From a quantitative perspective, this is straightforward:",
+      ],
+      transition: [
+        "Furthermore,",
+        "This is supported by the observation that",
+        "To extend this analysis:",
+        "The implication here is",
+        "Specifically,",
+        "This leads to the conclusion that",
+        "Notably,",
+        "The relevant distinction is",
+        "Put differently:",
+        "This follows from the fact that",
+      ],
+      closer: [
+        "The data supports this approach strongly.",
+        "I'd be interested in any counterexamples.",
+        "Happy to share the full model if useful.",
+        "Further study would be warranted here.",
+        "The conclusion seems robust.",
+        "Comments on the methodology are welcome.",
+        "I'm open to revisions if I've missed something.",
+        "The practical takeaway is clear.",
+      ],
+    },
+    adjectives: [
+      'systematic', 'rigorous', 'precise', 'significant', 'marginal', 'robust',
+      'optimal', 'consistent', 'variable', 'structured', 'quantifiable',
+      'measurable', 'theoretical', 'empirical', 'statistical',
+    ],
+    hedges: [
+      'based on available evidence', 'the data suggests', 'statistically speaking',
+      'assuming standard conditions', 'with some caveats', 'in most scenarios',
+      'the model predicts', 'under reasonable assumptions',
+    ],
+  },
+
+  'pro-jargon': {
+    id: 'pro-jargon',
+    enthusiasm: 'medium',
+    sentenceVariants: {
+      opener: [
+        "The range construction here is fascinating —",
+        "From a GTO baseline perspective,",
+        "Working through the ICM implications:",
+        "Looking at the EV calculation carefully:",
+        "The equilibrium solution for this spot is",
+        "When you plug this into the solver,",
+        "At equilibrium, the correct play is",
+        "The MDF here dictates",
+        "Thinking about this in terms of relative hand strength:",
+        "The pot geometry makes this an interesting spot:",
+        "Running this through PIO reveals",
+        "The frequency-based approach here is:",
+      ],
+      transition: [
+        "Expanding the range here,",
+        "The blocker effects are significant:",
+        "Adjusting for population tendencies:",
+        "In a balanced strategy,",
+        "The removal effects aside,",
+        "Working within the correct frequencies,",
+        "The SPR changes things here because",
+        "Given the board texture,",
+        "From a pure EV standpoint,",
+        "The equity distribution matters here:",
+      ],
+      closer: [
+        "The solver confirms this line.",
+        "This is a frequency-dependent conclusion.",
+        "Interested in alternative lines here.",
+        "The EV edge is real over large samples.",
+        "Happy to dig into the ranges further.",
+        "Post hands if you want specific analysis.",
+        "The math checks out.",
+        "Deviation from this line has a cost.",
+      ],
+    },
+    adjectives: [
+      'polarized', 'merged', 'linear', 'capped', 'uncapped', 'balanced',
+      'exploitative', 'optimal', '+EV', 'high-frequency', 'low-frequency',
+      'nutted', 'bluff-heavy', 'value-heavy', 'thin',
+    ],
+    hedges: [
+      'roughly speaking', 'in a vacuum', 'all else equal', 'assuming standard reads',
+      'at a GTO baseline', 'exploitably', 'in equilibrium', 'solver-wise',
+    ],
+  },
+
+  storytelling: {
+    id: 'storytelling',
+    enthusiasm: 'high',
+    sentenceVariants: {
+      opener: [
+        "Let me take you back to a hand I played three months ago.",
+        "Picture this: it's midnight, the felt is worn, and",
+        "There's a player who sits in Seat 3 every Thursday night.",
+        "The first time I walked into that cardroom, I knew",
+        "I remember the exact moment it clicked for me.",
+        "Years ago, a mentor said something I've never forgotten:",
+        "It started as an ordinary session until",
+        "The best lessons come from the worst beats.",
+        "I've been playing this game for long enough to know that",
+        "Some spots stay with you. This is one of them.",
+        "Ask any veteran and they'll tell you the same story.",
+        "The table was quiet when the big hand went down.",
+      ],
+      transition: [
+        "And that's when everything changed.",
+        "But the real lesson came later:",
+        "What I didn't know at the time was",
+        "Looking back now, I can see that",
+        "That moment taught me",
+        "The pattern became clear:",
+        "Here's where it gets interesting:",
+        "What followed was unexpected:",
+        "The moral of the story is",
+        "It changed how I approach everything.",
+      ],
+      closer: [
+        "That experience shaped how I play to this day.",
+        "Sometimes the game teaches you things you didn't ask to learn.",
+        "If there's one thing I'd pass on, it's this.",
+        "The table always has more lessons for those paying attention.",
+        "Every hand is a story. Learn to read them.",
+        "I hope this resonates with someone here.",
+        "The game is long. Play it with intention.",
+        "Thanks for reading this far.",
+      ],
+    },
+    adjectives: [
+      'vivid', 'quiet', 'electric', 'tense', 'hard-won', 'unexpected',
+      'memorable', 'honest', 'raw', 'patient', 'deliberate', 'earned',
+      'sharp', 'difficult', 'revealing',
+    ],
+    hedges: [
+      'if I remember right', 'or something close to it', 'at least that was my read',
+      'I could be misremembering but', 'the details blur but', 'roughly',
+      'though time colors memory', 'or so it seemed',
+    ],
+  },
+
+  'dry-humor': {
+    id: 'dry-humor',
+    enthusiasm: 'medium',
+    sentenceVariants: {
+      opener: [
+        "Shocking news from the poker world:",
+        "In what should surprise absolutely no one,",
+        "Another day, another reminder that variance exists.",
+        "I've made a discovery. It is, charitably, humbling.",
+        "Good news and bad news. The bad news is there's only bad news.",
+        "I've been playing this game long enough to be bad at it confidently.",
+        "Today's update from the 'things that were my fault' department:",
+        "Filed under: decisions I cannot explain:",
+        "Posting this so future me can learn. Future me won't.",
+        "A brief dispatch from the land of questionable decisions:",
+        "My results this week were, technically, a sample size.",
+        "Here is a thing I did. I stand by nothing.",
+      ],
+      transition: [
+        "The punchline, of course, is",
+        "Plot twist:",
+        "Naturally,",
+        "At this point, you may be wondering.",
+        "I was not wondering.",
+        "So obviously I",
+        "The correct play here, which I did not make,",
+        "Spoiler: it was not fine.",
+        "In hindsight,",
+        "And yet:",
+      ],
+      closer: [
+        "Anyway, variance.",
+        "I'm fine. Probably.",
+        "The bankroll survives. Barely.",
+        "This is fine.",
+        "I've updated my model. It now includes humility.",
+        "Comments open for roasting.",
+        "The math is not wrong. I am.",
+        "See you at the tables, where I will do this again.",
+      ],
+    },
+    adjectives: [
+      'spectacular', 'entirely predictable', 'technically correct', 'optional',
+      'allegedly', 'theoretically', 'what I thought was', 'apparently',
+      'ambitious', 'creative', 'generous', 'educational', 'expensive', 'memorable', 'formative',
+    ],
+    hedges: [
+      'allegedly', 'in theory', 'on paper', 'I thought', 'according to me',
+      'in what I called a plan', 'with what I described as confidence',
+      'not that it mattered',
+    ],
+  },
+};

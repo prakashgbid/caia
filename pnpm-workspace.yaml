@@ -1,3 +1,10 @@
 packages:
+  - 'apps/*'
   - 'packages/*'
   - 'configs/*'
+  # Only concrete site templates are workspace members. Generic scaffold
+  # templates (templates/site, templates/utility) contain unfilled placeholders
+  # like {{SLUG}}/{{SITE_NAME}} and are meant to be cloned-and-renamed by the
+  # scaffold tooling, not built directly. Including them here breaks `tsc`/
+  # `next build` because the placeholders aren't valid TS/JSX.
+  - 'templates/site-*'

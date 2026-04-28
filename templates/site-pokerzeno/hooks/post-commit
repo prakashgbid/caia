@@ -1,0 +1,2 @@
+#!/bin/sh
+git push origin main --quiet 2>/dev/null || true

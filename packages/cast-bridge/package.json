@@ -1,0 +1,41 @@
+{
+  "name": "@pokerzeno/cast-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable casting utility for PokerZeno and Roulette Community — BroadcastChannel two-tab sync + Chrome tab-mirror casting",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./sender": "./src/sender/index.ts",
+    "./receiver": "./src/receiver/index.ts",
+    "./filters": "./src/filters/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "jsdom": "^24.1.1",
+    "typescript": "^5.5.0",
+    "vitest": "^1.6.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  }
+}

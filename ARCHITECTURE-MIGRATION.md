@@ -107,3 +107,30 @@ When Tier 1 packages are production-ready:
 | 2026-04-24 | Monorepo (pnpm + turbo) over multi-repo | Easier cross-package refactoring; sites stay separate |
 | 2026-04-24 | Scope `@chiefaia` (not `@caia`) | `@caia` org is owned by another npm user |
 | 2026-04-24 | Changesets (not Lerna) | Leaner, no legacy baggage, better DX |
+
+## Phase 2 — Consolidation (completed)
+
+User directive: **"CAIA is the single site/app/IT-system building platform. Everything generic (non-site-specific) consolidates into the CAIA monorepo. Migrate everything in."**
+
+### What moved in (Phase 2)
+
+- Conductor factory (entire `prakashgbid/conductor` repo): orchestrator engine, dashboard, executor, task-run-poller, story-backfiller, db-backup, completeness-sentinel, pipeline-pulse, orchestrator-middleware
+- Conductor's `plugins/` workspace: secrets-broker, story-decomposer, dead-shell-detector, behavior-suite
+- Standalone `prakashgbid/image-provider` repo (now `@chiefaia/image-provider`)
+- `prakashgbid/pokerzeno-plugins` workspace (7 packages, `@pokerzeno/*` scope retained — sites consume from npm)
+- `prakashgbid/site-template` and `prakashgbid/pokerzeno-site-template` → `templates/site/` and `templates/site-pokerzeno/`
+- `prakashgbid/framework` and `prakashgbid/pokerzeno-framework` → `docs/legacy-framework/` and `docs/legacy-pokerzeno-framework/` (mostly ADRs, runbooks, lock specs)
+- `prakashgbid/conductor-state` archived (state lives at `~/.conductor/` filesystem path; no repo needed)
+
+### What stayed out
+
+- Site repos (`pokerzeno`, `ROULETTECOMMUNITY`, `poker-247`, future `chiefaia.com`, `edisoncricket`, `prakash-tiwari`, `ankitatiwari`)
+- Stolution + Stolution-fix (remote-only)
+
+### Workspace shape
+
+`pnpm-workspace.yaml` now spans `apps/`, `packages/`, `configs/`, `templates/`. 39 workspace projects total. `pnpm install` resolves 1119 deps cleanly.
+
+### Cutover
+
+Launchd plists (`com.conductor.*`) need their `ProgramArguments` rewritten to point at `caia/apps/*` instead of `conductor/...` and `plugins/...`. Cutover script lands in `scripts/migrate-launchd.sh`. After PR merge, run the script + `conductor pulse --json` to verify PASSING.

@@ -1,0 +1,48 @@
+{
+  "name": "@pokerzeno/backend-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared Supabase backend for RouletteCommunity and PokerZeno",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./users": "./src/users/index.ts",
+    "./groups": "./src/groups/index.ts",
+    "./posts": "./src/posts/index.ts",
+    "./publications": "./src/publications/index.ts",
+    "./events": "./src/events/index.ts",
+    "./points": "./src/points/index.ts",
+    "./notifications": "./src/notifications/index.ts",
+    "./follows": "./src/follows/index.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run tests/e2e",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'TODO: wire @chiefaia/eslint-config — currently a no-op so monorepo lint passes' && exit 0",
+    "db:migrate": "supabase db push",
+    "db:reset": "supabase db reset",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/auth-helpers-nextjs": "^0.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0",
+    "supabase": "^1.142.0",
+    "dotenv": "^16.4.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  }
+}

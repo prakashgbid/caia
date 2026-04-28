@@ -1,0 +1,21 @@
+{
+  "name": "@chiefaia/behavior-suite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Behavioral / functional / layout testing foundation for pokerzeno sites",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@axe-core/playwright": ">=4",
+    "@playwright/test": ">=1.44"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.5"
+  }
+}

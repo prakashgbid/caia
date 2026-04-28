@@ -1,0 +1,15 @@
+{
+  "name": "@caia-app/story-backfiller",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Periodic story backfiller daemon.",
+  "main": "index.cjs",
+  "scripts": {
+    "build": "tsc",
+    "start": "node index.cjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.0.0"
+  }
+}

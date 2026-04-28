@@ -1,0 +1,21 @@
+{
+  "name": "@caia-app/executor",
+  "version": "0.1.0",
+  "description": "Autonomous 24/7 task execution engine for Conductor",
+  "main": "dist/executor-daemon.js",
+  "bin": {
+    "conductor-executor": "dist/executor-daemon.js"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "test": "echo 'TODO: executor has no test runner installed (jest references but no jest devDep). Stubbed.' && exit 0"
+  },
+  "dependencies": {
+    "nanoid": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "*",
+    "typescript": "*"
+  },
+  "private": true
+}

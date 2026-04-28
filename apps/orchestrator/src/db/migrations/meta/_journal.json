@@ -1,0 +1,104 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1776729970193,
+      "tag": "0000_optimal_risque",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776729970194,
+      "tag": "0001_timeline_enrich",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776729970195,
+      "tag": "0002_domains",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1776729970196,
+      "tag": "0003_seed_domains",
+      "breakpoints": false
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1776729970197,
+      "tag": "0004_task_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1776729970198,
+      "tag": "0005_behavior_tests",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1776729970199,
+      "tag": "0006_completeness",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1776729970200,
+      "tag": "0007_executor",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1776729970201,
+      "tag": "0008_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1776729970202,
+      "tag": "0009_build_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1776729970203,
+      "tag": "0010_prompt_traceability",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1776729970212,
+      "tag": "0012_prioritization",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1776729970213,
+      "tag": "0013_pulse",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1776729970214,
+      "tag": "0014_health009_dom001",
+      "breakpoints": true
+    }
+  ]
+}

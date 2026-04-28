@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Pre-commit hook: blocks commits containing secrets.
+# Tools required: gitleaks ≥8.18, trufflehog ≥3.x
+set -euo pipefail
+
+RED='\033[0;31m'
+NC='\033[0m'
+
+if ! command -v gitleaks &>/dev/null; then
+  echo -e "${RED}[secrets-gate] gitleaks not found. Install: brew install gitleaks${NC}"
+  exit 1
+fi
+
+if ! command -v trufflehog &>/dev/null; then
+  echo -e "${RED}[secrets-gate] trufflehog not found. Install: brew install trufflehog${NC}"
+  exit 1
+fi
+
+echo "[secrets-gate] Running gitleaks on staged files..."
+gitleaks protect --staged --no-banner --redact
+GITLEAKS_EXIT=$?
+
+echo "[secrets-gate] Running trufflehog on recent commit range..."
+# In a worktree, .git is a file pointer; resolve the real repo root via git-common-dir
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir)
+IN_WORKTREE=false
+if [[ "$GIT_COMMON_DIR" != ".git" ]]; then
+  # git-common-dir is absolute when inside a worktree (not the main working tree)
+  IN_WORKTREE=true
+fi
+
+if [[ "$IN_WORKTREE" == "true" ]]; then
+  # trufflehog git scan requires a real .git directory; worktrees have a .git file pointer.
+  # Staged-content secrets are already covered by gitleaks above.
+  # Full history scan runs on the main working tree / CI.
+  echo "[secrets-gate] Worktree detected: trufflehog git history scan deferred to main branch."
+  TRUFFLE_EXIT=0
+else
+  trufflehog git file://. --since-commit HEAD~1 --only-verified --fail
+  TRUFFLE_EXIT=$?
+fi
+
+if [[ $GITLEAKS_EXIT -ne 0 || $TRUFFLE_EXIT -ne 0 ]]; then
+  echo -e "${RED}[secrets-gate] SECRET DETECTED — commit blocked. Remove the secret and try again.${NC}"
+  exit 1
+fi
+
+echo "[secrets-gate] Clean — no secrets detected."
+
+# gate:no-env-writes — block staged .env* file changes
+echo "[env-gate] Checking staged files for .env* modifications..."
+ENV_STAGED=$(git diff --cached --name-only | grep -E '^\.env' || true)
+if [[ -n "$ENV_STAGED" ]]; then
+  echo -e "${RED}[env-gate] Blocked: staged .env* files detected: ${ENV_STAGED}${NC}"
+  echo "  Secrets must be provisioned via Vault, not .env files. See SEC-052."
+  exit 1
+fi
+echo "[env-gate] Clean — no .env* file modifications staged."
+
+# gate:decision-autonomy — scan staged TS/JS for banned autonomy-violation phrases in string literals
+echo "[autonomy-gate] Scanning staged files for banned orchestrator phrases..."
+STAGED_TS=$(git diff --cached --name-only | grep -E '\.(ts|tsx|js|jsx)$' || true)
+BANNED_FOUND=""
+if [[ -n "$STAGED_TS" ]]; then
+  while IFS= read -r file; do
+    if [[ -f "$file" ]]; then
+      # Check for banned phrases that indicate autonomy violations in string literals
+      MATCH=$(grep -n -E '"(should I|want me to|let me know if you.d like|please approve|ready when you are|shall I proceed)"' "$file" 2>/dev/null || true)
+      if [[ -n "$MATCH" ]]; then
+        BANNED_FOUND="${BANNED_FOUND}\n${file}:\n${MATCH}"
+      fi
+    fi
+  done <<< "$STAGED_TS"
+fi
+if [[ -n "$BANNED_FOUND" ]]; then
+  echo -e "${RED}[autonomy-gate] BANNED PHRASES found in staged files:${NC}"
+  echo -e "$BANNED_FOUND"
+  echo "  Orchestrator must decide autonomously. See AUTON-001."
+  exit 1
+fi
+echo "[autonomy-gate] Clean — no banned phrases in staged code."

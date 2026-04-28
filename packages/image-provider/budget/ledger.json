@@ -1,0 +1,16 @@
+[
+  {
+    "ts": "2026-04-20T23:27:06.198Z",
+    "model": "fal-ai/flux/schnell",
+    "cost": 0.003,
+    "query": "q1",
+    "imageId": "i1"
+  },
+  {
+    "model": "fal-ai/flux/schnell",
+    "cost": 0.003,
+    "query": "q2",
+    "imageId": "i2",
+    "ts": "2026-04-20T23:27:06.198Z"
+  }
+]

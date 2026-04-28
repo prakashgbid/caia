@@ -1,0 +1,9 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f1117;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+a { color: #63b3ed; text-decoration: none; }
+a:hover { text-decoration: underline; }

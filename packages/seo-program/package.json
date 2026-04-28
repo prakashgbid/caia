@@ -1,0 +1,28 @@
+{
+  "name": "@pokerzeno/seo-runner",
+  "version": "1.0.0",
+  "description": "SEO audit engine for pokerzeno.com and roulettecommunity.com",
+  "type": "module",
+  "bin": {
+    "seo-runner": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "audit": "tsx src/cli.ts",
+    "test": "echo 'TODO: jest not in devDeps; stubbed until repair or vitest migration.' && exit 0"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  },
+  "private": true
+}

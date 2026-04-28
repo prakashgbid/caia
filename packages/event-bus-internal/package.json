@@ -1,0 +1,15 @@
+{
+  "name": "@chiefaia/event-bus-internal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Internal event bus shared by orchestrator apps. Not published.",
+  "main": "index.ts",
+  "types": "index.ts",
+  "dependencies": {
+    "picomatch": "^4.0.0",
+    "@chiefaia/events-taxonomy-internal": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/picomatch": "^2.3.4"
+  }
+}

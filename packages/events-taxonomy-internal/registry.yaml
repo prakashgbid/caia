@@ -1,0 +1,338 @@
+version: "1"
+events:
+  # Pipeline lifecycle
+  - type: pipeline.started
+    severity: info
+    actor: [user, executor, ci]
+    payload: [project_slug, trigger]
+
+  - type: pipeline.completed
+    severity: info
+    actor: [user, executor, ci]
+    payload: [project_slug, trigger, duration_ms, outcome]
+
+  - type: pipeline.failed
+    severity: error
+    actor: [user, executor, ci]
+    payload: [project_slug, trigger, duration_ms, error]
+
+  - type: pipeline.decompose_started
+    severity: info
+    actor: [story-decomposer, user]
+    payload: [story_id, project_slug]
+
+  - type: pipeline.decompose_completed
+    severity: info
+    actor: [story-decomposer]
+    payload: [story_id, children_count]
+
+  # Story events
+  - type: story.created
+    severity: info
+    actor: [user, story-decomposer, api]
+    payload: [story_id, title, kind, project_slug]
+
+  - type: story.updated
+    severity: info
+    actor: [user, executor, api]
+    payload: [story_id, fields_changed]
+
+  - type: story.status_changed
+    severity: info
+    actor: [executor, user, api]
+    payload: [story_id, from_status, to_status]
+
+  - type: story.deleted
+    severity: warning
+    actor: [user, api]
+    payload: [story_id]
+
+  # Task events
+  - type: task.created
+    severity: info
+    actor: [user, executor, api]
+    payload: [task_id, title, project_slug, domain_slug]
+
+  - type: task.queued
+    severity: info
+    actor: [executor, user]
+    payload: [task_id]
+
+  - type: task.started
+    severity: info
+    actor: [executor]
+    payload: [task_id, worker_pid, worktree_path]
+
+  - type: task.completed
+    severity: info
+    actor: [executor]
+    payload: [task_id, duration_ms, result_summary]
+
+  - type: task.failed
+    severity: error
+    actor: [executor]
+    payload: [task_id, failure_reason, attempt_n]
+
+  - type: task.paused
+    severity: warning
+    actor: [executor, user]
+    payload: [task_id, pause_reason]
+
+  - type: task.resumed
+    severity: info
+    actor: [user]
+    payload: [task_id]
+
+  - type: task.status_changed
+    severity: info
+    actor: [executor, user, api]
+    payload: [task_id, from_status, to_status]
+
+  # Executor events
+  - type: executor.started
+    severity: info
+    actor: [system]
+    payload: [pid, max_concurrent, poll_interval_ms]
+
+  - type: executor.stopped
+    severity: info
+    actor: [system, user]
+    payload: [pid, reason]
+
+  - type: executor.config_changed
+    severity: info
+    actor: [user, api]
+    payload: [fields_changed]
+
+  - type: executor.circuit_opened
+    severity: error
+    actor: [executor]
+    payload: [domain_slug, failure_count, threshold]
+
+  - type: executor.circuit_closed
+    severity: info
+    actor: [executor]
+    payload: [domain_slug]
+
+  - type: executor.heartbeat
+    severity: debug
+    actor: [executor]
+    payload: [pid, active_workers, queued_tasks]
+
+  # Worker events
+  - type: worker.spawned
+    severity: info
+    actor: [executor]
+    payload: [executor_run_id, task_id, pid, worktree_path]
+
+  - type: worker.completed
+    severity: info
+    actor: [executor]
+    payload: [executor_run_id, task_id, exit_code, turn_count]
+
+  - type: worker.failed
+    severity: error
+    actor: [executor]
+    payload: [executor_run_id, task_id, exit_code, failure_reason]
+
+  - type: worker.timed_out
+    severity: error
+    actor: [executor]
+    payload: [executor_run_id, task_id, max_turns]
+
+  # Behavior test events
+  - type: behavior_test.registered
+    severity: info
+    actor: [api, ci]
+    payload: [test_id, story_id, test_path]
+
+  - type: behavior_test.passed
+    severity: info
+    actor: [ci, behavior-runner]
+    payload: [test_id, duration_ms]
+
+  - type: behavior_test.failed
+    severity: error
+    actor: [ci, behavior-runner]
+    payload: [test_id, failure_message, duration_ms]
+
+  # Completeness sentinel events
+  - type: completeness.run_started
+    severity: info
+    actor: [completeness-sentinel]
+    payload: [entity_kind, entity_id, checks_total]
+
+  - type: completeness.run_completed
+    severity: info
+    actor: [completeness-sentinel]
+    payload: [run_id, score_pct, checks_passed, checks_total]
+
+  - type: completeness.finding_filed
+    severity: warning
+    actor: [completeness-sentinel]
+    payload: [run_id, entity_id, finding_code, severity]
+
+  # Backup events
+  - type: backup.started
+    severity: info
+    actor: [db-backup]
+    payload: [backup_path, trigger]
+
+  - type: backup.completed
+    severity: info
+    actor: [db-backup]
+    payload: [backup_path, size_bytes, duration_ms]
+
+  - type: backup.failed
+    severity: error
+    actor: [db-backup]
+    payload: [backup_path, error]
+
+  # User events
+  - type: user.action
+    severity: info
+    actor: [user]
+    payload: [action, entity_type, entity_id]
+
+  # System events
+  - type: system.startup
+    severity: info
+    actor: [system]
+    payload: [component, version, port]
+
+  - type: system.shutdown
+    severity: info
+    actor: [system]
+    payload: [component, reason]
+
+  - type: system.error
+    severity: error
+    actor: [system]
+    payload: [component, error, stack]
+
+  # Domain events
+  - type: domain.created
+    severity: info
+    actor: [user, api]
+    payload: [domain_slug, name]
+
+  - type: domain.updated
+    severity: info
+    actor: [user, api]
+    payload: [domain_slug, fields_changed]
+
+  # Lock events
+  - type: lock.acquired
+    severity: debug
+    actor: [executor, worker]
+    payload: [lock_name, holder, ttl_ms]
+
+  - type: lock.released
+    severity: debug
+    actor: [executor, worker]
+    payload: [lock_name, holder]
+
+  - type: lock.expired
+    severity: warning
+    actor: [system]
+    payload: [lock_name, holder]
+
+  # Build events
+  - type: build.started
+    severity: info
+    actor: [ci, user, executor]
+    payload: [build_run_id, trigger, git_sha, branch, changed_files]
+
+  - type: build.step_started
+    severity: info
+    actor: [build-runner]
+    payload: [build_run_id, build_step_id, step_name, command]
+
+  - type: build.step_completed
+    severity: info
+    actor: [build-runner]
+    payload: [build_run_id, build_step_id, step_name, exit_code, duration_ms]
+
+  - type: build.step_failed
+    severity: error
+    actor: [build-runner]
+    payload: [build_run_id, build_step_id, step_name, exit_code, stderr_tail, error_signature]
+
+  - type: build.completed
+    severity: info
+    actor: [build-runner]
+    payload: [build_run_id, outcome, duration_ms, steps_total, steps_failed]
+
+  - type: build.aborted
+    severity: warning
+    actor: [build-runner, user]
+    payload: [build_run_id, reason, completed_steps]
+
+  # Prompt traceability events (migration 0010)
+  - type: prompt.received
+    severity: info
+    actor: [user, api, mcp, executor]
+    payload: [prompt_id, received_via, session_id, hash]
+
+  - type: prompt.status_changed
+    severity: info
+    actor: [user, api, mcp, executor]
+    payload: [prompt_id, from_status, to_status, elapsed_ms]
+
+  # Priority engine events
+  - type: priority.scored
+    severity: info
+    actor: [prioritizer, system]
+    payload: [task_id, score, bucket, rationale_summary]
+
+  - type: priority.rebucketed
+    severity: info
+    actor: [prioritizer, system]
+    payload: [task_id, old_bucket, new_bucket, score]
+
+  - type: priority.reordered
+    severity: info
+    actor: [prioritizer, system]
+    payload: [task_id, old_ordinal, new_ordinal, bucket]
+
+  - type: priority.user_override
+    severity: info
+    actor: [user, api]
+    payload: [task_id, old_ordinal, new_ordinal, override_reason]
+
+  # System decisions (autonomous authority log)
+  - type: system.decision_made
+    severity: info
+    actor: [system, prioritizer]
+    payload: [component, decision, rationale]
+
+  # Secrets broker events
+  - type: secret.fetched
+    severity: info
+    actor: [secrets-broker]
+    payload: [secret_key_hash, caller_module, site_slug, ttl_sec, cached]
+
+  - type: secret.cache_hit
+    severity: debug
+    actor: [secrets-broker]
+    payload: [secret_key_hash, caller_module, site_slug, ttl_remaining_sec]
+
+  - type: secret.rotation_triggered
+    severity: info
+    actor: [secrets-broker, user]
+    payload: [secret_key_hash, site_slug, triggered_by]
+
+  - type: secret.rotated
+    severity: info
+    actor: [secrets-broker]
+    payload: [secret_key_hash, site_slug, duration_ms]
+
+  - type: secret.access_denied
+    severity: warning
+    actor: [secrets-broker]
+    payload: [secret_key_hash, caller_ip, reason]
+
+  - type: secret.fetch_failed
+    severity: error
+    actor: [secrets-broker]
+    payload: [secret_key_hash, caller_module, error]
