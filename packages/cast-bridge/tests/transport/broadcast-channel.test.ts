@@ -65,8 +65,13 @@ describe('BroadcastChannelTransport', () => {
       sender.send({ type: 'STATE', state: publicState });
 
       expect(received).not.toBeNull();
-      const stateMsg = received as Extract<CastMessage, { type: 'STATE' }>;
-      expect(stateMsg.state.pot).toBe(500);
+      // received is CastMessage | null; we just asserted non-null. Double-cast
+      // through unknown because TS doesn't propagate the runtime not-null
+      // assertion to the type. Then narrow to Poker state — this test sends
+      // a poker state (street: 'flop'), so the .pot field is present.
+      const stateMsg = received as unknown as Extract<CastMessage, { type: 'STATE' }>;
+      const pokerState = stateMsg.state as Extract<typeof stateMsg.state, { pot: number }>;
+      expect(pokerState.pot).toBe(500);
     });
   });
 
