@@ -1,18 +1,37 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "tsconfig*.json", "package.json"],
       "outputs": ["dist/**"]
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "tsconfig*.json"]
     },
     "test": {
       "dependsOn": ["^build"],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "tests/**/*.ts",
+        "tests/**/*.tsx",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx"
+      ],
       "outputs": ["coverage/**"]
     },
-    "lint": {},
+    "lint": {
+      "inputs": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
     "clean": {
       "cache": false
     }

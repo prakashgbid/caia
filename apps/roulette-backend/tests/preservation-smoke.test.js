@@ -123,6 +123,46 @@ for (const rel of expectedInfraFiles) {
   check(`infra preserved: ${rel}`, () => fileExists(rel));
 }
 
+
+// REM-008: original dev-loop / deploy automation, preserved alongside the backend.
+const expectedDevLoopFiles = [
+  'tools/deploy-to-gcp.sh',
+  'tools/setup-docs.sh',
+  'tools/setup-docs-root.sh',
+  'tools/setup-typedoc.sh',
+  'nodemon.json',
+  'typedoc.json',
+  'commitlint.config.js',
+];
+for (const rel of expectedDevLoopFiles) {
+  check(`dev-loop preserved (REM-008): ${rel}`, () => fileExists(rel));
+}
+
+// REM-009: original CRA + Redux Toolkit frontend, dormant preservation copy.
+const expectedFrontendFiles = [
+  'legacy-frontend/package.json.original',
+  'legacy-frontend/package-lock.json.original',
+  'legacy-frontend/tsconfig.json.original',
+  'legacy-frontend/src/App.tsx',
+  'legacy-frontend/src/index.tsx',
+  'legacy-frontend/src/app/store.ts',
+  'legacy-frontend/src/api/api.ts',
+  'legacy-frontend/src/features/auth/authSlice.ts',
+  'legacy-frontend/src/features/auth/Login.tsx',
+  'legacy-frontend/src/features/auth/Register.tsx',
+  'legacy-frontend/src/features/auth/ProtectedRoute.tsx',
+  'legacy-frontend/src/features/auth/AuthListener.tsx',
+  'legacy-frontend/src/features/auth/localAuth.ts',
+  'legacy-frontend/src/features/roulette/rouletteSlice.ts',
+  'legacy-frontend/src/features/roulette/RouletteBoard.tsx',
+  'legacy-frontend/src/features/roulette/RouletteControls.tsx',
+  'legacy-frontend/src/features/roulette/BetDetails.tsx',
+  'legacy-frontend/src/features/roulette/BetHistory.tsx',
+];
+for (const rel of expectedFrontendFiles) {
+  check(`legacy-frontend preserved (REM-009): ${rel}`, () => fileExists(rel));
+}
+
 console.log('---------------------------------------------------');
 console.log(`Result: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

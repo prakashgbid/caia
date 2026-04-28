@@ -1,7 +1,7 @@
 {
   "name": "caia",
   "private": true,
-  "description": "CAIA — Chief AI Agent monorepo. Foundational utilities, CLI, and templates for AI-driven application development.",
+  "description": "CAIA \u2014 Chief AI Agent monorepo. Foundational utilities, CLI, and templates for AI-driven application development.",
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
@@ -10,11 +10,15 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "turbo run build && changeset publish"
+    "release": "turbo run build && changeset publish",
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.1",
+    "@commitlint/cli": "^20.5.2",
+    "@commitlint/config-conventional": "^20.5.0",
     "@eslint/eslintrc": "^3.3.5",
+    "husky": "^9.1.7",
     "turbo": "^2.1.3",
     "typescript": "^5.4.5"
   },

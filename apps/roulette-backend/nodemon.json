@@ -1,0 +1,6 @@
+{
+  "watch": ["src/"],
+  "ext": "ts,tsx,js,jsx,json,css,scss",
+  "ignore": ["node_modules", "build", "public"],
+  "delay": "1000"
+} 
