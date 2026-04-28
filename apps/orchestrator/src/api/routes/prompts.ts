@@ -1,7 +1,7 @@
 import type { Hono } from 'hono';
 import { eq, desc, asc, sql, gte } from 'drizzle-orm';
 import type { Db } from '../../db/connection';
-import { prompts, events, promptPipelineStages, requirements, stories, tasks as dbTasks, taskRuns, dedupResults, entityLabels } from '../../db/schema';
+import { prompts, events, promptPipelineStages, requirements, stories, tasks as dbTasks, taskRuns, dedupResults, entityLabels, taskBuckets, agentMessages } from '../../db/schema';
 import { eventBus } from '../../events/bus-adapter';
 import { nanoid } from 'nanoid';
 import {
@@ -371,5 +371,203 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
       .limit(1)
       .all();
     return result ? c.json(result) : c.json({ decision: 'unchecked' });
+  });
+
+  // GET /prompts/:id/phase1 — Phase-1 dashboard payload (GATE-4-01).
+  //
+  // Returns everything the dashboard's `/prompts/[id]/journey` page needs to
+  // render the full Phase-1 timeline live:
+  //
+  //   - prompt: id/body/correlationId/status/receivedAt
+  //   - pipelineStages: every transition row (ingested → ready_for_pickup),
+  //                     ordered by enteredAt, including epoch-ms timestamps
+  //                     and durationMs back-fills
+  //   - stories: the rows produced by PO + BA, with template validation
+  //              status, bucket linkage and a parsed acceptance-criteria
+  //              count for the timeline summary
+  //   - buckets: every task_bucket row for this prompt (sequential per
+  //              domain + the parallel pool), each with a stories[] list
+  //              of story ids placed into it (so the dashboard's bucket
+  //              viz / journey page knows which bucket landed which ticket)
+  //   - agentMessages: BA cross-agent input requests + replies (filtered
+  //                    by the per-story sub-correlation prefix), sorted by
+  //                    createdAt — surfaces the BA collaboration thread
+  //   - phase1Events: every Phase-1 event correlated to this prompt or to
+  //                   a sub-correlation `${correlationId}::*`, ordered by
+  //                   occurredAt; the WS-driven page uses these to drive
+  //                   stage timestamps and the BA inspector
+  //
+  // The endpoint is read-only and has no side effects. The dashboard polls
+  // it once on load and refetches when a Phase-1 WS event arrives — that
+  // gives the live update without keeping a long-running query open.
+  app.get('/prompts/:id/phase1', (c) => {
+    const promptId = c.req.param('id');
+    const prompt = db.select().from(prompts).where(eq(prompts.id, promptId)).get();
+    if (!prompt) return c.json({ error: 'not found' }, 404);
+
+    const pipelineStages = db
+      .select()
+      .from(promptPipelineStages)
+      .where(eq(promptPipelineStages.promptId, promptId))
+      .orderBy(asc(promptPipelineStages.enteredAt))
+      .all();
+
+    const storyRows = db
+      .select()
+      .from(stories)
+      .where(eq(stories.rootPromptId, promptId))
+      .orderBy(asc(stories.ordinal))
+      .all();
+
+    function safeAcCount(raw: string | null | undefined): number {
+      if (!raw) return 0;
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.length : 0;
+      } catch { return 0; }
+    }
+
+    const storiesNode = storyRows.map((s) => ({
+      id: s.id,
+      title: s.title,
+      kind: s.kind,
+      status: s.status,
+      bucketId: s.bucketId,
+      templateVersion: s.templateVersion,
+      templateValidationStatus: s.templateValidationStatus,
+      acceptanceCriteriaCount: safeAcCount(s.acceptanceCriteriaJson),
+      enrichedAt: s.enrichedAt,
+      updatedAt: s.updatedAt,
+    }));
+
+    const bucketRows = db
+      .select()
+      .from(taskBuckets)
+      .where(eq(taskBuckets.promptId, promptId))
+      .orderBy(asc(taskBuckets.createdAt))
+      .all();
+
+    // Group story ids by bucket for quick rendering.
+    const storiesByBucket = new Map<string, string[]>();
+    for (const s of storyRows) {
+      if (!s.bucketId) continue;
+      const arr = storiesByBucket.get(s.bucketId) ?? [];
+      arr.push(s.id);
+      storiesByBucket.set(s.bucketId, arr);
+    }
+
+    const bucketsNode = bucketRows.map((b) => ({
+      id: b.id,
+      kind: b.kind,
+      domainSlug: b.domainSlug,
+      sequenceIndex: b.sequenceIndex,
+      status: b.status,
+      createdAt: b.createdAt,
+      storyIds: storiesByBucket.get(b.id) ?? [],
+    }));
+
+    // BA collaboration messages — the BA agent uses sub-correlation
+    // ids of shape `${promptCorrelationId}::${storyId}`. We capture rows
+    // whose correlationId equals the prompt's correlation OR starts with
+    // that prefix to surface every per-story exchange. SQLite has no
+    // native LIKE on bound params, so we pull a wider set and filter in
+    // memory — agent_messages is small per-prompt.
+    const allMsgs = db
+      .select()
+      .from(agentMessages)
+      .orderBy(asc(agentMessages.createdAt))
+      .all();
+    const messages = allMsgs.filter((m) =>
+      m.correlationId === prompt.correlationId ||
+      m.correlationId?.startsWith(`${prompt.correlationId}::`),
+    );
+
+    // Phase-1 event types (subset of the canonical taxonomy that drives
+    // dashboard updates). We do NOT introduce new event types here —
+    // these all come from existing emitters per Gate 3.
+    const PHASE1_TYPES = new Set([
+      'prompt.ingested',
+      'prompt.received',
+      'prompt.status_changed',
+      'scaffolder.team.assembled',
+      'po-agent.decomposition.complete',
+      'ba-agent.input-requested',
+      'ba-agent.input-received',
+      'ba-agent.enrichment.complete',
+      'task-scheduler.bucket-placed',
+      'task-scheduler.scheduling.complete',
+      'ticket.draft',
+      'ticket.po-decomposed',
+      'ticket.ba-enriching',
+      'ticket.ba-complete',
+      'ticket.ready-for-pickup',
+      'pipeline.stage.advanced',
+    ]);
+
+    // Pull events under the prompt correlation OR any sub-correlation
+    // (`::storyId`). Same filter as above — load-then-filter is fine for
+    // per-prompt cardinality.
+    const allEvents = db
+      .select()
+      .from(events)
+      .orderBy(asc(events.occurredAt))
+      .all();
+    const phase1Events = allEvents
+      .filter((e) =>
+        PHASE1_TYPES.has(e.type) &&
+        (e.correlationId === prompt.correlationId ||
+         e.correlationId?.startsWith(`${prompt.correlationId}::`)),
+      )
+      .map((e) => {
+        let payload: unknown = null;
+        try { payload = JSON.parse(e.payloadJson); } catch { /* ignore */ }
+        return {
+          id: e.id,
+          type: e.type,
+          actor: e.actor,
+          occurredAt: e.occurredAt,
+          correlationId: e.correlationId,
+          entityType: e.entityType,
+          entityId: e.entityId,
+          payload,
+          severity: e.severity,
+        };
+      });
+
+    return c.json({
+      prompt: {
+        id: prompt.id,
+        body: prompt.body,
+        receivedAt: prompt.receivedAt,
+        correlationId: prompt.correlationId,
+        status: prompt.status,
+      },
+      pipelineStages: pipelineStages.map((s) => ({
+        id: s.id,
+        stage: s.stage,
+        entityKind: s.entityKind,
+        entityId: s.entityId,
+        enteredAt: s.enteredAt,
+        durationMs: s.durationMs,
+        metadata: s.metadata,
+      })),
+      stories: storiesNode,
+      buckets: bucketsNode,
+      agentMessages: messages.map((m) => ({
+        id: m.id,
+        fromAgent: m.fromAgent,
+        toAgent: m.toAgent,
+        messageType: m.messageType,
+        correlationId: m.correlationId,
+        status: m.status,
+        createdAt: m.createdAt,
+        processedAt: m.processedAt,
+        expectedReplyBy: m.expectedReplyBy,
+        repliedAt: m.repliedAt,
+        parentMessageId: m.parentMessageId,
+        payload: (() => { try { return JSON.parse(m.payload); } catch { return m.payload; } })(),
+      })),
+      phase1Events,
+    });
   });
 }
