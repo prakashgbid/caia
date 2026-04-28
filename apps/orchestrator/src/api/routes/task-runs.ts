@@ -2,8 +2,10 @@ import type { Hono } from 'hono';
 import { eq, desc, and } from 'drizzle-orm';
 import type { Db } from '../../db/connection';
 import { getSqliteRaw } from '../../db/connection';
-import { taskRuns, taskSubtasks, taskRunEvents } from '../../db/schema';
+import { taskRuns, taskSubtasks, taskRunEvents, promptPipelineStages } from '../../db/schema';
 import { bus } from '../../ws/bus';
+import { nanoid } from 'nanoid';
+import { eventBus } from '../../events/bus-adapter';
 
 function subtaskProgress(db: Db, taskRunId: number): { done: number; total: number } {
   const sqlite = getSqliteRaw();
@@ -33,6 +35,7 @@ export function registerTaskRunRoutes(app: Hono, db: Db): void {
 
     const now = new Date().toISOString();
     const startedAt = (body['started_at'] as string) ?? now;
+    const rootPromptId = body['root_prompt_id'] as string | undefined;
 
     const existing = db.select().from(taskRuns).where(eq(taskRuns.sessionId, sessionId)).all()[0];
     if (existing) {
@@ -50,6 +53,7 @@ export function registerTaskRunRoutes(app: Hono, db: Db): void {
       domainSlugs: JSON.stringify(body['domain_slugs'] ?? []),
       parentSessionId: body['parent_session_id'] as string | undefined,
       respawnOfSessionId: body['respawn_of_session_id'] as string | undefined,
+      rootPromptId: rootPromptId ?? null,
       startedAt,
       lastActivityAt: startedAt,
       turnCount: 0,
@@ -58,6 +62,34 @@ export function registerTaskRunRoutes(app: Hono, db: Db): void {
     db.insert(taskRuns).values(row).run();
     const inserted = db.select().from(taskRuns).where(eq(taskRuns.sessionId, sessionId)).all()[0];
     if (!inserted) return c.json({ error: 'Insert failed' }, 500);
+
+    // Emit pipeline stage advancement if rootPromptId provided
+    if (rootPromptId) {
+      try {
+        eventBus.publish({
+          type: 'pipeline.stage.advanced',
+          actor: 'api',
+          correlation_id: rootPromptId,
+          payload: {
+            promptId: rootPromptId,
+            stage: 'task_running' as const,
+            entityKind: 'task_run',
+            entityId: sessionId,
+            durationFromStartMs: null,
+          },
+        });
+        db.insert(promptPipelineStages).values({
+          id: 'pps_' + nanoid(8),
+          promptId: rootPromptId,
+          stage: 'task_running',
+          entityKind: 'task_run',
+          entityId: sessionId,
+          enteredAt: Date.now(),
+        }).run();
+      } catch (err) {
+        console.error('[task-runs] Failed to emit pipeline stage or insert record:', err);
+      }
+    }
 
     bus.push({ kind: 'task_run.upserted', id: sessionId, payload: inserted, ts: now });
 
@@ -89,12 +121,23 @@ export function registerTaskRunRoutes(app: Hono, db: Db): void {
 
     const update: Record<string, unknown> = {};
 
+    // Core status fields
     if (body['status'] !== undefined) update['status'] = body['status'];
     if (body['turn_count'] !== undefined) update['turnCount'] = body['turn_count'];
     if (body['last_activity_at'] !== undefined) update['lastActivityAt'] = body['last_activity_at'];
     if (body['completion_summary'] !== undefined) update['completionSummary'] = body['completion_summary'];
     if (body['ended_at'] !== undefined) update['endedAt'] = body['ended_at'];
     if (body['result_ok'] !== undefined) update['resultOk'] = body['result_ok'];
+
+    // Executor telemetry fields (populated by the executor after a run completes)
+    if (body['executor_pid'] !== undefined) update['executorPid'] = body['executor_pid'];
+    if (body['worktree_path'] !== undefined) update['worktreePath'] = body['worktree_path'];
+    if (body['tool_call_count'] !== undefined) update['toolCallCount'] = body['tool_call_count'];
+    if (body['input_tokens'] !== undefined) update['inputTokens'] = body['input_tokens'];
+    if (body['output_tokens'] !== undefined) update['outputTokens'] = body['output_tokens'];
+    if (body['files_changed'] !== undefined) update['filesChanged'] = body['files_changed'];
+    if (body['duration_ms'] !== undefined) update['durationMs'] = body['duration_ms'];
+    if (body['raw_claude_output'] !== undefined) update['rawClaudeOutput'] = body['raw_claude_output'];
 
     if (!update['lastActivityAt']) update['lastActivityAt'] = now;
 
@@ -106,6 +149,40 @@ export function registerTaskRunRoutes(app: Hono, db: Db): void {
     }
 
     const updated = db.select().from(taskRuns).where(eq(taskRuns.sessionId, session_id)).all()[0];
+
+    // Emit pipeline stage advancement if task completed and has rootPromptId
+    if (updated && update['status'] === 'completed' && existing.rootPromptId) {
+      try {
+        eventBus.publish({
+          type: 'pipeline.stage.advanced',
+          actor: 'api',
+          correlation_id: existing.rootPromptId,
+          payload: {
+            promptId: existing.rootPromptId,
+            stage: 'task_completed' as const,
+            entityKind: 'task_run',
+            entityId: session_id,
+            durationFromStartMs: existing.endedAt && existing.startedAt
+              ? Math.round(new Date(existing.endedAt).getTime() - new Date(existing.startedAt).getTime())
+              : null,
+          },
+        });
+        db.insert(promptPipelineStages).values({
+          id: 'pps_' + nanoid(8),
+          promptId: existing.rootPromptId,
+          stage: 'task_completed',
+          entityKind: 'task_run',
+          entityId: session_id,
+          enteredAt: Date.now(),
+          durationMs: existing.endedAt && existing.startedAt
+            ? Math.round(new Date(existing.endedAt).getTime() - new Date(existing.startedAt).getTime())
+            : null,
+        }).run();
+      } catch (err) {
+        console.error('[task-runs] Failed to emit completion event:', err);
+      }
+    }
+
     bus.push({ kind: 'task_run.upserted', id: session_id, payload: updated, ts: now });
     return c.json(updated);
   });
