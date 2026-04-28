@@ -12,6 +12,9 @@ import {
 import { bus } from '../../ws/bus';
 import { nanoid } from 'nanoid';
 import { eventBus } from '../../events/bus-adapter';
+import { logger as rootLogger } from '../../observability/logger';
+
+const log = rootLogger.child({ component: 'api-executor' });
 
 function now(): string {
   return new Date().toISOString();
@@ -72,7 +75,7 @@ export function registerExecutorRoutes(app: Hono, db: Db): void {
           enteredAt: Date.now(),
         }).run();
       } catch (err) {
-        console.error('[executor] Failed to emit pipeline stage or insert record:', err);
+        log.error('failed to emit pipeline stage or insert record', { err: err instanceof Error ? err.message : String(err) });
       }
     }
 

@@ -13,6 +13,9 @@ import type { PromptStatus, PromptReceivedVia, PromptListOptions } from '../../p
 import { classifyKeyword } from '@chiefaia/classifier';
 import { check as dedupCheck } from '@chiefaia/dedup-engine';
 import { runScaffolder } from '../../agents/scaffolder';
+import { logger as rootLogger } from '../../observability/logger';
+
+const log = rootLogger.child({ component: 'api-prompts' });
 
 // @no-events — route registration wrapper; business events are emitted by manager functions
 export function registerPromptsRoutes(app: Hono, db: Db): void {
@@ -65,7 +68,12 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
         enteredAt: Date.now(),
       }).run();
     } catch (err) {
-      console.error('[prompts] Failed to emit ingested event or insert pipeline stage:', err);
+      log.error('failed to emit ingested event or insert pipeline stage', {
+        err: err instanceof Error ? err.message : String(err),
+        correlation_id: prompt.correlationId,
+        entity_type: 'prompt',
+        entity_id: prompt.id,
+      });
     }
 
     // Classify the prompt into functional domains and persist entity labels
@@ -73,7 +81,15 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
     try {
       const classification = classifyKeyword(prompt.body ?? '');
       classificationLabels = classification.allLabels;
-      console.info('[prompts] Prompt classified', { promptId: prompt.id, classification });
+      log.info('prompt classified', {
+        prompt_id: prompt.id,
+        correlation_id: prompt.correlationId,
+        entity_type: 'prompt',
+        entity_id: prompt.id,
+        primary_domain: classification.primaryDomain,
+        nature: classification.nature,
+        complexity: classification.complexity,
+      });
 
       // Determine label type for each label slot
       const labelTypeMap: Record<number, string> = {
@@ -144,21 +160,34 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
         createdAt: Date.now(),
       }).run();
 
-      console.info('[prompts] Dedup check complete', {
-        promptId: prompt.id,
+      log.info('dedup check complete', {
+        prompt_id: prompt.id,
+        correlation_id: prompt.correlationId,
+        entity_type: 'prompt',
+        entity_id: prompt.id,
         decision: dedupResult.decision,
         confidence: dedupResult.confidence,
-        shouldBlock: dedupResult.shouldBlock,
-        shouldWarn: dedupResult.shouldWarn,
+        should_block: dedupResult.shouldBlock,
+        should_warn: dedupResult.shouldWarn,
       });
     } catch (err) {
-      console.error('[prompts] Dedup check failed (non-fatal):', err);
+      log.error('dedup check failed (non-fatal)', {
+        err: err instanceof Error ? err.message : String(err),
+        correlation_id: prompt.correlationId,
+        entity_type: 'prompt',
+        entity_id: prompt.id,
+      });
     }
 
     // Run scaffolder asynchronously — determines agent team and broadcasts context
     const projectId = (body.metadata?.projectId as string | null) ?? null;
     runScaffolder(prompt.id, prompt.body ?? '', projectId, db).catch((e) => {
-      console.warn('[prompts] Scaffolder failed', { err: e, promptId: prompt.id });
+      log.warn('scaffolder failed', {
+        err: e instanceof Error ? e.message : String(e),
+        correlation_id: prompt.correlationId,
+        entity_type: 'prompt',
+        entity_id: prompt.id,
+      });
     });
 
     return c.json({

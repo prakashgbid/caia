@@ -35,6 +35,12 @@ export interface LoggerOptions {
   readonly level?: LogLevel;
   readonly pretty?: boolean;
   /**
+   * Field paths to redact from emitted log lines, e.g. ['value', '*.secret'].
+   * Forwarded directly to pino's `redact.paths` option. The censor token is
+   * always `[REDACTED]`.
+   */
+  readonly redactPaths?: readonly string[];
+  /**
    * Optional hook invoked after every warn/error/fatal log line, with the
    * merged structured-field view (bindings ∪ ctx). Designed to be wired to
    * the event bus by the host app so warn/error lines fan out as
@@ -100,24 +106,25 @@ function wrapPino(
 }
 
 export function createLogger(options: LoggerOptions): Logger {
-  const { name, level = 'info', pretty = false, onWarnOrError } = options;
+  const { name, level = 'info', pretty = false, redactPaths, onWarnOrError } = options;
 
   const transport =
     pretty
       ? pino.transport({ target: 'pino-pretty', options: { colorize: true } })
       : undefined;
 
-  const instance = pino(
-    {
-      name,
-      level,
-      // Emit level as string label so consumers see 'info' not 30
-      formatters: {
-        level: (label) => ({ level: label }),
-      },
+  const pinoOpts: pino.LoggerOptions = {
+    name,
+    level,
+    // Emit level as string label so consumers see 'info' not 30
+    formatters: {
+      level: (label) => ({ level: label }),
     },
-    transport,
-  );
+  };
+  if (redactPaths && redactPaths.length > 0) {
+    pinoOpts.redact = { paths: [...redactPaths], censor: '[REDACTED]' };
+  }
+  const instance = pino(pinoOpts, transport);
 
   return wrapPino(instance, name, {}, onWarnOrError);
 }

@@ -13,13 +13,9 @@ import { nanoid } from 'nanoid';
 import { agentMessages, promptPipelineStages } from '../db/schema';
 import { eventBus } from '../events/bus-adapter';
 import type { Db } from '../db/connection';
+import { logger as rootLogger } from '../observability/logger';
 
-// Logger shim — replaced at runtime by the real pino logger if available
-const logger = {
-  warn: (obj: Record<string, unknown>, msg: string) => {
-    console.warn('[scaffolder]', msg, obj);
-  },
-};
+const logger = rootLogger.child({ component: 'scaffolder' });
 
 // ─── Request Classification ──────────────────────────────────────────────────
 
@@ -263,7 +259,7 @@ export async function runScaffolder(
           .then(({ runPOAgent }) =>
             runPOAgent({ promptId, promptText, projectId, correlationId }, db),
           )
-          .catch((err: unknown) => logger.warn({ err }, 'PO Agent failed'))
+          .catch((err: unknown) => logger.warn('PO Agent failed', { err: err instanceof Error ? err.message : String(err) }))
       : Promise.resolve();
 
     poChain
@@ -283,7 +279,7 @@ export async function runScaffolder(
         }
       })
       .catch((err: unknown) =>
-        logger.warn({ err }, 'BA Agent / Task Scheduler chain failed'),
+        logger.warn('BA Agent / Task Scheduler chain failed', { err: err instanceof Error ? err.message : String(err) }),
       );
   }, 5_000);
 }
