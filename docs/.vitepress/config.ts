@@ -3,6 +3,11 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
   title: 'CAIA',
   description: 'Chief AI Agent — foundational utilities for AI-driven application development',
+  // Legacy archive folders preserved for capability-loss compliance are reference-only
+  // and not part of the active VitePress build. They use foreign frontmatter shapes
+  // (e.g. Docusaurus `sidebar_position`) and source assets (.tsx pages, vendor configs)
+  // that don't belong in this site.
+  srcExclude: ['legacy-roulette-advisor-ai/**'],
   themeConfig: {
     logo: '/logo.svg',
     nav: [
