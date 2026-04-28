@@ -404,6 +404,20 @@ export const stories = sqliteTable('stories', {
   templateVersion: text('template_version').notNull().default('v1'),
   templateValidationStatus: text('template_validation_status').notNull().default('pending'), // 'pending'|'valid'|'invalid'
   templateValidationErrors: text('template_validation_errors'),
+  // BUCKET-001 — 9-axis taxonomy (migration 0023). Nullable on this
+  // migration; required after BUCKET-007 backfill (migration 0025).
+  businessSubDomainsJson: text('business_sub_domains_json').notNull().default('[]'),
+  techSubDomainsJson: text('tech_sub_domains_json').notNull().default('[]'),
+  techSubDomainPrimary: text('tech_sub_domain_primary'),  // TECH_SUB_DOMAINS
+  lifecycle: text('lifecycle'),                            // LIFECYCLE_VALUES
+  qualityTagsJson: text('quality_tags_json').notNull().default('[]'),
+  risk: text('risk'),                                      // RISK_VALUES
+  effort: text('effort'),                                  // EFFORT_VALUES
+  priorityBucket: text('priority_bucket'),                 // PRIORITY_VALUES
+  blockedByJson: text('blocked_by_json').notNull().default('[]'),
+  softDependsOnJson: text('soft_depends_on_json').notNull().default('[]'),
+  conflictsWithJson: text('conflicts_with_json').notNull().default('[]'),
+  claimsJson: text('claims_json').notNull().default('{}'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -412,6 +426,11 @@ export const stories = sqliteTable('stories', {
   index('story_parent_entity_idx').on(t.parentEntityId),
   index('story_bucket_idx').on(t.bucketId),
   index('story_template_status_idx').on(t.templateValidationStatus),
+  // BUCKET-001 indexes (migration 0023)
+  index('story_project_tech_idx').on(t.projectSlug, t.techSubDomainPrimary),
+  index('story_lifecycle_idx').on(t.lifecycle),
+  index('story_risk_idx').on(t.risk),
+  index('story_priority_bucket_idx').on(t.priorityBucket),
 ]);
 
 // story_revisions — append-only history of every story-tree edit
@@ -872,20 +891,32 @@ export const dedupResults = sqliteTable('dedup_results', {
   index('idx_dr_decision').on(t.decision),
 ]);
 
-// task_buckets — Phase-1 scheduling buckets (migration 0021)
-// Sequential buckets are partitioned by domain_slug per prompt; one parallel
-// bucket per prompt holds tickets that have no cross-domain upstream deps.
+// task_buckets — Phase-1 scheduling buckets (migration 0021 + 0024)
+// Sequential buckets are partitioned by (project_slug, tech_sub_domain) per
+// prompt (BUCKET-001/0024); one parallel bucket per prompt holds tickets
+// that have no cross-bucket upstream deps. domain_slug is retained for
+// backwards compatibility with pre-BUCKET-001 rows.
 export const taskBuckets = sqliteTable('task_buckets', {
   id: text('id').primaryKey().notNull(),
   kind: text('kind').notNull(),                 // 'sequential' | 'parallel'
-  domainSlug: text('domain_slug'),              // non-null for sequential, null for parallel
+  domainSlug: text('domain_slug'),              // legacy — pre-BUCKET-001 rows
+  /** BUCKET-001 (migration 0024): bucket-placement key dimension 1. */
+  projectSlug: text('project_slug'),
+  /** BUCKET-001 (migration 0024): bucket-placement key dimension 2. */
+  techSubDomain: text('tech_sub_domain'),
   promptId: text('prompt_id').notNull().references(() => prompts.id),
   createdAt: integer('created_at').notNull(),   // epoch ms
   sequenceIndex: integer('sequence_index'),     // 0,1,2... for sequential, null for parallel
   status: text('status').notNull().default('open'), // 'open'|'in_progress'|'drained'
   metadata: text('metadata'),                   // JSON: bucket_label, predicted_concurrency, etc.
+  /** BUCKET-008 (migration 0024): per-WCC level batches; persisted so the
+   *  dashboard can render Kanban level-coloring without recomputing. */
+  levelsJson: text('levels_json').notNull().default('[]'),
 }, (t) => [
   index('idx_tb_prompt').on(t.promptId),
   index('idx_tb_kind_domain').on(t.kind, t.domainSlug),
   index('idx_tb_status').on(t.status),
+  // BUCKET-001 indexes (migration 0024)
+  index('idx_tb_prompt_project_tech').on(t.promptId, t.projectSlug, t.techSubDomain),
+  index('idx_tb_project_tech').on(t.projectSlug, t.techSubDomain),
 ]);

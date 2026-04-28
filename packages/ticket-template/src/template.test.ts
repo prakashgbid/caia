@@ -10,9 +10,16 @@ import { describe, expect, it } from 'vitest';
 import {
   AGENT_SECTION_KEYS,
   COMPLEXITY_VALUES,
+  EFFORT_VALUES,
+  LIFECYCLE_VALUES,
   MAX_ACCEPTANCE_CRITERIA,
   MIN_ACCEPTANCE_CRITERIA,
   NATURE_VALUES,
+  PRIORITY_VALUES,
+  PROJECT_SLUGS,
+  QUALITY_TAGS,
+  RISK_VALUES,
+  TECH_SUB_DOMAINS,
   TICKET_TEMPLATE_VERSION,
   TicketTemplateV1Schema,
   assertValidTicket,
@@ -330,5 +337,315 @@ describe('round-trip JSON', () => {
     const parsed = JSON.parse(json) as unknown;
     const result = validateTicket(parsed);
     expect(result.ok).toBe(true);
+  });
+});
+
+// ─── BUCKET-001 — taxonomy + claims + policy invariants ─────────────────────
+
+describe('BUCKET-001 taxonomy enums', () => {
+  it('exports an exhaustive PROJECT_SLUGS list including the directive-mandated slugs', () => {
+    for (const slug of [
+      'caia',
+      'pokerzeno',
+      'roulettecommunity',
+      'edisoncricket',
+      'ankitatiwari',
+      'prakash-tiwari',
+      'chiefaia.com',
+    ]) {
+      expect(PROJECT_SLUGS).toContain(slug);
+    }
+  });
+
+  it('exports the lifecycle values per the directive', () => {
+    expect(LIFECYCLE_VALUES).toEqual([
+      'new',
+      'enhance',
+      'bug',
+      'refactor',
+      'chore',
+      'docs',
+      'hotfix',
+      'spike',
+    ]);
+  });
+
+  it('exports the four-step risk ladder', () => {
+    expect(RISK_VALUES).toEqual(['low', 'medium', 'high', 'critical']);
+  });
+
+  it('exports the t-shirt effort sizes', () => {
+    expect(EFFORT_VALUES).toEqual(['XS', 'S', 'M', 'L', 'XL']);
+  });
+
+  it('exports the priority bucket values', () => {
+    expect(PRIORITY_VALUES).toEqual(['P0', 'P1', 'P2', 'P3']);
+  });
+
+  it('exports the seven quality tags', () => {
+    expect(QUALITY_TAGS).toContain('seo');
+    expect(QUALITY_TAGS).toContain('accessibility');
+    expect(QUALITY_TAGS).toContain('performance');
+    expect(QUALITY_TAGS).toContain('security');
+    expect(QUALITY_TAGS).toContain('compliance');
+    expect(QUALITY_TAGS).toContain('observability');
+    expect(QUALITY_TAGS).toContain('internationalization');
+  });
+
+  it('exports a comprehensive technology sub-domain list (≥30 entries)', () => {
+    expect(TECH_SUB_DOMAINS.length).toBeGreaterThanOrEqual(30);
+    expect(TECH_SUB_DOMAINS).toContain('frontend');
+    expect(TECH_SUB_DOMAINS).toContain('database');
+    expect(TECH_SUB_DOMAINS).toContain('agent-runtime');
+    expect(TECH_SUB_DOMAINS).toContain('ticket-template');
+  });
+});
+
+describe('BUCKET-001 taxonomy block', () => {
+  it('accepts a fully-populated taxonomy block', () => {
+    const ticket = buildDraftTicket({
+      ...{
+        rootPromptId: 'prm_x_y',
+        requirementId: 'req_x',
+        domainPrimary: 'auth',
+        domainAll: ['auth'],
+        nature: 'feature',
+        complexity: 'low',
+        summary: 'thing',
+        inScope: ['a'],
+        acceptanceCriteria: ['a', 'b', 'c'],
+        verificationPlan: ['vp'],
+      },
+      taxonomy: {
+        project: 'pokerzeno',
+        businessSubDomains: ['billing', 'profile'],
+        techSubDomains: { primary: 'frontend', all: ['frontend', 'bff'] },
+        lifecycle: 'new',
+        qualityTags: ['accessibility', 'seo'],
+        risk: 'medium',
+        effort: 'M',
+        priorityBucket: 'P1',
+        blockedBy: ['story_user-model_001'],
+        softDependsOn: [],
+        conflictsWith: [],
+      },
+    });
+    expect(validateTicket(ticket).ok).toBe(true);
+    expect(ticket.taxonomy?.project).toBe('pokerzeno');
+    expect(ticket.taxonomy?.techSubDomains?.primary).toBe('frontend');
+  });
+
+  it('rejects taxonomy.techSubDomains where primary is not in all', () => {
+    const ticket = buildDraftTicket({
+      rootPromptId: 'p',
+      requirementId: 'r',
+      domainPrimary: 'auth',
+      domainAll: ['auth'],
+      nature: 'feature',
+      complexity: 'low',
+      summary: 'x',
+      inScope: ['x'],
+      acceptanceCriteria: ['a', 'b', 'c'],
+      verificationPlan: ['v'],
+      taxonomy: {
+        techSubDomains: { primary: 'database', all: ['frontend'] },
+      },
+    });
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('rejects an unknown project slug', () => {
+    const bad = {
+      ...baseDraft,
+      taxonomy: {
+        project: 'mystery-site',
+        businessSubDomains: [],
+        qualityTags: [],
+        blockedBy: [],
+        softDependsOn: [],
+        conflictsWith: [],
+      },
+    };
+    expect(validateTicket(bad).ok).toBe(false);
+  });
+
+  it('rejects an unknown lifecycle value', () => {
+    const bad = {
+      ...baseDraft,
+      taxonomy: {
+        lifecycle: 'mystery',
+        businessSubDomains: [],
+        qualityTags: [],
+        blockedBy: [],
+        softDependsOn: [],
+        conflictsWith: [],
+      },
+    };
+    expect(validateTicket(bad).ok).toBe(false);
+  });
+
+  it('rejects an unknown risk value', () => {
+    const bad = {
+      ...baseDraft,
+      taxonomy: {
+        risk: 'mystery',
+        businessSubDomains: [],
+        qualityTags: [],
+        blockedBy: [],
+        softDependsOn: [],
+        conflictsWith: [],
+      },
+    };
+    expect(validateTicket(bad).ok).toBe(false);
+  });
+
+  it('legacy tickets without a taxonomy block continue to validate', () => {
+    expect(validateTicket(baseDraft).ok).toBe(true);
+    expect(baseDraft.taxonomy).toBeUndefined();
+  });
+});
+
+describe('BUCKET-001 policy invariants', () => {
+  function ticketWith(taxonomy: NonNullable<typeof baseDraft.taxonomy>) {
+    return { ...baseDraft, taxonomy };
+  }
+
+  it('rejects lifecycle=docs with non-doc tech sub-domains', () => {
+    const ticket = ticketWith({
+      lifecycle: 'docs',
+      techSubDomains: { primary: 'frontend', all: ['frontend', 'documentation'] },
+      businessSubDomains: [],
+      qualityTags: [],
+      blockedBy: [],
+      softDependsOn: [],
+      conflictsWith: [],
+    });
+    const result = validateTicket(ticket);
+    expect(result.ok).toBe(false);
+  });
+
+  it('accepts lifecycle=docs with techSubDomains.all = [documentation]', () => {
+    const ticket = ticketWith({
+      lifecycle: 'docs',
+      techSubDomains: { primary: 'documentation', all: ['documentation'] },
+      businessSubDomains: [],
+      qualityTags: [],
+      blockedBy: [],
+      softDependsOn: [],
+      conflictsWith: [],
+    });
+    expect(validateTicket(ticket).ok).toBe(true);
+  });
+
+  it('rejects lifecycle=spike with effort=L', () => {
+    const ticket = ticketWith({
+      lifecycle: 'spike',
+      effort: 'L',
+      businessSubDomains: [],
+      qualityTags: [],
+      blockedBy: [],
+      softDependsOn: [],
+      conflictsWith: [],
+    });
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('accepts lifecycle=spike with effort=M', () => {
+    const ticket = ticketWith({
+      lifecycle: 'spike',
+      effort: 'M',
+      businessSubDomains: [],
+      qualityTags: [],
+      blockedBy: [],
+      softDependsOn: [],
+      conflictsWith: [],
+    });
+    expect(validateTicket(ticket).ok).toBe(true);
+  });
+
+  it('rejects risk=critical with priorityBucket=P3', () => {
+    const ticket = ticketWith({
+      risk: 'critical',
+      priorityBucket: 'P3',
+      businessSubDomains: [],
+      qualityTags: [],
+      blockedBy: [],
+      softDependsOn: [],
+      conflictsWith: [],
+    });
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('accepts risk=critical with priorityBucket=P0', () => {
+    const ticket = ticketWith({
+      risk: 'critical',
+      priorityBucket: 'P0',
+      businessSubDomains: [],
+      qualityTags: [],
+      blockedBy: [],
+      softDependsOn: [],
+      conflictsWith: [],
+    });
+    expect(validateTicket(ticket).ok).toBe(true);
+  });
+
+  it('rejects lifecycle=hotfix without priorityBucket=P0', () => {
+    const ticket = ticketWith({
+      lifecycle: 'hotfix',
+      priorityBucket: 'P1',
+      businessSubDomains: [],
+      qualityTags: [],
+      blockedBy: [],
+      softDependsOn: [],
+      conflictsWith: [],
+    });
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('rejects lifecycle=new combined with context.nature=bug-fix', () => {
+    const ticket = {
+      ...baseDraft,
+      context: { ...baseDraft.context, nature: 'bug-fix' as const },
+      taxonomy: {
+        lifecycle: 'new' as const,
+        businessSubDomains: [],
+        qualityTags: [],
+        blockedBy: [],
+        softDependsOn: [],
+        conflictsWith: [],
+      },
+    };
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+});
+
+describe('BUCKET-001 / BUCKET-009 claims block', () => {
+  it('accepts a fully-populated claims block', () => {
+    const ticket = {
+      ...baseDraft,
+      claims: {
+        files: ['apps/poker-zeno/src/billing/service.ts'],
+        schemas: ['stories.tech_sub_domain_primary'],
+        apiRoutes: ['POST /api/billing'],
+        domains: ['payments'],
+      },
+    };
+    expect(validateTicket(ticket).ok).toBe(true);
+  });
+
+  it('accepts an empty claims block (legacy/coarse default)', () => {
+    const ticket = {
+      ...baseDraft,
+      claims: { files: [], schemas: [], apiRoutes: [], domains: [] },
+    };
+    expect(validateTicket(ticket).ok).toBe(true);
+  });
+
+  it('rejects an unknown key on the claims block (strict)', () => {
+    const ticket = {
+      ...baseDraft,
+      claims: { files: [], surplus: 'no extras allowed' },
+    };
+    expect(validateTicket(ticket).ok).toBe(false);
   });
 });
