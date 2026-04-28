@@ -52,7 +52,10 @@ describe('PIPELINE_STAGE_ORDER', () => {
       'ingested',
       'scaffolded',
       'po_decomposed',
+      'ea_classified',
       'ba_enriched',
+      'validated',
+      'test_designed',
       'bucket_placed',
       'ready_for_pickup',
     ]);

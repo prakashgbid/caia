@@ -24,7 +24,14 @@ export const PIPELINE_STAGE_ORDER = [
   'ingested',
   'scaffolded',
   'po_decomposed',
+  // BUCKET-003: EA classifies tech / quality / risk / effort between PO and BA.
+  'ea_classified',
   'ba_enriched',
+  // BUCKET-003 / pipeline refresh: Validator + Testing slot between BA and
+  // Task Manager. Their stages live in the enum but the BUCKET-### work
+  // doesn'''t emit them — the Validator and Testing tracks own those.
+  'validated',
+  'test_designed',
   'bucket_placed',
   'ready_for_pickup',
 ] as const;
