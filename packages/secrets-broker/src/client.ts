@@ -1,19 +1,15 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import pino from 'pino';
 import { TtlCache } from './cache.js';
 import { hashKey, recordAudit, emitEvent } from './events.js';
 import { createVaultAdapter } from './vault-adapter.js';
 import type { VaultAdapter, SiteManifest, SecretValue, BrokerOptions } from './types.js';
+import { logger } from './logger.js';
 
 const DEFAULT_TTL_SEC = 300;
 
-const log = pino({
-  name: 'secrets-broker',
-  level: process.env['BROKER_LOG_LEVEL'] ?? 'info',
-  redact: { paths: ['value', '*.value', 'secret', '*.secret'], censor: '[REDACTED]' },
-});
+const log = logger.child({ component: 'client' });
 
 const cache = new TtlCache<SecretValue>();
 const manifestCache = new TtlCache<SiteManifest>();
@@ -85,8 +81,11 @@ export async function fetchSecret(
 
   const cached = cache.get(cacheKey);
   if (cached) {
-    log.debug({ secret_key_hash: keyHash, caller_module: callerModule, site_slug: siteSlug },
-      'secret cache hit');
+    log.debug('secret cache hit', {
+      secret_key_hash: keyHash,
+      caller_module: callerModule,
+      site_slug: siteSlug,
+    });
     recordAudit({ timestamp: new Date().toISOString(), actor: 'secrets-broker',
       secret_key_hash: keyHash, caller_module: callerModule, site_slug: siteSlug,
       event: 'cache_hit', cached: true });
@@ -108,7 +107,11 @@ export async function fetchSecret(
     rawValue = await getAdapter().fetchSecret(path, meta?.key ?? key);
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    log.error({ secret_key_hash: keyHash, caller_module: callerModule, error }, 'secret fetch failed');
+    log.error('secret fetch failed', {
+      secret_key_hash: keyHash,
+      caller_module: callerModule,
+      error,
+    });
     recordAudit({ timestamp: new Date().toISOString(), actor: 'secrets-broker',
       secret_key_hash: keyHash, caller_module: callerModule, site_slug: siteSlug,
       event: 'fetch_failed', cached: false });
@@ -132,8 +135,13 @@ export async function fetchSecret(
   };
 
   cache.set(cacheKey, result, ttlSec);
-  log.info({ secret_key_hash: keyHash, caller_module: callerModule, site_slug: siteSlug,
-    ttl_sec: ttlSec, fetch_latency_ms: fetchLatencyMs }, 'secret fetched');
+  log.info('secret fetched', {
+    secret_key_hash: keyHash,
+    caller_module: callerModule,
+    site_slug: siteSlug,
+    ttl_sec: ttlSec,
+    fetch_latency_ms: fetchLatencyMs,
+  });
   recordAudit({ timestamp: now.toISOString(), actor: 'secrets-broker',
     secret_key_hash: keyHash, caller_module: callerModule, site_slug: siteSlug,
     event: 'fetched', cached: false });
@@ -175,8 +183,11 @@ export async function rotateSecret(
   const meta = resolveManifestEntry(siteSlug, key);
   const path = meta?.path ?? `kv/${siteSlug}/${key.toLowerCase()}`;
 
-  log.info({ secret_key_hash: keyHash, site_slug: siteSlug, caller_module: callerModule },
-    'rotation triggered');
+  log.info('rotation triggered', {
+    secret_key_hash: keyHash,
+    site_slug: siteSlug,
+    caller_module: callerModule,
+  });
   recordAudit({ timestamp: new Date().toISOString(), actor: 'secrets-broker',
     secret_key_hash: keyHash, caller_module: callerModule, site_slug: siteSlug,
     event: 'rotated', cached: false });
@@ -192,6 +203,9 @@ export async function rotateSecret(
   await emitEvent('secret.rotated', {
     secret_key_hash: keyHash, site_slug: siteSlug, duration_ms: Date.now() - start,
   });
-  log.info({ secret_key_hash: keyHash, site_slug: siteSlug, duration_ms: Date.now() - start },
-    'secret rotated');
+  log.info('secret rotated', {
+    secret_key_hash: keyHash,
+    site_slug: siteSlug,
+    duration_ms: Date.now() - start,
+  });
 }

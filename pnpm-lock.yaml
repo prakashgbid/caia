@@ -124,6 +124,9 @@ importers:
       '@chiefaia/local-llm-router':
         specifier: workspace:*
         version: link:../../packages/local-llm-router
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@chiefaia/ticket-template':
         specifier: workspace:*
         version: link:../../packages/ticket-template
@@ -823,6 +826,9 @@ importers:
 
   packages/secrets-broker:
     dependencies:
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       commander:
         specifier: ^12.1.0
         version: 12.1.0
