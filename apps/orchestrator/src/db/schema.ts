@@ -801,17 +801,26 @@ export const agentMessages = sqliteTable('agent_messages', {
   id: text('id').primaryKey(),
   fromAgent: text('from_agent').notNull(),
   toAgent: text('to_agent').notNull(),
-  messageType: text('message_type').notNull(), // 'context-broadcast'|'task-delegation'|'result'|'escalation'
+  // 'context-broadcast' | 'task-delegation' | 'result' | 'escalation'
+  // | 'input-requested' | 'input-received' (migration 0022 — BA collab protocol)
+  messageType: text('message_type').notNull(),
   correlationId: text('correlation_id').notNull(),
   payload: text('payload').notNull(), // JSON
-  status: text('status').notNull().default('pending'), // 'pending'|'delivered'|'processed'|'failed'
+  // 'pending' | 'delivered' | 'processed' | 'failed' | 'replied' | 'timed_out'
+  status: text('status').notNull().default('pending'),
   createdAt: integer('created_at').notNull().$defaultFn(() => Date.now()),
   processedAt: integer('processed_at'),
+  // Migration 0022 — request/response columns (nullable, backwards-compatible)
+  expectedReplyBy: integer('expected_reply_by'),  // epoch ms deadline for the responder
+  repliedAt: integer('replied_at'),                // epoch ms when reply landed
+  parentMessageId: text('parent_message_id'),      // links a reply row back to its request
 }, (t) => [
   index('am_from_idx').on(t.fromAgent),
   index('am_to_idx').on(t.toAgent),
   index('am_correlation_idx').on(t.correlationId),
   index('am_status_idx').on(t.status),
+  index('am_parent_idx').on(t.parentMessageId),
+  index('am_deadline_idx').on(t.expectedReplyBy),
 ]);
 
 // prompt_pipeline_stages — tracks stage advancement for each prompt through the pipeline (migration 0015)
