@@ -324,6 +324,12 @@ export type EventType =
   | 'task-scheduler.scheduling.complete'
   // ─── Task Scheduler bucket placement (migration 0021) ────────────────────
   | 'task-scheduler.bucket-placed'
+  // ─── Ticket state machine (migration 0021 ticket_template lifecycle) ────
+  | 'ticket.draft'
+  | 'ticket.po-decomposed'
+  | 'ticket.ba-enriching'
+  | 'ticket.ba-complete'
+  | 'ticket.ready-for-pickup'
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   | 'testing-agent.validation.complete'
   | 'release-agent.report.ready'
@@ -389,6 +395,12 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'task-scheduler.scheduling.complete': 'info',
   // ─── Task Scheduler bucket placement (migration 0021) ────────────────────
   'task-scheduler.bucket-placed': 'info',
+  // ─── Ticket state machine (migration 0021 ticket_template lifecycle) ────
+  'ticket.draft': 'info',
+  'ticket.po-decomposed': 'info',
+  'ticket.ba-enriching': 'info',
+  'ticket.ba-complete': 'info',
+  'ticket.ready-for-pickup': 'info',
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   'testing-agent.validation.complete': 'info',
   'release-agent.report.ready': 'info',

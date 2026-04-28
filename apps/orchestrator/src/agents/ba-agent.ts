@@ -46,6 +46,7 @@ import {
   type ResponderInput,
   selectConsultants,
 } from './domain-responders';
+import { advancePipelineStage } from './pipeline-stages';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -354,6 +355,17 @@ export async function runBAAgent(
     try {
       const title = story.title;
       const description = story.description ?? '';
+
+      // Ticket state: ba-enriching (BA owns this story now).
+      eventBus.publish({
+        type: 'ticket.ba-enriching',
+        actor: 'ba-agent',
+        correlation_id: correlationId,
+        entity_type: 'story',
+        entity_id: story.id,
+        payload: { storyId: story.id, promptId, correlationId },
+      });
+
       const acceptanceCriteria = generateAcceptanceCriteria({ title, description });
       const implNotes = generateImplementationNotes({ title, description });
       const classification = classifyKeyword(`${title} ${description}`);
@@ -455,10 +467,38 @@ export async function runBAAgent(
         withCriteriaCount++;
         totalCriteria += acceptanceCriteria.length;
       }
+
+      // Ticket state: ba-complete (template validated, sections persisted).
+      eventBus.publish({
+        type: 'ticket.ba-complete',
+        actor: 'ba-agent',
+        correlation_id: correlationId,
+        entity_type: 'story',
+        entity_id: story.id,
+        payload: {
+          storyId: story.id,
+          promptId,
+          correlationId,
+          validationStatus: status,
+          sectionsPopulated: Object.keys(collab.agentSections),
+        },
+      });
     } catch {
       // Non-fatal — continue enriching remaining stories.
     }
   }
+
+  // Advance the prompt-level pipeline stage once every story has been
+  // enriched (or attempted). Subsequent reruns will append a new row.
+  advancePipelineStage(
+    {
+      promptId,
+      stage: 'ba_enriched',
+      correlationId,
+      metadata: { enrichedCount, ticketsValid, ticketsInvalid },
+    },
+    db,
+  );
 
   eventBus.publish({
     type: 'ba-agent.enrichment.complete',

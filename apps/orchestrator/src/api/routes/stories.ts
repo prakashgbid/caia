@@ -13,6 +13,7 @@ import {
 } from '../../db/schema';
 import { bus } from '../../ws/bus';
 import { eventBus } from '../../events/bus-adapter';
+import { getTicketBundle } from '../ticket-bundle';
 
 function sha256(s: string): string {
   return createHash('sha256').update(s).digest('hex');
@@ -63,6 +64,17 @@ export function registerStoriesRoutes(app: Hono, db: Db): void {
       .orderBy(desc(storyRevisions.version))
       .all();
     return c.json(revs);
+  });
+
+  // GET /stories/:id/bundle — Phase-1 self-contained ticket bundle: story
+  // row + parsed TicketTemplateV1 (validated) + linked requirement + bucket
+  // + entity_labels + dependency / dependent id lists. Read-only, used by
+  // the executor and the phase1-e2e acceptance test.
+  app.get('/stories/:id/bundle', (c) => {
+    const id = c.req.param('id');
+    const bundle = getTicketBundle(db, id);
+    if (!bundle) return c.json({ error: 'not found' }, 404);
+    return c.json(bundle);
   });
 
   // POST /stories — transactional: story + revision_v1 + timeline

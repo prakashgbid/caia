@@ -10,11 +10,13 @@
  */
 
 import { nanoid } from 'nanoid';
+import { eq } from 'drizzle-orm';
 import { classifyKeyword } from '@chiefaia/classifier';
 import { decompose } from '@chiefaia/decomposer';
 import { eventBus } from '../events/bus-adapter';
 import { getDb } from '../db/connection';
 import { requirements, stories } from '../db/schema';
+import { advancePipelineStage } from './pipeline-stages';
 
 // Logger shim — replaced at runtime by the real pino logger if available
 const logger = {
@@ -103,6 +105,16 @@ export async function runPOAgent(
             createdAt: now,
           }).run();
           storiesCreated++;
+
+          // Ticket state: draft (story exists, no enrichment yet).
+          eventBus.publish({
+            type: 'ticket.draft',
+            actor: 'po-agent',
+            correlation_id: correlationId,
+            entity_type: 'story',
+            entity_id: storyDbId,
+            payload: { storyId: storyDbId, promptId, correlationId, requirementId: reqId },
+          });
         } catch (err) {
           logger.warn({ err, storyDbId }, 'PO Agent: story insert skipped (may already exist)');
         }
@@ -127,6 +139,38 @@ export async function runPOAgent(
       primaryDomain: classification.primaryDomain,
     },
   });
+
+  // 5. Advance pipeline stage and emit per-story `ticket.po-decomposed`.
+  advancePipelineStage(
+    {
+      promptId,
+      stage: 'po_decomposed',
+      correlationId,
+      metadata: { requirementsCreated, storiesCreated, primaryDomain: classification.primaryDomain },
+    },
+    db,
+  );
+
+  // Emit ticket.po-decomposed for every story that exists under this prompt.
+  try {
+    const allStoriesForPrompt = db
+      .select({ id: stories.id })
+      .from(stories)
+      .where(eq(stories.rootPromptId, promptId))
+      .all();
+    for (const s of allStoriesForPrompt) {
+      eventBus.publish({
+        type: 'ticket.po-decomposed',
+        actor: 'po-agent',
+        correlation_id: correlationId,
+        entity_type: 'story',
+        entity_id: s.id,
+        payload: { storyId: s.id, promptId, correlationId, requirementsCreated },
+      });
+    }
+  } catch {
+    /* non-fatal — ticket events are observability */
+  }
 
   return {
     promptId,
