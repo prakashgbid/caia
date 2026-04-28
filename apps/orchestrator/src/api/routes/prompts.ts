@@ -235,83 +235,131 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
     return c.json({ task_id: id, transitions, total: transitions.length });
   });
 
-  // Get prompt with full pipeline visualization
+  // Get prompt with full pipeline visualization (DASH-203)
+  // Returns the `PipelineData` shape the dashboard's /pipeline page expects:
+  //   { promptId, promptBody, promptReceivedAt, promptStatus,
+  //     requirements: [{ id, title, status, createdAt, stories: [
+  //       { id, title, status, tasks: [
+  //         { id, title, status, createdAt, completedAt, taskRuns: [...] }
+  //       ]}
+  //     ]}],
+  //     totalDurationMs, totalTokensIn, totalTokensOut, totalFilesChanged,
+  //     overallStatus }
   app.get('/prompts/:id/pipeline', async (c) => {
     const promptId = c.req.param('id');
 
     const prompt = db.select().from(prompts).where(eq(prompts.id, promptId)).get();
     if (!prompt) return c.json({ error: 'Not found' }, 404);
 
-    // Get all pipeline stages for this prompt
+    // Stages (used to derive overall duration)
     const stages = db.select().from(promptPipelineStages)
       .where(eq(promptPipelineStages.promptId, promptId))
       .orderBy(asc(promptPipelineStages.enteredAt))
       .all();
 
-    // Get all requirements linked to this prompt
+    // All requirements linked to this prompt
     const reqs = db.select().from(requirements)
       .where(eq(requirements.rootPromptId, promptId))
       .all();
 
-    // Build tree: requirements -> stories -> tasks -> task_runs
-    const tree = await Promise.all(reqs.map(async (req) => {
-      const reqStories = db.select().from(stories)
-        .where(eq(stories.rootPromptId, promptId))
-        .all()
-        .filter(_s => {
-          // stories from this requirement context
-          return true; // In real scenario, would track parentage
-        });
+    // All stories linked to this prompt (any kind: epic / story / sub_story / task)
+    const allStoriesForPrompt = db.select().from(stories)
+      .where(eq(stories.rootPromptId, promptId))
+      .all();
 
-      const storiesWithTasks = await Promise.all(reqStories.map(async (story) => {
+    // Build the tree in PipelineData shape
+    const flatRunsAccumulator: Array<typeof taskRuns.$inferSelect> = [];
+
+    const tree = reqs.map((req) => {
+      const reqStories = allStoriesForPrompt; // every story for this prompt rolls up under its requirement(s)
+
+      const storiesNode = reqStories.map((story) => {
         const storyTasks = db.select().from(dbTasks)
           .where(eq(dbTasks.parentEntityId, story.id))
           .all();
 
-        const tasksWithRuns = await Promise.all(storyTasks.map(async (task) => {
+        const tasksNode = storyTasks.map((task) => {
           const runs = db.select().from(taskRuns)
             .where(eq(taskRuns.parentEntityId, task.id))
             .orderBy(asc(taskRuns.startedAt))
             .all();
-          return { ...task, taskRuns: runs };
-        }));
+          flatRunsAccumulator.push(...runs);
 
-        return { ...story, tasks: tasksWithRuns };
-      }));
+          return {
+            id: task.id,
+            title: task.title,
+            status: task.status,
+            createdAt: task.createdAt ?? null,
+            completedAt: task.completedAt ?? null,
+            taskRuns: runs.map((r, idx) => ({
+              id: r.id,
+              runIndex: idx + 1,
+              durationMs: r.startedAt && r.endedAt
+                ? new Date(r.endedAt).getTime() - new Date(r.startedAt).getTime()
+                : null,
+              tokensIn: r.inputTokens ?? null,
+              tokensOut: r.outputTokens ?? null,
+              filesChanged: r.filesChanged
+                ? (() => { try { return (JSON.parse(r.filesChanged as string) as unknown[]).length; } catch { return null; } })()
+                : null,
+              status: r.status ?? undefined,
+              startedAt: r.startedAt ?? null,
+              finishedAt: r.endedAt ?? null,
+            })),
+            completenessChecks: [],
+          };
+        });
 
-      return { ...req, stories: storiesWithTasks };
-    }));
+        return {
+          id: story.id,
+          title: story.title,
+          status: story.status ?? 'pending',
+          tasks: tasksNode,
+        };
+      });
 
-    // Get related events
-    const relatedEvents = db.select().from(events)
-      .where(
-        sql`(json_extract(${events.payloadJson}, '$.promptId') = ${promptId}
-             OR json_extract(${events.payloadJson}, '$.rootPromptId') = ${promptId}
-             OR ${events.correlationId} = ${promptId})`
-      )
-      .orderBy(asc(events.occurredAt))
-      .limit(500)
-      .all();
+      return {
+        id: req.id,
+        title: req.title,
+        status: req.state ?? 'captured',
+        createdAt: req.createdAt ?? null,
+        stories: storiesNode,
+      };
+    });
 
-    // Compute summary statistics
-    const allRuns = tree.flatMap(r => r.stories.flatMap(s => s.tasks.flatMap(t => t.taskRuns)));
-    const summary = {
-      totalDurationMs: stages.length > 0 ? Date.now() - stages[0].enteredAt : null,
-      totalInputTokens: allRuns.reduce((s, r) => s + (r.inputTokens ?? 0), 0),
-      totalOutputTokens: allRuns.reduce((s, r) => s + (r.outputTokens ?? 0), 0),
-      filesChanged: [...new Set(allRuns.flatMap(r => {
+    // Aggregate totals across all task_runs in the tree
+    const totalTokensIn = flatRunsAccumulator.reduce((acc, r) => acc + (r.inputTokens ?? 0), 0);
+    const totalTokensOut = flatRunsAccumulator.reduce((acc, r) => acc + (r.outputTokens ?? 0), 0);
+    const totalFilesChanged = (() => {
+      const all = new Set<string>();
+      for (const r of flatRunsAccumulator) {
+        if (!r.filesChanged) continue;
         try {
-          return r.filesChanged ? JSON.parse(r.filesChanged) : [];
-        } catch {
-          return [];
-        }
-      }))],
-      requirementCount: reqs.length,
-      taskCount: tree.flatMap(r => r.stories.flatMap(s => s.tasks)).length,
-      taskRunCount: allRuns.length,
-    };
+          const arr = JSON.parse(r.filesChanged as string) as unknown[];
+          for (const f of arr) if (typeof f === 'string') all.add(f);
+        } catch { /* ignore */ }
+      }
+      return all.size;
+    })();
+    const totalDurationMs = stages.length > 0
+      ? Date.now() - stages[0].enteredAt
+      : null;
 
-    return c.json({ prompt, stages, requirements: tree, events: relatedEvents, summary });
+    // Overall status: derived from prompt status; pipeline is done when prompt is.
+    const overallStatus = prompt.status ?? 'pending';
+
+    return c.json({
+      promptId: prompt.id,
+      promptBody: prompt.body,
+      promptReceivedAt: prompt.receivedAt,
+      promptStatus: prompt.status ?? 'pending',
+      requirements: tree,
+      totalDurationMs,
+      totalTokensIn,
+      totalTokensOut,
+      totalFilesChanged,
+      overallStatus,
+    });
   });
 
   // GET /prompts/:id/dedup — get the most recent dedup result for a prompt
