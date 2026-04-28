@@ -8,18 +8,10 @@ import * as child_process from 'child_process';
 import type { MonitoredWorker } from './monitor';
 import { parseClaudeOutput, cleanupWorktree } from './dispatcher';
 import { checkAndBreak } from './breaker';
+import { publishEvent } from './publish-event';
+import { parseClaudeOutputRich } from './parse-claude-output-rich';
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
-
-async function emitEvent(type: string, payload: Record<string, unknown>): Promise<void> {
-  try {
-    await fetch(`${API_BASE}/events`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, actor: 'executor', payload }),
-    });
-  } catch { /* non-fatal */ }
-}
 
 export interface HookConfig {
   circuitBreakerThreshold: number;
@@ -32,6 +24,7 @@ interface TaskRow {
   cwd: string;
   attemptCount: number;
   paused: boolean;
+  rootPromptId: string | null;
 }
 
 async function fetchTask(taskId: string): Promise<TaskRow | null> {
@@ -134,6 +127,10 @@ export async function handleCompletion(
   const { handle, outcome } = worker;
   const parsed = parseClaudeOutput(handle.outputLines);
 
+  // Rich telemetry: tool calls, token usage, files changed
+  const rich = parseClaudeOutputRich(handle.outputLines);
+  const durationMs = Date.now() - new Date(handle.startedAt).getTime();
+
   const task = await fetchTask(handle.taskId);
   if (!task) {
     console.log(`[executor:hook] Task ${handle.taskId} not found — skipping completion hook`);
@@ -143,7 +140,7 @@ export async function handleCompletion(
   const newAttemptCount = task.attemptCount + 1;
 
   if (outcome.kind === 'done' && outcome.exitCode === 0 && parsed.resultOk) {
-    // Success path
+    // ── Success path ──────────────────────────────────────────────────────────
     console.log(`[executor:hook] Task ${handle.taskId} completed successfully`);
 
     await finalizeExecutorRun(
@@ -152,9 +149,86 @@ export async function handleCompletion(
     );
 
     await markTaskDone(handle.taskId, parsed.sessionId);
-    await emitEvent('task.completed', { task_id: handle.taskId, duration_ms: Date.now() - new Date(handle.startedAt).getTime(), result_summary: parsed.summary });
-    await emitEvent('worker.completed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? 0, turn_count: parsed.turnCount });
+
+    // Legacy events (retained for existing consumers)
+    await publishEvent('task.completed', { task_id: handle.taskId, duration_ms: durationMs, result_summary: parsed.summary });
+    await publishEvent('worker.completed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? 0, turn_count: parsed.turnCount });
+
+    // Per-tool-call events (fire-and-forget — no await)
+    for (const tc of rich.toolCalls) {
+      void publishEvent('executor.claude.tool_call', {
+        taskId: handle.taskId,
+        executorRunId: handle.executorRunId,
+        toolName: tc.name,
+        inputSummary: tc.inputSummary,
+        sequenceIndex: tc.sequenceIndex,
+      });
+    }
+
+    // Structured completion event
+    await publishEvent('executor.claude.completed', {
+      taskId: handle.taskId,
+      executorRunId: handle.executorRunId,
+      rootPromptId: task.rootPromptId ?? null,
+      sessionId: parsed.sessionId,
+      exitCode: outcome.exitCode ?? 0,
+      inputTokens: rich.inputTokens,
+      outputTokens: rich.outputTokens,
+      filesChanged: rich.filesChanged,
+      toolCallCount: rich.toolCallCount,
+      durationMs,
+      costUsd: parsed.costUsd,
+      turnCount: parsed.turnCount,
+    });
+
+    await publishEvent('pipeline.stage.advanced', {
+      rootPromptId: task.rootPromptId ?? null,
+      stage: 'task_completed',
+      entityKind: 'task',
+      entityId: handle.taskId,
+      durationFromStartMs: durationMs,
+    });
+
+    // PATCH task_run with executor telemetry (best-effort; run may not exist yet if poller hasn't fired)
+    if (parsed.sessionId) {
+      try {
+        await fetch(`${API_BASE}/task-runs/${parsed.sessionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            executor_pid: handle.pid,
+            worktree_path: handle.worktreePath,
+            tool_call_count: rich.toolCallCount,
+            input_tokens: rich.inputTokens,
+            output_tokens: rich.outputTokens,
+            files_changed: JSON.stringify(rich.filesChanged),
+            duration_ms: durationMs,
+            raw_claude_output: handle.outputLines.join('\n').slice(0, 50_000),
+          }),
+        });
+      } catch { /* non-fatal — task_run may not exist yet */ }
+    }
+
     await runCompletenessCheck(task.cwd);
+
+    // Trigger Testing Agent (Tier 4) — validate the implementation non-fatally
+    if (parsed.sessionId) {
+      try {
+        const testResponse = await fetch(`${API_BASE}/agents/testing/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: handle.taskId,
+            taskRunId: parsed.sessionId,
+            promptId: task.rootPromptId ?? null,
+            correlationId: `test-${parsed.sessionId}`,
+          }),
+        });
+        if (!testResponse.ok) {
+          console.log(`[executor:hook] Testing agent trigger returned ${testResponse.status}`);
+        }
+      } catch { /* non-fatal — testing agent is observability, not critical path */ }
+    }
 
     // Write timeline event
     try {
@@ -171,6 +245,8 @@ export async function handleCompletion(
             session_id: parsed.sessionId,
             cost_usd: parsed.costUsd,
             attempt_n: newAttemptCount,
+            tool_call_count: rich.toolCallCount,
+            duration_ms: durationMs,
           },
         }),
       });
@@ -180,7 +256,7 @@ export async function handleCompletion(
     cleanupWorktree(handle.worktreePath);
 
   } else {
-    // Failure path
+    // ── Failure path ──────────────────────────────────────────────────────────
     const reason = outcome.kind === 'stalled'
       ? `stalled (no output for ${Math.round(outcome.lastOutputAge / 60000)}min)`
       : outcome.kind === 'dead'
@@ -196,10 +272,8 @@ export async function handleCompletion(
 
     // Always update task status + attempt count first (moves out of 'running')
     await markTaskFailed(task.id, reason, newAttemptCount);
-    await emitEvent('task.failed', { task_id: handle.taskId, failure_reason: reason, attempt_n: newAttemptCount });
-    await emitEvent('worker.failed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? -1, failure_reason: reason });
 
-    // Check circuit breaker
+    // Check circuit breaker before emitting events so we can include tripped status
     const tripped = await checkAndBreak(
       task.id,
       task.title,
@@ -207,6 +281,25 @@ export async function handleCompletion(
       config.circuitBreakerThreshold,
       reason,
     );
+
+    // Legacy events (retained for existing consumers)
+    await publishEvent('task.failed', { task_id: handle.taskId, failure_reason: reason, attempt_n: newAttemptCount });
+    await publishEvent('worker.failed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? -1, failure_reason: reason });
+
+    // Structured failure event
+    await publishEvent('executor.task.failed', {
+      taskId: handle.taskId,
+      executorRunId: handle.executorRunId,
+      rootPromptId: task.rootPromptId ?? null,
+      error: reason,
+      exitCode: outcome.exitCode ?? -1,
+      retryCount: newAttemptCount - 1,
+      circuitBreakerTripped: tripped,
+      durationMs,
+      toolCallCount: rich.toolCallCount,
+      inputTokens: rich.inputTokens,
+      outputTokens: rich.outputTokens,
+    });
 
     if (!tripped) {
       console.log(`[executor:hook] Task ${handle.taskId} re-queued (attempt ${newAttemptCount}/${config.circuitBreakerThreshold})`);
