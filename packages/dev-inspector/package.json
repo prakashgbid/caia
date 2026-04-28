@@ -1,5 +1,5 @@
 {
-  "name": "@pokerzeno/dev-inspector",
+  "name": "@chiefaia/dev-inspector",
   "version": "0.1.0",
   "private": true,
   "description": "Dev-only React element inspector: hover outline, stable fiber IDs, click-to-copy",
