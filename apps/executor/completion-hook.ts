@@ -10,6 +10,9 @@ import { parseClaudeOutput, cleanupWorktree } from './dispatcher';
 import { checkAndBreak } from './breaker';
 import { publishEvent } from './publish-event';
 import { parseClaudeOutputRich } from './parse-claude-output-rich';
+import { logger } from './logger';
+
+const log = logger.child({ component: 'completion-hook' });
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 

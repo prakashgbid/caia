@@ -20,6 +20,9 @@ import {
 } from './monitor';
 import { handleCompletion } from './completion-hook';
 import type { MonitoredWorker } from './monitor';
+import { logger } from './logger';
+
+const log = logger.child({ component: 'daemon' });
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 const HEARTBEAT_FILE = path.join(os.homedir(), '.conductor', 'executor.heartbeat');
@@ -140,7 +143,10 @@ async function recoverInFlight(): Promise<void> {
           body: JSON.stringify({ status: 'queued' }),
         });
 
-        console.log(`[executor:daemon] Recovered task ${run.task_id} (PID ${run.pid} dead)`);
+        log.info('recovered task: pid dead on restart', {
+          task_id: run.task_id,
+          pid: run.pid,
+        });
       }
     }
   } catch { /* non-fatal */ }
@@ -153,7 +159,10 @@ async function tick(
   // 1. Poll existing workers for completion
   const finished = pollWorkers(monitored);
   for (const worker of finished) {
-    console.log(`[executor:daemon] Worker done: task=${worker.handle.taskId} outcome=${worker.outcome.kind}`);
+    log.info('worker finished', {
+      task_id: worker.handle.taskId,
+      outcome: worker.outcome.kind,
+    });
     await handleCompletion(worker, { circuitBreakerThreshold: config.circuitBreakerThreshold });
 
     if (worker.outcome.kind === 'stalled') {
@@ -190,7 +199,7 @@ async function tick(
 
   if (schedulerResult.skipped.length > 0 && process.env['EXECUTOR_DEBUG']) {
     for (const s of schedulerResult.skipped) {
-      console.log(`[executor:daemon] Skipped ${s.id}: ${s.reason}`);
+      log.debug('scheduler skipped task', { task_id: s.id, reason: s.reason });
     }
   }
 
@@ -200,7 +209,13 @@ async function tick(
     const task = queued.find(t => t.id === taskId);
     if (!task) continue;
 
-    console.log(`[executor:daemon] Dispatching task ${taskId}: ${task.title}`);
+    log.info('dispatching task', {
+      task_id: taskId,
+      title: task.title,
+      correlation_id: task.rootPromptId ?? undefined,
+      entity_type: 'task',
+      entity_id: taskId,
+    });
 
     try {
       const handle = await dispatch(
@@ -224,9 +239,21 @@ async function tick(
 
       addWorker(stillRunning, handle);
       dispatchedThisTick++;
-      console.log(`[executor:daemon] Spawned task ${taskId} (PID ${handle.pid})`);
+      log.info('spawned task', {
+        task_id: taskId,
+        pid: handle.pid,
+        correlation_id: task.rootPromptId ?? undefined,
+        entity_type: 'task',
+        entity_id: taskId,
+      });
     } catch (err) {
-      console.error(`[executor:daemon] Failed to dispatch task ${taskId}:`, err instanceof Error ? err.message : err);
+      log.error('dispatch failed', {
+        task_id: taskId,
+        err: err instanceof Error ? err.message : String(err),
+        correlation_id: task.rootPromptId ?? undefined,
+        entity_type: 'task',
+        entity_id: taskId,
+      });
     }
   }
 
@@ -244,7 +271,11 @@ async function main(): Promise<void> {
   let totalDispatched = 0;
   let drainLimitReached = false;
 
-  console.log(`[executor:daemon] Starting. PID=${process.pid}, API=${API_BASE}${DRAIN_LIMIT ? `, drain-limit=${DRAIN_LIMIT}` : ''}`);
+  log.info('starting', {
+    pid: process.pid,
+    api: API_BASE,
+    drain_limit: DRAIN_LIMIT ?? null,
+  });
 
   // Recover any in-flight tasks from previous run
   await recoverInFlight();
@@ -254,11 +285,11 @@ async function main(): Promise<void> {
   // Graceful shutdown
   let shuttingDown = false;
   process.on('SIGTERM', () => {
-    console.log('[executor:daemon] SIGTERM received, shutting down...');
+    log.info('SIGTERM received, shutting down');
     shuttingDown = true;
   });
   process.on('SIGINT', () => {
-    console.log('[executor:daemon] SIGINT received, shutting down...');
+    log.info('SIGINT received, shutting down');
     shuttingDown = true;
     process.exit(0);
   });
@@ -270,7 +301,7 @@ async function main(): Promise<void> {
 
     const config = await fetchConfig();
     if (!config) {
-      console.log('[executor:daemon] Could not fetch config — API down?');
+      log.warn('could not fetch executor config — api down?');
       writeHeartbeat(0, -1);
       return;
     }
@@ -289,10 +320,10 @@ async function main(): Promise<void> {
       }
       currentMonitored = removeFinished(currentMonitored, finished);
       if (currentMonitored.length === 0) {
-        console.log(`[executor:daemon] Drain complete. Dispatched=${totalDispatched}, all workers finished. Exiting.`);
+        log.info('drain complete', { total_dispatched: totalDispatched });
         process.exit(0);
       }
-      console.log(`[executor:daemon] Drain waiting: ${currentMonitored.length} workers still running...`);
+      log.info('drain waiting', { running: currentMonitored.length });
       return;
     }
 
@@ -303,10 +334,14 @@ async function main(): Promise<void> {
 
       if (DRAIN_LIMIT !== null && totalDispatched >= DRAIN_LIMIT) {
         drainLimitReached = true;
-        console.log(`[executor:daemon] Drain limit reached (${totalDispatched}/${DRAIN_LIMIT}). Will wait for ${currentMonitored.length} running workers.`);
+        log.info('drain limit reached', {
+          total_dispatched: totalDispatched,
+          drain_limit: DRAIN_LIMIT,
+          running: currentMonitored.length,
+        });
       }
     } catch (err) {
-      console.error('[executor:daemon] Tick error:', err instanceof Error ? err.message : err);
+      log.error('tick failed', { err: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -326,6 +361,9 @@ async function main(): Promise<void> {
 }
 
 main().catch(err => {
-  console.error('[executor:daemon] Fatal:', err);
+  log.fatal('fatal startup error', {
+    err: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+  });
   process.exit(1);
 });
