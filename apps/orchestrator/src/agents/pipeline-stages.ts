@@ -101,4 +101,34 @@ export function advancePipelineStage(input: AdvanceStageInput, db: Db): void {
       durationFromStartMs: durationMs,
     },
   });
+
+  // DASH-104: emit canonical decompose lifecycle events at the relevant
+  // stage transitions. `pipeline.decompose_started` fires when the prompt
+  // enters the scaffolded stage (decomposer is about to run); the matching
+  // `pipeline.decompose_completed` fires when it reaches po_decomposed.
+  // Subscribers can pair the two by `correlation_id` (= prompt id).
+  if (input.stage === 'scaffolded') {
+    eventBus.publish({
+      type: 'pipeline.decompose_started',
+      actor: 'system',
+      correlation_id: input.correlationId,
+      entity_type: 'prompt',
+      entity_id: input.promptId,
+      payload: {
+        promptId: input.promptId,
+      },
+    });
+  } else if (input.stage === 'po_decomposed') {
+    eventBus.publish({
+      type: 'pipeline.decompose_completed',
+      actor: 'system',
+      correlation_id: input.correlationId,
+      entity_type: 'prompt',
+      entity_id: input.promptId,
+      payload: {
+        promptId: input.promptId,
+        durationMs: durationMs ?? undefined,
+      },
+    });
+  }
 }
