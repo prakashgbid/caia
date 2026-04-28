@@ -12,6 +12,7 @@ import * as child_process from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { lookupCorrelationId } from './correlation';
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 
@@ -186,6 +187,11 @@ export async function dispatch(
 
   const executorRunId = await registerExecutorRun(task.id, pid, worktreePath, attemptN);
 
+  // Stamp every executor-emitted event with the originating prompt's
+  // correlation_id (DASH-107) so /prompts/:id/journey can build a complete
+  // trace across the executor boundary.
+  const correlationId = await lookupCorrelationId(task.id);
+
   // Emit worker.spawned via API
   try {
     await fetch(`${API_BASE}/events`, {
@@ -193,6 +199,9 @@ export async function dispatch(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'worker.spawned', actor: 'executor',
+        correlation_id: correlationId ?? undefined,
+        entity_type: 'task',
+        entity_id: task.id,
         payload: { executor_run_id: executorRunId, task_id: task.id, pid, worktree_path: worktreePath },
       }),
     });

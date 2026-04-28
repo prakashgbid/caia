@@ -11,12 +11,31 @@ import { checkAndBreak } from './breaker';
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 
-async function emitEvent(type: string, payload: Record<string, unknown>): Promise<void> {
+interface EmitOptions {
+  correlationId?: string | null;
+  taskId?: string;
+}
+
+async function emitEvent(
+  type: string,
+  payload: Record<string, unknown>,
+  opts: EmitOptions = {},
+): Promise<void> {
   try {
     await fetch(`${API_BASE}/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, actor: 'executor', payload }),
+      body: JSON.stringify({
+        type,
+        actor: 'executor',
+        // Stamp every executor-emitted event with the originating prompt's
+        // correlation_id (DASH-107) so /prompts/:id/journey can build a
+        // complete trace across the executor boundary.
+        correlation_id: opts.correlationId ?? undefined,
+        entity_type: opts.taskId ? 'task' : undefined,
+        entity_id: opts.taskId,
+        payload,
+      }),
     });
   } catch { /* non-fatal */ }
 }
@@ -32,6 +51,9 @@ interface TaskRow {
   cwd: string;
   attemptCount: number;
   paused: boolean;
+  // DASH-107: GET /tasks/:id returns the full row including the originating
+  // prompt link. Used to stamp `correlation_id` on completion events.
+  rootPromptId?: string | null;
 }
 
 async function fetchTask(taskId: string): Promise<TaskRow | null> {
@@ -141,6 +163,8 @@ export async function handleCompletion(
   }
 
   const newAttemptCount = task.attemptCount + 1;
+  const correlationId = task.rootPromptId ?? null;
+  const emitOpts: EmitOptions = { correlationId, taskId: handle.taskId };
 
   if (outcome.kind === 'done' && outcome.exitCode === 0 && parsed.resultOk) {
     // Success path
@@ -152,8 +176,8 @@ export async function handleCompletion(
     );
 
     await markTaskDone(handle.taskId, parsed.sessionId);
-    await emitEvent('task.completed', { task_id: handle.taskId, duration_ms: Date.now() - new Date(handle.startedAt).getTime(), result_summary: parsed.summary });
-    await emitEvent('worker.completed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? 0, turn_count: parsed.turnCount });
+    await emitEvent('task.completed', { task_id: handle.taskId, duration_ms: Date.now() - new Date(handle.startedAt).getTime(), result_summary: parsed.summary }, emitOpts);
+    await emitEvent('worker.completed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? 0, turn_count: parsed.turnCount }, emitOpts);
     await runCompletenessCheck(task.cwd);
 
     // Write timeline event
@@ -196,8 +220,8 @@ export async function handleCompletion(
 
     // Always update task status + attempt count first (moves out of 'running')
     await markTaskFailed(task.id, reason, newAttemptCount);
-    await emitEvent('task.failed', { task_id: handle.taskId, failure_reason: reason, attempt_n: newAttemptCount });
-    await emitEvent('worker.failed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? -1, failure_reason: reason });
+    await emitEvent('task.failed', { task_id: handle.taskId, failure_reason: reason, attempt_n: newAttemptCount }, emitOpts);
+    await emitEvent('worker.failed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? -1, failure_reason: reason }, emitOpts);
 
     // Check circuit breaker
     const tripped = await checkAndBreak(
