@@ -418,3 +418,29 @@ events:
     severity: info
     actor: [task-scheduler]
     payload: [promptId, correlationId, storyId, bucketId, bucketKind, domainSlug, positionInBucket]
+
+  # Ticket state machine (migration 0021 ticket_template lifecycle)
+  - type: ticket.draft
+    severity: info
+    actor: [po-agent]
+    payload: [storyId, promptId, correlationId, requirementId]
+
+  - type: ticket.po-decomposed
+    severity: info
+    actor: [po-agent]
+    payload: [storyId, promptId, correlationId, requirementsCreated]
+
+  - type: ticket.ba-enriching
+    severity: info
+    actor: [ba-agent]
+    payload: [storyId, promptId, correlationId]
+
+  - type: ticket.ba-complete
+    severity: info
+    actor: [ba-agent]
+    payload: [storyId, promptId, correlationId, validationStatus, sectionsPopulated]
+
+  - type: ticket.ready-for-pickup
+    severity: info
+    actor: [task-scheduler]
+    payload: [storyId, promptId, correlationId, bucketId, bucketKind]

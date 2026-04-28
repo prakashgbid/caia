@@ -16,6 +16,7 @@ import { getDb } from '../db/connection';
 import { tasks } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { placeStoriesInBuckets, type BucketPlacement } from './bucket-placer';
+import { advancePipelineStage } from './pipeline-stages';
 
 export interface SchedulerInput {
   promptId: string;
@@ -149,6 +150,51 @@ export async function runTaskScheduler(
   // bucket per prompt. Tickets are scheduled before tasks so the executor
   // can pick up enriched stories even when no tasks have been spawned yet.
   const placement = placeStoriesInBuckets({ promptId, correlationId }, db);
+
+  // Advance prompt-level pipeline stage to bucket_placed.
+  if (placement.placements.length > 0) {
+    advancePipelineStage(
+      {
+        promptId,
+        stage: 'bucket_placed',
+        correlationId,
+        metadata: {
+          sequentialBucketsCreated: placement.sequentialBucketsCreated,
+          parallelBucketSize: placement.parallelBucketSize,
+        },
+      },
+      db,
+    );
+
+    // Per-story ticket lifecycle event: ready-for-pickup.
+    for (const p of placement.placements) {
+      eventBus.publish({
+        type: 'ticket.ready-for-pickup',
+        actor: 'task-scheduler',
+        correlation_id: correlationId,
+        entity_type: 'story',
+        entity_id: p.storyId,
+        payload: {
+          storyId: p.storyId,
+          promptId,
+          correlationId,
+          bucketId: p.bucketId,
+          bucketKind: p.bucketKind,
+        },
+      });
+    }
+
+    // Advance to ready_for_pickup once every story has a bucket assignment.
+    advancePipelineStage(
+      {
+        promptId,
+        stage: 'ready_for_pickup',
+        correlationId,
+        metadata: { totalStoriesPlaced: placement.placements.length },
+      },
+      db,
+    );
+  }
 
   // Then schedule tasks (executor work-items) using the existing
   // topological-sort logic — task-level scheduling complements story-level
