@@ -64,7 +64,6 @@ export const VOICE_PROFILES: Record<VoiceStyle, VoiceProfile> = {
       'I think', 'maybe', 'could be wrong but', 'just my take',
       'not 100% sure but', 'in my experience', 'seems like', 'might be',
     ],
-    enthusiasm: 'high',
   },
 
   analytical: {
@@ -118,7 +117,6 @@ export const VOICE_PROFILES: Record<VoiceStyle, VoiceProfile> = {
       'assuming standard conditions', 'with some caveats', 'in most scenarios',
       'the model predicts', 'under reasonable assumptions',
     ],
-    enthusiasm: 'low',
   },
 
   'pro-jargon': {
@@ -171,7 +169,6 @@ export const VOICE_PROFILES: Record<VoiceStyle, VoiceProfile> = {
       'roughly speaking', 'in a vacuum', 'all else equal', 'assuming standard reads',
       'at a GTO baseline', 'exploitably', 'in equilibrium', 'solver-wise',
     ],
-    enthusiasm: 'medium',
   },
 
   storytelling: {
@@ -225,7 +222,6 @@ export const VOICE_PROFILES: Record<VoiceStyle, VoiceProfile> = {
       'I could be misremembering but', 'the details blur but', 'roughly',
       'though time colors memory', 'or so it seemed',
     ],
-    enthusiasm: 'high',
   },
 
   'dry-humor': {
@@ -279,6 +275,5 @@ export const VOICE_PROFILES: Record<VoiceStyle, VoiceProfile> = {
       'in what I called a plan', 'with what I described as confidence',
       'not that it mattered',
     ],
-    enthusiasm: 'medium',
   },
 };

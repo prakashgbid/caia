@@ -24,8 +24,8 @@ export default function RootLayout({
         <main id="main-content">
           {children}
         </main>
-        {/* ConsentBanner: wire @chiefaia/analytics when available */}
-        {/* DevInspector: wire @chiefaia/dev-inspector when available */}
+        {/* ConsentBanner: wire @pokerzeno/analytics when available */}
+        {/* DevInspector: wire @pokerzeno/dev-inspector when available */}
       </body>
     </html>
   );

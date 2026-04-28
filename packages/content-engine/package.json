@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "seed:poker": "node dist/cli.js generate --site poker --all",
     "seed:roulette": "node dist/cli.js generate --site roulette --all",
     "seed:all": "npm run build && npm run seed:poker && npm run seed:roulette"

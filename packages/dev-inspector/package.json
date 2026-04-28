@@ -1,8 +1,8 @@
 {
-  "name": "@chiefaia/dev-inspector",
-  "version": "0.2.0",
+  "name": "@pokerzeno/dev-inspector",
+  "version": "0.1.0",
   "private": true,
-  "description": "Dev-only React inspector panel: tabbed dashboard for accessibility, integrity, console, network, and Core Web Vitals. Cmd+Shift+I to toggle.",
+  "description": "Dev-only React element inspector: hover outline, stable fiber IDs, click-to-copy",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "sideEffects": false,
@@ -14,13 +14,7 @@
   },
   "peerDependencies": {
     "react": ">=18.0.0",
-    "react-dom": ">=18.0.0",
-    "axe-core": ">=4.0.0",
-    "web-vitals": ">=4.0.0"
-  },
-  "peerDependenciesMeta": {
-    "axe-core": { "optional": true },
-    "web-vitals": { "optional": true }
+    "react-dom": ">=18.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0",
@@ -30,11 +24,9 @@
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",
-    "axe-core": "^4.11.3",
     "jsdom": "^24.1.0",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0",
-    "web-vitals": "^4.2.4",
     "@vitejs/plugin-react": "^4.3.0"
   },
   "license": "UNLICENSED",

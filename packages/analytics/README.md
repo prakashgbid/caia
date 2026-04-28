@@ -1,6 +1,6 @@
-# @chiefaia/analytics
+# @pokerzeno/analytics
 
-Shared analytics package for all CAIA-powered sites. Provides:
+Shared analytics package for all Pokerzeno sites. Provides:
 - **Google Analytics 4** — consent-gated, deep event data
 - **Cloudflare Web Analytics** — cookieless, always-on pageview data
 - **GDPR/CCPA Consent Banner** — WCAG 2.2 AA, keyboard-accessible, focus-trapped modal
@@ -30,7 +30,7 @@ GA4 only loads after the user clicks "Accept all" or toggles analytics on.
 ### 1. Add to root layout
 
 ```tsx
-import { AnalyticsProvider, ConsentBanner } from '@chiefaia/analytics';
+import { AnalyticsProvider, ConsentBanner } from '@pokerzeno/analytics';
 
 export default function RootLayout({ children }) {
   return (
@@ -61,7 +61,7 @@ NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-XXXXXXXXXX
 
 ```tsx
 'use client';
-import { useConsent } from '@chiefaia/analytics';
+import { useConsent } from '@pokerzeno/analytics';
 
 function Footer() {
   const { openBanner } = useConsent();
@@ -79,7 +79,7 @@ function Footer() {
 import {
   trackBetPlaced, trackGameStart, trackGameEnd,
   trackCTAClicked, trackEmailCaptured, trackLessonStarted,
-} from '@chiefaia/analytics';
+} from '@pokerzeno/analytics';
 
 // Game events
 trackGameStart({ variant: 'european', difficulty: 'medium', app_name: 'my-site' });
@@ -96,7 +96,7 @@ trackEmailCaptured('homepage_waitlist', '/');
 ### 5. Use the hook (in client components)
 
 ```tsx
-import { useAnalytics } from '@chiefaia/analytics';
+import { useAnalytics } from '@pokerzeno/analytics';
 
 function MyComponent() {
   const { track, analyticsEnabled } = useAnalytics();
@@ -184,7 +184,7 @@ The banner uses CSS custom properties. Set them on your `<body>`:
 ## Scaling to 20+ sites
 
 Each site needs:
-1. `@chiefaia/analytics` in `devDependencies` (file: protocol locally)
+1. `@pokerzeno/analytics` in `devDependencies` (file: protocol locally)
 2. `AnalyticsProvider` + `ConsentBanner` in root layout
 3. `NEXT_PUBLIC_GA4_MEASUREMENT_ID` env var
 4. "Manage cookies" button in footer calling `useConsent().openBanner()`

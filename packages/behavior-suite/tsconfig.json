@@ -10,5 +10,9 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src", "scripts"]
+  // scripts/ is intentionally excluded from the typecheck/build:
+  // scripts/scope-tests.ts is a standalone CLI run via `npx tsx` (used by
+  // gate-publish.sh), not a library source. Including it conflicts with
+  // rootDir: "src" (TS6059).
+  "include": ["src"]
 }
