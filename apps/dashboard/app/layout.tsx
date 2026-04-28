@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { path: '/domains', label: 'Domains', icon: '🏷️', tabKey: 'domains' },
   { path: '/projects', label: 'Projects', icon: '📁', tabKey: 'projects' },
   { path: '/queue', label: 'Queue', icon: '🎯', tabKey: 'queue' },
+  { path: '/buckets', label: 'Buckets', icon: '🗂️', tabKey: 'buckets' },
   { path: '/tasks', label: 'Tasks', icon: '📋', tabKey: 'tasks' },
   { path: '/task-runs', label: 'Task Runs', icon: '📡', tabKey: 'task_runs' },
   { path: '/requirements', label: 'Requirements', icon: '📝', tabKey: 'requirements' },
@@ -50,6 +51,7 @@ function kindToTab(kind: string): string {
   if (kind.startsWith('task_run.')) return 'task_runs';
   if (kind.startsWith('behavior_test.')) return 'tests';
   if (kind.startsWith('priority.')) return 'queue';
+  if (kind.startsWith('task-scheduler.') || kind.startsWith('ticket.')) return 'buckets';
   if (kind.startsWith('task.') || kind.startsWith('task_')) return 'tasks';
   if (kind.startsWith('requirement.')) return 'requirements';
   if (kind.startsWith('blocker.')) return 'blockers';
