@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { MetricsDashboard } from '../../components/MetricsDashboard';
 import type { Metrics } from '../../components/MetricsDashboard';
@@ -20,7 +21,18 @@ function MetricsContent() {
 
   return (
     <div>
-      <h1 style={{ margin: '0 0 20px', fontSize: 22, fontWeight: 700, color: '#f0f4f8' }}>📊 Metrics</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#f0f4f8' }}>📊 Metrics</h1>
+        <Link
+          href="/metrics/phase1"
+          style={{
+            background: '#2d3748', border: '1px solid #4a5568', color: '#90cdf4',
+            borderRadius: 4, padding: '6px 12px', fontSize: 12, textDecoration: 'none',
+          }}
+        >
+          📈 Phase 1 Metrics →
+        </Link>
+      </div>
       <MetricsDashboard metrics={metrics} />
     </div>
   );

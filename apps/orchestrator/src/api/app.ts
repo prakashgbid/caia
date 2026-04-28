@@ -23,6 +23,7 @@ import { registerLlmRoutes } from './routes/llm';
 import { registerStatsRoutes } from './routes/stats';
 import { registerAgentRoutes } from './routes/agents';
 import { registerBucketsRoutes } from './routes/buckets';
+import { registerMetricsPhase1Routes } from './routes/metrics-phase1';
 import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
 
 export function createApp(db: Db): Hono {
@@ -69,6 +70,7 @@ export function createApp(db: Db): Hono {
   registerStatsRoutes(app);
   registerAgentRoutes(app, db);
   registerBucketsRoutes(app, db);
+  registerMetricsPhase1Routes(app, db);
 
   return app;
 }
