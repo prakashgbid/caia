@@ -20,7 +20,7 @@ export default function EntityAuditPage({ params }: { params: { entityKind: stri
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/events')
+    fetch('/api/audit')
       .then(r => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data)) {
