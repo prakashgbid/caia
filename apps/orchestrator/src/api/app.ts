@@ -22,6 +22,7 @@ import { registerPulseRoutes } from './routes/pulse';
 import { registerLlmRoutes } from './routes/llm';
 import { registerStatsRoutes } from './routes/stats';
 import { registerAgentRoutes } from './routes/agents';
+import { registerBucketsRoutes } from './routes/buckets';
 import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
 
 export function createApp(db: Db): Hono {
@@ -67,6 +68,7 @@ export function createApp(db: Db): Hono {
   registerLlmRoutes(app);
   registerStatsRoutes(app);
   registerAgentRoutes(app, db);
+  registerBucketsRoutes(app, db);
 
   return app;
 }
