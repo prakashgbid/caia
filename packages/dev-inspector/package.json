@@ -1,11 +1,15 @@
 {
   "name": "@chiefaia/dev-inspector",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
   "description": "Dev-only React element inspector: hover outline, stable fiber IDs, click-to-copy",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "sideEffects": false,
+  "files": [
+    "src",
+    "tsconfig.json",
+    "tsconfig.build.json"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
@@ -39,7 +43,6 @@
   },
   "license": "UNLICENSED",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
     "access": "public"
   }
 }

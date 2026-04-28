@@ -1,11 +1,14 @@
 {
   "name": "@chiefaia/analytics",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
   "description": "Shared GA4 analytics, consent management, and event taxonomy for Pokerzeno sites",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "sideEffects": false,
+  "files": [
+    "src",
+    "tsconfig.json"
+  ],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
@@ -30,7 +33,6 @@
   },
   "license": "UNLICENSED",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
     "access": "public"
   }
 }
