@@ -18,13 +18,15 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "bench": "TS_NODE_PROJECT=tsconfig.bench.json TS_NODE_TRANSPILE_ONLY=1 ts-node --transpile-only scripts/benchmark-catalog.ts"
   },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
     "@chiefaia/tsconfig": "workspace:*",
     "@chiefaia/vitest-config": "workspace:*",
     "@types/node": "^20",
+    "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   },

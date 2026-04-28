@@ -51,6 +51,33 @@ Unknown task types default to Claude Sonnet for safety.
 
 The adapter pins IPv4 explicitly because on macOS `localhost` often resolves to `::1` first, and a stray IPv6 listener (e.g., an SSH tunnel) on port 11434 will silently route requests to the wrong daemon.
 
+## Model catalog (LAI-001)
+
+`MODEL_CATALOG` is the typed registry of every local model the router knows about — parameter count, runtime RAM, on-disk size, role, and the right endpoint to call. It does **not** drive routing decisions on its own; LAI-005 wires roles into rules.
+
+To pull the catalog's recommended set on an M1 Pro 16GB:
+
+```bash
+ollama pull qwen2.5-coder:7b      # baseline coder (already in use)
+ollama pull llama3.1:8b           # baseline generalist (already in use)
+ollama pull qwen2.5-coder:14b     # bigger coder for multi-file edits
+ollama pull qwen3:14b             # 14B-class generalist (chat + think:false)
+ollama pull phi4                  # math/STEM specialist
+ollama pull nomic-embed-text      # embeddings for RAG / cache
+```
+
+Caveat — Qwen3 emits chain-of-thought tokens by default. Always call it via `/api/chat` with `think: false` (or prefix prompts with `/no_think`); calling `/api/generate` returns empty responses.
+
+### Benchmarking
+
+Run every catalog model that's pulled against a small classification fixture and print latency + tokens/sec:
+
+```bash
+pnpm --filter @chiefaia/local-llm-router run bench
+```
+
+The script silently skips models that aren't pulled, so it's safe to run on any machine.
+
 ## Testing
 
 ```bash
