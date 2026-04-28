@@ -1,7 +1,7 @@
 import type { Hono } from 'hono';
-import { eq, desc, asc, sql } from 'drizzle-orm';
+import { eq, desc, asc, sql, gte } from 'drizzle-orm';
 import type { Db } from '../../db/connection';
-import { prompts, events, promptPipelineStages, requirements, stories, tasks as dbTasks, taskRuns } from '../../db/schema';
+import { prompts, events, promptPipelineStages, requirements, stories, tasks as dbTasks, taskRuns, dedupResults, entityLabels } from '../../db/schema';
 import { eventBus } from '../../events/bus-adapter';
 import { nanoid } from 'nanoid';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../../prompts/manager';
 import type { PromptStatus, PromptReceivedVia, PromptListOptions } from '../../prompts/types';
 import { classifyKeyword } from '../../../packages/classifier/src/index';
+import { check as dedupCheck } from '../../../packages/dedup-engine/src/index';
 import { runScaffolder } from '../../agents/scaffolder';
 
 // @no-events — route registration wrapper; business events are emitted by manager functions
@@ -67,11 +68,92 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
       console.error('[prompts] Failed to emit ingested event or insert pipeline stage:', err);
     }
 
-    // Classify the prompt into functional domains and assign labels
+    // Classify the prompt into functional domains and persist entity labels
+    let classificationLabels: string[] = [];
     try {
       const classification = classifyKeyword(prompt.body ?? '');
+      classificationLabels = classification.allLabels;
       console.info('[prompts] Prompt classified', { promptId: prompt.id, classification });
+
+      // Determine label type for each label slot
+      const labelTypeMap: Record<number, string> = {
+        0: 'domain',      // primaryDomain
+      };
+      // Build label type lookup: nature, complexity, layer get specific types; rest are 'label'
+      const natureLike = new Set([classification.nature]);
+      const complexityLike = new Set([classification.complexity]);
+      const layerLike = new Set([classification.layer]);
+
+      for (const [i, label] of classification.allLabels.entries()) {
+        let labelType = 'label';
+        if (i === 0) labelType = 'domain';
+        else if (natureLike.has(label as never)) labelType = 'nature';
+        else if (complexityLike.has(label as never)) labelType = 'complexity';
+        else if (layerLike.has(label as never)) labelType = 'layer';
+
+        db.insert(entityLabels).values({
+          id: `el-${nanoid()}`,
+          entityKind: 'prompt',
+          entityId: prompt.id,
+          labelSlug: label,
+          labelType,
+          confidence: classification.confidence,
+          source: 'classifier',
+          createdAt: Date.now(),
+        }).run();
+      }
     } catch { /* never break prompt creation */ }
+
+    // Run dedup check against recent prompts (last 6 months)
+    let dedupDecision: string = 'unchecked';
+    try {
+      const sixMonthsAgo = new Date(Date.now() - (180 * 24 * 60 * 60 * 1000)).toISOString();
+      const recentPrompts = db.select({
+        id: prompts.id,
+        body: prompts.body,
+        receivedAt: prompts.receivedAt,
+      }).from(prompts)
+        .where(gte(prompts.receivedAt, sixMonthsAgo))
+        .limit(200)
+        .all();
+
+      const corpus = recentPrompts.map(p => ({
+        id: p.id,
+        title: p.body ?? '',
+        description: p.body ?? '',
+        createdAt: new Date(p.receivedAt ?? Date.now()).getTime(),
+        labels: classificationLabels,
+      }));
+
+      const dedupResult = dedupCheck(
+        { id: prompt.id, title: prompt.body ?? '', description: prompt.body ?? '', labels: classificationLabels },
+        corpus
+      );
+
+      dedupDecision = dedupResult.decision;
+
+      db.insert(dedupResults).values({
+        id: `dedup-${nanoid()}`,
+        entityKind: 'prompt',
+        entityId: prompt.id,
+        checkedAt: Date.now(),
+        decision: dedupResult.decision,
+        similarityScore: dedupResult.confidence,
+        similarEntities: JSON.stringify(dedupResult.similarItems.slice(0, 5)),
+        recommendations: JSON.stringify(dedupResult.recommendations),
+        createdAt: Date.now(),
+      }).run();
+
+      console.info('[prompts] Dedup check complete', {
+        promptId: prompt.id,
+        decision: dedupResult.decision,
+        confidence: dedupResult.confidence,
+        shouldBlock: dedupResult.shouldBlock,
+        shouldWarn: dedupResult.shouldWarn,
+      });
+    } catch (err) {
+      console.error('[prompts] Dedup check failed (non-fatal):', err);
+    }
 
     // Run scaffolder asynchronously — determines agent team and broadcasts context
     const projectId = (body.metadata?.projectId as string | null) ?? null;
@@ -79,7 +161,11 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
       console.warn('[prompts] Scaffolder failed', { err: e, promptId: prompt.id });
     });
 
-    return c.json({ prompt_id: prompt.id, correlation_id: prompt.correlationId }, 201);
+    return c.json({
+      prompt_id: prompt.id,
+      correlation_id: prompt.correlationId,
+      dedup_decision: dedupDecision,
+    }, 201);
   });
 
   // List prompts with optional filters
@@ -226,5 +312,16 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
     };
 
     return c.json({ prompt, stages, requirements: tree, events: relatedEvents, summary });
+  });
+
+  // GET /prompts/:id/dedup — get the most recent dedup result for a prompt
+  app.get('/prompts/:id/dedup', async (c) => {
+    const id = c.req.param('id');
+    const [result] = db.select().from(dedupResults)
+      .where(eq(dedupResults.entityId, id))
+      .orderBy(desc(dedupResults.checkedAt))
+      .limit(1)
+      .all();
+    return result ? c.json(result) : c.json({ decision: 'unchecked' });
   });
 }

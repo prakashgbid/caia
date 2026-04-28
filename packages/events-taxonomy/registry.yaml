@@ -383,3 +383,21 @@ events:
     severity: info
     actor: [api]
     payload: [promptId, requestType, agentsActivated, correlationId, projectId]
+
+  # PO Agent events (migration 0019)
+  - type: po-agent.decomposition.complete
+    severity: info
+    actor: [po-agent]
+    payload: [promptId, correlationId, requirementsCreated, storiesCreated, totalNodes, summary, primaryDomain]
+
+  # BA Agent events (migration 0018)
+  - type: ba-agent.enrichment.complete
+    severity: info
+    actor: [ba-agent]
+    payload: [promptId, correlationId, enrichedStories, storiesWithAcceptanceCriteria]
+
+  # Task Scheduler Agent events (migration 0018)
+  - type: task-scheduler.scheduling.complete
+    severity: info
+    actor: [task-scheduler]
+    payload: [promptId, correlationId, totalTasks, sequentialCount, parallelBucketCount, estimatedWallclockHours]

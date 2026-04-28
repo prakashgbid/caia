@@ -211,6 +211,25 @@ export async function handleCompletion(
 
     await runCompletenessCheck(task.cwd);
 
+    // Trigger Testing Agent (Tier 4) — validate the implementation non-fatally
+    if (parsed.sessionId) {
+      try {
+        const testResponse = await fetch(`${API_BASE}/agents/testing/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: handle.taskId,
+            taskRunId: parsed.sessionId,
+            promptId: task.rootPromptId ?? null,
+            correlationId: `test-${parsed.sessionId}`,
+          }),
+        });
+        if (!testResponse.ok) {
+          console.log(`[executor:hook] Testing agent trigger returned ${testResponse.status}`);
+        }
+      } catch { /* non-fatal — testing agent is observability, not critical path */ }
+    }
+
     // Write timeline event
     try {
       await fetch(`${API_BASE}/timeline`, {

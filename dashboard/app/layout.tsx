@@ -8,6 +8,8 @@ import { NavProjectSelector } from '../components/NavProjectSelector';
 import './globals.css';
 
 const NAV_ITEMS = [
+  { path: '/submit', label: 'Submit', icon: '✦', tabKey: 'submit' },
+  { path: '/gates', label: 'Review Gates', icon: '◈', tabKey: 'gates' },
   { path: '/timeline', label: 'Timeline', icon: '🕒', tabKey: 'timeline' },
   { path: '/pipeline', label: 'Pipeline', icon: '⇢', tabKey: 'pipeline' },
   { path: '/platform-status', label: 'Platform Status', icon: '⬡', tabKey: 'platform_status' },
@@ -183,6 +185,19 @@ function SidebarInner() {
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   // Flash state for pipeline tab
   const [pipelineFlash, setPipelineFlash] = useState(false);
+  // Live pending gate count
+  const [gatesCount, setGatesCount] = useState(0);
+  useEffect(() => {
+    const fetchGates = () => {
+      fetch('/api/agents/artifacts?status=draft')
+        .then(r => r.ok ? r.json() : { total: 0 })
+        .then((d: { total?: number }) => setGatesCount(d.total ?? 0))
+        .catch(() => {});
+    };
+    fetchGates();
+    const timer = setInterval(fetchGates, 20_000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Current active tab key
   const currentTab = NAV_ITEMS.find(n => pathname.startsWith(n.path))?.tabKey ?? 'timeline';
@@ -273,7 +288,29 @@ function SidebarInner() {
           >
             <span style={{ fontSize: 16 }} aria-hidden="true">{item.icon}</span>
             <span style={{ flex: 1 }}>{item.label}</span>
-            {count > 0 && (
+            {/* Gate count badge (orange, for gates tab only) */}
+            {item.tabKey === 'gates' && gatesCount > 0 && (
+              <span
+                style={{
+                  background: '#f6ad55',
+                  color: '#1a202c',
+                  borderRadius: '50%',
+                  width: 18,
+                  height: 18,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+                aria-hidden="true"
+              >
+                {gatesCount > 99 ? '99+' : gatesCount}
+              </span>
+            )}
+            {/* Standard unseen event badge */}
+            {item.tabKey !== 'gates' && count > 0 && (
               <span
                 style={{
                   background: '#fc8181',

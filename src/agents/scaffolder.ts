@@ -14,6 +14,13 @@ import { agentMessages, promptPipelineStages } from '../db/schema';
 import { eventBus } from '../events/bus-adapter';
 import type { Db } from '../db/connection';
 
+// Logger shim — replaced at runtime by the real pino logger if available
+const logger = {
+  warn: (obj: Record<string, unknown>, msg: string) => {
+    console.warn('[scaffolder]', msg, obj);
+  },
+};
+
 // ─── Request Classification ──────────────────────────────────────────────────
 
 export type RequestType =
@@ -246,4 +253,37 @@ export async function runScaffolder(
   } catch {
     // Non-fatal: pipeline stage is observability, not critical path
   }
+
+  // 4. Chain Tier-2 agents: PO Agent → BA Agent → Task Scheduler
+  //    Fire-and-forget with a brief delay to let the scaffolder event persist first.
+  setTimeout(() => {
+    // PO Agent runs first (decomposition) — only for request types that include it
+    const poChain: Promise<unknown> = agentsToActivate.includes('po-agent')
+      ? import('./po-agent.js')
+          .then(({ runPOAgent }) =>
+            runPOAgent({ promptId, promptText, projectId, correlationId }, db),
+          )
+          .catch((err: unknown) => logger.warn({ err }, 'PO Agent failed'))
+      : Promise.resolve();
+
+    poChain
+      .then(() => {
+        if (agentsToActivate.includes('ba-agent')) {
+          return import('./ba-agent.js')
+            .then(({ runBAAgent }) =>
+              runBAAgent({ promptId, correlationId }, db),
+            );
+        }
+      })
+      .then(() => {
+        if (agentsToActivate.includes('task-scheduler')) {
+          return import('./task-scheduler.js').then(({ runTaskScheduler }) =>
+            runTaskScheduler({ promptId, correlationId }, db),
+          );
+        }
+      })
+      .catch((err: unknown) =>
+        logger.warn({ err }, 'BA Agent / Task Scheduler chain failed'),
+      );
+  }, 5_000);
 }

@@ -1,0 +1,26 @@
+{
+  "name": "@chiefaia/dedup-engine",
+  "version": "0.1.0",
+  "description": "Deduplication engine — detects duplicate/similar entities using Jaccard similarity with temporal decay",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs && tsc --project tsconfig.json --emitDeclarationOnly --declarationDir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}

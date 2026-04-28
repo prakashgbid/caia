@@ -394,6 +394,10 @@ export const stories = sqliteTable('stories', {
   rootPromptId: text('root_prompt_id'),
   parentEntityType: text('parent_entity_type'),
   parentEntityId: text('parent_entity_id'),
+  // BA Agent enrichment columns (migration 0018)
+  implementationNotes: text('implementation_notes'),
+  updatedAt: integer('updated_at'),
+  enrichedAt: integer('enriched_at'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -815,4 +819,38 @@ export const promptPipelineStages = sqliteTable('prompt_pipeline_stages', {
 }, (t) => [
   index('pps_prompt_idx').on(t.promptId),
   index('pps_stage_idx').on(t.stage),
+]);
+
+// entity_labels — domain taxonomy labels applied to any entity (migration 0019)
+export const entityLabels = sqliteTable('entity_labels', {
+  id: text('id').primaryKey().notNull(),
+  entityKind: text('entity_kind').notNull(), // 'prompt'|'requirement'|'story'|'task'
+  entityId: text('entity_id').notNull(),
+  labelSlug: text('label_slug').notNull(),   // e.g. 'auth', 'ui-frontend', 'feature', 'medium'
+  labelType: text('label_type').notNull(),   // 'domain'|'nature'|'complexity'|'layer'|'lifecycle'
+  confidence: real('confidence').notNull().default(1.0),
+  source: text('source').notNull().default('classifier'), // 'classifier'|'human'|'ai'
+  createdAt: integer('created_at').notNull(),
+}, (t) => [
+  index('idx_el_entity').on(t.entityKind, t.entityId),
+  index('idx_el_label').on(t.labelSlug),
+  index('idx_el_type').on(t.labelType),
+]);
+
+// dedup_results — deduplication check results (migration 0019)
+export const dedupResults = sqliteTable('dedup_results', {
+  id: text('id').primaryKey().notNull(),
+  entityKind: text('entity_kind').notNull(),
+  entityId: text('entity_id').notNull(),
+  checkedAt: integer('checked_at').notNull(),
+  decision: text('decision').notNull(), // 'new'|'similar_concept'|'related'|'overlap'|'likely_duplicate'|'duplicate'
+  similarityScore: real('similarity_score').notNull().default(0),
+  similarEntities: text('similar_entities').notNull().default('[]'), // JSON array of {id, score, title}
+  recommendations: text('recommendations').notNull().default('[]'),  // JSON array of recommendation strings
+  resolvedAction: text('resolved_action'),  // 'proceed'|'merge'|'enhancement_of'|'override'
+  resolvedAt: integer('resolved_at'),
+  createdAt: integer('created_at').notNull(),
+}, (t) => [
+  index('idx_dr_entity').on(t.entityKind, t.entityId),
+  index('idx_dr_decision').on(t.decision),
 ]);

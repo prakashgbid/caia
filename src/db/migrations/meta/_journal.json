@@ -120,6 +120,20 @@
       "when": 1746200000000,
       "tag": "0017_agent_registry",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1746300000000,
+      "tag": "0018_story_enrichment",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1746400000000,
+      "tag": "0019_entity_labels",
+      "breakpoints": true
     }
   ]
 }

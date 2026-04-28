@@ -1,6 +1,7 @@
 /**
  * Agent Registry API Routes
  * Provides CRUD and messaging endpoints for the CAIA agent registry.
+ * Also exposes action endpoints for Tier-4 agents (Testing, Release).
  */
 
 import type { Hono } from 'hono';
@@ -13,6 +14,8 @@ import {
   agentArtifacts,
   agentMessages,
 } from '../../db/schema';
+import { runTestingAgent } from '../../agents/testing-agent';
+import { runReleaseAgent } from '../../agents/release-agent';
 
 // @no-events — route registration wrapper
 export function registerAgentRoutes(app: Hono, db: Db): void {
@@ -241,6 +244,102 @@ export function registerAgentRoutes(app: Hono, db: Db): void {
       .all();
 
     return c.json({ agentName, prompts: rows, total: rows.length });
+  });
+
+  // ─── POST /agents/testing/run — trigger Testing Agent for a task run ────────
+  app.post('/agents/testing/run', async (c) => {
+    const body = await c.req.json() as {
+      taskId: string;
+      taskRunId: string;
+      promptId?: string | null;
+      correlationId?: string;
+    };
+
+    if (!body.taskId || !body.taskRunId) {
+      return c.json({ error: 'taskId and taskRunId are required' }, 400);
+    }
+
+    const correlationId = body.correlationId ?? `test-${body.taskRunId}`;
+
+    try {
+      const result = await runTestingAgent(
+        {
+          taskId: body.taskId,
+          taskRunId: body.taskRunId,
+          promptId: body.promptId ?? null,
+          correlationId,
+        },
+        db,
+      );
+      return c.json(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return c.json({ error: message }, 500);
+    }
+  });
+
+  // ─── POST /agents/release/report — generate a release report for a prompt ──
+  app.post('/agents/release/report', async (c) => {
+    const body = await c.req.json() as {
+      promptId: string;
+      correlationId?: string;
+    };
+
+    if (!body.promptId) {
+      return c.json({ error: 'promptId is required' }, 400);
+    }
+
+    const correlationId = body.correlationId ?? `release-${body.promptId}`;
+
+    try {
+      const report = await runReleaseAgent({ promptId: body.promptId, correlationId }, db);
+
+      // Persist the report as an agent artifact so it can be retrieved later
+      const artifactId = `art-rel-${nanoid(10)}`;
+      db.insert(agentArtifacts).values({
+        id: artifactId,
+        agentName: 'release-agent',
+        artifactType: 'release-report',
+        promptId: body.promptId,
+        content: JSON.stringify(report),
+        contentType: 'application/json',
+        status: 'draft',
+        createdAt: Date.now(),
+      }).run();
+
+      return c.json({ ...report, artifactId });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return c.json({ error: message }, 500);
+    }
+  });
+
+  // ─── GET /agents/release/report/:promptId — latest release report ──────────
+  app.get('/agents/release/report/:promptId', (c) => {
+    const { promptId } = c.req.param();
+
+    const artifact = db.select().from(agentArtifacts)
+      .where(
+        and(
+          eq(agentArtifacts.agentName, 'release-agent'),
+          eq(agentArtifacts.artifactType, 'release-report'),
+          eq(agentArtifacts.promptId, promptId),
+        ),
+      )
+      .orderBy(desc(agentArtifacts.createdAt))
+      .limit(1)
+      .get();
+
+    if (!artifact) {
+      return c.json({ error: 'No release report found for this promptId' }, 404);
+    }
+
+    try {
+      const report = JSON.parse(artifact.content) as Record<string, unknown>;
+      return c.json({ ...report, artifactId: artifact.id, generatedAt: artifact.createdAt });
+    } catch {
+      return c.json({ error: 'Failed to parse stored release report' }, 500);
+    }
   });
 
   // ─── POST /agents/system-prompts — add a new system prompt version ────────

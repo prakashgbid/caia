@@ -21,7 +21,12 @@ export type EventActor =
   | 'worker'
   | 'prioritizer'
   | 'secrets-broker'
-  | 'scaffolder';
+  | 'scaffolder'
+  | 'po-agent'
+  | 'ba-agent'
+  | 'task-scheduler'
+  | 'testing-agent'
+  | 'release-agent';
 
 /** Canonical envelope for every event emitted through the bus */
 export interface ConductorEvent {
@@ -214,6 +219,62 @@ export interface PulseHealFailedPayload {
   error: string;
 }
 
+// ─── PO Agent (migration 0019) ───────────────────────────────────────────────
+
+export interface POAgentDecompositionCompletePayload {
+  promptId: string;
+  correlationId: string;
+  requirementsCreated: number;
+  storiesCreated: number;
+  totalNodes: number;
+  summary: string;
+  primaryDomain: string;
+}
+
+// ─── BA Agent (migration 0018) ────────────────────────────────────────────────
+
+export interface BAAgentEnrichmentCompletePayload {
+  promptId: string;
+  correlationId: string;
+  enrichedStories: number;
+  storiesWithAcceptanceCriteria: number;
+}
+
+// ─── Task Scheduler Agent (migration 0018) ────────────────────────────────────
+
+export interface TaskSchedulerSchedulingCompletePayload {
+  promptId: string;
+  correlationId: string;
+  totalTasks: number;
+  sequentialCount: number;
+  parallelBucketCount: number;
+  estimatedWallclockHours: number;
+}
+
+// ─── Testing Agent (Tier 4) ──────────────────────────────────────────────────
+
+export interface TestingAgentValidationCompletePayload {
+  taskId: string;
+  taskRunId: string;
+  promptId: string | null;
+  correlationId: string;
+  passed: boolean;
+  overallScore: number;
+  failCount: number;
+  passCount: number;
+}
+
+// ─── Release Agent (Tier 4) ──────────────────────────────────────────────────
+
+export interface ReleaseAgentReportReadyPayload {
+  promptId: string;
+  correlationId: string;
+  readyForRelease: boolean;
+  tasksCompleted: number;
+  tasksFailed: number;
+  blockers: string[];
+}
+
 // ─── Union type of all valid event types ─────────────────────────────────────
 
 export type EventType =
@@ -252,7 +313,15 @@ export type EventType =
   | 'completeness.check.completed'
   | 'pipeline.stage.advanced'
   // ─── Scaffolder agent events (migration 0017) ─────────────────────────────
-  | 'scaffolder.team.assembled';
+  | 'scaffolder.team.assembled'
+  // ─── PO Agent events (migration 0019) ─────────────────────────────────────
+  | 'po-agent.decomposition.complete'
+  // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
+  | 'ba-agent.enrichment.complete'
+  | 'task-scheduler.scheduling.complete'
+  // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
+  | 'testing-agent.validation.complete'
+  | 'release-agent.report.ready';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -299,6 +368,14 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'pipeline.stage.advanced': 'info',
   // ─── Scaffolder agent events (migration 0017) ─────────────────────────────
   'scaffolder.team.assembled': 'info',
+  // ─── PO Agent events (migration 0019) ─────────────────────────────────────
+  'po-agent.decomposition.complete': 'info',
+  // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
+  'ba-agent.enrichment.complete': 'info',
+  'task-scheduler.scheduling.complete': 'info',
+  // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
+  'testing-agent.validation.complete': 'info',
+  'release-agent.report.ready': 'info',
 };
 
 /** All valid event type strings from the registry */
