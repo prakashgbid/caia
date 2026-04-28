@@ -9,6 +9,13 @@ import {
   TicketTemplateV1,
   COMPLEXITY_VALUES,
   NATURE_VALUES,
+  PROJECT_SLUGS,
+  LIFECYCLE_VALUES,
+  RISK_VALUES,
+  EFFORT_VALUES,
+  PRIORITY_VALUES,
+  QUALITY_TAGS,
+  TECH_SUB_DOMAINS,
 } from './schema';
 
 export interface DraftTicketInput {
@@ -28,6 +35,30 @@ export interface DraftTicketInput {
   downstream?: string[];
   files?: string[];
   poDecomposedAt?: number;
+  /** BUCKET-001 — optional taxonomy populated by PO + EA. */
+  taxonomy?: {
+    project?: (typeof PROJECT_SLUGS)[number];
+    businessSubDomains?: string[];
+    techSubDomains?: {
+      primary: (typeof TECH_SUB_DOMAINS)[number];
+      all: ReadonlyArray<(typeof TECH_SUB_DOMAINS)[number]>;
+    };
+    lifecycle?: (typeof LIFECYCLE_VALUES)[number];
+    qualityTags?: ReadonlyArray<(typeof QUALITY_TAGS)[number]>;
+    risk?: (typeof RISK_VALUES)[number];
+    effort?: (typeof EFFORT_VALUES)[number];
+    priorityBucket?: (typeof PRIORITY_VALUES)[number];
+    blockedBy?: string[];
+    softDependsOn?: string[];
+    conflictsWith?: string[];
+  };
+  /** BUCKET-001 / BUCKET-009 — optional resource claims populated by EA. */
+  claims?: {
+    files?: string[];
+    schemas?: string[];
+    apiRoutes?: string[];
+    domains?: string[];
+  };
 }
 
 /**
@@ -37,7 +68,7 @@ export interface DraftTicketInput {
  */
 export function buildDraftTicket(input: DraftTicketInput): TicketTemplateV1 {
   const now = Date.now();
-  return {
+  const draft: TicketTemplateV1 = {
     version: TICKET_TEMPLATE_VERSION,
     scope: {
       summary: input.summary,
@@ -67,4 +98,38 @@ export function buildDraftTicket(input: DraftTicketInput): TicketTemplateV1 {
       lastUpdatedAt: now,
     },
   };
+
+  if (input.taxonomy) {
+    draft.taxonomy = {
+      project: input.taxonomy.project,
+      businessSubDomains: input.taxonomy.businessSubDomains ?? [],
+      techSubDomains: input.taxonomy.techSubDomains
+        ? {
+            primary: input.taxonomy.techSubDomains.primary,
+            all: [...input.taxonomy.techSubDomains.all],
+          }
+        : undefined,
+      lifecycle: input.taxonomy.lifecycle,
+      qualityTags: input.taxonomy.qualityTags
+        ? [...input.taxonomy.qualityTags]
+        : [],
+      risk: input.taxonomy.risk,
+      effort: input.taxonomy.effort,
+      priorityBucket: input.taxonomy.priorityBucket,
+      blockedBy: input.taxonomy.blockedBy ?? [],
+      softDependsOn: input.taxonomy.softDependsOn ?? [],
+      conflictsWith: input.taxonomy.conflictsWith ?? [],
+    };
+  }
+
+  if (input.claims) {
+    draft.claims = {
+      files: input.claims.files ?? [],
+      schemas: input.claims.schemas ?? [],
+      apiRoutes: input.claims.apiRoutes ?? [],
+      domains: input.claims.domains ?? [],
+    };
+  }
+
+  return draft;
 }

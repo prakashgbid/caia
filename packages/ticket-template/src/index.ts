@@ -14,8 +14,26 @@ export {
   NATURE_VALUES,
   COMPLEXITY_VALUES,
   AGENT_SECTION_KEYS,
+  // BUCKET-001 taxonomy enums + types
+  PROJECT_SLUGS,
+  LIFECYCLE_VALUES,
+  RISK_VALUES,
+  EFFORT_VALUES,
+  PRIORITY_VALUES,
+  QUALITY_TAGS,
+  TECH_SUB_DOMAINS,
 } from './schema';
-export type { TicketTemplateV1, AgentSectionKey } from './schema';
+export type {
+  TicketTemplateV1,
+  AgentSectionKey,
+  ProjectSlug,
+  LifecycleValue,
+  RiskValue,
+  EffortValue,
+  PriorityValue,
+  QualityTag,
+  TechSubDomain,
+} from './schema';
 
 export {
   validateTicket,

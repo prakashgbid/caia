@@ -38,6 +38,125 @@ export const NATURE_VALUES = [
 /** Allowed values for the `complexity` field. */
 export const COMPLEXITY_VALUES = ['low', 'medium', 'high', 'spike'] as const;
 
+// ─── BUCKET-001 taxonomy enums ───────────────────────────────────────────────
+//
+// First-class taxonomy fields populated by PO + EA before BA hands a ticket
+// off to the Task Manager. All optional on v1 so existing tickets continue
+// to validate; they become required at v2 once BUCKET-007 backfill ships.
+
+/**
+ * Canonical project slugs. New projects: add here + new migration row.
+ * `unassigned` is the fallback only — must be replaced before BA finishes.
+ */
+export const PROJECT_SLUGS = [
+  'caia',
+  'pokerzeno',
+  'roulettecommunity',
+  'edisoncricket',
+  'ankitatiwari',
+  'prakash-tiwari',
+  'chiefaia.com',
+  'framework',
+  'site-template',
+  'image-provider',
+  'cast-bridge',
+  'dev-inspector',
+  'backend-core',
+  'content-engine',
+  'integrity-check',
+  'seo-program',
+  'analytics',
+  'unassigned',
+] as const;
+
+/** Lifecycle classification. Mirrors conventional-commits with hotfix + spike. */
+export const LIFECYCLE_VALUES = [
+  'new',
+  'enhance',
+  'bug',
+  'refactor',
+  'chore',
+  'docs',
+  'hotfix',
+  'spike',
+] as const;
+
+/** Risk classification — drives review approach. */
+export const RISK_VALUES = ['low', 'medium', 'high', 'critical'] as const;
+
+/** Effort estimate. `XL` is a guard rail — EA must split before BA finishes. */
+export const EFFORT_VALUES = ['XS', 'S', 'M', 'L', 'XL'] as const;
+
+/** Priority bucket — mirrors orchestrator priority engine. */
+export const PRIORITY_VALUES = ['P0', 'P1', 'P2', 'P3'] as const;
+
+/** Quality tags — drive automatic policy gates (auto-AC injection, etc.). */
+export const QUALITY_TAGS = [
+  'seo',
+  'accessibility',
+  'performance',
+  'security',
+  'compliance',
+  'observability',
+  'internationalization',
+] as const;
+
+/**
+ * Technology sub-domains — what layer/capability the code touches.
+ * Multi-value; one is designated `primary` and used as the bucket-placement
+ * key by the Task Manager.
+ */
+export const TECH_SUB_DOMAINS = [
+  'frontend',
+  'bff',
+  'backend',
+  'database',
+  'event-driven',
+  'observability',
+  'web-analytics',
+  'crm',
+  'cms',
+  'search',
+  'auth',
+  'payments',
+  'email',
+  'caching',
+  'infra',
+  'ci-cd',
+  'ml-ai',
+  'testing',
+  'accessibility',
+  'seo',
+  'security',
+  'localization-i18n',
+  'design-system',
+  'documentation',
+  'api-gateway',
+  'websockets',
+  'file-storage',
+  'rate-limiting',
+  'feature-flags',
+  'monitoring-alerting',
+  'secrets-management',
+  'dependency-management',
+  'data-pipeline',
+  'cron-scheduling',
+  'agent-runtime',
+  'prompt-engineering',
+  'ticket-template',
+  'data-migration',
+  'compliance',
+  'performance',
+] as const;
+
+export type ProjectSlug = (typeof PROJECT_SLUGS)[number];
+export type LifecycleValue = (typeof LIFECYCLE_VALUES)[number];
+export type RiskValue = (typeof RISK_VALUES)[number];
+export type EffortValue = (typeof EFFORT_VALUES)[number];
+export type PriorityValue = (typeof PRIORITY_VALUES)[number];
+export type QualityTag = (typeof QUALITY_TAGS)[number];
+export type TechSubDomain = (typeof TECH_SUB_DOMAINS)[number];
+
 // ─── Required core sections ──────────────────────────────────────────────────
 
 const Scope = z
@@ -181,6 +300,62 @@ const AgentSections = z
   .strict()
   .default({});
 
+// ─── BUCKET-001 / BUCKET-009 — Taxonomy + Claims blocks ─────────────────────
+
+/**
+ * Taxonomy block — populated by PO Agent (project, businessSubDomains,
+ * lifecycle, priority) and extended by EA Agent (techSubDomains + primary,
+ * qualityTags, risk, effort, blockedBy/conflictsWith/softDependsOn markers).
+ *
+ * On v1 the whole block is optional so existing tickets still validate.
+ */
+const TechSubDomains = z
+  .object({
+    primary: z.enum(TECH_SUB_DOMAINS),
+    all: z.array(z.enum(TECH_SUB_DOMAINS)).min(1),
+  })
+  .strict()
+  .superRefine((val, ctx) => {
+    if (!val.all.includes(val.primary)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'techSubDomains.primary must appear in techSubDomains.all',
+        path: ['primary'],
+      });
+    }
+  });
+
+const Taxonomy = z
+  .object({
+    project: z.enum(PROJECT_SLUGS).optional(),
+    businessSubDomains: z.array(z.string().min(1)).default([]),
+    techSubDomains: TechSubDomains.optional(),
+    lifecycle: z.enum(LIFECYCLE_VALUES).optional(),
+    qualityTags: z.array(z.enum(QUALITY_TAGS)).default([]),
+    risk: z.enum(RISK_VALUES).optional(),
+    effort: z.enum(EFFORT_VALUES).optional(),
+    priorityBucket: z.enum(PRIORITY_VALUES).optional(),
+    blockedBy: z.array(z.string()).default([]),
+    softDependsOn: z.array(z.string()).default([]),
+    conflictsWith: z.array(z.string()).default([]),
+  })
+  .strict();
+
+/**
+ * Resource-claim block — populated by EA Agent. Files / schemas / apiRoutes
+ * are fine-grained; `domains` is the coarse fallback (= a coarsened union of
+ * techSubDomains.all). The scheduler enforces no two in-flight stories
+ * intersect on any of files/schemas/apiRoutes — see BUCKET-009.
+ */
+const Claims = z
+  .object({
+    files: z.array(z.string()).default([]),
+    schemas: z.array(z.string()).default([]),
+    apiRoutes: z.array(z.string()).default([]),
+    domains: z.array(z.string()).default([]),
+  })
+  .strict();
+
 // ─── BA enrichment metadata ──────────────────────────────────────────────────
 
 const InputRequest = z
@@ -222,11 +397,79 @@ export const TicketTemplateV1Schema = z
     acceptanceCriteria: AcceptanceCriteria,
     verificationPlan: VerificationPlan,
     dependencies: Dependencies,
+    /** BUCKET-001: 9-axis classification populated by PO + EA. */
+    taxonomy: Taxonomy.optional(),
+    /** BUCKET-009: scheduler resource claims populated by EA. */
+    claims: Claims.optional(),
     agentSections: AgentSections,
     baEnrichment: BaEnrichment.optional(),
     metadata: Metadata,
   })
-  .strict();
+  .strict()
+  .superRefine((ticket, ctx) => {
+    // §4.2 mutual exclusions — only enforced when both fields are present,
+    // so legacy tickets without the taxonomy block still validate.
+    const tx = ticket.taxonomy;
+    if (!tx) return;
+
+    // docs lifecycle ⇒ techSubDomains.all should be ['documentation']
+    if (
+      tx.lifecycle === 'docs' &&
+      tx.techSubDomains &&
+      !tx.techSubDomains.all.every((d) => d === 'documentation')
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "taxonomy.lifecycle='docs' requires techSubDomains.all to contain only 'documentation'",
+        path: ['taxonomy', 'techSubDomains', 'all'],
+      });
+    }
+
+    // spike lifecycle ⇒ effort ∈ {XS, S, M}
+    if (tx.lifecycle === 'spike' && tx.effort && !['XS', 'S', 'M'].includes(tx.effort)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "taxonomy.lifecycle='spike' requires effort ∈ {XS, S, M}",
+        path: ['taxonomy', 'effort'],
+      });
+    }
+
+    // critical risk ⇒ priority ∈ {P0, P1}
+    if (
+      tx.risk === 'critical' &&
+      tx.priorityBucket &&
+      !['P0', 'P1'].includes(tx.priorityBucket)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "taxonomy.risk='critical' requires priorityBucket ∈ {P0, P1}",
+        path: ['taxonomy', 'priorityBucket'],
+      });
+    }
+
+    // new lifecycle + bug-fix nature ⇒ split into two stories
+    if (tx.lifecycle === 'new' && ticket.context.nature === 'bug-fix') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "taxonomy.lifecycle='new' is incompatible with context.nature='bug-fix' — split into two stories",
+        path: ['taxonomy', 'lifecycle'],
+      });
+    }
+
+    // hotfix lifecycle ⇒ priority forced to P0
+    if (tx.lifecycle === 'hotfix' && tx.priorityBucket && tx.priorityBucket !== 'P0') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "taxonomy.lifecycle='hotfix' requires priorityBucket='P0'",
+        path: ['taxonomy', 'priorityBucket'],
+      });
+    }
+
+    // unassigned project ⇒ this is a transient state; flag for EA/BA to fix.
+    // (Allowed on v1 so legacy tickets validate, but loud for new pipeline runs.)
+  });
 
 export type TicketTemplateV1 = z.infer<typeof TicketTemplateV1Schema>;
 export type AgentSectionKey = keyof TicketTemplateV1['agentSections'];
