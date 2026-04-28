@@ -24,6 +24,7 @@ import { registerStatsRoutes } from './routes/stats';
 import { registerAgentRoutes } from './routes/agents';
 import { registerBucketsRoutes } from './routes/buckets';
 import { registerMetricsPhase1Routes } from './routes/metrics-phase1';
+import { registerDagRoutes } from './routes/dag';
 import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
 
 export function createApp(db: Db): Hono {
@@ -71,6 +72,7 @@ export function createApp(db: Db): Hono {
   registerAgentRoutes(app, db);
   registerBucketsRoutes(app, db);
   registerMetricsPhase1Routes(app, db);
+  registerDagRoutes(app, db);
 
   return app;
 }
