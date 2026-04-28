@@ -214,7 +214,7 @@ export function Phase1Timeline({ data }: { data: Phase1Payload }) {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <Link href={`/stories?id=${encodeURIComponent(s.id)}`} style={{ color: '#90cdf4', textDecoration: 'none', fontWeight: 600 }}>
+                  <Link href={`/stories/${encodeURIComponent(s.id)}`} style={{ color: '#90cdf4', textDecoration: 'none', fontWeight: 600 }}>
                     {s.title}
                   </Link>
                   <span style={{
