@@ -49,7 +49,8 @@ const AGENTS: AgentSeedRow[] = [
     description: 'Enriches stories with acceptance criteria, functional specs, implementation detail, and domain labels.',
     modelRecommendation: 'sonnet',
     capabilities: ['story-enrichment', 'acceptance-criteria', 'functional-specs'],
-    triggerEvents: ['po-agent.decomposition.complete'],
+    // BUCKET-003: BA now triggers on EA classification complete (PO -> EA -> BA chain).
+    triggerEvents: ['ea-agent.classification.complete'],
   },
   {
     id: 'ux-agent',
@@ -146,10 +147,10 @@ const AGENTS: AgentSeedRow[] = [
     name: 'ea-agent',
     displayName: 'Enterprise Architect Agent',
     tier: 'strategic',
-    description: 'Translates business vision into technical initiatives, produces ADRs, makes platform decisions.',
+    description: 'Classifies stories along the BUCKET-003 taxonomy axes (techSubDomains, qualityTags, risk, effort, blockedBy, claims) and produces ADRs for new projects + major refactors.',
     modelRecommendation: 'opus',
-    capabilities: ['architecture-design', 'adr-production', 'platform-decision'],
-    triggerEvents: ['prompt.ingested'],
+    capabilities: ['architecture-design', 'adr-production', 'platform-decision', 'taxonomy-classification'],
+    triggerEvents: ['po-agent.decomposition.complete'],
   },
   {
     id: 'platform-agent',

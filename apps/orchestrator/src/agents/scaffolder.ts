@@ -268,6 +268,17 @@ export async function runScaffolder(
 
     poChain
       .then(() => {
+        // BUCKET-003: EA Agent runs between PO and BA — assigns techSubDomains,
+        // qualityTags, risk, effort, blockedBy, claims to every story.
+        if (agentsToActivate.includes('ea-agent') || agentsToActivate.includes('ba-agent')) {
+          return import('./ea-agent')
+            .then(({ runEAAgent }) =>
+              runEAAgent({ promptId, correlationId }, db),
+            )
+            .catch((err: unknown) => logger.warn({ err }, 'EA Agent failed'));
+        }
+      })
+      .then(() => {
         if (agentsToActivate.includes('ba-agent')) {
           return import('./ba-agent')
             .then(({ runBAAgent }) =>
@@ -283,7 +294,7 @@ export async function runScaffolder(
         }
       })
       .catch((err: unknown) =>
-        logger.warn({ err }, 'BA Agent / Task Scheduler chain failed'),
+        logger.warn({ err }, 'EA / BA Agent / Task Scheduler chain failed'),
       );
   }, 5_000);
 }

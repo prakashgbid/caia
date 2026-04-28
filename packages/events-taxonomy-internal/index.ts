@@ -23,6 +23,7 @@ export type EventActor =
   | 'secrets-broker'
   | 'scaffolder'
   | 'po-agent'
+  | 'ea-agent'
   | 'ba-agent'
   | 'task-scheduler'
   | 'testing-agent'
@@ -231,6 +232,19 @@ export interface POAgentDecompositionCompletePayload {
   primaryDomain: string;
 }
 
+// ─── EA Agent (BUCKET-003) ───────────────────────────────────────────────────
+
+export interface EAAgentClassificationCompletePayload {
+  promptId: string;
+  correlationId: string;
+  storiesClassified: number;
+  techSubDomainsAssigned: number;
+  qualityTagsAssigned: number;
+  blockedByMarkersFound: number;
+  storiesWithCriticalRisk: number;
+  storiesRequiringSplit: number;
+}
+
 // ─── BA Agent (migration 0018) ────────────────────────────────────────────────
 
 export interface BAAgentEnrichmentCompletePayload {
@@ -316,6 +330,8 @@ export type EventType =
   | 'scaffolder.team.assembled'
   // ─── PO Agent events (migration 0019) ─────────────────────────────────────
   | 'po-agent.decomposition.complete'
+  // ─── EA Agent events (BUCKET-003) ─────────────────────────────────────────
+  | 'ea-agent.classification.complete'
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   | 'ba-agent.enrichment.complete'
   // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
@@ -387,6 +403,8 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'scaffolder.team.assembled': 'info',
   // ─── PO Agent events (migration 0019) ─────────────────────────────────────
   'po-agent.decomposition.complete': 'info',
+  // ─── EA Agent events (BUCKET-003) ─────────────────────────────────────────
+  'ea-agent.classification.complete': 'info',
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   'ba-agent.enrichment.complete': 'info',
   // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
