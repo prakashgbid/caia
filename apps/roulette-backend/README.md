@@ -71,6 +71,20 @@ apps/roulette-backend/
 │       ├── backend-deployment.yaml
 │       ├── frontend-deployment.yaml
 │       └── mongodb-statefulset.yaml
+├── tools/                          # Original deploy/docs scripts (REM-008, dormant)
+│   ├── deploy-to-gcp.sh
+│   ├── setup-docs.sh
+│   ├── setup-docs-root.sh
+│   └── setup-typedoc.sh
+├── nodemon.json                    # Original dev-loop config (REM-008)
+├── typedoc.json                    # Original API-doc config (REM-008)
+├── commitlint.config.js            # Original Conventional Commits rules (REM-008)
+├── legacy-frontend/                # Original CRA + Redux Toolkit frontend (REM-009, dormant)
+│   ├── src/                        # Auth/roulette feature slices, App, store, etc.
+│   ├── public/                     # Static assets
+│   ├── package.json.original
+│   ├── package-lock.json.original
+│   └── tsconfig.json.original
 └── tests/
     └── preservation-smoke.test.js  # DoD smoke test — asserts files exist
 ```
@@ -101,10 +115,25 @@ This app is **excluded from CAIA's active build/test/lint/typecheck pipelines**:
 
 | Field | Value |
 |-------|-------|
-| Source repo | `prakashgbid/roulette-advisor-ai` (archived) |
-| Source paths | `apps/backend/`, `src/server.js`, `infrastructure/{docker,gcp}/` |
-| Source file count | 23 |
+| Source repo | `prakashgbid/roulette-advisor-ai` (archived) || Source paths | `apps/backend/`, `apps/frontend/`, `src/server.js`, `tools/`, `infrastructure/{docker,gcp}/`, root dev-loop config |
+| Source file count | ~23 backend + ~16 frontend + 4 dev-loop = ~43 (post REM-008/009 sweep) |
 | Ported on | 2026-04-28 |
-| Ported by | REM-001 of archived-repos-no-loss-audit-2026-04-28 |
+| Ported by | REM-001/007 (initial) + REM-008 (dev-loop) + REM-009 (legacy-frontend) of archived-repos-no-loss-audit-2026-04-28 |
 | Policy | No-capability-loss (default: bring everything; retire only with sign-off) |
 | Status | DORMANT — preserved, not running |
+
+### Subsequent sweeps
+
+- **REM-008 (2026-04-28):** Ported original dev-loop / deploy automation alongside the
+  backend it serves: `tools/deploy-to-gcp.sh`, `tools/setup-docs.sh`,
+  `tools/setup-docs-root.sh`, `tools/setup-typedoc.sh`, `nodemon.json`, `typedoc.json`,
+  `commitlint.config.js`. All preserved verbatim, dormant — no scripts wired up to run
+  them from this package.
+- **REM-009 (2026-04-28):** Ported the original CRA + Redux Toolkit frontend
+  (`apps/frontend/src` + `public`) into `legacy-frontend/`. The current
+  `roulette-community` repo is a Next.js static site with no auth / Redux / backend, so
+  no parity is claimed; this is a preservation copy of the auth (`authSlice`, `Login`,
+  `Register`, `ProtectedRoute`, `AuthListener`, `localAuth`) and roulette
+  (`rouletteSlice`, `RouletteBoard`, `RouletteControls`, `BetDetails`, `BetHistory`)
+  feature slices, the `App` shell, and the API client. Original `package.json`,
+  `package-lock.json`, and `tsconfig.json` preserved as `*.original`.

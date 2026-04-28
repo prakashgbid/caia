@@ -1,0 +1,25 @@
+{
+  "entryPoints": [
+    "./apps/frontend/src/**/*.{ts,tsx}",
+    "./apps/backend/src/**/*.{ts,js}",
+    "./packages/common/src/**/*.ts"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.test.{ts,tsx,js,jsx}",
+    "**/*.spec.{ts,tsx,js,jsx}"
+  ],
+  "out": "./packages/docs/static/api",
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "includeVersion": true,
+  "disableSources": false,
+  "readme": "README.md",
+  "name": "Roulette Advisor API Documentation",
+  "plugin": ["typedoc-plugin-markdown"],
+  "theme": "markdown",
+  "hideGenerator": true
+} 
