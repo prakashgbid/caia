@@ -16,6 +16,7 @@ import {
 } from '../../db/schema';
 import { runTestingAgent } from '../../agents/testing-agent';
 import { runReleaseAgent } from '../../agents/release-agent';
+import { eventBus } from '../../events/bus-adapter';
 
 // @no-events — route registration wrapper
 export function registerAgentRoutes(app: Hono, db: Db): void {
@@ -231,7 +232,78 @@ export function registerAgentRoutes(app: Hono, db: Db): void {
       createdAt: Date.now(),
     }).run();
 
+    eventBus.publish({
+      type: 'artifact.draft_filed',
+      actor: 'api',
+      entity_type: 'agent_artifact',
+      entity_id: id,
+      payload: {
+        artifact_id: id,
+        agent_name: body.agentName,
+        artifact_type: body.artifactType,
+        prompt_id: body.promptId ?? null,
+      },
+    });
+
     return c.json({ artifact_id: id }, 201);
+  });
+
+  // ─── GET /agents/artifacts/:id — single artifact (DASH-204) ───────────────
+  app.get('/agents/artifacts/:id', (c) => {
+    const id = c.req.param('id');
+    const row = db.select().from(agentArtifacts).where(eq(agentArtifacts.id, id)).get();
+    if (!row) return c.json({ error: 'Not found' }, 404);
+    return c.json(row);
+  });
+
+  // ─── PATCH /agents/artifacts/:id — approve / reject / supersede (DASH-204)
+  // Used by /gates page when reviewer clicks Approve / Request Changes.
+  app.patch('/agents/artifacts/:id', async (c) => {
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({})) as { status?: string; feedback?: string };
+    const existing = db.select().from(agentArtifacts).where(eq(agentArtifacts.id, id)).get();
+    if (!existing) return c.json({ error: 'Not found' }, 404);
+
+    const validStatuses = new Set(['draft', 'approved', 'rejected', 'superseded']);
+    if (body.status !== undefined && !validStatuses.has(body.status)) {
+      return c.json({ error: 'invalid status' }, 400);
+    }
+
+    const updates: Partial<typeof agentArtifacts.$inferInsert> = {};
+    if (body.status !== undefined) updates.status = body.status;
+
+    if (Object.keys(updates).length > 0) {
+      db.update(agentArtifacts).set(updates).where(eq(agentArtifacts.id, id)).run();
+    }
+
+    if (body.status === 'approved') {
+      eventBus.publish({
+        type: 'artifact.approved',
+        actor: 'api',
+        entity_type: 'agent_artifact',
+        entity_id: id,
+        payload: { artifact_id: id, agent_name: existing.agentName, artifact_type: existing.artifactType },
+      });
+    } else if (body.status === 'rejected') {
+      eventBus.publish({
+        type: 'artifact.rejected',
+        actor: 'api',
+        entity_type: 'agent_artifact',
+        entity_id: id,
+        payload: { artifact_id: id, feedback: body.feedback ?? null },
+      });
+    } else if (body.status === 'superseded') {
+      eventBus.publish({
+        type: 'artifact.superseded',
+        actor: 'api',
+        entity_type: 'agent_artifact',
+        entity_id: id,
+        payload: { artifact_id: id, feedback: body.feedback ?? null },
+      });
+    }
+
+    const updated = db.select().from(agentArtifacts).where(eq(agentArtifacts.id, id)).get();
+    return c.json(updated);
   });
 
   // ─── GET /agents/system-prompts/:agentName — all versions for an agent ───
