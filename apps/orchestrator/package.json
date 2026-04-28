@@ -41,6 +41,9 @@
     "@chiefaia/event-bus-internal": "workspace:*",
     "@chiefaia/events-taxonomy-internal": "workspace:*",
     "@chiefaia/local-llm-router": "workspace:*",
+    "@chiefaia/classifier": "workspace:*",
+    "@chiefaia/decomposer": "workspace:*",
+    "@chiefaia/dedup-engine": "workspace:*",
     "@caia-app/pipeline-pulse": "workspace:*"
   },
   "devDependencies": {

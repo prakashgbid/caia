@@ -91,6 +91,15 @@ importers:
       '@caia-app/pipeline-pulse':
         specifier: workspace:*
         version: link:../pipeline-pulse
+      '@chiefaia/classifier':
+        specifier: workspace:*
+        version: link:../../packages/classifier
+      '@chiefaia/decomposer':
+        specifier: workspace:*
+        version: link:../../packages/decomposer
+      '@chiefaia/dedup-engine':
+        specifier: workspace:*
+        version: link:../../packages/dedup-engine
       '@chiefaia/event-bus-internal':
         specifier: workspace:*
         version: link:../../packages/event-bus-internal
