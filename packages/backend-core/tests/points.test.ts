@@ -62,8 +62,10 @@ describe('points', () => {
     }
   })
 
-  it('awardPoints throws for non-positive delta', () => {
-    expect(() => awardPoints(USER_ID, 'bad', 0)).toThrow()
-    expect(() => awardPoints(USER_ID, 'bad', -10)).toThrow()
+  it('awardPoints throws for non-positive delta', async () => {
+    // awardPoints is async — even sync throws inside an async function become
+    // rejected promises, so use `.rejects.toThrow()` rather than `.toThrow()`.
+    await expect(awardPoints(USER_ID, 'bad', 0)).rejects.toThrow()
+    await expect(awardPoints(USER_ID, 'bad', -10)).rejects.toThrow()
   })
 })
