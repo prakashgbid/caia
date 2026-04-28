@@ -1,6 +1,6 @@
 {
   "name": "@chiefaia/image-provider",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "description": "Supply real photo-quality imagery to roulette-community and poker-zeno sites",
   "type": "module",
