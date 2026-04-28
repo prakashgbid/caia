@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "Cowork MCP configuration for the stolution remote server.",
+    "Add the 'stolution-remote' block to your Claude desktop config:",
+    "  ~/Library/Application Support/Claude/claude_desktop_config.json",
+    "",
+    "How it works:",
+    "  - 'command': 'ssh' launches an SSH connection to the stolution server",
+    "  - '-tt' forces a pseudo-TTY (required for some server setups)",
+    "  - The final arg starts the MCP server via Node on the remote",
+    "  - MCP speaks JSON-RPC over stdio; SSH tunnels stdin/stdout transparently",
+    "  - No HTTP tunnel needed — SSH IS the transport",
+    "",
+    "Alternatives:",
+    "  Option B (HTTP/SSE via cloudflared): see README.md section 'Cloudflare Tunnel'",
+    "  Option C (local proxy script):       see README.md section 'Local SSH proxy'"
+  ],
+  "mcpServers": {
+    "stolution-remote": {
+      "command": "ssh",
+      "args": [
+        "-tt",
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "ConnectTimeout=15",
+        "stolution",
+        "node /home/s903/stolution-mcp/dist/index.js"
+      ],
+      "description": "Full access to stolution remote server — file system, Docker, PM2, Vault, PostgreSQL, bash, git"
+    }
+  }
+}
