@@ -325,7 +325,9 @@ export type EventType =
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
-  | 'requirement.created';
+  | 'requirement.created'
+  // ─── Agent artifacts (DASH-204) ───────────────────────────────────────────
+  | 'artifact.draft_filed' | 'artifact.approved' | 'artifact.rejected' | 'artifact.superseded';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -386,6 +388,11 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'question.created': 'info',
   'question.answered': 'info',
   'requirement.created': 'info',
+  // ─── Agent artifacts (DASH-204) ───────────────────────────────────────────
+  'artifact.draft_filed': 'info',
+  'artifact.approved': 'info',
+  'artifact.rejected': 'warning',
+  'artifact.superseded': 'warning',
 };
 
 /** All valid event type strings from the registry */
