@@ -10,7 +10,6 @@
 -- Tasks whose parent entity is a requirement inherit its root_prompt_id.
 -- Tasks default root_prompt_id to 'untraced'; treat both NULL and 'untraced'
 -- as candidates for backfill.
---> statement-breakpoint
 UPDATE tasks
 SET root_prompt_id = (
   SELECT r.root_prompt_id

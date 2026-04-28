@@ -1,7 +1,13 @@
 -- Migration 0013: Pipeline Pulse — health-check run tracking
 -- One row per `conductor pulse` invocation. Stores all 3-layer results.
+--
+-- NOTE (DASH-208/209/210): made idempotent so that downstream migration 0015
+-- can repair databases where `pulse_runs` was created with a divergent schema
+-- by older code paths. With CREATE TABLE IF NOT EXISTS this migration is a
+-- no-op on those DBs; 0015 then drops and rebuilds the table to the canonical
+-- shape. On a fresh DB this still creates the table on first run.
 
-CREATE TABLE `pulse_runs` (
+CREATE TABLE IF NOT EXISTS `pulse_runs` (
   `id` text PRIMARY KEY NOT NULL,
   `ran_at` text NOT NULL,
   `outcome` text NOT NULL,
@@ -13,6 +19,6 @@ CREATE TABLE `pulse_runs` (
   `duration_ms` integer NOT NULL DEFAULT 0
 );
 --> statement-breakpoint
-CREATE INDEX `pulse_runs_ran_at_idx` ON `pulse_runs` (`ran_at` DESC);
+CREATE INDEX IF NOT EXISTS `pulse_runs_ran_at_idx` ON `pulse_runs` (`ran_at` DESC);
 --> statement-breakpoint
-CREATE INDEX `pulse_runs_outcome_idx` ON `pulse_runs` (`outcome`);
+CREATE INDEX IF NOT EXISTS `pulse_runs_outcome_idx` ON `pulse_runs` (`outcome`);
