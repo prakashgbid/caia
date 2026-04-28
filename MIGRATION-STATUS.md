@@ -2,6 +2,28 @@
 
 CAIA is the single site/app/IT-system building platform. **Everything generic (non-site-specific) lives in this monorepo.** Each site stays in its own repo and consumes `@chiefaia/*` from public npm.
 
+## Conductor lift complete (2026-04-28)
+
+Gate 1 — full conductor lift into CAIA — is complete. Per the matrix at `docs/legacy-conductor-reports/` (originally at `~/Documents/projects/reports/conductor-to-caia-capability-matrix-2026-04-28.md`), all 40 LIFT items have landed across 10 PRs (#48 through #58 plus the parallel #49 for `@chiefaia/local-llm-router`):
+
+| Batch | PR | Items | Lines lifted |
+|---|---|---|---|
+| A — Quick wins (plist, health test, gitleaks, reports) | [#48](https://github.com/prakashgbid/caia/pull/48) | LIFT-001/002/004/005/006/007 | 7,159 |
+| B — Executor Phase-2 routing + telemetry | [#50](https://github.com/prakashgbid/caia/pull/50) | LIFT-008/003 | 464 |
+| C — Internal packages (classifier/decomposer/dedup-engine) | [#51](https://github.com/prakashgbid/caia/pull/51) | LIFT-010/011/012 | 1,249 |
+| (parallel) — `@chiefaia/local-llm-router` | [#49](https://github.com/prakashgbid/caia/pull/49) | LIFT-013 | (handled by parallel task) |
+| D — DB migrations 0015–0019 + schema + agents seed | [#52](https://github.com/prakashgbid/caia/pull/52) | LIFT-014/015/016/017/018/019 | 1,011 |
+| E — Event taxonomy (12 types + payload typedefs) | [#53](https://github.com/prakashgbid/caia/pull/53) | LIFT-020/021 | 179 |
+| F — Agents code + agents/stats routes + app.ts wiring | [#54](https://github.com/prakashgbid/caia/pull/54) | LIFT-022/023/024/025 | 1,701 |
+| G — Diverged routes (prompts/task-runs/stories/executor) + requirements/manager | [#55](https://github.com/prakashgbid/caia/pull/55) | LIFT-026/027/028/029/030 | 431 |
+| H — Dashboard pages + agents page + drift fixes | [#56](https://github.com/prakashgbid/caia/pull/56) | LIFT-031/032/033 | 3,610 |
+| I — `@stolution/mcp-server` + ops scripts | [#57](https://github.com/prakashgbid/caia/pull/57) | LIFT-034/035/036 | 1,714 |
+| J — Doc + config polish + workflow move + close | [#58](https://github.com/prakashgbid/caia/pull/58) | LIFT-037/038/039/040 | (this PR) |
+
+**Result:** every capability that existed in `prakashgbid/conductor` (per archive branches `archive/conductor-claude-exec-token-phase2-2026-04-28` and `archive/conductor-claude-priceless-cohen-ab221c-2026-04-28`, both pinned at `71a02a6`) is now present in CAIA, plus the untracked `apps/stolution-mcp/` and ops scripts that lived only in the conductor working tree. Conductor can now be archived without capability loss.
+
+> The matrix listed 9 agents in Section 1.3, but only 6 (`scaffolder`, `po-agent`, `ba-agent`, `task-scheduler`, `testing-agent`, `release-agent`) actually had source files in either archive branch. The other 3 (`ea-agent`, `dba-agent`, `platform-agent`) were planned-only in `caia-agent-team-architecture.md` and never written. Lifting those 3 is not a regression — they were never implemented.
+
 ## Source Repos
 
 | Source repo | Status | Destination in CAIA | Notes |
@@ -57,6 +79,13 @@ Future sites: `chiefaia.com`, `prakash-tiwari`, `ankitatiwari`, `edisoncricket`.
 - `story-decomposer` — story decomposition utilities
 - `dead-shell-detector` — dead shell detection
 - `behavior-suite` — behavior testing kit
+- `classifier` — domain taxonomy + label assignment (lifted in #51)
+- `decomposer` — NL → Initiative→Epic→Module→Story→Task; rule-based + claude-driven (lifted in #51)
+- `dedup-engine` — Jaccard similarity + temporal decay + entity-label overlap (lifted in #51)
+- `local-llm-router` — Claude/Ollama routing (lifted in #49)
+
+**Stolution-bound:**
+- `apps/stolution-mcp/` (`@stolution/mcp-server`) — MCP server exposing the stolution remote (filesystem, shell, docker, pm2, vault, postgres) over SSH stdio. Lifted in #57.
 
 **Pokerzeno-scoped libs (sites consume from npm):**
 - `analytics`, `backend-core`, `cast-bridge`, `content-engine`, `dev-inspector`, `integrity-check`, `seo-program`

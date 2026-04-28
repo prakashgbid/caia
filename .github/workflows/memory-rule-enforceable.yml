@@ -3,8 +3,12 @@ name: gate:memory-rule-enforceable
 on:
   pull_request:
     paths:
+      # Path filter inherited from conductor; in CAIA's monorepo layout the
+      # equivalent files live under docs/legacy-conductor-reports/. Most CAIA
+      # PRs won't touch these so the workflow is largely dormant — but it
+      # keeps the enforcement contract intact for any future memory-rule edits.
       - '.auto-memory/**/*.md'
-      - 'reports/memory-rule-inventory.md'
+      - 'docs/legacy-conductor-reports/memory-rule-inventory.md'
 
 jobs:
   check-rules:
@@ -29,7 +33,6 @@ jobs:
 
       - name: Check inventory is updated for new rules
         run: |
-          ADDED="${{ steps.extract-rules.outputs.added_rules }}"
           COUNT="${{ steps.extract-rules.outputs.line_count }}"
 
           if [[ "$COUNT" -eq 0 ]]; then
@@ -39,7 +42,7 @@ jobs:
 
           echo "Found $COUNT new rule line(s) in .auto-memory files."
           echo ""
-          echo "Verifying reports/memory-rule-inventory.md covers these new rules..."
+          echo "Verifying docs/legacy-conductor-reports/memory-rule-inventory.md covers these new rules..."
 
           # Check that the inventory file was also updated in this PR
           INVENTORY_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep 'memory-rule-inventory.md' || true)

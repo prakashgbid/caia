@@ -8,10 +8,15 @@ const config: Config = {
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/dashboard/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@conductor/events-taxonomy$': '<rootDir>/packages/events-taxonomy/index.ts',
-    '^@conductor/event-bus$': '<rootDir>/packages/event-bus/index.ts',
-    '^@conductor/logger$': '<rootDir>/packages/logger/index.ts',
-    '^@conductor/test-kit$': '<rootDir>/packages/test-kit/index.ts',
+    // Workspace packages live two levels up at <repo>/packages/* in the CAIA
+    // monorepo (orchestrator is at apps/orchestrator/). When orchestrator
+    // jest is un-stubbed (Batch J cleanup), pnpm workspace symlinks under
+    // node_modules should resolve these — these mappers are belt-and-suspenders.
+    '^@chiefaia/events-taxonomy-internal$': '<rootDir>/../../packages/events-taxonomy-internal/index.ts',
+    '^@chiefaia/event-bus-internal$': '<rootDir>/../../packages/event-bus-internal/index.ts',
+    '^@chiefaia/classifier$': '<rootDir>/../../packages/classifier/src/index.ts',
+    '^@chiefaia/decomposer$': '<rootDir>/../../packages/decomposer/src/index.ts',
+    '^@chiefaia/dedup-engine$': '<rootDir>/../../packages/dedup-engine/src/index.ts',
     // Remap ESM-style `.js` extension imports to `.ts` sources so ts-jest can
     // resolve them without requiring Node ESM module resolution.
     '^(\\.{1,2}/.*)\\.js$': '$1',
