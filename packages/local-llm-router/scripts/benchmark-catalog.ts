@@ -1,44 +1,57 @@
 #!/usr/bin/env ts-node
-// Benchmark every catalog model against a small classification fixture and
-// print a comparison table (latency, eval count, tok/s, response sample).
+// Benchmark every catalog model that's pulled. For each model:
+//   1. one cold call to load the model (latency reported separately)
+//   2. N warm calls (default 3); reports min / median / max wall ms + tok/s
+//
+// Latency is dominated by cold-load on 14B models (2-5 s). With keep_alive
+// (LAI-002) the second and subsequent calls hit a warm slot, so the median
+// of the warm runs is the realistic per-call latency to optimize against.
 //
 // Usage:
 //   pnpm --filter @chiefaia/local-llm-router run bench
-//   OLLAMA_BASE_URL=http://127.0.0.1:11434 \
-//     npx ts-node --esm scripts/benchmark-catalog.ts
+//   BENCH_WARM_RUNS=5 pnpm bench
+//   BENCH_PROMPT_KIND=code pnpm bench
 //
 // Models are skipped silently when not pulled locally so the script is safe
 // to run on any machine — it'll just benchmark whatever is available.
-//
-// This is part of LAI-001 (pull better models). LAI-005 (routing-rule
-// enrichment) extends the fixture with task-specific prompts and quality
-// scoring against a Claude-baseline.
 
 import { MODEL_CATALOG, type LocalModel } from '../src/model-catalog';
 
 const OLLAMA_BASE_URL =
   process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434';
 
-const FIXTURE_PROMPT =
-  'Reply with a single word — the most likely domain for "user signs in with email": auth, ui, payments, or other.';
+const WARM_RUNS = Number(process.env['BENCH_WARM_RUNS'] ?? '3');
+
+const PROMPTS = {
+  classify:
+    'Reply with a single word — the most likely domain for "user signs in with email": auth, ui, payments, or other.',
+  code:
+    'Write a TypeScript function that takes a string and returns its sha256 hex digest. No prose, just the function.',
+  embed: 'user signs in with email',
+} as const;
+
+type PromptKind = keyof typeof PROMPTS;
+
+const PROMPT_KIND: PromptKind =
+  ((process.env['BENCH_PROMPT_KIND'] as PromptKind | undefined) ?? 'classify');
 
 interface BenchResult {
   tag: string;
   role: string;
   endpoint: string;
-  durationMs: number;
+  coldMs: number;
+  warmMinMs: number;
+  warmMedianMs: number;
+  warmMaxMs: number;
+  tokensPerSecMedian: number;
   evalCount: number;
-  tokensPerSec: number;
   response: string;
   ok: boolean;
   error?: string;
 }
 
-interface OllamaModelEntry {
-  name: string;
-}
 interface OllamaTagsResponse {
-  models?: OllamaModelEntry[];
+  models?: Array<{ name: string }>;
 }
 interface OllamaGenerateResponse {
   response: string;
@@ -54,6 +67,12 @@ interface OllamaEmbeddingsResponse {
   embedding: number[];
 }
 
+interface SingleCallResult {
+  durationMs: number;
+  evalCount: number;
+  response: string;
+}
+
 async function pulledModelTags(): Promise<Set<string>> {
   const res = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
   if (!res.ok) throw new Error(`/api/tags returned ${res.status}`);
@@ -61,134 +80,159 @@ async function pulledModelTags(): Promise<Set<string>> {
   return new Set((data.models ?? []).map((m) => m.name));
 }
 
-async function benchGenerate(model: LocalModel): Promise<BenchResult> {
-  const start = Date.now();
-  try {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: model.tag,
-        prompt: FIXTURE_PROMPT,
-        stream: false,
-        options: { num_predict: 30, temperature: 0 },
-      }),
-      signal: AbortSignal.timeout(120_000),
-    });
-    if (!res.ok) {
-      return resultFromError(model, Date.now() - start, `HTTP ${res.status}`);
-    }
-    const data = (await res.json()) as OllamaGenerateResponse;
-    return resultFromOk(
-      model,
-      Date.now() - start,
-      data.eval_count ?? 0,
-      data.response.trim(),
-    );
-  } catch (err) {
-    return resultFromError(model, Date.now() - start, String(err));
-  }
-}
-
-async function benchChatNoThink(model: LocalModel): Promise<BenchResult> {
-  const start = Date.now();
-  try {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: model.tag,
-        messages: [{ role: 'user', content: FIXTURE_PROMPT }],
-        stream: false,
-        // Suppresses Qwen3's chain-of-thought; harmless for non-think models.
-        think: false,
-        options: { num_predict: 30, temperature: 0 },
-      }),
-      signal: AbortSignal.timeout(120_000),
-    });
-    if (!res.ok) {
-      return resultFromError(model, Date.now() - start, `HTTP ${res.status}`);
-    }
-    const data = (await res.json()) as OllamaChatResponse;
-    return resultFromOk(
-      model,
-      Date.now() - start,
-      data.eval_count ?? 0,
-      (data.message?.content ?? '').trim(),
-    );
-  } catch (err) {
-    return resultFromError(model, Date.now() - start, String(err));
-  }
-}
-
-async function benchEmbeddings(model: LocalModel): Promise<BenchResult> {
-  const start = Date.now();
-  try {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: model.tag,
-        prompt: FIXTURE_PROMPT,
-      }),
-      signal: AbortSignal.timeout(60_000),
-    });
-    if (!res.ok) {
-      return resultFromError(model, Date.now() - start, `HTTP ${res.status}`);
-    }
-    const data = (await res.json()) as OllamaEmbeddingsResponse;
-    return resultFromOk(
-      model,
-      Date.now() - start,
-      data.embedding.length,
-      `dim=${data.embedding.length}`,
-    );
-  } catch (err) {
-    return resultFromError(model, Date.now() - start, String(err));
-  }
-}
-
-function resultFromOk(
+async function callGenerate(
   model: LocalModel,
-  durationMs: number,
-  evalCount: number,
-  response: string,
-): BenchResult {
-  const seconds = durationMs / 1000;
+  prompt: string,
+): Promise<SingleCallResult> {
+  const start = Date.now();
+  const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: model.tag,
+      prompt,
+      stream: false,
+      keep_alive: '10m',
+      options: { num_predict: 64, temperature: 0 },
+    }),
+    signal: AbortSignal.timeout(180_000),
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+  }
+  const data = (await res.json()) as OllamaGenerateResponse;
   return {
-    tag: model.tag,
-    role: model.role,
-    endpoint: model.endpoint,
-    durationMs,
-    evalCount,
-    tokensPerSec: seconds > 0 ? evalCount / seconds : 0,
-    response: response.slice(0, 60),
-    ok: true,
+    durationMs: Date.now() - start,
+    evalCount: data.eval_count ?? 0,
+    response: data.response.trim(),
   };
 }
 
-function resultFromError(
+async function callChat(
   model: LocalModel,
-  durationMs: number,
-  error: string,
-): BenchResult {
+  prompt: string,
+): Promise<SingleCallResult> {
+  const start = Date.now();
+  const res = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: model.tag,
+      messages: [{ role: 'user', content: prompt }],
+      stream: false,
+      think: false,
+      keep_alive: '10m',
+      options: { num_predict: 64, temperature: 0 },
+    }),
+    signal: AbortSignal.timeout(180_000),
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+  }
+  const data = (await res.json()) as OllamaChatResponse;
   return {
-    tag: model.tag,
-    role: model.role,
-    endpoint: model.endpoint,
-    durationMs,
-    evalCount: 0,
-    tokensPerSec: 0,
-    response: '',
-    ok: false,
-    error,
+    durationMs: Date.now() - start,
+    evalCount: data.eval_count ?? 0,
+    response: (data.message?.content ?? '').trim(),
   };
+}
+
+async function callEmbeddings(
+  model: LocalModel,
+  prompt: string,
+): Promise<SingleCallResult> {
+  const start = Date.now();
+  const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: model.tag, prompt }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+  }
+  const data = (await res.json()) as OllamaEmbeddingsResponse;
+  return {
+    durationMs: Date.now() - start,
+    evalCount: data.embedding.length,
+    response: `dim=${data.embedding.length}`,
+  };
+}
+
+function callerFor(model: LocalModel) {
+  if (model.endpoint === 'chat') return callChat;
+  if (model.endpoint === 'embeddings') return callEmbeddings;
+  return callGenerate;
+}
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1]! + sorted[mid]!) / 2;
+  }
+  return sorted[mid]!;
+}
+
+async function benchModel(
+  model: LocalModel,
+  prompt: string,
+): Promise<BenchResult> {
+  const caller = callerFor(model);
+  try {
+    const cold = await caller(model, prompt);
+
+    const warmRuns: SingleCallResult[] = [];
+    for (let i = 0; i < WARM_RUNS; i++) {
+      warmRuns.push(await caller(model, prompt));
+    }
+    const durations = warmRuns.map((r) => r.durationMs);
+    const evalCounts = warmRuns.map((r) => r.evalCount);
+    const tokPerSec = warmRuns.map((r) =>
+      r.durationMs > 0 ? (r.evalCount * 1000) / r.durationMs : 0,
+    );
+    const lastWarm = warmRuns[warmRuns.length - 1]!;
+
+    return {
+      tag: model.tag,
+      role: model.role,
+      endpoint: model.endpoint,
+      coldMs: cold.durationMs,
+      warmMinMs: Math.min(...durations),
+      warmMedianMs: median(durations),
+      warmMaxMs: Math.max(...durations),
+      tokensPerSecMedian: median(tokPerSec),
+      evalCount: median(evalCounts),
+      response: lastWarm.response.slice(0, 60),
+      ok: true,
+    };
+  } catch (err) {
+    return {
+      tag: model.tag,
+      role: model.role,
+      endpoint: model.endpoint,
+      coldMs: 0,
+      warmMinMs: 0,
+      warmMedianMs: 0,
+      warmMaxMs: 0,
+      tokensPerSecMedian: 0,
+      evalCount: 0,
+      response: '',
+      ok: false,
+      error: String(err),
+    };
+  }
 }
 
 async function main(): Promise<void> {
+  const prompt =
+    PROMPT_KIND === 'embed' ? PROMPTS.embed : PROMPTS[PROMPT_KIND];
   // eslint-disable-next-line no-console
   console.log(
-    `[bench] OLLAMA_BASE_URL=${OLLAMA_BASE_URL}, fixture="${FIXTURE_PROMPT}"`,
+    `[bench] OLLAMA_BASE_URL=${OLLAMA_BASE_URL}, ` +
+      `kind=${PROMPT_KIND}, warm_runs=${WARM_RUNS}\n` +
+      `[bench] prompt: "${prompt.slice(0, 80)}${prompt.length > 80 ? '...' : ''}"`,
   );
 
   let pulled: Set<string>;
@@ -210,28 +254,25 @@ async function main(): Promise<void> {
       console.log(`[bench] skipping ${model.tag} (not pulled)`);
       continue;
     }
+    // For the embedding model, only the embed prompt makes sense; everything
+    // else gets the chosen prompt kind.
+    const useEmbedPrompt = model.endpoint === 'embeddings';
+    const promptForModel = useEmbedPrompt ? PROMPTS.embed : prompt;
     // eslint-disable-next-line no-console
-    console.log(`[bench] running ${model.tag} via ${model.endpoint} ...`);
-    let result: BenchResult;
-    if (model.endpoint === 'chat') {
-      result = await benchChatNoThink(model);
-    } else if (model.endpoint === 'embeddings') {
-      result = await benchEmbeddings(model);
-    } else {
-      result = await benchGenerate(model);
-    }
-    results.push(result);
+    console.log(`[bench] ${model.tag} (cold + ${WARM_RUNS} warm)...`);
+    results.push(await benchModel(model, promptForModel));
   }
 
   // eslint-disable-next-line no-console
-  console.log('\n=== Benchmark results ===');
+  console.log('\n=== Benchmark results (ms; warm = median of N) ===');
   // eslint-disable-next-line no-console
   console.log(
     'tag'.padEnd(24) +
       'role'.padEnd(14) +
-      'endpoint'.padEnd(12) +
-      'ms'.padStart(7) +
-      'tok'.padStart(6) +
+      'cold'.padStart(7) +
+      'warm_p50'.padStart(10) +
+      'warm_min'.padStart(10) +
+      'warm_max'.padStart(10) +
       'tok/s'.padStart(8) +
       '  response',
   );
@@ -239,10 +280,11 @@ async function main(): Promise<void> {
     const line =
       r.tag.padEnd(24) +
       r.role.padEnd(14) +
-      r.endpoint.padEnd(12) +
-      String(r.durationMs).padStart(7) +
-      String(r.evalCount).padStart(6) +
-      r.tokensPerSec.toFixed(1).padStart(8) +
+      String(r.coldMs).padStart(7) +
+      String(r.warmMedianMs).padStart(10) +
+      String(r.warmMinMs).padStart(10) +
+      String(r.warmMaxMs).padStart(10) +
+      r.tokensPerSecMedian.toFixed(1).padStart(8) +
       '  ' +
       (r.ok ? r.response : `ERR: ${r.error ?? 'unknown'}`);
     // eslint-disable-next-line no-console

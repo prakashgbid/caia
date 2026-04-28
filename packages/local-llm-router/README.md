@@ -66,17 +66,52 @@ ollama pull phi4                  # math/STEM specialist
 ollama pull nomic-embed-text      # embeddings for RAG / cache
 ```
 
-Caveat — Qwen3 emits chain-of-thought tokens by default. Always call it via `/api/chat` with `think: false` (or prefix prompts with `/no_think`); calling `/api/generate` returns empty responses.
+The Qwen3 caveat is now handled inside the adapter itself — the router automatically picks `/api/chat` with `think: false` for any catalog model flagged `emitsThinkingByDefault`. See `src/ollama-adapter.ts`.
+
+## Speed tuning (LAI-002)
+
+The Ollama adapter forwards a `keep_alive` window on every call so frequently-used models stay loaded warm in unified memory. Cold-load on a 14B model is 2-7 s on M1 Pro; warm calls are 200-300 ms. Default window: `10m`.
+
+```bash
+# Keep models loaded for an hour after the last call:
+OLLAMA_KEEP_ALIVE=1h pnpm start
+
+# Never unload (unified RAM stays committed to the model):
+OLLAMA_KEEP_ALIVE=-1 pnpm start
+```
+
+Concurrent requests are governed by Ollama itself, not the router. To serve more than one in-flight request, set `OLLAMA_NUM_PARALLEL` on the daemon (not in this package's env):
+
+```bash
+# Run two requests in parallel against the same model
+launchctl setenv OLLAMA_NUM_PARALLEL 2 && \
+  launchctl unload ~/Library/LaunchAgents/ollama.plist 2>/dev/null
+ollama serve   # picks up the new env var
+```
+
+On 16 GB unified memory, 2 is the safe ceiling for a single 14B model; pushing higher trades latency for throughput and risks the OS swapping.
 
 ### Benchmarking
 
-Run every catalog model that's pulled against a small classification fixture and print latency + tokens/sec:
-
 ```bash
-pnpm --filter @chiefaia/local-llm-router run bench
+pnpm --filter @chiefaia/local-llm-router run bench               # classify prompt, 3 warm runs
+BENCH_PROMPT_KIND=code pnpm bench                                # code-gen prompt
+BENCH_WARM_RUNS=10 pnpm bench                                    # bigger warm sample
 ```
 
-The script silently skips models that aren't pulled, so it's safe to run on any machine.
+Sample output on M1 Pro 16GB (April 2026):
+
+```
+tag                     role             cold  warm_p50  warm_min  warm_max   tok/s
+qwen2.5-coder:7b        coder            4034       172       171       178    11.6
+qwen2.5-coder:14b       coder           10496       287       269       292     7.0
+llama3.1:8b             generalist       4613       208       203       208     9.6
+qwen3:14b               generalist       6721       274       266       312     7.3
+phi4                    reasoning        6738       252       236       426     7.9
+nomic-embed-text        embeddings       1642        19        17        27 40421.1
+```
+
+Warm calls are 20-90× faster than cold — that's the value `keep_alive` unlocks. With LAI-002 in place, the practical latency gap between 7B and 14B-class models on short classification prompts collapses to ~100 ms.
 
 ## Testing
 
