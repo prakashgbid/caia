@@ -10,7 +10,9 @@ out/
 *.tsbuildinfo
 
 # Test outputs
+# Ignore coverage build artifacts but allow the dashboard /coverage route
 coverage/
+!apps/dashboard/app/coverage/
 .nyc_output/
 playwright-report/
 test-results/
