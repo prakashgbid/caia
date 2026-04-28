@@ -8,7 +8,8 @@ import {
   stories, storyRevisions,
   completenessRuns, completenessFindings, completenessSchedule,
   lockContracts, lockContractRevisions, memoryAnchors, dbBackups,
-  timelineEvents, auditLog, requirements,
+  // timelineEvents and auditLog imported via schema but used via raw SQL
+
 } from '../../db/schema';
 import { bus } from '../../ws/bus';
 import { eventBus } from '../../events/bus-adapter';
@@ -260,6 +261,36 @@ export function registerCompletenessRoutes(app: Hono, db: Db): void {
 
     bus.push({ kind: 'completeness.run', id: String(runId), payload: { status, score_pct: body['score_pct'] }, ts: now });
     eventBus.publish({ type: 'completeness.run_completed', actor: 'completeness-sentinel', payload: { run_id: runId, score_pct: (body['score_pct'] as number) ?? 0, checks_passed: 0, checks_total: 0 } });
+
+    // Structured completeness observability events
+    const criticalCount = findings.filter((f) => f['severity'] === 'critical').length;
+    eventBus.publish({
+      type: 'completeness.check.completed',
+      actor: 'completeness-sentinel',
+      payload: {
+        runId,
+        entityKind: body['entity_kind'] as string,
+        entityId: body['entity_id'] as string,
+        passed: status !== 'fail',
+        findingCount: findings.length,
+        criticalCount,
+        score: (body['score_pct'] as number) ?? 0,
+        checksTotal: (body['checks_total'] as number) ?? 0,
+        checksPassed: (body['checks_passed'] as number) ?? 0,
+      },
+    });
+    eventBus.publish({
+      type: 'pipeline.stage.advanced',
+      actor: 'completeness-sentinel',
+      payload: {
+        stage: 'verified',
+        entityKind: body['entity_kind'] as string,
+        entityId: body['entity_id'] as string,
+        passed: status !== 'fail',
+        score: (body['score_pct'] as number) ?? 0,
+      },
+    });
+
     return c.json({ id: runId, status, runAt: now }, 201);
   });
 

@@ -7,8 +7,7 @@ import {
   executorRuns,
   executorConfig,
   taskAttempts,
-  timelineEvents,
-  blockers,
+  promptPipelineStages,
 } from '../../db/schema';
 import { bus } from '../../ws/bus';
 import { nanoid } from 'nanoid';
@@ -31,6 +30,7 @@ export function registerExecutorRoutes(app: Hono, db: Db): void {
       notes?: string;
       projectId?: string;
       dependsOn?: string[];
+      rootPromptId?: string;
     };
     const id = nanoid();
     const now_ = now();
@@ -43,9 +43,39 @@ export function registerExecutorRoutes(app: Hono, db: Db): void {
       spawnedBy: body.spawnedBy ?? 'user',
       notes: body.notes ?? null,
       projectId: body.projectId ?? null,
+      rootPromptId: body.rootPromptId ?? null,
       status: 'queued',
       createdAt: now_,
     }).run();
+
+    // Emit pipeline stage advancement if rootPromptId provided
+    if (body.rootPromptId) {
+      try {
+        eventBus.publish({
+          type: 'pipeline.stage.advanced',
+          actor: 'api',
+          correlation_id: body.rootPromptId,
+          payload: {
+            promptId: body.rootPromptId,
+            stage: 'task_queued' as const,
+            entityKind: 'task',
+            entityId: id,
+            durationFromStartMs: null,
+          },
+        });
+        db.insert(promptPipelineStages).values({
+          id: 'pps_' + nanoid(8),
+          promptId: body.rootPromptId,
+          stage: 'task_queued',
+          entityKind: 'task',
+          entityId: id,
+          enteredAt: Date.now(),
+        }).run();
+      } catch (err) {
+        console.error('[executor] Failed to emit pipeline stage or insert record:', err);
+      }
+    }
+
     eventBus.publish({
       type: 'task.created',
       actor: (body.spawnedBy ?? 'user') as import('@chiefaia/events-taxonomy-internal').EventActor,
@@ -182,8 +212,11 @@ export function registerExecutorRoutes(app: Hono, db: Db): void {
     // Read heartbeat file
     let heartbeat: { at: string; pid: number; running: number; queued: number } | null = null;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { readFileSync } = require('fs') as typeof import('fs');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { join } = require('path') as typeof import('path');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { homedir } = require('os') as typeof import('os');
       const hbPath = join(homedir(), '.conductor', 'executor.heartbeat');
       heartbeat = JSON.parse(readFileSync(hbPath, 'utf8')) as { at: string; pid: number; running: number; queued: number };
@@ -249,12 +282,6 @@ export function registerExecutorRoutes(app: Hono, db: Db): void {
       .all();
 
     if (domainCap) candidates = candidates.filter(t => t.domainSlug === domainCap);
-
-    // Dep-aware: skip tasks whose deps are not done/completed
-    const runningIds = db.select({ id: tasks.id }).from(tasks)
-      .where(eq(tasks.status, 'running'))
-      .all()
-      .map(r => r.id);
 
     const eligible = candidates.find(task => {
       const depIds = JSON.parse(task.dependsOn) as string[];
