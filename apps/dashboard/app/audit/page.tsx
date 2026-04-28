@@ -30,8 +30,8 @@ function AuditContent() {
 
   useEffect(() => {
     setLoading(true);
-    // Fetch from events endpoint as proxy for audit log
-    fetch('/api/events')
+    // Fetch from /api/audit (proxy to orchestrator /audit, returns AuditEntry shape — DASH-201)
+    fetch('/api/audit')
       .then(r => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data)) {
