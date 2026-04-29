@@ -1,24 +1,41 @@
 /**
- * Workers routes — TASKMGR-006.
+ * Workers routes — TASKMGR-006 + CODING-007.
  *
  * Surfaces the Phase 2 worker pool + per-bucket health metrics to the
- * dashboard. Read-only — workers self-register via the WorkerPoolRegistry
- * (TASKMGR-002); these endpoints are pure projections.
+ * dashboard, and exposes the lifecycle API workers use to register +
+ * heartbeat + poll for assignments + release.
  *
- * Endpoints:
- *   GET /api/workers/summary           — aggregate counts + per-bucket cards
- *   GET /api/workers/list              — every worker row with current status
- *   GET /api/workers/health/:bucketId  — last 60 entries of bucket_health_history
+ * Read endpoints (TASKMGR-006):
+ *   GET /api/workers/summary            — aggregate counts + per-bucket cards
+ *   GET /api/workers/list               — every worker row with current status
+ *   GET /api/workers/health/:bucketId   — last 60 entries of bucket_health_history
  *
- * The frontend dashboard (apps/dashboard/app/workers/page.tsx — to be
- * shipped in a follow-up UI PR) polls /summary every 5s for the overview
- * and /health/:bucketId every 30s for the per-bucket sparkline.
+ * Lifecycle endpoints (CODING-007):
+ *   POST /api/workers/register          — { kind, capabilities, socketPath, metadata? }
+ *                                         → { workerId }
+ *   POST /api/workers/:id/heartbeat     → { ok, status, currentStoryId }
+ *   POST /api/workers/:id/release       → { ok }
+ *   GET  /api/workers/:id/assignment    → { assignment: { storyId, bucketId, assignedAt } | null }
+ *
+ * The lifecycle endpoints accept an optional `WorkerPoolRegistry` so the
+ * route handlers go through the registry's emit-events code path, falling
+ * back to direct DB writes when the registry isn't wired (legacy / test).
+ *
+ * Shape of an assignment row: it's just stories.assignedWorkerId === id +
+ * status='pending' AND assignedAt = the row's updatedAt; we read the
+ * worker's currentStoryId (set by ReadyPoolConsumer.atomicAssign) to
+ * locate it.
  */
 
 import type { Hono } from 'hono';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import type { Db } from '../../db/connection';
 import { workerPool, bucketHealthHistory, stories } from '../../db/schema';
+import type {
+  WorkerPoolRegistry,
+  WorkerKind,
+  WorkerReleaseReason,
+} from '../../agents/worker-pool-registry';
 
 interface WorkerOut {
   id: string;
@@ -94,7 +111,15 @@ function toWorkerOut(r: typeof workerPool.$inferSelect): WorkerOut {
   };
 }
 
-export function registerWorkerRoutes(app: Hono, db: Db): void {
+export interface WorkerRoutesOptions {
+  /** When provided, lifecycle endpoints route through the registry so
+   *  worker.* events are emitted on the bus. Read endpoints don't need it. */
+  registry?: WorkerPoolRegistry;
+}
+
+export function registerWorkerRoutes(app: Hono, db: Db, opts: WorkerRoutesOptions = {}): void {
+  const registry = opts.registry;
+
   // GET /api/workers/summary
   app.get('/api/workers/summary', (c) => {
     const allWorkers = db.select().from(workerPool).all();
@@ -165,5 +190,115 @@ export function registerWorkerRoutes(app: Hono, db: Db): void {
         })),
     };
     return c.json(out);
+  });
+
+  // ─── Lifecycle endpoints (CODING-007) ─────────────────────────────────────
+
+  // POST /api/workers/register
+  app.post('/api/workers/register', async (c) => {
+    let body: {
+      kind?: WorkerKind;
+      capabilities?: string[];
+      socketPath?: string;
+      metadata?: Record<string, unknown>;
+      id?: string;
+    } = {};
+    try { body = await c.req.json(); } catch { /* ignore */ }
+    if (!body.kind || (body.kind !== 'coding' && body.kind !== 'fix-it')) {
+      return c.json({ error: 'kind must be "coding" or "fix-it"' }, 400);
+    }
+    if (!body.socketPath || typeof body.socketPath !== 'string') {
+      return c.json({ error: 'socketPath is required' }, 400);
+    }
+    const metadata = { ...(body.metadata ?? {}), socketPath: body.socketPath };
+    if (registry) {
+      const rec = registry.register({
+        kind: body.kind,
+        capabilities: body.capabilities ?? [],
+        metadata,
+        id: body.id,
+      });
+      return c.json({ workerId: rec.id });
+    }
+    // Fallback: write directly to DB without bus events.
+    const id = body.id ?? `wkr_${Math.random().toString(36).slice(2, 14)}`;
+    const ts = Date.now();
+    db.insert(workerPool).values({
+      id,
+      kind: body.kind,
+      capabilitiesJson: JSON.stringify(body.capabilities ?? []),
+      status: 'idle',
+      currentStoryId: null,
+      lastHeartbeatAt: ts,
+      registeredAt: ts,
+      releasedAt: null,
+      metadataJson: JSON.stringify(metadata),
+    }).run();
+    return c.json({ workerId: id });
+  });
+
+  // POST /api/workers/:id/heartbeat
+  app.post('/api/workers/:id/heartbeat', (c) => {
+    const id = c.req.param('id');
+    let ok = false;
+    if (registry) {
+      ok = registry.heartbeat(id);
+    } else {
+      const row = db.select().from(workerPool).where(eq(workerPool.id, id)).get();
+      if (row && row.status !== 'released') {
+        db.update(workerPool).set({ lastHeartbeatAt: Date.now() }).where(eq(workerPool.id, id)).run();
+        ok = true;
+      }
+    }
+    if (!ok) return c.json({ ok: false, error: 'worker not found or released' }, 404);
+    const row = db.select().from(workerPool).where(eq(workerPool.id, id)).get();
+    return c.json({
+      ok: true,
+      status: row?.status ?? 'unknown',
+      currentStoryId: row?.currentStoryId ?? null,
+    });
+  });
+
+  // GET /api/workers/:id/assignment
+  app.get('/api/workers/:id/assignment', (c) => {
+    const id = c.req.param('id');
+    const row = db.select().from(workerPool).where(eq(workerPool.id, id)).get();
+    if (!row) return c.json({ error: 'worker not found' }, 404);
+    if (!row.currentStoryId) return c.json({ assignment: null });
+    const story = db.select().from(stories).where(eq(stories.id, row.currentStoryId)).get();
+    if (!story) return c.json({ assignment: null });
+    return c.json({
+      assignment: {
+        storyId: story.id,
+        bucketId: story.bucketId ?? null,
+        // ReadyPoolConsumer doesn't currently stamp an assignment timestamp on
+        // the story; surface the worker's heartbeat (which atomicAssign sets
+        // to ts at the moment of assignment) as a stable proxy.
+        assignedAt: row.lastHeartbeatAt,
+      },
+    });
+  });
+
+  // POST /api/workers/:id/release
+  app.post('/api/workers/:id/release', async (c) => {
+    const id = c.req.param('id');
+    let body: { reason?: WorkerReleaseReason } = {};
+    try { body = await c.req.json(); } catch { /* ignore */ }
+    if (registry) {
+      try {
+        registry.release(id, body.reason ?? 'manual-shutdown');
+      } catch (e) {
+        return c.json({ ok: false, error: (e as Error).message }, 404);
+      }
+    } else {
+      const row = db.select().from(workerPool).where(eq(workerPool.id, id)).get();
+      if (!row) return c.json({ ok: false, error: 'worker not found' }, 404);
+      const ts = Date.now();
+      db.update(workerPool)
+        .set({ status: 'released', releasedAt: ts, lastHeartbeatAt: ts })
+        .where(eq(workerPool.id, id))
+        .run();
+    }
+    return c.json({ ok: true });
   });
 }

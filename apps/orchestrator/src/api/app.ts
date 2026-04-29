@@ -29,8 +29,19 @@ import { registerFeatureRegistryRoutes } from './routes/feature-registry';
 import { registerArchitectureRoutes } from './routes/architecture';
 import { registerWorkerRoutes } from './routes/workers';
 import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
+import type { Phase2Context } from '../agents/wire-phase2';
 
-export function createApp(db: Db): Hono {
+/**
+ * Optional Phase 2 context. When provided, the `/api/workers/*` lifecycle
+ * routes go through the WorkerPoolRegistry so worker.* events are emitted
+ * on the bus. When omitted, the lifecycle routes fall back to direct DB
+ * writes (still functional, but no events).
+ */
+export interface CreateAppOptions {
+  phase2?: Phase2Context;
+}
+
+export function createApp(db: Db, opts: CreateAppOptions = {}): Hono {
   const app = new Hono();
 
   app.use('*', cors({ origin: '*', allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] }));
@@ -79,8 +90,8 @@ export function createApp(db: Db): Hono {
   registerFeatureRegistryRoutes(app, db);
   registerArchitectureRoutes(app, db);
   registerDagRoutes(app, db);
-  // TASKMGR-006 — Phase 2 worker pool dashboard backend
-  registerWorkerRoutes(app, db);
+  // TASKMGR-006 + CODING-007 — Phase 2 worker pool dashboard + lifecycle
+  registerWorkerRoutes(app, db, { registry: opts.phase2?.registry });
 
   return app;
 }
