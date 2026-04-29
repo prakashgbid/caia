@@ -422,6 +422,15 @@ export const stories = sqliteTable('stories', {
   testCasesJson: text('test_cases_json').notNull().default('[]'),
   testDesignedAt: integer('test_designed_at'),
   testDesignStatus: text('test_design_status').notNull().default('pending'), // 'pending'|'designed'|'skipped'|'error'
+  // VAL-003 — Story Validator agent (migration 0027)
+  /** Structured ValidationReport (JSON-serialised) — see @chiefaia/ticket-template. */
+  validationReport: text('validation_report'),
+  /** Headline outcome: 'pending' | 'in_progress' | 'passed' | 'failed' | 'escalated' */
+  validationStatus: text('validation_status').notNull().default('pending'),
+  /** Number of Validator → BA round-trips. Capped at VERDICT_THRESHOLDS.maxAttempts. */
+  validationAttempts: integer('validation_attempts').notNull().default(0),
+  /** Epoch ms when the last validation run completed (pass or fail). */
+  lastValidatedAt: integer('last_validated_at'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -437,6 +446,9 @@ export const stories = sqliteTable('stories', {
   index('story_priority_bucket_idx').on(t.priorityBucket),
   // TEST-001 index (migration 0026)
   index('story_test_design_status_idx').on(t.testDesignStatus),
+  // VAL-003 indexes (migration 0027)
+  index('story_validation_status_idx').on(t.validationStatus),
+  index('story_validation_attempts_idx').on(t.validationAttempts),
 ]);
 
 // story_revisions — append-only history of every story-tree edit

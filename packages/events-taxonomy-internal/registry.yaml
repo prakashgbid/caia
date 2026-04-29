@@ -455,3 +455,35 @@ events:
     severity: info
     actor: [testing-agent]
     payload: [storyId, promptId, correlationId, testCaseId, category, layer]
+
+  # Story Validator Agent — Phase A (VAL-003)
+  - type: story.validation_started
+    severity: info
+    actor: [story-validator]
+    payload: [storyId, promptId, correlationId, attemptNumber, rubricVersion]
+
+  - type: story.validation_passed
+    severity: info
+    actor: [story-validator]
+    payload: [storyId, promptId, correlationId, attemptNumber, score, durationMs, judgeProvider]
+
+  - type: story.validation_failed
+    severity: warning
+    actor: [story-validator]
+    payload: [storyId, promptId, correlationId, attemptNumber, score, failedCheckCount, nextAction, durationMs]
+
+  - type: story.validation_escalated
+    severity: error
+    actor: [story-validator]
+    payload: [storyId, promptId, correlationId, attemptNumber, blockerId]
+
+  # Ticket-state machine extensions for the Validator gate.
+  - type: ticket.validating
+    severity: info
+    actor: [story-validator]
+    payload: [storyId, promptId, correlationId, attemptNumber]
+
+  - type: ticket.validated
+    severity: info
+    actor: [story-validator]
+    payload: [storyId, promptId, correlationId, score, judgeProvider]
