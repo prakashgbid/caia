@@ -2,7 +2,7 @@ name: Pipeline regression
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'apps/orchestrator/**'
       - 'apps/worker-coding/**'
@@ -14,7 +14,7 @@ on:
       - 'apps/orchestrator/tests/e2e/**'
       - '.github/workflows/pipeline-regression.yml'
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'apps/orchestrator/**'
       - 'apps/worker-coding/**'
