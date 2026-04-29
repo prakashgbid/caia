@@ -444,6 +444,11 @@ export type EventType =
   | 'story.validation_escalated'
   | 'ticket.validating'
   | 'ticket.validated'
+  // ─── Phase 2 worker-pool lifecycle (TASKMGR-002) ──────────────────────────
+  | 'worker.registered'
+  | 'worker.heartbeat'
+  | 'worker.released'
+  | 'worker.crashed'
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
@@ -551,6 +556,11 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'story.validation_escalated': 'error',
   'ticket.validating': 'info',
   'ticket.validated': 'info',
+  // ─── Phase 2 worker-pool lifecycle (TASKMGR-002) ──────────────────────────
+  'worker.registered': 'info',
+  'worker.heartbeat': 'debug',
+  'worker.released': 'info',
+  'worker.crashed': 'error',
 };
 
 /** All valid event type strings from the registry */
