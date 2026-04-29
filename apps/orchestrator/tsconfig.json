@@ -23,15 +23,15 @@
   // already excludes tests/scripts) and they're tracked for follow-up
   // re-pathing to use the workspace package names. See PR #43 for context.
   //
-  // PHASE2E-001 cross-app imports: the Phase 2 acceptance test imports
-  // from sibling apps (`worker-coding`, `worker-fix-it`) via relative
-  // paths so it can exercise the *real* ImplementationEngine and
-  // FixItOrchestrator. ts-jest resolves those paths fine via the test
-  // job's own ts-jest tsconfig (see jest.config.ts), but the package's
-  // `tsc --noEmit` enforces `rootDir: '.'` and rejects them. Excluding
-  // the test from the default typecheck is the standard workaround for
-  // cross-app test imports — the file is still type-checked by ts-jest
-  // when the test runs.
+  // PHASE2E-001/002 cross-app imports: the Phase 2 acceptance tests
+  // import from sibling apps (`worker-coding`, `worker-fix-it`) via
+  // relative paths so they can exercise the *real* ImplementationEngine
+  // and FixItOrchestrator. ts-jest resolves those paths fine via the
+  // test job's own ts-jest tsconfig (see jest.config.ts), but the
+  // package's `tsc --noEmit` enforces `rootDir: '.'` and rejects them.
+  // Excluding the tests from the default typecheck is the standard
+  // workaround for cross-app test imports — the files are still
+  // type-checked by ts-jest when the tests run.
   "exclude": [
     "node_modules",
     "dist",
@@ -42,6 +42,7 @@
     "tests/contracts/task-run-logger.contract.test.ts",
     "tests/ws/events.test.ts",
     "tests/phase2-e2e-acceptance.test.ts",
+    "tests/phase2-diverse-prompts.test.ts",
     "scripts/check-events-taxonomy.ts"
   ]
 }
