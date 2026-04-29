@@ -16,6 +16,7 @@ import {
   PRIORITY_VALUES,
   QUALITY_TAGS,
   TECH_SUB_DOMAINS,
+  type InputDependency,
 } from './schema';
 
 export interface DraftTicketInput {
@@ -59,6 +60,12 @@ export interface DraftTicketInput {
     apiRoutes?: string[];
     domains?: string[];
   };
+  /**
+   * 0025 — declarative input dependencies. PO seeds this with capability-
+   * kind entries from the decomposer; EA / BA refine `kind` and fill in
+   * `satisfiedBy` once a producing story is identified.
+   */
+  inputDependencies?: InputDependency[];
 }
 
 /**
@@ -91,6 +98,7 @@ export function buildDraftTicket(input: DraftTicketInput): TicketTemplateV1 {
       downstream: input.downstream ?? [],
       files: input.files ?? [],
     },
+    inputDependencies: input.inputDependencies ?? [],
     agentSections: {},
     metadata: {
       templateVersion: TICKET_TEMPLATE_VERSION,
