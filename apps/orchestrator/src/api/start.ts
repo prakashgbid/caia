@@ -9,6 +9,8 @@ import { getDb, runMigrations } from '../db/connection';
 import type { Db } from '../db/connection';
 import { seedProjects } from '../db/seed-projects';
 import { seedAdr011 } from '../db/seed-adr';
+import { seedFeatures } from '../db/seed-features';
+import { seedSuggestions } from '../db/seed-suggestions';
 import { migrateFromJsonl } from '../db/migrate-from-jsonl';
 import { attachWsServer } from '../ws/index';
 import { createApp } from './app';
