@@ -15,7 +15,13 @@ import * as schema from '../../src/db/schema';
 import { promptPipelineStages, prompts } from '../../src/db/schema';
 import {
   PIPELINE_STAGE_ORDER,
+  STAGE_BA_ENRICHED,
+  STAGE_BUCKET_PLACED,
+  STAGE_READY_FOR_PICKUP,
+  STAGE_TEST_DESIGNED,
+  STAGE_VALIDATED,
   advancePipelineStage,
+  stageIndex,
 } from '../../src/agents/pipeline-stages';
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../src/db/migrations');
@@ -46,7 +52,7 @@ function seedPrompt(db: ReturnType<typeof createTestDb>, id: string) {
 }
 
 describe('PIPELINE_STAGE_ORDER', () => {
-  it('locks the canonical Phase-1 progression', () => {
+  it('locks the canonical Phase-1 + Phase-A progression', () => {
     expect([...PIPELINE_STAGE_ORDER]).toEqual([
       'received',
       'ingested',
@@ -59,6 +65,32 @@ describe('PIPELINE_STAGE_ORDER', () => {
       'bucket_placed',
       'ready_for_pickup',
     ]);
+  });
+
+  it('places `validated` strictly after `ba_enriched` and before `test_designed`', () => {
+    // VAL-002: the Validator gate sits between BA and Testing.
+    expect(stageIndex('ba_enriched')).toBeLessThan(stageIndex('validated'));
+    expect(stageIndex('validated')).toBeLessThan(stageIndex('test_designed'));
+  });
+
+  it('places every Phase-A stage strictly before bucket_placed', () => {
+    // Validator + Testing must complete before Task Manager places the
+    // ticket into a bucket.
+    for (const stage of ['validated', 'test_designed'] as const) {
+      expect(stageIndex(stage)).toBeLessThan(stageIndex('bucket_placed'));
+    }
+  });
+
+  it('exposes named stage constants matching their string values', () => {
+    expect(STAGE_BA_ENRICHED).toBe('ba_enriched');
+    expect(STAGE_VALIDATED).toBe('validated');
+    expect(STAGE_TEST_DESIGNED).toBe('test_designed');
+    expect(STAGE_BUCKET_PLACED).toBe('bucket_placed');
+    expect(STAGE_READY_FOR_PICKUP).toBe('ready_for_pickup');
+  });
+
+  it('stageIndex returns -1 for unknown stages', () => {
+    expect(stageIndex('not_a_stage' as never)).toBe(-1);
   });
 });
 
@@ -178,5 +210,79 @@ describe('advancePipelineStage', () => {
       .where(eq(prompts.id, 'prm_full'))
       .get();
     expect(promptRow!.status).toBe('ready_for_pickup');
+  });
+
+  it('progresses a prompt through the full Phase-1 + Phase-A sequence (incl. validated + test_designed)', () => {
+    // VAL-002: end-to-end traversal that includes the new Validator and
+    // Testing stages — once VAL-005 + TEST-### wire them up, this is the
+    // shape every prompt will follow.
+    const db = createTestDb();
+    seedPrompt(db, 'prm_phaseA');
+    for (const stage of [
+      'ingested',
+      'scaffolded',
+      'po_decomposed',
+      'ea_classified',
+      'ba_enriched',
+      'validated',
+      'test_designed',
+      'bucket_placed',
+      'ready_for_pickup',
+    ] as const) {
+      advancePipelineStage(
+        { promptId: 'prm_phaseA', stage, correlationId: 'cor_phaseA' },
+        db,
+      );
+    }
+    const rows = db
+      .select()
+      .from(promptPipelineStages)
+      .where(eq(promptPipelineStages.promptId, 'prm_phaseA'))
+      .orderBy(asc(promptPipelineStages.enteredAt))
+      .all();
+    expect(rows.map((r) => r.stage)).toEqual([
+      'ingested',
+      'scaffolded',
+      'po_decomposed',
+      'ea_classified',
+      'ba_enriched',
+      'validated',
+      'test_designed',
+      'bucket_placed',
+      'ready_for_pickup',
+    ]);
+    const promptRow = db
+      .select()
+      .from(prompts)
+      .where(eq(prompts.id, 'prm_phaseA'))
+      .get();
+    expect(promptRow!.status).toBe('ready_for_pickup');
+  });
+
+  it('records `validated` with attemptNumber metadata when Validator advances', () => {
+    // The Validator agent (VAL-004) attaches attemptNumber + score to its
+    // metadata so the dashboard can display retry history. This test
+    // verifies that the helper correctly persists arbitrary metadata.
+    const db = createTestDb();
+    seedPrompt(db, 'prm_val');
+    advancePipelineStage(
+      {
+        promptId: 'prm_val',
+        stage: STAGE_VALIDATED,
+        correlationId: 'cor_val',
+        metadata: { attemptNumber: 2, score: 87, judgeProvider: 'local' },
+      },
+      db,
+    );
+    const row = db
+      .select()
+      .from(promptPipelineStages)
+      .where(eq(promptPipelineStages.promptId, 'prm_val'))
+      .get();
+    expect(row!.stage).toBe('validated');
+    const meta = JSON.parse(row!.metadata!);
+    expect(meta.attemptNumber).toBe(2);
+    expect(meta.score).toBe(87);
+    expect(meta.judgeProvider).toBe('local');
   });
 });

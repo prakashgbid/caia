@@ -376,6 +376,13 @@ export type EventType =
   | 'task-scheduler.scheduling.complete'
   // ─── Task Scheduler bucket placement (migration 0021) ────────────────────
   | 'task-scheduler.bucket-placed'
+  // ─── BUCKET-004 multi-bucket placer events ───────────────────────────────
+  | 'task-scheduler.cycle-detected'
+  | 'task-scheduler.cross-bucket-blocker'
+  | 'task-scheduler.resource-conflict-warning'
+  | 'task-scheduler.wcc-detected'
+  // ─── BUCKET-007 backfill ────────────────────────────────────────────────
+  | 'story.taxonomy.backfilled'
   // ─── Ticket state machine (migration 0021 ticket_template lifecycle) ────
   | 'ticket.draft'
   | 'ticket.po-decomposed'
@@ -459,6 +466,13 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'task-scheduler.scheduling.complete': 'info',
   // ─── Task Scheduler bucket placement (migration 0021) ────────────────────
   'task-scheduler.bucket-placed': 'info',
+  // ─── BUCKET-004 multi-bucket placer events ───────────────────────────────
+  'task-scheduler.cycle-detected': 'error',
+  'task-scheduler.cross-bucket-blocker': 'warning',
+  'task-scheduler.resource-conflict-warning': 'warning',
+  'task-scheduler.wcc-detected': 'info',
+  // ─── BUCKET-007 backfill ────────────────────────────────────────────────
+  'story.taxonomy.backfilled': 'info',
   // ─── Ticket state machine (migration 0021 ticket_template lifecycle) ────
   'ticket.draft': 'info',
   'ticket.po-decomposed': 'info',
