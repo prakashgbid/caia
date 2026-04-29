@@ -563,3 +563,14 @@ events:
     severity: debug
     actor: [task-scheduler]
     payload: [bucketId, queueDepth, throughputPerHour, oldestReadyAgeS, workersAssigned, engaged, ts]
+
+  # HARDEN-001 — failure recovery
+  - type: task.requeued
+    severity: warning
+    actor: [task-scheduler]
+    payload: [storyId, workerId, attemptNumber, reason, ts]
+
+  - type: phase2.escalated
+    severity: error
+    actor: [task-scheduler]
+    payload: [storyId, workerId, attemptNumber, reason, ts]

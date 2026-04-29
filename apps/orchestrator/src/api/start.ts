@@ -17,6 +17,8 @@ import { createApp } from './app';
 import { wireEventBus, eventBus } from '../events/bus-adapter';
 // FREG-003: subscribe FeatureRegistryWriter to story.completed at boot.
 import { registerFeatureRegistryWriter } from '../agents/feature-registry-writer';
+// HARDEN-001: requeue stories whose worker crashed (heartbeat stale).
+import { registerWorkerCrashRecovery } from '../agents/worker-crash-recovery';
 import { subscribeToEvents as subscribePriorityEvents, scoreAll } from '../prioritization/reprioritizer';
 import { tasks, executorRuns } from '../db/schema';
 
@@ -123,6 +125,12 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
   // if the embedder (Ollama) is unreachable — the backfill script (FREG-004)
   // will catch up later.
   registerFeatureRegistryWriter();
+
+  // HARDEN-001: subscribe the WorkerCrashRecovery so a crashed worker's
+  // story is rolled back and re-queued for the next idle worker. Without
+  // this subscriber, the row would stay stuck in `coding_in_progress`
+  // forever even though the registry already emits `worker.crashed`.
+  registerWorkerCrashRecovery(db);
 
   // Initial batch score of all unscored/stale tasks (fire-and-forget)
   scoreAll(db, 'system').catch(() => {});
