@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+
+# Git-flow guard: never commit directly to main or develop.
+#
+# Reference: feedback_git_flow_enforced.md, caia/docs/git-flow.md.
+
+[ -n "$CI" ] && exit 0
+
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+
+case "${branch}" in
+  main|develop)
+    cat <<MSG >&2
+
+╭───────────────────────────────────────────────────────────────────╮
+│  ✗ git-flow: direct commit to '${branch}' is forbidden.
+│
+│  Use a feature branch instead:
+│
+│      pnpm flow start <id>-<slug>
+│
+│  Or manually:
+│
+│      git checkout -b feature/<id>-<slug> origin/develop
+│
+│  Reference: caia/docs/git-flow.md
+╰───────────────────────────────────────────────────────────────────╯
+MSG
+    exit 1
+    ;;
+esac
+
+exit 0
