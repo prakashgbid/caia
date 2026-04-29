@@ -113,6 +113,21 @@ export async function runPOAgent(
 
         const storyDbId = `story-${story.id}-${nanoid(4)}`;
 
+        // Migration 0025: PO seeds an initial set of declarative input
+        // dependencies from the decomposer's output. The decomposer surfaces
+        // "inputs" as plain strings in `story.dependencies` — we promote
+        // each into a structured InputDependency entry of kind='capability'
+        // with declaredBy='po'. EA/BA refines `kind` and fills in
+        // `satisfiedBy` once a producing story is identified.
+        const seededInputDeps = (story.dependencies ?? []).map((dep) => ({
+          kind: 'capability' as const,
+          name: dep,
+          description: '',
+          required: true,
+          declaredBy: 'po' as const,
+          declaredAt: Date.now(),
+        }));
+
         // BUCKET-002 — per-story taxonomy. project + priority are inherited
         // from the prompt-level classification; lifecycle is re-classified
         // on the story body so a "fix bug X" story under a "build feature Y"
@@ -133,6 +148,7 @@ export async function runPOAgent(
             description: story.description ?? '',
             acceptanceCriteriaJson: JSON.stringify(story.acceptanceCriteria ?? []),
             dependsOnJson: JSON.stringify(story.dependencies ?? []),
+            inputDependenciesJson: JSON.stringify(seededInputDeps),
             status: 'pending',
             rootPromptId: promptId,
             parentEntityType: 'requirement',

@@ -14,7 +14,6 @@ export {
   NATURE_VALUES,
   COMPLEXITY_VALUES,
   AGENT_SECTION_KEYS,
-  // BUCKET-001 taxonomy enums + types
   PROJECT_SLUGS,
   LIFECYCLE_VALUES,
   RISK_VALUES,
@@ -22,6 +21,9 @@ export {
   PRIORITY_VALUES,
   QUALITY_TAGS,
   TECH_SUB_DOMAINS,
+  // 0025 — input-dependency runtime constants
+  INPUT_DEPENDENCY_KINDS,
+  INPUT_DEPENDENCY_DECLARERS,
   // TEST-001 testing framework taxonomy + bounds
   TEST_CASE_CATEGORIES,
   TEST_CASE_STATUSES,
@@ -39,6 +41,10 @@ export type {
   PriorityValue,
   QualityTag,
   TechSubDomain,
+  // 0025 — input-dependency types
+  InputDependency,
+  InputDependencyKind,
+  InputDependencyDeclarer,
   // TEST-001 test case types
   TestCase,
   TestCaseCategory,

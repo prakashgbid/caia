@@ -16,6 +16,7 @@ import {
   PRIORITY_VALUES,
   QUALITY_TAGS,
   TECH_SUB_DOMAINS,
+  type InputDependency,
 } from './schema';
 
 export interface DraftTicketInput {
@@ -35,7 +36,6 @@ export interface DraftTicketInput {
   downstream?: string[];
   files?: string[];
   poDecomposedAt?: number;
-  /** BUCKET-001 — optional taxonomy populated by PO + EA. */
   taxonomy?: {
     project?: (typeof PROJECT_SLUGS)[number];
     businessSubDomains?: string[];
@@ -52,20 +52,20 @@ export interface DraftTicketInput {
     softDependsOn?: string[];
     conflictsWith?: string[];
   };
-  /** BUCKET-001 / BUCKET-009 — optional resource claims populated by EA. */
   claims?: {
     files?: string[];
     schemas?: string[];
     apiRoutes?: string[];
     domains?: string[];
   };
+  /**
+   * 0025 — declarative input dependencies. PO seeds with capability-kind
+   * entries from the decomposer; EA / BA refine `kind` and fill in
+   * `satisfiedBy` once a producing story is identified.
+   */
+  inputDependencies?: InputDependency[];
 }
 
-/**
- * Build a draft ticket payload from the minimum required inputs the PO
- * agent has after decomposition. Returns a fully-typed TicketTemplateV1
- * with empty `agentSections` ready for BA to enrich.
- */
 export function buildDraftTicket(input: DraftTicketInput): TicketTemplateV1 {
   const now = Date.now();
   const draft: TicketTemplateV1 = {
@@ -91,6 +91,7 @@ export function buildDraftTicket(input: DraftTicketInput): TicketTemplateV1 {
       downstream: input.downstream ?? [],
       files: input.files ?? [],
     },
+    inputDependencies: input.inputDependencies ?? [],
     agentSections: {},
     testCases: [],
     metadata: {
