@@ -926,3 +926,67 @@ export const taskBuckets = sqliteTable('task_buckets', {
   index('idx_tb_prompt_project_tech').on(t.promptId, t.projectSlug, t.techSubDomain),
   index('idx_tb_project_tech').on(t.projectSlug, t.techSubDomain),
 ]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// feature_registry — FREG-001 (migration 0028)
+//
+// Catalog of every shipped feature/route/component/agent. Powers the PO
+// Agent's new-vs-enhance lifecycle classification by way of a hybrid
+// sqlite-vec + FTS5 search. See @chiefaia/feature-registry for the Zod
+// schema, dedup-key helper, and search/write API.
+//
+// Embeddings live in a sibling vec0 virtual table (`feature_registry_vec`)
+// declared in the SQL migration; drizzle doesn't model virtual tables so
+// FREG-002 wires it via raw SQL on top of better-sqlite3.
+// ─────────────────────────────────────────────────────────────────────────────
+export const featureRegistry = sqliteTable('feature_registry', {
+  id: text('id').primaryKey(),
+  project: text('project').notNull(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  routePath: text('route_path'),
+  filePathsJson: text('file_paths_json').notNull().default('[]'),
+  componentName: text('component_name'),
+  apiEndpoint: text('api_endpoint'),
+  dbTablesJson: text('db_tables_json').notNull().default('[]'),
+  agentName: text('agent_name'),
+  shippedAt: integer('shipped_at').notNull(),
+  storyId: text('story_id'),
+  tagsJson: text('tags_json').notNull().default('[]'),
+  embeddingModel: text('embedding_model').notNull().default('nomic-embed-text'),
+  embeddingDim: integer('embedding_dim').notNull().default(768),
+  embeddingVersion: text('embedding_version').notNull().default('v1.5'),
+  source: text('source').notNull(),                       // FEATURE_REGISTRY_SOURCES
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  dedupKey: text('dedup_key').notNull().unique(),         // sha256 of (project,name,locator)
+}, (t) => [
+  index('freg_project_idx').on(t.project),
+  index('freg_shipped_idx').on(t.shippedAt),
+  index('freg_story_idx').on(t.storyId),
+  index('freg_source_idx').on(t.source),
+]);
+
+// feature_registry_search_log — FREG-001 (migration 0028)
+//
+// One row per `registry.search` invocation. Powers FREG-007's "top match
+// queries" + latency dashboards. Cleared on a 30-day TTL by a background
+// sweep (added when the dashboard ships).
+export const featureRegistrySearchLog = sqliteTable('feature_registry_search_log', {
+  id: text('id').primaryKey(),
+  query: text('query').notNull(),
+  project: text('project'),                                // optional restriction
+  classification: text('classification').notNull(),         // 'enhance'|'ambiguous'|'new'
+  topMatchId: text('top_match_id'),                         // feature_registry.id when present
+  topScore: real('top_score'),                              // cosine sim in [0,1]
+  thresholdUsed: real('threshold_used').notNull(),
+  latencyMs: integer('latency_ms').notNull(),
+  embedderTokens: integer('embedder_tokens').notNull().default(0),
+  hitCount: integer('hit_count').notNull().default(0),
+  caller: text('caller').notNull().default('po-agent'),     // 'po-agent'|'manual'|'validator'|...
+  createdAt: integer('created_at').notNull(),
+}, (t) => [
+  index('freg_log_created_idx').on(t.createdAt),
+  index('freg_log_classification_idx').on(t.classification),
+  index('freg_log_caller_idx').on(t.caller),
+]);
