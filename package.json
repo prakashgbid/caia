@@ -1,7 +1,7 @@
 {
   "name": "caia",
   "private": true,
-  "description": "CAIA \u2014 Chief AI Agent monorepo. Foundational utilities, CLI, and templates for AI-driven application development.",
+  "description": "CAIA — Chief AI Agent monorepo. Foundational utilities, CLI, and templates for AI-driven application development.",
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
@@ -12,6 +12,7 @@
     "version": "changeset version",
     "release": "turbo run build && changeset publish",
     "prepare": "husky || true",
+    "flow": "bash scripts/caia-flow.sh",
     "test:regression": "pnpm --filter @caia-app/core test:regression",
     "test:regression:pipeline": "pnpm --filter @caia-app/core test:regression:pipeline",
     "test:regression:agent": "pnpm --filter @caia-app/core test:regression:agent"
