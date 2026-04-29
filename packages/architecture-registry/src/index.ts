@@ -135,3 +135,23 @@ export type {
   EmbedResult,
   OllamaClientOpts,
 } from '@chiefaia/feature-registry';
+
+// ARCH-005 — per-domain query API.
+export {
+  archSearch,
+  findUIArtifacts,
+  findBackendArtifacts,
+  findDBArtifacts,
+  findPackageArtifacts,
+  findIntegrationArtifacts,
+  findAcrossDomains,
+  UI_KINDS,
+  BACKEND_KINDS,
+  DB_KINDS,
+  PACKAGE_KINDS,
+  INTEGRATION_KINDS,
+  DEFAULT_TOP_K,
+  DEFAULT_RRF_K,
+  DEFAULT_MIN_SCORE,
+} from './search';
+export type { ArchSearchOpts, ArchSearchDeps } from './search';
