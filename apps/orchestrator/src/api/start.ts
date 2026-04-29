@@ -17,6 +17,8 @@ import { createApp } from './app';
 import { wireEventBus, eventBus } from '../events/bus-adapter';
 // FREG-003: subscribe FeatureRegistryWriter to story.completed at boot.
 import { registerFeatureRegistryWriter } from '../agents/feature-registry-writer';
+// HARDEN-003: prune orphan worktrees periodically when enabled.
+import { WorktreeReaper, startReaperLoop } from '../agents/worktree-reaper';
 import { subscribeToEvents as subscribePriorityEvents, scoreAll } from '../prioritization/reprioritizer';
 import { tasks, executorRuns } from '../db/schema';
 
@@ -123,6 +125,23 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
   // if the embedder (Ollama) is unreachable — the backfill script (FREG-004)
   // will catch up later.
   registerFeatureRegistryWriter();
+
+  // HARDEN-003: opt-in worktree reaper. Off by default — only meaningful
+  // on hosts running worker-coding (where ~/.caia/worktrees lives).
+  if (process.env['CAIA_WORKTREE_REAPER_ENABLED'] === '1') {
+    const reaper = new WorktreeReaper(db, {
+      ...(process.env['CAIA_WORKTREE_BASE_DIR']
+        ? { baseDir: process.env['CAIA_WORKTREE_BASE_DIR'] }
+        : {}),
+      ...(process.env['CAIA_WORKTREE_REPO_PATH']
+        ? { repoPath: process.env['CAIA_WORKTREE_REPO_PATH'] }
+        : {}),
+    });
+    startReaperLoop(
+      reaper,
+      parseInt(process.env['CAIA_WORKTREE_REAPER_INTERVAL_MS'] ?? '300000', 10),
+    );
+  }
 
   // Initial batch score of all unscored/stale tasks (fire-and-forget)
   scoreAll(db, 'system').catch(() => {});

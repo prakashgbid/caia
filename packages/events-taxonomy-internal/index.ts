@@ -456,6 +456,8 @@ export type EventType =
   | 'task-scheduler.backpressure.released'
   // ─── Phase 2 bucket health metrics (TASKMGR-005) ──────────────────────────
   | 'task-scheduler.bucket.health'
+  // ─── HARDEN-003 — worktree reaper ─────────────────────────────────────────
+  | 'worktree.reaped'
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
@@ -575,6 +577,8 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'task-scheduler.backpressure.released': 'info',
   // ─── Phase 2 bucket health metrics (TASKMGR-005) ──────────────────────────
   'task-scheduler.bucket.health': 'debug',
+  // ─── HARDEN-003 — worktree reaper ─────────────────────────────────────────
+  'worktree.reaped': 'info',
 };
 
 /** All valid event type strings from the registry */

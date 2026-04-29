@@ -563,3 +563,9 @@ events:
     severity: debug
     actor: [task-scheduler]
     payload: [bucketId, queueDepth, throughputPerHour, oldestReadyAgeS, workersAssigned, engaged, ts]
+
+  # HARDEN-003 — worktree reaper
+  - type: worktree.reaped
+    severity: info
+    actor: [system]
+    payload: [storyId, path, reason, ts]
