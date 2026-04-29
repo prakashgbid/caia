@@ -107,3 +107,52 @@ describe('createLogger', () => {
     write.mockRestore();
   });
 });
+
+describe('createLogger — HARDEN-007 default redaction', () => {
+  it('scrubs token / secret / password fields when includeDefaultRedactPaths is on', () => {
+    const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const logger = createLogger({ name: 'test', includeDefaultRedactPaths: true });
+    logger.info('login attempt', {
+      user: 'alice',
+      token: 'sk-abc-123',
+      password: 'hunter2',
+      apiKey: 'k_xyz',
+      vault_token: 'vt_xxx',
+      github_pat: 'ghp_xxx',
+      authorization: 'Bearer foo',
+    });
+    const line = JSON.parse(write.mock.calls[0]![0] as string);
+    expect(line.user).toBe('alice');
+    expect(line.token).toBe('[REDACTED]');
+    expect(line.password).toBe('[REDACTED]');
+    expect(line.apiKey).toBe('[REDACTED]');
+    expect(line.vault_token).toBe('[REDACTED]');
+    expect(line.github_pat).toBe('[REDACTED]');
+    expect(line.authorization).toBe('[REDACTED]');
+    write.mockRestore();
+  });
+
+  it('honours additional per-host redactPaths alongside defaults', () => {
+    const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const logger = createLogger({
+      name: 'test',
+      includeDefaultRedactPaths: true,
+      redactPaths: ['host_field'],
+    });
+    logger.info('host', { host_field: 'sensitive', token: 'sk' });
+    const line = JSON.parse(write.mock.calls[0]![0] as string);
+    expect(line.host_field).toBe('[REDACTED]');
+    expect(line.token).toBe('[REDACTED]');
+    write.mockRestore();
+  });
+
+  it('does NOT scrub when includeDefaultRedactPaths is off (back-compat)', () => {
+    const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const logger = createLogger({ name: 'test' });
+    logger.info('plain', { token: 'visible' });
+    const line = JSON.parse(write.mock.calls[0]![0] as string);
+    // No redaction configured -> token field is emitted as-is.
+    expect(line.token).toBe('visible');
+    write.mockRestore();
+  });
+});

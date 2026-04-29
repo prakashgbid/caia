@@ -2,6 +2,47 @@ import pino from 'pino';
 
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
+/**
+ * HARDEN-007: shared redaction defaults applied to every logger created
+ * via `createLogger({ ..., includeDefaultRedactPaths: true })`. Chosen
+ * to cover the secrets we know flow through the orchestrator + workers:
+ *
+ *   - vault tokens (broker auth + raw vault tokens)
+ *   - github_pat (Coding Agent's git operations)
+ *   - generic auth headers + api keys + bearer tokens
+ *   - cookies / sessions
+ *   - the `value` / `secret` / `password` field names used by
+ *     @chiefaia/secrets-broker payloads
+ *
+ * The list is intentionally conservative; hosts can OPT OUT by leaving
+ * `includeDefaultRedactPaths` unset (default false to preserve existing
+ * behaviour). Add additional patterns via the per-host `redactPaths`
+ * array — the two are concatenated.
+ */
+export const DEFAULT_REDACT_PATHS: readonly string[] = Object.freeze([
+  // Field names commonly carrying secrets.
+  'value', '*.value', '*.*.value',
+  'secret', '*.secret', '*.*.secret',
+  'password', '*.password',
+  'token', '*.token', '*.*.token',
+  'apiKey', '*.apiKey',
+  'api_key', '*.api_key',
+  'authorization', '*.authorization',
+  'cookie', '*.cookie',
+  'session', '*.session',
+  // Stolution-specific.
+  'vault_token', '*.vault_token',
+  'vaultToken', '*.vaultToken',
+  'github_pat', '*.github_pat',
+  'githubPat', '*.githubPat',
+  // HTTP request/response structured logs (pino convention).
+  'req.headers.authorization',
+  'req.headers.cookie',
+  'req.headers["x-api-key"]',
+  'req.headers["x-vault-token"]',
+  'res.headers["set-cookie"]',
+]);
+
 export interface LogContext {
   readonly [key: string]: unknown;
 }
@@ -40,6 +81,12 @@ export interface LoggerOptions {
    * always `[REDACTED]`.
    */
   readonly redactPaths?: readonly string[];
+  /**
+   * HARDEN-007: include the shared DEFAULT_REDACT_PATHS list in addition
+   * to the per-host `redactPaths`. Default false to preserve existing
+   * behaviour for hosts that haven't migrated.
+   */
+  readonly includeDefaultRedactPaths?: boolean;
   /**
    * Optional hook invoked after every warn/error/fatal log line, with the
    * merged structured-field view (bindings ∪ ctx). Designed to be wired to
@@ -106,7 +153,7 @@ function wrapPino(
 }
 
 export function createLogger(options: LoggerOptions): Logger {
-  const { name, level = 'info', pretty = false, redactPaths, onWarnOrError } = options;
+  const { name, level = 'info', pretty = false, redactPaths, includeDefaultRedactPaths = false, onWarnOrError } = options;
 
   const transport =
     pretty
@@ -121,8 +168,14 @@ export function createLogger(options: LoggerOptions): Logger {
       level: (label) => ({ level: label }),
     },
   };
-  if (redactPaths && redactPaths.length > 0) {
-    pinoOpts.redact = { paths: [...redactPaths], censor: '[REDACTED]' };
+  // HARDEN-007: prepend DEFAULT_REDACT_PATHS when opted-in. Hosts that
+  // pass includeDefaultRedactPaths: true get the shared baseline automatically.
+  const mergedRedact: string[] = [
+    ...(includeDefaultRedactPaths ? DEFAULT_REDACT_PATHS : []),
+    ...(redactPaths ?? []),
+  ];
+  if (mergedRedact.length > 0) {
+    pinoOpts.redact = { paths: mergedRedact, censor: '[REDACTED]' };
   }
   const instance = pino(pinoOpts, transport);
 

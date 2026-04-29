@@ -30,6 +30,8 @@ const wrappedBus: LoggerEventBus = {
 export const logger: Logger = createLogger({
   name: 'orchestrator',
   level: (process.env['ORCHESTRATOR_LOG_LEVEL'] as 'debug' | 'info' | 'warn' | 'error' | undefined) ?? 'info',
+  // HARDEN-007: scrub shared secret-shaped paths from every emitted log line.
+  includeDefaultRedactPaths: true,
   onWarnOrError: busTransport({
     bus: wrappedBus,
     actor: 'system',

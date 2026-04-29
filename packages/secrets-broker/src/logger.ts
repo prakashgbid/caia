@@ -26,6 +26,10 @@ const httpBus: LoggerEventBus = {
 export const logger: Logger = createLogger({
   name: 'secrets-broker',
   level: (process.env['BROKER_LOG_LEVEL'] as 'debug' | 'info' | 'warn' | 'error' | undefined) ?? 'info',
+  // HARDEN-007: opt into the shared DEFAULT_REDACT_PATHS so vault tokens,
+  // bearer auth, github_pat, etc. are scrubbed alongside the broker's
+  // own value/secret payloads.
+  includeDefaultRedactPaths: true,
   redactPaths: ['value', '*.value', 'secret', '*.secret'],
   onWarnOrError: BUS_URL ? busTransport({ bus: httpBus, actor: 'secrets-broker' }) : undefined,
 });
