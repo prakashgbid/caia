@@ -44,6 +44,7 @@
     "@chiefaia/classifier": "workspace:*",
     "@chiefaia/decomposer": "workspace:*",
     "@chiefaia/dedup-engine": "workspace:*",
+    "@chiefaia/logger": "workspace:*",
     "@chiefaia/ticket-template": "workspace:*",
     "@caia-app/pipeline-pulse": "workspace:*",
     "@chiefaia/feature-registry": "workspace:*"

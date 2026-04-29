@@ -84,6 +84,12 @@ importers:
 
   apps/executor:
     dependencies:
+      '@chiefaia/event-bus-internal':
+        specifier: workspace:*
+        version: link:../../packages/event-bus-internal
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       nanoid:
         specifier: ^5.0.0
         version: 5.1.9
@@ -121,6 +127,9 @@ importers:
       '@chiefaia/local-llm-router':
         specifier: workspace:*
         version: link:../../packages/local-llm-router
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@chiefaia/ticket-template':
         specifier: workspace:*
         version: link:../../packages/ticket-template
@@ -868,6 +877,9 @@ importers:
       pino-pretty:
         specifier: ^13.1.3
         version: 13.1.3
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.10)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
       typescript:
         specifier: ^5.4.5
         version: 5.9.3
@@ -920,6 +932,9 @@ importers:
 
   packages/secrets-broker:
     dependencies:
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       commander:
         specifier: ^12.1.0
         version: 12.1.0
