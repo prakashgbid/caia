@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+
+# Git-flow guard: never push directly to main or develop, regardless of
+# what local branch we're on. The remote branch protection enforces this
+# server-side too; this hook surfaces the failure earlier with a clear
+# message.
+#
+# Reference: feedback_git_flow_enforced.md, caia/docs/git-flow.md.
+
+[ -n "$CI" ] && exit 0
+
+remote="$1"
+url="$2"
+
+# Stdin: <local_ref> <local_sha> <remote_ref> <remote_sha>
+zero='0000000000000000000000000000000000000000'
+violation=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "${remote_ref}" in
+    refs/heads/main|refs/heads/develop)
+      cat <<MSG >&2
+
+╭───────────────────────────────────────────────────────────────────╮
+│  ✗ git-flow: direct push to '${remote_ref##refs/heads/}' is forbidden.
+│
+│  All work merges through a PR:
+│
+│    feature/<id>-<slug>  →  PR to develop  →  squash-merge
+│    develop              →  release/<date> PR to main → merge
+│
+│  Use:
+│
+│      pnpm flow ready    # mark current PR ready for review
+│      pnpm flow ship     # squash-merge when CI green + delete branch
+│      pnpm flow release  # open release/<date> PR develop → main
+│
+│  Reference: caia/docs/git-flow.md
+╰───────────────────────────────────────────────────────────────────╯
+MSG
+      violation=1
+      ;;
+  esac
+done
+
+[ "${violation}" -eq 1 ] && exit 1
+exit 0
