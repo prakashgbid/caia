@@ -11,6 +11,11 @@ export {
   totalRuntimeRamGB,
   M1_PRO_USABLE_MODEL_RAM_GB,
 } from './model-catalog.js';
+export {
+  LlmMetricsTracker,
+  llmMetrics,
+  perCallCostFromRuleString,
+} from './llm-metrics.js';
 export type {
   LLMProvider,
   LLMRequest,
@@ -24,3 +29,9 @@ export type {
   ModelRole,
   EndpointKind,
 } from './model-catalog.js';
+export type {
+  LlmCallRecord,
+  LlmMetricsProvider,
+  LlmMetricsSnapshot,
+  LlmMetricsSnapshotTask,
+} from './llm-metrics.js';

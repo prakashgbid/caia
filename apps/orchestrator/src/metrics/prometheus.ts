@@ -80,3 +80,38 @@ export const httpRequestsTotal = new Counter({
   labelNames: ['method', 'path', 'status'],
   registers: [promRegistry],
 });
+
+// ─── LLM routing metrics (LAI-006) ────────────────────────────────────────────
+// Wired by apps/orchestrator/src/api/routes/llm.ts. The same numbers are
+// also surfaced as a JSON snapshot on GET /llm/metrics for the dashboard.
+
+export const llmCallsTotal = new Counter({
+  name: 'conductor_llm_calls_total',
+  help: 'Total LLM calls dispatched through /llm/route',
+  labelNames: ['provider', 'model', 'task_type', 'outcome'],
+  registers: [promRegistry],
+});
+
+export const llmCallDurationMs = new Histogram({
+  name: 'conductor_llm_call_duration_ms',
+  help: 'Wall-clock duration of LLM calls',
+  labelNames: ['provider', 'model', 'task_type'],
+  buckets: [50, 100, 250, 500, 1000, 2500, 5000, 15000, 60000],
+  registers: [promRegistry],
+});
+
+export const llmTokensTotal = new Counter({
+  name: 'conductor_llm_tokens_total',
+  help: 'Total LLM tokens consumed (prompt + completion)',
+  labelNames: ['provider', 'model', 'kind'],
+  registers: [promRegistry],
+});
+
+export const llmEstimatedSavedUsd = new Counter({
+  name: 'conductor_llm_estimated_saved_usd',
+  help:
+    'Estimated USD saved per call vs the all-Claude baseline. Only ' +
+    'increments when local routing avoided a Claude call.',
+  labelNames: ['provider'],
+  registers: [promRegistry],
+});
