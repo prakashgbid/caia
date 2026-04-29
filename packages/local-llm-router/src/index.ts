@@ -1,6 +1,8 @@
 // Public API for @chiefaia/local-llm-router
 
-export { route, __setAdapters } from './router.js';
+export { route, __setAdapters, __resetBreakers, getBreakerStates, TimeoutError, BreakerOpenError } from './router.js';
+export { withTimeout, withRetry, CircuitBreaker } from './resilience.js';
+export type { BreakerState, BreakerOptions, RetryOptions } from './resilience.js';
 export { OllamaAdapter } from './ollama-adapter.js';
 export { ClaudeAdapter } from './claude-adapter.js';
 export { getRoute, ROUTING_RULES, COST_ANALYSIS } from './routing-config.js';

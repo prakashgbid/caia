@@ -39,6 +39,12 @@ export interface RouterOptions {
   forceClaude?: boolean;
   /** If the primary provider fails, automatically retry with the other */
   fallbackOnError?: boolean;
+  /** HARDEN-005: per-call timeout. Default 60_000 ms. */
+  timeoutMs?: number;
+  /** HARDEN-005: total retry attempts (incl. first). Default 3. */
+  retryAttempts?: number;
+  /** HARDEN-005: base backoff delay before the first retry. Default 250 ms. */
+  retryBaseDelayMs?: number;
 }
 
 interface OllamaCommonOptions {
