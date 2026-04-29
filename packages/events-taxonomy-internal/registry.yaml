@@ -563,3 +563,9 @@ events:
     severity: debug
     actor: [task-scheduler]
     payload: [bucketId, queueDepth, throughputPerHour, oldestReadyAgeS, workersAssigned, engaged, ts]
+
+  # HARDEN-002 — pipeline cost alerting
+  - type: pipeline.cost.alert
+    severity: warning
+    actor: [system]
+    payload: [correlationId, totalCostUsd, thresholdUsd, ts]

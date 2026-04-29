@@ -1200,3 +1200,24 @@ export const bucketHealthHistory = sqliteTable('bucket_health_history', {
   index('bhh_bucket_ts_idx').on(t.bucketId, t.ts),
   index('bhh_ts_idx').on(t.ts),
 ]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// pipeline_run_costs — HARDEN-002 (migration 0035)
+//
+// One row per pipeline-run keyed by correlation_id. Updated in place by
+// PipelineCostTracker on every llm.* call routed through the orchestrator.
+// ─────────────────────────────────────────────────────────────────────────────
+export const pipelineRunCosts = sqliteTable('pipeline_run_costs', {
+  correlationId: text('correlation_id').primaryKey(),
+  totalCalls: integer('total_calls').notNull().default(0),
+  localCalls: integer('local_calls').notNull().default(0),
+  claudeCalls: integer('claude_calls').notNull().default(0),
+  totalCostUsd: real('total_cost_usd').notNull().default(0),
+  baselineCostUsd: real('baseline_cost_usd').notNull().default(0),
+  perAgentBreakdownJson: text('per_agent_breakdown_json').notNull().default('{}'),
+  startedAt: integer('started_at').notNull(),
+  lastUpdatedAt: integer('last_updated_at').notNull(),
+  alertTriggeredAt: integer('alert_triggered_at'),
+}, (t) => [
+  index('pipeline_run_costs_updated_idx').on(t.lastUpdatedAt),
+]);

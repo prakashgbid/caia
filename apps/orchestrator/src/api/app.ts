@@ -70,7 +70,7 @@ export function createApp(db: Db): Hono {
   registerPromptsRoutes(app, db);
   registerPriorityRoutes(app, db);
   registerPulseRoutes(app, db);
-  registerLlmRoutes(app);
+  registerLlmRoutes(app, db);
   registerStatsRoutes(app);
   registerAgentRoutes(app, db);
   registerBucketsRoutes(app, db);

@@ -8,6 +8,8 @@
 //   3. GET /llm/metrics returns the aggregated snapshot.
 
 import type { Hono } from 'hono';
+import type { Db } from '../../db/connection';
+import { getPipelineCostTracker } from '../../agents/pipeline-cost-tracker';
 import {
   route,
   getRoute,
@@ -29,10 +31,14 @@ interface LlmRouteBody {
   prompt?: string;
   forceLocal?: boolean;
   forceClaude?: boolean;
+  /** HARDEN-002: pipeline-run id (the prompt's correlation_id). */
+  correlationId?: string;
+  /** HARDEN-002: which agent issued the call (e.g. 'po-agent'). */
+  agent?: string;
 }
 
 // @no-events — pure routing decision endpoint, downstream handlers emit events
-export function registerLlmRoutes(app: Hono): void {
+export function registerLlmRoutes(app: Hono, db: Db): void {
   app.get('/llm/rules', (c) => {
     return c.json({
       rules: ROUTING_RULES,
@@ -115,7 +121,30 @@ export function registerLlmRoutes(app: Hono): void {
         .labels(provider)
         .inc(Math.max(0, baselinePerCall - actualPerCall));
 
-      return c.json(result);
+      // HARDEN-002: persist per-pipeline-run cost when the caller tags
+      // the request with a correlationId + agent. Falls back to silent
+      // no-op so the legacy in-memory tracker still wins for smoke runs.
+      let costSnapshot: ReturnType<ReturnType<typeof getPipelineCostTracker>['recordCall']> | null = null;
+      if (body.correlationId && body.agent) {
+        try {
+          const tracker = getPipelineCostTracker(db, {
+            alertThresholdUsd: parseFloat(
+              process.env['CAIA_PIPELINE_COST_ALERT_USD'] ?? '5',
+            ),
+          });
+          costSnapshot = tracker.recordCall({
+            correlationId: body.correlationId,
+            agent: body.agent,
+            provider,
+            estimatedCostUsd: actualPerCall,
+            baselineCostUsd: baselinePerCall,
+          });
+        } catch {
+          // Cost tracking is observability — never break the route.
+        }
+      }
+
+      return c.json({ ...result, costSnapshot });
     } catch (err) {
       // Best-effort metrics on failure — we still want the call counted
       // even if it errored, so failure rates are visible on the dashboard.
