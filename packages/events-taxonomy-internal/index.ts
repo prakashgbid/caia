@@ -407,8 +407,9 @@ export type EventType =
   | 'scaffolder.team.assembled'
   // ─── PO Agent events (migration 0019) ─────────────────────────────────────
   | 'po-agent.decomposition.complete'
-  // ─── EA Agent events (BUCKET-003) ─────────────────────────────────────────
+  // ─── EA Agent events (BUCKET-003 + ARCH-006) ─────────────────────────────
   | 'ea-agent.classification.complete'
+  | 'ea-agent.akg.complete'
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   | 'ba-agent.enrichment.complete'
   // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
@@ -502,8 +503,9 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'scaffolder.team.assembled': 'info',
   // ─── PO Agent events (migration 0019) ─────────────────────────────────────
   'po-agent.decomposition.complete': 'info',
-  // ─── EA Agent events (BUCKET-003) ─────────────────────────────────────────
+  // ─── EA Agent events (BUCKET-003 + ARCH-006) ─────────────────────────────
   'ea-agent.classification.complete': 'info',
+  'ea-agent.akg.complete': 'info',
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   'ba-agent.enrichment.complete': 'info',
   // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
