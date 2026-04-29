@@ -1,0 +1,46 @@
+name: fix-it sharded tests (meta)
+
+# Meta workflow: validates the FIX-012 sharded-tests workflow file
+# itself + the aggregator script. Runs offline on every PR that
+# touches the workflow or the helper scripts. Cheap (<10s).
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/fix-it-sharded-tests.yml'
+      - '.github/workflows/fix-it-sharded-tests-meta.yml'
+      - 'scripts/fix-it/**'
+
+concurrency:
+  group: fix-it-sharded-meta-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: validate workflow + aggregator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install python yaml (for thorough YAML check)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml
+
+      - name: Validate workflow YAML structure
+        run: node scripts/fix-it/validate-workflow.test.mjs
+
+      - name: Aggregator unit tests
+        run: node scripts/fix-it/aggregate-shard-results.test.mjs
+
+      - name: Lint shell scripts
+        run: |
+          if command -v shellcheck >/dev/null; then
+            shellcheck scripts/fix-it/*.sh
+          else
+            echo "shellcheck not installed; skipping"
+          fi
