@@ -1,10 +1,20 @@
 /**
  * Pipeline-stage advancement helper.
  *
- * Phase 1 advances every prompt through this canonical sequence:
+ * Phase 1 + Phase A advance every prompt through this canonical sequence:
  *
- *   ingested → scaffolded → po_decomposed → ba_enriched → bucket_placed
- *   → ready_for_pickup
+ *   ingested → scaffolded → po_decomposed → ea_classified → ba_enriched
+ *   → validated → test_designed → bucket_placed → ready_for_pickup
+ *
+ * Stage owners:
+ *   - ingested, scaffolded         — scaffolder agent (entry point)
+ *   - po_decomposed                — PO agent
+ *   - ea_classified                — EA agent (BUCKET-003)
+ *   - ba_enriched                  — BA agent (cross-agent collab round)
+ *   - validated                    — Story Validator agent (VAL-### track)
+ *   - test_designed                — Testing agent (TEST-### track)
+ *   - bucket_placed,
+ *     ready_for_pickup             — Task Manager (BUCKET-### track)
  *
  * Each transition is recorded in `prompt_pipeline_stages` (one row per
  * advancement, with epoch-ms `enteredAt`) and reflected on
@@ -27,16 +37,40 @@ export const PIPELINE_STAGE_ORDER = [
   // BUCKET-003: EA classifies tech / quality / risk / effort between PO and BA.
   'ea_classified',
   'ba_enriched',
-  // BUCKET-003 / pipeline refresh: Validator + Testing slot between BA and
-  // Task Manager. Their stages live in the enum but the BUCKET-### work
-  // doesn'''t emit them — the Validator and Testing tracks own those.
+  // VAL-### track: Story Validator gate. Story enters here once BA enrichment
+  // completes. Pass → advances to test_designed. Fail → re-invokes BA with
+  // feedback (capped at VERDICT_THRESHOLDS.maxAttempts attempts).
   'validated',
+  // TEST-### track: Testing Agent generates concrete test cases from the
+  // validated ticket. Stage owned by the testing-agent track; declared here
+  // so the order is canonical and the Validator can advance to it.
   'test_designed',
   'bucket_placed',
   'ready_for_pickup',
 ] as const;
 
 export type PipelineStage = (typeof PIPELINE_STAGE_ORDER)[number];
+
+/**
+ * Canonical stage names exposed as named constants so call-sites avoid
+ * string-typo bugs (a typo to `'validatd'` in the validator agent would
+ * silently mis-record a stage). Validator-emitting code should import
+ * `STAGE_VALIDATED` rather than the string literal.
+ */
+export const STAGE_VALIDATED = 'validated' satisfies PipelineStage;
+export const STAGE_TEST_DESIGNED = 'test_designed' satisfies PipelineStage;
+export const STAGE_BA_ENRICHED = 'ba_enriched' satisfies PipelineStage;
+export const STAGE_BUCKET_PLACED = 'bucket_placed' satisfies PipelineStage;
+export const STAGE_READY_FOR_PICKUP = 'ready_for_pickup' satisfies PipelineStage;
+
+/**
+ * Returns the index of `stage` in PIPELINE_STAGE_ORDER. Useful for sentinel
+ * checks like "this prompt has already passed BA" or "Validator must not
+ * advance a prompt that's still pre-BA".
+ */
+export function stageIndex(stage: PipelineStage): number {
+  return (PIPELINE_STAGE_ORDER as readonly string[]).indexOf(stage);
+}
 
 export interface AdvanceStageInput {
   promptId: string;
