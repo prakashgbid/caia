@@ -1,0 +1,133 @@
+name: auto-pr
+
+# Hygiene watchdog: every 30 minutes, scan all live branches matching
+# feature/*, fix/*, chore/* and open a draft PR against develop for any
+# branch that has unique commits ahead of develop AND no open PR.
+#
+# Keeps work visible — no branch silently accumulates commits without a
+# tracking PR. The branch author flips the draft to "ready for review"
+# via `pnpm flow ready` when the work is complete.
+#
+# Reference: feedback_git_flow_enforced.md, caia/docs/git-flow.md.
+
+on:
+  schedule:
+    # Every 30 minutes.
+    - cron: '*/30 * * * *'
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'chore/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: auto-pr
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: Open draft PRs for orphaned branches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # ensure we can read all branches.
+
+      - name: Fetch all remote branches
+        run: |
+          git fetch origin --prune
+          git for-each-ref refs/remotes/origin --format='%(refname:short)' | head -300
+
+      - name: Open draft PRs for unattended branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Build the set of branches that already have an open PR.
+          OPEN_PRS=$(gh pr list --state open --base develop --limit 500 --json headRefName --jq '.[].headRefName' | sort -u)
+          echo "branches with open PRs to develop:"
+          echo "${OPEN_PRS}" | sed 's/^/  - /'
+
+          declare -A HAS_PR
+          while IFS= read -r ref; do
+            [[ -n "${ref}" ]] && HAS_PR["${ref}"]=1
+          done <<< "${OPEN_PRS}"
+
+          # Scan candidates: feature/*, fix/*, chore/* on origin.
+          CANDIDATES=$(git for-each-ref refs/remotes/origin \
+            --format='%(refname:short)' \
+            | sed 's|^origin/||' \
+            | grep -E '^(feature|fix|chore)/' || true)
+
+          if [[ -z "${CANDIDATES}" ]]; then
+            echo "no candidate branches found."
+            exit 0
+          fi
+
+          OPENED=0
+          while IFS= read -r branch; do
+            [[ -z "${branch}" ]] && continue
+
+            # Skip if already has open PR to develop.
+            if [[ -n "${HAS_PR[${branch}]:-}" ]]; then
+              echo "skip ${branch}: open PR already exists."
+              continue
+            fi
+
+            # Has unique commits ahead of develop?
+            AHEAD=$(git rev-list --count "origin/develop..origin/${branch}" 2>/dev/null || echo 0)
+            if [[ "${AHEAD}" == "0" ]]; then
+              echo "skip ${branch}: no commits ahead of develop."
+              continue
+            fi
+
+            # Confirm any non-draft PR (closed or merged) doesn't exist either —
+            # we don't want to spam reopens. Only open if NO PR at all targets
+            # develop from this branch.
+            ANY_PR=$(gh pr list --state all --base develop --head "${branch}" --limit 1 --json number --jq '.[].number' || true)
+            if [[ -n "${ANY_PR}" ]]; then
+              echo "skip ${branch}: a PR already exists (state=all)."
+              continue
+            fi
+
+            COMMITS=$(git log "origin/develop..origin/${branch}" --pretty=format:'- %h %s' | head -20)
+            BODY=$(cat <<EOF
+**Auto-opened by the hygiene watchdog** (\`.github/workflows/auto-pr.yml\`).
+
+This branch has ${AHEAD} commit(s) ahead of \`develop\` but no open PR. The watchdog opens a draft PR so the work stays visible.
+
+## Commits
+
+${COMMITS}
+
+## Next steps
+- If the work is complete: \`pnpm flow ready\` to flip this PR from draft to ready-for-review (CI runs, squash-merge auto-fires when green).
+- If abandoned: rename to \`backup/<reason>\` via \`pnpm flow archive <reason>\` (the branch is preserved, this PR auto-closes).
+
+Reference: \`caia/docs/git-flow.md\`.
+EOF
+)
+            echo "→ opening draft PR for ${branch} (${AHEAD} commits ahead)"
+            gh pr create \
+              --draft \
+              --base develop \
+              --head "${branch}" \
+              --title "[draft] ${branch}" \
+              --body "${BODY}" || {
+                echo "::warning::failed to open draft PR for ${branch} — continuing."
+                continue
+              }
+            OPENED=$((OPENED + 1))
+          done <<< "${CANDIDATES}"
+
+          echo
+          echo "Opened ${OPENED} draft PR(s)."
