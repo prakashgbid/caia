@@ -307,7 +307,10 @@ export const AGENT_SECTION_RULES: readonly AgentSectionRule[] = [
       'Test coverage strategy: unit and integration test paths, target coverage. Used by Testing ' +
       'Agent (test design) and Test Runner Agent (execution).',
     trigger: { always: true },
-    minWords: 20,
+    // Testing sections are path-heavy by nature (file paths count as one
+    // whitespace-separated word each), so the minimum is intentionally low.
+    // ≥3 path-like entries plus the contributedBy field comfortably hit it.
+    minWords: 5,
     forbidSnippets: true,
     runContentRelevance: true,
     severityOnFail: 'soft',
