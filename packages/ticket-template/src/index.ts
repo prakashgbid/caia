@@ -55,3 +55,28 @@ export type { ValidationError, ValidationResult } from './validate';
 
 export { buildDraftTicket } from './build';
 export type { DraftTicketInput } from './build';
+
+// VAL-001 — validation rubric for the Story Validator Agent.
+export {
+  RUBRIC_VERSION,
+  UNIVERSAL_FORBIDDEN_SNIPPETS,
+  TOP_LEVEL_SECTION_RULES,
+  AGENT_SECTION_RULES,
+  AC_ITEM_RULES,
+  CROSS_SECTION_CONSISTENCY_PROMPT_SEED,
+  COMPLETENESS_GESTALT_PROMPT_SEED,
+  VERDICT_THRESHOLDS,
+  SCORE_WEIGHTS,
+  buildContentRelevancePrompt,
+  isSectionRequired,
+  countWordsInValue,
+  findForbiddenSnippets,
+  concatStrings,
+} from './validation-rubric';
+export type {
+  RubricVersion,
+  RubricSeverity,
+  TopLevelSectionRule,
+  AgentSectionRule,
+  SectionTrigger,
+} from './validation-rubric';
