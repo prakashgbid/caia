@@ -21,6 +21,24 @@ export function getDb(dbUrl?: string): Db {
   sqlite.pragma('foreign_keys = ON');
   _sqlite = sqlite;
   _db = drizzle(sqlite, { schema });
+
+  // FREG-002: load sqlite-vec + bootstrap virtual tables for the
+  // feature_registry. Failure is non-fatal — the orchestrator can boot
+  // without the registry; the PO Agent will degrade to lifecycle='new'
+  // for every story until the bootstrap succeeds. We log + continue.
+  try {
+    // Lazy require so test-only code paths that don't have the
+    // workspace dep wired (or are run in environments without the
+    // sqlite-vec native blob) keep working.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { bootstrapVectorTables } = require('@chiefaia/feature-registry') as typeof import('@chiefaia/feature-registry');
+    bootstrapVectorTables(sqlite);
+  } catch (err) {
+    // Use console.warn for compatibility with the orchestrator's
+    // existing logger-shim pattern (see po-agent.ts).
+    console.warn('[feature-registry] sqlite-vec bootstrap skipped:', (err as Error).message);
+  }
+
   return _db;
 }
 

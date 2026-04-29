@@ -268,22 +268,28 @@ export async function runScaffolder(
 
     poChain
       .then(() => {
-        // BUCKET-003: EA Agent runs between PO and BA — assigns techSubDomains,
-        // qualityTags, risk, effort, blockedBy, claims to every story.
+        // ARCH-006 (2026-04-28): BA runs first (cross-agent collab + ticket
+        // enrichment), THEN EA runs second (with full functional context +
+        // AKG queries → architecturalInstructions[]). The reverse of the
+        // legacy BUCKET-003 order.
+        if (agentsToActivate.includes('ba-agent')) {
+          return import('./ba-agent')
+            .then(({ runBAAgent }) =>
+              runBAAgent({ promptId, correlationId }, db),
+            )
+            .catch((err: unknown) => logger.warn({ err }, 'BA Agent failed'));
+        }
+      })
+      .then(() => {
+        // EA runs after BA so it can read the enriched ticket + acceptance
+        // criteria, query the AKG by tech_sub_domain, and produce concrete
+        // per-domain architecturalInstructions[].
         if (agentsToActivate.includes('ea-agent') || agentsToActivate.includes('ba-agent')) {
           return import('./ea-agent')
             .then(({ runEAAgent }) =>
               runEAAgent({ promptId, correlationId }, db),
             )
             .catch((err: unknown) => logger.warn({ err }, 'EA Agent failed'));
-        }
-      })
-      .then(() => {
-        if (agentsToActivate.includes('ba-agent')) {
-          return import('./ba-agent')
-            .then(({ runBAAgent }) =>
-              runBAAgent({ promptId, correlationId }, db),
-            );
         }
       })
       .then(() => {

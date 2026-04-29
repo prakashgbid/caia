@@ -2,7 +2,7 @@
  * @chiefaia/feature-registry — public exports
  *
  * FREG-001: schema + dedup key.
- * FREG-002: storage layer (sqlite-vec).
+ * FREG-002: storage layer (sqlite-vec + FTS5) + EmbeddingClient.
  * FREG-003: story.completed event subscriber.
  * FREG-004: backfill script.
  * FREG-005: hybrid search API.
@@ -35,3 +35,27 @@ export type {
 
 export { computeDedupKey } from './dedup-key';
 export type { DedupKeyInput } from './dedup-key';
+
+export {
+  bootstrapVecTable,
+  bootstrapVectorTables,
+  upsertRegistryRow,
+  buildFtsText,
+  queryDense,
+  querySparse,
+} from './storage';
+export type { DenseHit, SparseHit, QueryOpts, VecTableOpts } from './storage';
+
+export {
+  OllamaEmbeddingClient,
+  StubEmbeddingClient,
+  EmbedderUnavailableError,
+} from './embedding-client';
+export type {
+  EmbeddingClient,
+  EmbedResult,
+  OllamaClientOpts,
+} from './embedding-client';
+
+export { search } from './search';
+export type { SearchOpts, SearchClientDeps } from './search';

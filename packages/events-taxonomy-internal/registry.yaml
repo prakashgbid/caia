@@ -52,6 +52,38 @@ events:
     actor: [user, api]
     payload: [story_id]
 
+  # FREG-003 — story completion → feature_registry write hook.
+  # Fired when a story reaches its terminal verified/done state. The
+  # FeatureRegistryWriter subscriber catches this, synthesizes a registry
+  # row, embeds the description via Ollama, and upserts. Until Phase 2
+  # actually ships stories, the only emitter is the API endpoint that
+  # PATCHes a story's status to verified.
+  - type: story.completed
+    severity: info
+    actor: [executor, api, worker]
+    payload: [story_id, project_slug, status, completed_at]
+
+  # FREG-003 — observability for registry writes (story.completed → upsert).
+  - type: feature.registry.upserted
+    severity: info
+    actor: [feature-registry-writer]
+    payload: [feature_id, project, source, story_id, dedup_key, embedding_model, latency_ms]
+
+  # FREG-006 — observability for the PO Agent's lifecycle classification
+  # when the top match falls in the 0.78-0.85 grey zone (PO sets enhance
+  # but flags for human/BA review).
+  - type: feature.classification.uncertain
+    severity: warning
+    actor: [po-agent]
+    payload: [story_id, top_match_id, top_score, threshold_used, project]
+
+  # FREG-006 — observability for the PO Agent's lifecycle classification
+  # when the registry/embedder is unavailable (PO defaults to lifecycle='new').
+  - type: feature.classification.skipped
+    severity: warning
+    actor: [po-agent]
+    payload: [story_id, reason]
+
   # Task events
   - type: task.created
     severity: info
@@ -487,3 +519,47 @@ events:
     severity: info
     actor: [story-validator]
     payload: [storyId, promptId, correlationId, score, judgeProvider]
+
+  # Phase 2 worker-pool lifecycle (TASKMGR-002)
+  - type: worker.registered
+    severity: info
+    actor: [worker]
+    payload: [workerId, kind, capabilities, registeredAt]
+
+  - type: worker.heartbeat
+    severity: debug
+    actor: [worker]
+    payload: [workerId, status, currentStoryId, ts]
+
+  - type: worker.released
+    severity: info
+    actor: [worker]
+    payload: [workerId, lastStoryId, releasedAt, reason]
+
+  - type: worker.crashed
+    severity: error
+    actor: [task-scheduler]
+    payload: [workerId, lastStoryId, error, lastHeartbeatAt, ts]
+
+  # Phase 2 task assignment (TASKMGR-003)
+  - type: task.assigned
+    severity: info
+    actor: [task-scheduler]
+    payload: [storyId, workerId, bucketId, assignedAt, correlationId]
+
+  # Phase 2 backpressure (TASKMGR-004)
+  - type: task-scheduler.backpressure.engaged
+    severity: warning
+    actor: [task-scheduler]
+    payload: [bucketId, queueDepth, ceiling, ts]
+
+  - type: task-scheduler.backpressure.released
+    severity: info
+    actor: [task-scheduler]
+    payload: [bucketId, queueDepth, ts]
+
+  # Phase 2 bucket health metrics (TASKMGR-005)
+  - type: task-scheduler.bucket.health
+    severity: debug
+    actor: [task-scheduler]
+    payload: [bucketId, queueDepth, throughputPerHour, oldestReadyAgeS, workersAssigned, engaged, ts]
