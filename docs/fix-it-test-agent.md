@@ -87,7 +87,7 @@ change needed.
 - [x] Operator runbook (this file).
 - [x] FIX-002: Real test code generator (`TemplateTestCodeGenerator`)
       with layer dispatch and idempotency, plumbed into `bootstrap()`.
-- [ ] FIX-003: Real test runner (replaces `StubTestRunner`).
+- [x] FIX-003: Real test runner (`SubprocessTestRunner` over an injectable `CommandExecutor`).
 - [ ] FIX-004: Real failure diagnoser (replaces `StubFailureDiagnoser`).
 - [ ] FIX-005: Real Coding Agent IPC client (replaces
       `StubCodingIpcInvoker`; coordinates with CODING-007).
