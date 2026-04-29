@@ -29,13 +29,28 @@ interface BucketRowOut {
   id: string;
   kind: string;
   domainSlug: string | null;
+  // BUCKET-001/004 — multi-bucket placement key + level metadata.
+  projectSlug: string | null;
+  techSubDomain: string | null;
+  levels: string[][];
   sequenceIndex: number | null;
   status: string;
   promptId: string;
   createdAt: number;
   ticketCount: number;
   validTicketCount: number;
-  preview: Array<{ id: string; title: string; status: string; templateValidationStatus: string }>;
+  preview: Array<{
+    id: string;
+    title: string;
+    status: string;
+    templateValidationStatus: string;
+    // BUCKET-001/003 — surface the per-story taxonomy on the card.
+    projectSlug: string | null;
+    techSubDomainPrimary: string | null;
+    lifecycle: string | null;
+    risk: string | null;
+    priorityBucket: string | null;
+  }>;
 }
 
 // @no-events — read-only routes
@@ -51,10 +66,16 @@ export function registerBucketsRoutes(app: Hono, db: Db): void {
 
     let rows = db.select().from(taskBuckets).orderBy(desc(taskBuckets.createdAt)).all();
 
+    const project = c.req.query('project');
+    const techSubDomain = c.req.query('techSubDomain');
+
     if (promptId) rows = rows.filter((r) => r.promptId === promptId);
     if (domain) rows = rows.filter((r) => r.domainSlug === domain);
     if (kind) rows = rows.filter((r) => r.kind === kind);
     if (status) rows = rows.filter((r) => r.status === status);
+    // BUCKET-005 filters
+    if (project) rows = rows.filter((r) => r.projectSlug === project);
+    if (techSubDomain) rows = rows.filter((r) => r.techSubDomain === techSubDomain);
 
     const cap = limit ? Math.min(parseInt(limit, 10) || 200, 500) : 200;
     rows = rows.slice(0, cap);
@@ -69,6 +90,12 @@ export function registerBucketsRoutes(app: Hono, db: Db): void {
         bucketId: stories.bucketId,
         ordinal: stories.ordinal,
         templateValidationStatus: stories.templateValidationStatus,
+        // BUCKET-001/003 fields surfaced on the bucket card.
+        projectSlug: stories.projectSlug,
+        techSubDomainPrimary: stories.techSubDomainPrimary,
+        lifecycle: stories.lifecycle,
+        risk: stories.risk,
+        priorityBucket: stories.priorityBucket,
       })
       .from(stories)
       .all();
@@ -85,10 +112,22 @@ export function registerBucketsRoutes(app: Hono, db: Db): void {
     const out: BucketRowOut[] = rows.map((b) => {
       const linked = (storiesByBucket.get(b.id) ?? []).slice().sort((a, z) => a.ordinal - z.ordinal);
       const valid = linked.filter((s) => s.templateValidationStatus === 'valid').length;
+      let levels: string[][] = [];
+      try {
+        const parsed = JSON.parse(b.levelsJson ?? '[]');
+        if (Array.isArray(parsed)) {
+          levels = parsed.filter((lvl): lvl is string[] => Array.isArray(lvl));
+        }
+      } catch {
+        /* malformed levelsJson treated as no levels */
+      }
       return {
         id: b.id,
         kind: b.kind,
         domainSlug: b.domainSlug,
+        projectSlug: b.projectSlug,
+        techSubDomain: b.techSubDomain,
+        levels,
         sequenceIndex: b.sequenceIndex,
         status: b.status,
         promptId: b.promptId,
@@ -100,6 +139,11 @@ export function registerBucketsRoutes(app: Hono, db: Db): void {
           title: s.title,
           status: s.status,
           templateValidationStatus: s.templateValidationStatus,
+          projectSlug: s.projectSlug,
+          techSubDomainPrimary: s.techSubDomainPrimary,
+          lifecycle: s.lifecycle,
+          risk: s.risk,
+          priorityBucket: s.priorityBucket,
         })),
       };
     });

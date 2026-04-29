@@ -109,7 +109,11 @@ describe('placeStoriesInBuckets — parallel bucket', () => {
     }
   });
 
-  it('places same-domain dependents into the parallel bucket (no cross-domain edge)', () => {
+  // BUCKET-004 (proposal §9.2): same-domain dependents now ALSO go to a
+  // sequential bucket (keyed on project + techSubDomain). The fragmenter
+  // computes level batches inside; the placer no longer collapses same-
+  // domain chains into the parallel bucket.
+  it('places same-domain dependents into the (project, tech) sequential bucket', () => {
     const db = createTestDb();
     seedPrompt(db, 'prm_same');
     seedStory(db, { id: 's1', promptId: 'prm_same' });
@@ -123,12 +127,13 @@ describe('placeStoriesInBuckets — parallel bucket', () => {
       { promptId: 'prm_same', correlationId: 'cor_same' },
       db,
     );
-    expect(result.sequentialBucketsCreated).toBe(0);
-    expect(result.parallelBucketSize).toBe(3);
-    for (const p of result.placements) {
-      expect(p.bucketKind).toBe('parallel');
-      expect(p.bucketId).toBe('bkt_par_prm_same');
-    }
+    // s1 has no blockers -> parallel bucket; s2/s3 do -> sequential.
+    expect(result.parallelBucketSize).toBe(1);
+    expect(result.sequentialBucketsCreated).toBe(1);
+    const seqPlacements = result.placements.filter((p) => p.bucketKind === 'sequential');
+    expect(seqPlacements).toHaveLength(2);
+    // All sequential members share the same (project=unassigned, tech=auth) bucket.
+    expect(new Set(seqPlacements.map((p) => p.bucketId)).size).toBe(1);
   });
 });
 
@@ -153,7 +158,7 @@ describe('placeStoriesInBuckets — sequential bucket', () => {
     const uiPlacement = result.placements.find((p) => p.storyId === 'ui_a')!;
     expect(uiPlacement.bucketKind).toBe('sequential');
     expect(uiPlacement.domainSlug).toBe('ui-frontend');
-    expect(uiPlacement.bucketId).toBe('bkt_seq_ui-frontend_000');
+    expect(uiPlacement.bucketId).toBe('bkt_seq_unassigned_ui-frontend_000');
   });
 
   it('partitions cross-domain dependents into separate sequential buckets', () => {

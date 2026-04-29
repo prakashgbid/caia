@@ -23,10 +23,13 @@ export type EventActor =
   | 'secrets-broker'
   | 'scaffolder'
   | 'po-agent'
+  | 'ea-agent'
   | 'ba-agent'
   | 'task-scheduler'
   | 'testing-agent'
-  | 'release-agent';
+  | 'release-agent'
+  | 'story-validator'
+  | 'feature-registry-writer';
 
 /** Canonical envelope for every event emitted through the bus */
 export interface ConductorEvent {
@@ -68,6 +71,41 @@ export interface StoryCreatedPayload { story_id: string; title: string; kind: st
 export interface StoryUpdatedPayload { story_id: string; fields_changed: string[] }
 export interface StoryStatusChangedPayload { story_id: string; from_status: string; to_status: string }
 export interface StoryDeletedPayload { story_id: string }
+
+// FREG-003 — story completion + feature_registry events
+export interface StoryCompletedPayload {
+  story_id: string;
+  project_slug?: string;
+  /** Terminal status — 'verified' | 'done' | 'partial'. */
+  status: string;
+  /** epoch ms */
+  completed_at: number;
+}
+
+export interface FeatureRegistryUpsertedPayload {
+  feature_id: string;
+  project: string;
+  /** 'story_completed' | 'backfill_codebase' | 'backfill_stories' | 'manual' */
+  source: string;
+  story_id?: string;
+  dedup_key: string;
+  embedding_model: string;
+  latency_ms: number;
+}
+
+export interface FeatureClassificationUncertainPayload {
+  story_id: string;
+  top_match_id: string;
+  top_score: number;
+  threshold_used: number;
+  project?: string;
+}
+
+export interface FeatureClassificationSkippedPayload {
+  story_id: string;
+  /** 'embedder_unavailable' | 'registry_empty' | 'registry_disabled' */
+  reason: string;
+}
 
 // ─── Task ────────────────────────────────────────────────────────────────────
 
@@ -231,6 +269,19 @@ export interface POAgentDecompositionCompletePayload {
   primaryDomain: string;
 }
 
+// ─── EA Agent (BUCKET-003) ───────────────────────────────────────────────────
+
+export interface EAAgentClassificationCompletePayload {
+  promptId: string;
+  correlationId: string;
+  storiesClassified: number;
+  techSubDomainsAssigned: number;
+  qualityTagsAssigned: number;
+  blockedByMarkersFound: number;
+  storiesWithCriticalRisk: number;
+  storiesRequiringSplit: number;
+}
+
 // ─── BA Agent (migration 0018) ────────────────────────────────────────────────
 
 export interface BAAgentEnrichmentCompletePayload {
@@ -275,12 +326,52 @@ export interface ReleaseAgentReportReadyPayload {
   blockers: string[];
 }
 
+// ─── Story-driven testing framework — Phase A (TEST-003) ─────────────────────
+
+export interface TestCasesGeneratedPayload {
+  storyId: string;
+  promptId: string;
+  correlationId: string;
+  totalCases: number;
+  categoryCounts: {
+    happy: number;
+    edge: number;
+    error: number;
+    accessibility: number;
+    security: number;
+    performance: number;
+    visual: number;
+  };
+  durationMs: number;
+}
+
+export interface TestCaseAddedPayload {
+  storyId: string;
+  promptId: string;
+  correlationId: string;
+  testCaseId: string;
+  category:
+    | 'happy'
+    | 'edge'
+    | 'error'
+    | 'accessibility'
+    | 'security'
+    | 'performance'
+    | 'visual';
+  layer: 'unit' | 'integration' | 'e2e' | 'visual' | 'accessibility';
+}
+
 // ─── Union type of all valid event types ─────────────────────────────────────
 
 export type EventType =
   | 'pipeline.started' | 'pipeline.completed' | 'pipeline.failed'
   | 'pipeline.decompose_started' | 'pipeline.decompose_completed'
   | 'story.created' | 'story.updated' | 'story.status_changed' | 'story.deleted'
+  // ─── FREG-003 — story completion + feature_registry events ─────────────
+  | 'story.completed'
+  | 'feature.registry.upserted'
+  | 'feature.classification.uncertain'
+  | 'feature.classification.skipped'
   | 'task.created' | 'task.queued' | 'task.started' | 'task.completed'
   | 'task.failed' | 'task.paused' | 'task.resumed' | 'task.status_changed'
   | 'executor.started' | 'executor.stopped' | 'executor.config_changed'
@@ -316,6 +407,8 @@ export type EventType =
   | 'scaffolder.team.assembled'
   // ─── PO Agent events (migration 0019) ─────────────────────────────────────
   | 'po-agent.decomposition.complete'
+  // ─── EA Agent events (BUCKET-003) ─────────────────────────────────────────
+  | 'ea-agent.classification.complete'
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   | 'ba-agent.enrichment.complete'
   // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
@@ -324,6 +417,13 @@ export type EventType =
   | 'task-scheduler.scheduling.complete'
   // ─── Task Scheduler bucket placement (migration 0021) ────────────────────
   | 'task-scheduler.bucket-placed'
+  // ─── BUCKET-004 multi-bucket placer events ───────────────────────────────
+  | 'task-scheduler.cycle-detected'
+  | 'task-scheduler.cross-bucket-blocker'
+  | 'task-scheduler.resource-conflict-warning'
+  | 'task-scheduler.wcc-detected'
+  // ─── BUCKET-007 backfill ────────────────────────────────────────────────
+  | 'story.taxonomy.backfilled'
   // ─── Ticket state machine (migration 0021 ticket_template lifecycle) ────
   | 'ticket.draft'
   | 'ticket.po-decomposed'
@@ -333,6 +433,16 @@ export type EventType =
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   | 'testing-agent.validation.complete'
   | 'release-agent.report.ready'
+  // ─── Story-driven testing framework — Phase A (TEST-003) ──────────────────
+  | 'test.cases_generated'
+  | 'test.case_added'
+  // ─── Story Validator Agent — Phase A (VAL-003) ────────────────────────────
+  | 'story.validation_started'
+  | 'story.validation_passed'
+  | 'story.validation_failed'
+  | 'story.validation_escalated'
+  | 'ticket.validating'
+  | 'ticket.validated'
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
@@ -345,6 +455,11 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'pipeline.started': 'info', 'pipeline.completed': 'info', 'pipeline.failed': 'error',
   'pipeline.decompose_started': 'info', 'pipeline.decompose_completed': 'info',
   'story.created': 'info', 'story.updated': 'info', 'story.status_changed': 'info', 'story.deleted': 'warning',
+  // ─── FREG-003 — story completion + feature_registry events ─────────────
+  'story.completed': 'info',
+  'feature.registry.upserted': 'info',
+  'feature.classification.uncertain': 'warning',
+  'feature.classification.skipped': 'warning',
   'task.created': 'info', 'task.queued': 'info', 'task.started': 'info', 'task.completed': 'info',
   'task.failed': 'error', 'task.paused': 'warning', 'task.resumed': 'info', 'task.status_changed': 'info',
   'executor.started': 'info', 'executor.stopped': 'info', 'executor.config_changed': 'info',
@@ -387,6 +502,8 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'scaffolder.team.assembled': 'info',
   // ─── PO Agent events (migration 0019) ─────────────────────────────────────
   'po-agent.decomposition.complete': 'info',
+  // ─── EA Agent events (BUCKET-003) ─────────────────────────────────────────
+  'ea-agent.classification.complete': 'info',
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   'ba-agent.enrichment.complete': 'info',
   // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
@@ -395,6 +512,13 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'task-scheduler.scheduling.complete': 'info',
   // ─── Task Scheduler bucket placement (migration 0021) ────────────────────
   'task-scheduler.bucket-placed': 'info',
+  // ─── BUCKET-004 multi-bucket placer events ───────────────────────────────
+  'task-scheduler.cycle-detected': 'error',
+  'task-scheduler.cross-bucket-blocker': 'warning',
+  'task-scheduler.resource-conflict-warning': 'warning',
+  'task-scheduler.wcc-detected': 'info',
+  // ─── BUCKET-007 backfill ────────────────────────────────────────────────
+  'story.taxonomy.backfilled': 'info',
   // ─── Ticket state machine (migration 0021 ticket_template lifecycle) ────
   'ticket.draft': 'info',
   'ticket.po-decomposed': 'info',
@@ -415,6 +539,16 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'artifact.approved': 'info',
   'artifact.rejected': 'warning',
   'artifact.superseded': 'warning',
+  // ─── Story-driven testing framework — Phase A (TEST-003) ──────────────────
+  'test.cases_generated': 'info',
+  'test.case_added': 'info',
+  // ─── Story Validator Agent — Phase A (VAL-003) ────────────────────────────
+  'story.validation_started': 'info',
+  'story.validation_passed': 'info',
+  'story.validation_failed': 'warning',
+  'story.validation_escalated': 'error',
+  'ticket.validating': 'info',
+  'ticket.validated': 'info',
 };
 
 /** All valid event type strings from the registry */

@@ -15,3 +15,12 @@ export {
   type LifecycleLabel,
   type ImpactLabel,
 } from './taxonomy';
+
+// BUCKET-002 — taxonomy classifiers consumed by PO Agent.
+export {
+  classifyProject,
+  classifyBusinessSubDomains,
+  classifyLifecycle,
+  classifyPriority,
+  type ProjectClassification,
+} from './taxonomy-classifier';

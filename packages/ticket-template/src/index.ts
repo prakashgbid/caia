@@ -24,6 +24,12 @@ export {
   // 0025 — input-dependency runtime constants
   INPUT_DEPENDENCY_KINDS,
   INPUT_DEPENDENCY_DECLARERS,
+  // TEST-001 testing framework taxonomy + bounds
+  TEST_CASE_CATEGORIES,
+  TEST_CASE_STATUSES,
+  TEST_CASE_LAYERS,
+  MIN_TEST_CASES,
+  MAX_TEST_CASES,
 } from './schema';
 export type {
   TicketTemplateV1,
@@ -39,6 +45,11 @@ export type {
   InputDependency,
   InputDependencyKind,
   InputDependencyDeclarer,
+  // TEST-001 test case types
+  TestCase,
+  TestCaseCategory,
+  TestCaseStatus,
+  TestCaseLayer,
 } from './schema';
 
 export {

@@ -9,17 +9,17 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import pino from 'pino';
 import { fetchSecret, fetchEnv } from './client.js';
 import { getAuditLog, hashKey } from './events.js';
 import type { RateLimitEntry } from './types.js';
+import { logger } from './logger.js';
 
 const PORT = parseInt(process.env['BROKER_PORT'] ?? '7788', 10);
 const HOST = process.env['BROKER_HOST'] ?? '127.0.0.1';
 const RATE_LIMIT_MAX = parseInt(process.env['BROKER_RATE_LIMIT'] ?? '60', 10);
 const RATE_WINDOW_MS = 60_000;
 
-const log = pino({ name: 'secrets-broker-server', level: process.env['BROKER_LOG_LEVEL'] ?? 'info' });
+const log = logger.child({ component: 'server' });
 const rateLimitMap = new Map<string, RateLimitEntry>();
 
 function getToken(): string {
@@ -113,14 +113,14 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   if (!checkRateLimit(ip)) {
-    log.warn({ ip }, 'rate limit exceeded');
+    log.warn('rate limit exceeded', { ip });
     json(res, 429, { error: 'rate limit exceeded' });
     return;
   }
 
   if (!checkAuth(req)) {
     const dummyHash = hashKey(path);
-    log.warn({ caller_ip: ip, secret_key_hash: dummyHash }, 'access denied — bad token');
+    log.warn('access denied — bad token', { caller_ip: ip, secret_key_hash: dummyHash });
     json(res, 401, { error: 'unauthorized' });
     return;
   }
@@ -175,7 +175,7 @@ export function startServer(port = PORT, host = HOST): Promise<{ port: number; c
   return new Promise((resolve, reject) => {
     const server = createServer((req, res) => {
       handleRequest(req, res).catch(err => {
-        log.error({ err }, 'unhandled request error');
+        log.error('unhandled request error', { err: err instanceof Error ? err.message : String(err) });
         res.writeHead(500);
         res.end(JSON.stringify({ error: 'internal error' }));
       });
@@ -183,7 +183,7 @@ export function startServer(port = PORT, host = HOST): Promise<{ port: number; c
 
     server.once('error', reject);
     server.listen(port, host, () => {
-      log.info({ port, host }, 'secrets-broker server started');
+      log.info('secrets-broker server started', { port, host });
       resolve({
         port,
         close: () => new Promise((r, e) => server.close(err => (err ? e(err) : r()))),
@@ -195,9 +195,9 @@ export function startServer(port = PORT, host = HOST): Promise<{ port: number; c
 // Run directly
 if (process.argv[1]?.includes('server')) {
   startServer().then(({ port }) => {
-    log.info({ port }, 'broker ready');
+    log.info('broker ready', { port });
   }).catch(err => {
-    log.error({ err }, 'failed to start server');
+    log.error('failed to start server', { err: err instanceof Error ? err.message : String(err) });
     process.exit(1);
   });
 }
