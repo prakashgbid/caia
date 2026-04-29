@@ -91,3 +91,11 @@ export {
   sha256,
 } from './extractors';
 export type { ExtractionResult, ExtractorOptions } from './extractors';
+
+// ARCH-003 — drizzle introspect + package scanner.
+export {
+  extractSchemasFromInMemorySource,
+  extractSchemasFromFile,
+  extractMigrationsFromMigrationsDir,
+  extractPackagesFromMonorepo,
+} from './extractors';
