@@ -232,6 +232,13 @@
       "when": 1778300000001,
       "tag": "0033_worker_pool",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1778400000000,
+      "tag": "0034_bucket_health_history",
+      "breakpoints": true
     }
   ]
 }

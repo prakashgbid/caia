@@ -557,3 +557,9 @@ events:
     severity: info
     actor: [task-scheduler]
     payload: [bucketId, queueDepth, ts]
+
+  # Phase 2 bucket health metrics (TASKMGR-005)
+  - type: task-scheduler.bucket.health
+    severity: debug
+    actor: [task-scheduler]
+    payload: [bucketId, queueDepth, throughputPerHour, oldestReadyAgeS, workersAssigned, engaged, ts]
