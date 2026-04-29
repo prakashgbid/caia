@@ -99,3 +99,39 @@ export {
   extractMigrationsFromMigrationsDir,
   extractPackagesFromMonorepo,
 } from './extractors';
+
+// ARCH-004 — storage layer (sqlite-vec + FTS5; reuses FREG infra).
+export {
+  bootstrapVectorTables,
+  buildArtifactFtsText,
+  upsertArtifactRow,
+  upsertEdgeRow,
+  queryDense,
+  querySparse,
+  readArtifactById,
+  readArtifactsByIds,
+  readEdgesFrom,
+  readEdgesTo,
+  recordExtractRun,
+} from './storage';
+export type {
+  BootstrapResult,
+  DenseHit,
+  SparseHit,
+  DenseQueryOpts,
+  SparseQueryOpts,
+  ExtractRunRow,
+} from './storage';
+
+// Re-export the shared embedding client from FREG so AKG callers don't
+// need a second import path. Same Ollama daemon, same model.
+export {
+  OllamaEmbeddingClient,
+  StubEmbeddingClient,
+  EmbedderUnavailableError,
+} from '@chiefaia/feature-registry';
+export type {
+  EmbeddingClient,
+  EmbedResult,
+  OllamaClientOpts,
+} from '@chiefaia/feature-registry';
