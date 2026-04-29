@@ -1179,3 +1179,24 @@ export const workerPool = sqliteTable('worker_pool', {
   index('worker_pool_current_story_idx').on(t.currentStoryId),
   index('worker_pool_heartbeat_idx').on(t.lastHeartbeatAt),
 ]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// bucket_health_history — TASKMGR-005 (migration 0034)
+//
+// Append-only ring-style history table written every 60s by
+// HealthMetricsEmitter. The /workers dashboard renders the last 60
+// entries per bucket as a sparkline so operators can see trends.
+// ─────────────────────────────────────────────────────────────────────────────
+export const bucketHealthHistory = sqliteTable('bucket_health_history', {
+  id: text('id').primaryKey(),
+  bucketId: text('bucket_id').notNull(),
+  ts: integer('ts').notNull(),
+  queueDepth: integer('queue_depth').notNull(),
+  throughputPerHour: real('throughput_per_hour').notNull(),
+  oldestReadyAgeS: integer('oldest_ready_age_s'),
+  workersAssigned: integer('workers_assigned').notNull(),
+  engaged: integer('engaged').notNull().default(0),                     // 0|1
+}, (t) => [
+  index('bhh_bucket_ts_idx').on(t.bucketId, t.ts),
+  index('bhh_ts_idx').on(t.ts),
+]);

@@ -454,6 +454,8 @@ export type EventType =
   // ─── Phase 2 backpressure (TASKMGR-004) ───────────────────────────────────
   | 'task-scheduler.backpressure.engaged'
   | 'task-scheduler.backpressure.released'
+  // ─── Phase 2 bucket health metrics (TASKMGR-005) ──────────────────────────
+  | 'task-scheduler.bucket.health'
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
@@ -571,6 +573,8 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   // ─── Phase 2 backpressure (TASKMGR-004) ───────────────────────────────────
   'task-scheduler.backpressure.engaged': 'warning',
   'task-scheduler.backpressure.released': 'info',
+  // ─── Phase 2 bucket health metrics (TASKMGR-005) ──────────────────────────
+  'task-scheduler.bucket.health': 'debug',
 };
 
 /** All valid event type strings from the registry */
