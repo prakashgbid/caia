@@ -27,3 +27,12 @@ export { extractServicesFromAppsRoot } from './service-extractor';
 
 export type { ExtractionResult, ExtractorOptions } from './ts-morph-types';
 export { sha256 } from './utils';
+
+// ARCH-003 — drizzle introspect + package scanner.
+export {
+  extractSchemasFromInMemorySource,
+  extractSchemasFromFile,
+  extractMigrationsFromMigrationsDir,
+} from './drizzle-extractor';
+
+export { extractPackagesFromMonorepo } from './package-extractor';
