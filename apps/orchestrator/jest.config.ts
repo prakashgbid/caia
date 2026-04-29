@@ -18,6 +18,10 @@ const config: Config = {
     '^@chiefaia/ticket-template$': '<rootDir>/../../packages/ticket-template/src/index.ts',
     '^@chiefaia/logger$': '<rootDir>/../../packages/logger/src/index.ts',
     '^@chiefaia/feature-registry$': '<rootDir>/../../packages/feature-registry/src/index.ts',
+    '^@chiefaia/architecture-registry$': '<rootDir>/../../packages/architecture-registry/src/index.ts',
+    '^@chiefaia/local-llm-router$': '<rootDir>/../../packages/local-llm-router/src/index.ts',
+    '^@chiefaia/local-rag$': '<rootDir>/../../packages/local-rag/src/index.ts',
+    '^@chiefaia/llm-cache$': '<rootDir>/../../packages/llm-cache/src/index.ts',
     // Remap ESM-style `.js` extension imports to `.ts` sources so ts-jest can
     // resolve them without requiring Node ESM module resolution.
     '^(\\.{1,2}/.*)\\.js$': '$1',

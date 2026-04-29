@@ -407,8 +407,9 @@ export type EventType =
   | 'scaffolder.team.assembled'
   // ─── PO Agent events (migration 0019) ─────────────────────────────────────
   | 'po-agent.decomposition.complete'
-  // ─── EA Agent events (BUCKET-003) ─────────────────────────────────────────
+  // ─── EA Agent events (BUCKET-003 + ARCH-006) ─────────────────────────────
   | 'ea-agent.classification.complete'
+  | 'ea-agent.akg.complete'
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   | 'ba-agent.enrichment.complete'
   // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
@@ -443,6 +444,18 @@ export type EventType =
   | 'story.validation_escalated'
   | 'ticket.validating'
   | 'ticket.validated'
+  // ─── Phase 2 worker-pool lifecycle (TASKMGR-002) ──────────────────────────
+  | 'worker.registered'
+  | 'worker.heartbeat'
+  | 'worker.released'
+  | 'worker.crashed'
+  // ─── Phase 2 task assignment (TASKMGR-003) ────────────────────────────────
+  | 'task.assigned'
+  // ─── Phase 2 backpressure (TASKMGR-004) ───────────────────────────────────
+  | 'task-scheduler.backpressure.engaged'
+  | 'task-scheduler.backpressure.released'
+  // ─── Phase 2 bucket health metrics (TASKMGR-005) ──────────────────────────
+  | 'task-scheduler.bucket.health'
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
@@ -502,8 +515,9 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'scaffolder.team.assembled': 'info',
   // ─── PO Agent events (migration 0019) ─────────────────────────────────────
   'po-agent.decomposition.complete': 'info',
-  // ─── EA Agent events (BUCKET-003) ─────────────────────────────────────────
+  // ─── EA Agent events (BUCKET-003 + ARCH-006) ─────────────────────────────
   'ea-agent.classification.complete': 'info',
+  'ea-agent.akg.complete': 'info',
   // ─── BA Agent + Task Scheduler events (migration 0018) ────────────────────
   'ba-agent.enrichment.complete': 'info',
   // ─── BA cross-agent collaboration protocol (migration 0022) ──────────────
@@ -549,6 +563,18 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'story.validation_escalated': 'error',
   'ticket.validating': 'info',
   'ticket.validated': 'info',
+  // ─── Phase 2 worker-pool lifecycle (TASKMGR-002) ──────────────────────────
+  'worker.registered': 'info',
+  'worker.heartbeat': 'debug',
+  'worker.released': 'info',
+  'worker.crashed': 'error',
+  // ─── Phase 2 task assignment (TASKMGR-003) ────────────────────────────────
+  'task.assigned': 'info',
+  // ─── Phase 2 backpressure (TASKMGR-004) ───────────────────────────────────
+  'task-scheduler.backpressure.engaged': 'warning',
+  'task-scheduler.backpressure.released': 'info',
+  // ─── Phase 2 bucket health metrics (TASKMGR-005) ──────────────────────────
+  'task-scheduler.bucket.health': 'debug',
 };
 
 /** All valid event type strings from the registry */

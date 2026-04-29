@@ -14,7 +14,6 @@ export {
   NATURE_VALUES,
   COMPLEXITY_VALUES,
   AGENT_SECTION_KEYS,
-  // BUCKET-001 taxonomy enums + types
   PROJECT_SLUGS,
   LIFECYCLE_VALUES,
   RISK_VALUES,
@@ -22,12 +21,18 @@ export {
   PRIORITY_VALUES,
   QUALITY_TAGS,
   TECH_SUB_DOMAINS,
+  // 0025 — input-dependency runtime constants
+  INPUT_DEPENDENCY_KINDS,
+  INPUT_DEPENDENCY_DECLARERS,
   // TEST-001 testing framework taxonomy + bounds
   TEST_CASE_CATEGORIES,
   TEST_CASE_STATUSES,
   TEST_CASE_LAYERS,
   MIN_TEST_CASES,
   MAX_TEST_CASES,
+  // ARCH-006 architecturalInstructions[] schema
+  ArchitecturalInstructionSchema,
+  ARCH_INSTRUCTION_ACTIONS,
 } from './schema';
 export type {
   TicketTemplateV1,
@@ -39,11 +44,18 @@ export type {
   PriorityValue,
   QualityTag,
   TechSubDomain,
+  // 0025 — input-dependency types
+  InputDependency,
+  InputDependencyKind,
+  InputDependencyDeclarer,
   // TEST-001 test case types
   TestCase,
   TestCaseCategory,
   TestCaseStatus,
   TestCaseLayer,
+  // ARCH-006 architectural-instruction types
+  ArchitecturalInstruction,
+  ArchInstructionAction,
 } from './schema';
 
 export {

@@ -37,13 +37,14 @@ export { computeDedupKey } from './dedup-key';
 export type { DedupKeyInput } from './dedup-key';
 
 export {
+  bootstrapVecTable,
   bootstrapVectorTables,
   upsertRegistryRow,
   buildFtsText,
   queryDense,
   querySparse,
 } from './storage';
-export type { DenseHit, SparseHit, QueryOpts } from './storage';
+export type { DenseHit, SparseHit, QueryOpts, VecTableOpts } from './storage';
 
 export {
   OllamaEmbeddingClient,
@@ -55,3 +56,6 @@ export type {
   EmbedResult,
   OllamaClientOpts,
 } from './embedding-client';
+
+export { search } from './search';
+export type { SearchOpts, SearchClientDeps } from './search';

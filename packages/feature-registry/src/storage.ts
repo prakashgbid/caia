@@ -38,40 +38,71 @@ import {
  * exist. Returns the dim used so callers can assert the registry's
  * embeddingDim matches.
  */
+/**
+ * Generic helper — create a sqlite-vec `vec0` + FTS5 pair scoped to the
+ * given table prefix. Idempotent; safe to call once per process per
+ * connection. Used by both feature_registry (this package) and ARCH-###
+ * (architecture_registry — coordinates with FREG to share infra).
+ *
+ * Created tables:
+ *   <prefix>_vec   — vec0 virtual table; embedding FLOAT[dim]
+ *   <prefix>_fts   — FTS5 virtual table; text column + porter tokenizer
+ *
+ * Returns the dim used + the live sqlite-vec version (proof the
+ * extension is wired correctly).
+ */
+export interface VecTableOpts {
+  /** Prefix for the two virtual tables. Required; no default to prevent collisions. */
+  tablePrefix: string;
+  /** Embedding dimensionality. Must match the EmbeddingClient's modelDim. */
+  dim: number;
+  /** FTS5 tokenizer. Default 'porter' (English-aware stemming). */
+  ftsTokenize?: string;
+}
+
+export function bootstrapVecTable(
+  db: Database.Database,
+  opts: VecTableOpts,
+): { dim: number; vecVersion: string; tablePrefix: string } {
+  sqliteVec.load(db);
+  const versionRow = db.prepare('SELECT vec_version() AS v').get() as { v: string };
+
+  const vecTable = `${opts.tablePrefix}_vec`;
+  const ftsTable = `${opts.tablePrefix}_fts`;
+  const tokenize = opts.ftsTokenize ?? 'porter';
+
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS ${vecTable} USING vec0(
+      id TEXT PRIMARY KEY,
+      embedding FLOAT[${opts.dim}]
+    );
+  `);
+
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS ${ftsTable} USING fts5(
+      id UNINDEXED,
+      text,
+      tokenize = '${tokenize}'
+    );
+  `);
+
+  return { dim: opts.dim, vecVersion: versionRow.v, tablePrefix: opts.tablePrefix };
+}
+
+/**
+ * Feature Registry's vec0 + FTS5 setup. Thin wrapper around
+ * bootstrapVecTable; preserved for backwards compatibility with all
+ * existing FREG callers.
+ */
 export function bootstrapVectorTables(
   db: Database.Database,
   dim: number = DEFAULT_EMBEDDING_DIM,
 ): { dim: number; vecVersion: string } {
-  // Idempotent — sqlite-vec's load() is no-op if already loaded.
-  sqliteVec.load(db);
-
-  // Confirm vec_version() is callable (proves the extension is wired).
-  const versionRow = db.prepare('SELECT vec_version() AS v').get() as { v: string };
-
-  // vec0 virtual table for embeddings.
-  // We use BLOB-style FLOAT[N] storage: a single row per registry id
-  // mirroring feature_registry.id, with a fixed-dim embedding vector.
-  db.exec(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS feature_registry_vec USING vec0(
-      id TEXT PRIMARY KEY,
-      embedding FLOAT[${dim}]
-    );
-  `);
-
-  // FTS5 virtual table for BM25 keyword search. We index a single
-  // `text` column that callers concatenate from name + description +
-  // route_path + component_name + tags so BM25 weights all locator
-  // hints equivalently. `id` is UNINDEXED so it round-trips back to the
-  // main table without participating in the inverted index.
-  db.exec(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS feature_registry_fts USING fts5(
-      id UNINDEXED,
-      text,
-      tokenize = 'porter'
-    );
-  `);
-
-  return { dim, vecVersion: versionRow.v };
+  const { dim: d, vecVersion } = bootstrapVecTable(db, {
+    tablePrefix: 'feature_registry',
+    dim,
+  });
+  return { dim: d, vecVersion };
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -311,7 +342,7 @@ export function querySparse(
   // characters with special meaning (`OR`, `AND`, parens). Each token
   // becomes a prefix term so partial matches still count.
   const sanitized = queryText
-    .replace(/[^\w\s-]/g, ' ')
+    .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
     .filter((t) => t.length > 0)
     .map((t) => `${t}*`)
