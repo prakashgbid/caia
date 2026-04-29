@@ -1,6 +1,6 @@
 {
   "name": "@chiefaia/test-isolation",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Per-test ephemeral SQLite + isolated localhost ports for parallel test runs",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,6 +14,10 @@
     "./sqlite": {
       "import": "./dist/sqlite.js",
       "types": "./dist/sqlite.d.ts"
+    },
+    "./ports": {
+      "import": "./dist/ports.js",
+      "types": "./dist/ports.d.ts"
     }
   },
   "files": [
