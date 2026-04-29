@@ -418,6 +418,10 @@ export const stories = sqliteTable('stories', {
   softDependsOnJson: text('soft_depends_on_json').notNull().default('[]'),
   conflictsWithJson: text('conflicts_with_json').notNull().default('[]'),
   claimsJson: text('claims_json').notNull().default('{}'),
+  // TEST-001 — story-driven testing framework (migration 0026)
+  testCasesJson: text('test_cases_json').notNull().default('[]'),
+  testDesignedAt: integer('test_designed_at'),
+  testDesignStatus: text('test_design_status').notNull().default('pending'), // 'pending'|'designed'|'skipped'|'error'
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -431,6 +435,8 @@ export const stories = sqliteTable('stories', {
   index('story_lifecycle_idx').on(t.lifecycle),
   index('story_risk_idx').on(t.risk),
   index('story_priority_bucket_idx').on(t.priorityBucket),
+  // TEST-001 index (migration 0026)
+  index('story_test_design_status_idx').on(t.testDesignStatus),
 ]);
 
 // story_revisions — append-only history of every story-tree edit

@@ -649,3 +649,230 @@ describe('BUCKET-001 / BUCKET-009 claims block', () => {
     expect(validateTicket(ticket).ok).toBe(false);
   });
 });
+
+// ─── TEST-001 — testCases + testDesign ──────────────────────────────────────
+
+import {
+  TEST_CASE_CATEGORIES,
+  TEST_CASE_LAYERS,
+  TEST_CASE_STATUSES,
+  MAX_TEST_CASES,
+  MIN_TEST_CASES,
+} from './schema';
+
+describe('TEST-001 — test case taxonomy', () => {
+  it('exports the canonical category set', () => {
+    expect(TEST_CASE_CATEGORIES).toEqual([
+      'happy', 'edge', 'error',
+      'accessibility', 'security', 'performance', 'visual',
+    ]);
+  });
+
+  it('exports the canonical layer set', () => {
+    expect(TEST_CASE_LAYERS).toEqual([
+      'unit', 'integration', 'e2e', 'visual', 'accessibility',
+    ]);
+  });
+
+  it('exports the canonical status lifecycle', () => {
+    expect(TEST_CASE_STATUSES).toEqual([
+      'pending', 'running', 'passed', 'failed', 'skipped', 'flaky',
+    ]);
+  });
+
+  it('locks test_cases array bounds', () => {
+    expect(MIN_TEST_CASES).toBe(0);
+    expect(MAX_TEST_CASES).toBe(50);
+  });
+});
+
+const tc1 = {
+  id: 'tc-001',
+  title: 'happy login',
+  category: 'happy' as const,
+  layer: 'e2e' as const,
+  given: 'A registered user is on the /login page',
+  when: 'They submit valid credentials',
+  then: 'They are redirected to /dashboard',
+  selectorHints: ['#email', '#password', 'button[type="submit"]'],
+  mocks: [],
+  required: true,
+  status: 'pending' as const,
+  designedBy: 'testing-agent',
+  designedAt: ts,
+};
+
+const tc2 = {
+  id: 'tc-002',
+  title: 'error on bad password',
+  category: 'error' as const,
+  layer: 'e2e' as const,
+  given: 'A registered user is on the /login page',
+  when: 'They submit a wrong password',
+  then: 'An inline error message appears',
+  selectorHints: ['#error'],
+  mocks: [
+    {
+      method: 'POST' as const,
+      url: '/api/auth/login',
+      status: 401,
+      body: '{"error":"invalid"}',
+    },
+  ],
+  required: true,
+  status: 'pending' as const,
+  designedBy: 'testing-agent',
+  designedAt: ts,
+};
+
+const tc3 = {
+  id: 'tc-003',
+  title: 'login form is keyboard navigable',
+  category: 'accessibility' as const,
+  layer: 'accessibility' as const,
+  given: 'The /login page is loaded',
+  when: 'A user navigates with Tab',
+  then: 'Focus order traverses email → password → submit',
+  selectorHints: [],
+  mocks: [],
+  required: false,
+  status: 'pending' as const,
+  designedBy: 'testing-agent',
+  designedAt: ts,
+};
+
+describe('TEST-001 — testCases array', () => {
+  it('defaults to an empty array on a fresh draft', () => {
+    expect(baseDraft.testCases).toEqual([]);
+    expect(validateTicket(baseDraft).ok).toBe(true);
+  });
+
+  it('accepts a populated testCases array with consistent testDesign', () => {
+    const ticket = {
+      ...baseDraft,
+      testCases: [tc1, tc2, tc3],
+      testDesign: {
+        designedBy: 'testing-agent',
+        designedAt: ts,
+        totalCases: 3,
+        categoryCounts: {
+          happy: 1, edge: 0, error: 1,
+          accessibility: 1, security: 0, performance: 0, visual: 0,
+        },
+        notes: 'Designed from BA enrichment.',
+      },
+    };
+    expect(validateTicket(ticket).ok).toBe(true);
+  });
+
+  it('rejects testDesign.totalCases mismatch', () => {
+    const ticket = {
+      ...baseDraft,
+      testCases: [tc1],
+      testDesign: {
+        designedBy: 'testing-agent',
+        designedAt: ts,
+        totalCases: 5,
+        categoryCounts: {
+          happy: 1, edge: 0, error: 0,
+          accessibility: 0, security: 0, performance: 0, visual: 0,
+        },
+        notes: '',
+      },
+    };
+    const r = validateTicket(ticket);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(
+        r.errors.some((e) => e.path.includes('testDesign') && e.path.includes('totalCases')),
+      ).toBe(true);
+    }
+  });
+
+  it('rejects testDesign.categoryCounts mismatch with actual cases', () => {
+    const ticket = {
+      ...baseDraft,
+      testCases: [tc1, tc2],
+      testDesign: {
+        designedBy: 'testing-agent',
+        designedAt: ts,
+        totalCases: 2,
+        categoryCounts: {
+          happy: 2, edge: 0, error: 0, // wrong: should be happy=1, error=1
+          accessibility: 0, security: 0, performance: 0, visual: 0,
+        },
+        notes: '',
+      },
+    };
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('rejects duplicate test case ids within a ticket', () => {
+    const dup = { ...tc2, id: 'tc-001' };
+    const ticket = { ...baseDraft, testCases: [tc1, dup] };
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('rejects an unknown category enum', () => {
+    const bad = { ...tc1, category: 'mystery' as unknown as typeof tc1.category };
+    const ticket = { ...baseDraft, testCases: [bad] };
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('rejects an unknown status enum', () => {
+    const bad = { ...tc1, status: 'mystery' as unknown as typeof tc1.status };
+    const ticket = { ...baseDraft, testCases: [bad] };
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('rejects a test case missing the given/when/then triple', () => {
+    const bad = { ...tc1, given: '' };
+    const ticket = { ...baseDraft, testCases: [bad] };
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('rejects a mock with an unknown HTTP method', () => {
+    const bad = {
+      ...tc2,
+      mocks: [{ method: 'TRACE' as unknown as 'GET', url: '/x', status: 200, body: '' }],
+    };
+    const ticket = { ...baseDraft, testCases: [bad] };
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('rejects more than MAX_TEST_CASES test cases', () => {
+    const tooMany = Array.from({ length: MAX_TEST_CASES + 1 }, (_, i) => ({
+      ...tc1,
+      id: `tc-${i}`,
+    }));
+    const ticket = { ...baseDraft, testCases: tooMany };
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+
+  it('accepts up to MAX_TEST_CASES test cases', () => {
+    const exactlyMax = Array.from({ length: MAX_TEST_CASES }, (_, i) => ({
+      ...tc1,
+      id: `tc-${i}`,
+    }));
+    const ticket = {
+      ...baseDraft,
+      testCases: exactlyMax,
+      testDesign: {
+        designedBy: 'testing-agent',
+        designedAt: ts,
+        totalCases: MAX_TEST_CASES,
+        categoryCounts: {
+          happy: MAX_TEST_CASES, edge: 0, error: 0,
+          accessibility: 0, security: 0, performance: 0, visual: 0,
+        },
+        notes: '',
+      },
+    };
+    expect(validateTicket(ticket).ok).toBe(true);
+  });
+
+  it('rejects a top-level unknown key (strict mode preserves)', () => {
+    const ticket = { ...baseDraft, surplus: 'no' };
+    expect(validateTicket(ticket).ok).toBe(false);
+  });
+});

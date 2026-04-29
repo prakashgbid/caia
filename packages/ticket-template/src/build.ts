@@ -92,6 +92,7 @@ export function buildDraftTicket(input: DraftTicketInput): TicketTemplateV1 {
       files: input.files ?? [],
     },
     agentSections: {},
+    testCases: [],
     metadata: {
       templateVersion: TICKET_TEMPLATE_VERSION,
       poDecomposedAt: input.poDecomposedAt ?? now,
