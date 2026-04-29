@@ -17,13 +17,9 @@ import { eventBus } from '../events/bus-adapter';
 import { getDb } from '../db/connection';
 import { requirements, stories } from '../db/schema';
 import { advancePipelineStage } from './pipeline-stages';
+import { logger as rootLogger } from '../observability/logger';
 
-// Logger shim — replaced at runtime by the real pino logger if available
-const logger = {
-  warn: (obj: Record<string, unknown>, msg: string) => {
-    console.warn('[po-agent]', msg, obj);
-  },
-};
+const logger = rootLogger.child({ component: 'po-agent' });
 
 export interface POAgentInput {
   promptId: string;
@@ -81,7 +77,7 @@ export async function runPOAgent(
         }).run();
         requirementsCreated++;
       } catch (err) {
-        logger.warn({ err, reqId }, 'PO Agent: requirement insert skipped (may already exist)');
+        logger.warn('requirement insert skipped (may already exist)', { err: err instanceof Error ? err.message : String(err), reqId });
       }
 
       // Create a story row for each story node under this epic
@@ -116,7 +112,7 @@ export async function runPOAgent(
             payload: { storyId: storyDbId, promptId, correlationId, requirementId: reqId },
           });
         } catch (err) {
-          logger.warn({ err, storyDbId }, 'PO Agent: story insert skipped (may already exist)');
+          logger.warn('story insert skipped (may already exist)', { err: err instanceof Error ? err.message : String(err), storyDbId });
         }
       }
     }

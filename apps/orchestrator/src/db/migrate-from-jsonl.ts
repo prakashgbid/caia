@@ -3,6 +3,9 @@ import * as path from 'path';
 import * as os from 'os';
 import type { Db } from './connection';
 import { requirements, tasks, blockers, questions, projects } from './schema';
+import { logger as rootLogger } from '../observability/logger';
+
+const log = rootLogger.child({ component: 'migrate-from-jsonl' });
 import { eq } from 'drizzle-orm';
 
 function inferProjectId(db: Db, opts: {
@@ -118,7 +121,7 @@ export async function migrateFromJsonl(
         migrated++;
       }
     } catch (e) {
-      console.error('Failed to migrate requirements:', e);
+      log.error('failed to migrate requirements', { err: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -158,7 +161,7 @@ export async function migrateFromJsonl(
         migrated++;
       }
     } catch (e) {
-      console.error('Failed to migrate blockers:', e);
+      log.error('failed to migrate blockers', { err: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -195,7 +198,7 @@ export async function migrateFromJsonl(
         migrated++;
       }
     } catch (e) {
-      console.error('Failed to migrate questions:', e);
+      log.error('failed to migrate questions', { err: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -234,7 +237,7 @@ export async function migrateFromJsonl(
         migrated++;
       }
     } catch (e) {
-      console.error('Failed to migrate tasks:', e);
+      log.error('failed to migrate tasks', { err: e instanceof Error ? e.message : String(e) });
     }
   }
 

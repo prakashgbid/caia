@@ -40,6 +40,7 @@
     "ws": "^8.20.0",
     "@chiefaia/event-bus-internal": "workspace:*",
     "@chiefaia/events-taxonomy-internal": "workspace:*",
+    "@chiefaia/logger": "workspace:*",
     "@chiefaia/local-llm-router": "workspace:*",
     "@chiefaia/classifier": "workspace:*",
     "@chiefaia/decomposer": "workspace:*",
