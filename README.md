@@ -50,6 +50,33 @@ pnpm test
 pnpm changeset
 ```
 
+## Contributing
+
+CAIA enforces a strict, mechanically-protected git flow:
+
+```
+feature/<id>-<slug>  →  PR to develop  →  squash-merge  →  branch deleted
+develop              →  release/<date> PR to main       →  merge → tag
+main                 ←  only develop or release/* may merge in
+backup/<reason>      ←  preservation only, never merged
+```
+
+Quickstart:
+
+```bash
+pnpm flow start <id>-<slug>          # cut feature/<id>-<slug> from develop
+# ...edit, commit, push as needed...
+pnpm flow ready                      # push + open PR vs develop
+pnpm flow ship                       # squash-merge when CI green; delete branch
+pnpm flow release --auto             # end-of-day release develop → main
+```
+
+Direct commits/pushes to `main` or `develop` are blocked locally (Husky `.husky/pre-commit` + `.husky/pre-push`) and server-side (GitHub branch protection + the required `gitflow-conformance` check). A daily watchdog (`.github/workflows/hygiene-report.yml`) opens a tracking issue if branches go stale; a 30-minute auto-PR worker (`.github/workflows/auto-pr.yml`) opens drafts for branches that accumulate commits without a PR.
+
+Full operator runbook: **[`docs/git-flow.md`](./docs/git-flow.md)**.
+
+Standing rules: [`agent/memory/feedback_git_flow_enforced.md`](./agent/memory/feedback_git_flow_enforced.md).
+
 ## Sites (separate repos)
 
 Sites stay in their own repos and consume `@chiefaia/*` from npm:
