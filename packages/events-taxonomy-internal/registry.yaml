@@ -540,3 +540,9 @@ events:
     severity: error
     actor: [task-scheduler]
     payload: [workerId, lastStoryId, error, lastHeartbeatAt, ts]
+
+  # Phase 2 task assignment (TASKMGR-003)
+  - type: task.assigned
+    severity: info
+    actor: [task-scheduler]
+    payload: [storyId, workerId, bucketId, assignedAt, correlationId]
