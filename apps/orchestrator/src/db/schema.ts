@@ -446,6 +446,25 @@ export const stories = sqliteTable('stories', {
   // ARCH-006 (migration 0031): EA Agent's per-domain architectural instructions
   architecturalInstructionsJson: text('architectural_instructions_json').notNull().default('[]'),
   eaDecomposedAt: integer('ea_decomposed_at'),
+  // TASKMGR-001 (migration 0032): Phase 2 worker-pool runtime state.
+  // Populated once a story leaves `ready_for_pickup` and enters the worker pool.
+  // assignedWorkerId points at worker_pool.id; codingSessionId is the stable
+  // Claude SDK session id so Fix-It Agent can re-invoke the same warm session
+  // for in-place fixes; worktreePath/featureBranch identify the on-disk state
+  // for the worker; prNumber/prUrl/prState mirror the PR lifecycle so the
+  // dashboard can render without a GitHub round-trip.
+  assignedWorkerId: text('assigned_worker_id'),
+  codingSessionId: text('coding_session_id'),
+  worktreePath: text('worktree_path'),
+  featureBranch: text('feature_branch'),
+  prNumber: integer('pr_number'),
+  prUrl: text('pr_url'),
+  prState: text('pr_state'),                                            // 'draft'|'open'|'merged'|'closed'
+  lastCommitSha: text('last_commit_sha'),
+  codingAttempts: integer('coding_attempts').notNull().default(0),
+  fixAttempts: integer('fix_attempts').notNull().default(0),
+  phase2Status: text('phase2_status'),                                  // 'coding_in_progress'|...|'done'|'escalated'
+  phase2BlockerId: text('phase2_blocker_id'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -471,6 +490,10 @@ export const stories = sqliteTable('stories', {
   index('story_feature_classification_idx').on(t.featureClassification),
   // ARCH-006 index (migration 0031)
   index('story_ea_decomposed_idx').on(t.eaDecomposedAt),
+  // TASKMGR-001 indexes (migration 0032)
+  index('story_assigned_worker_idx').on(t.assignedWorkerId),
+  index('story_phase2_status_idx').on(t.phase2Status),
+  index('story_pr_state_idx').on(t.prState),
 ]);
 
 // story_revisions — append-only history of every story-tree edit
@@ -1114,4 +1137,45 @@ export const archExtractRuns = sqliteTable('arch_extract_runs', {
 }, (t) => [
   index('arch_extract_runs_extractor_idx').on(t.extractor),
   index('arch_extract_runs_started_idx').on(t.startedAt),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// worker_pool — TASKMGR-001 (migration 0033)
+//
+// Durable registry of every Phase 2 worker process (Coding Agent + Fix-It
+// Test Agent). The Task Manager Agent maintains an in-process WorkerPoolRegistry
+// that mirrors this table. Workers self-register on startup, heartbeat every
+// 15s, and emit `worker.released` when finishing a story. Task Manager's
+// stale-detector sweeps every 30s and flips workers to `crashed` when their
+// last_heartbeat_at is older than 60s; the assigned story is requeued.
+//
+// Companion taxonomy:
+//   kind:
+//     'coding'    — Coding Agent worker (apps/worker-coding/)
+//     'fix-it'    — Fix-It Test Agent worker (apps/worker-fix-it/)
+//   status:
+//     'idle'      — registered, no current assignment.
+//     'busy'      — currently working `current_story_id`.
+//     'crashed'   — heartbeat is stale (> 60s); story was requeued.
+//     'released'  — worker explicitly shut down (set on `worker.released`
+//                   for terminal-state workers; useful for debugging).
+//
+//   capabilities is a JSON array of bucket ids the worker is willing to
+//   accept; an empty array means "any bucket" (default).
+// ─────────────────────────────────────────────────────────────────────────────
+export const workerPool = sqliteTable('worker_pool', {
+  id: text('id').primaryKey(),
+  kind: text('kind').notNull(),                                        // 'coding'|'fix-it'
+  capabilitiesJson: text('capabilities_json').notNull().default('[]'),
+  status: text('status').notNull(),                                     // 'idle'|'busy'|'crashed'|'released'
+  currentStoryId: text('current_story_id'),
+  lastHeartbeatAt: integer('last_heartbeat_at').notNull(),
+  registeredAt: integer('registered_at').notNull(),
+  releasedAt: integer('released_at'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+}, (t) => [
+  index('worker_pool_status_idx').on(t.status),
+  index('worker_pool_kind_idx').on(t.kind),
+  index('worker_pool_current_story_idx').on(t.currentStoryId),
+  index('worker_pool_heartbeat_idx').on(t.lastHeartbeatAt),
 ]);
