@@ -418,6 +418,11 @@ export const stories = sqliteTable('stories', {
   softDependsOnJson: text('soft_depends_on_json').notNull().default('[]'),
   conflictsWithJson: text('conflicts_with_json').notNull().default('[]'),
   claimsJson: text('claims_json').notNull().default('{}'),
+  // Migration 0025 — declarative input dependencies. Distinct from
+  // `blockedByJson` (story-to-story ordering): this column lists inputs
+  // the story needs to start, with `satisfiedBy` filled in by EA/BA once
+  // a producing story exists. See `InputDependency` in @chiefaia/ticket-template.
+  inputDependenciesJson: text('input_dependencies_json').notNull().default('[]'),
   // TEST-001 — story-driven testing framework (migration 0026)
   testCasesJson: text('test_cases_json').notNull().default('[]'),
   testDesignedAt: integer('test_designed_at'),
@@ -431,6 +436,35 @@ export const stories = sqliteTable('stories', {
   validationAttempts: integer('validation_attempts').notNull().default(0),
   /** Epoch ms when the last validation run completed (pass or fail). */
   lastValidatedAt: integer('last_validated_at'),
+  // FREG-006 (migration 0029): PO Agent's feature_registry classification.
+  // links_to_json holds an array of feature_registry.id strings for the
+  // matched features. featureClassification reflects the verdict.
+  linksToJson: text('links_to_json').notNull().default('[]'),
+  featureClassification: text('feature_classification'),               // 'enhance'|'ambiguous'|'new'|null
+  featureClassificationScore: real('feature_classification_score'),    // cosine sim of top match
+  featureClassificationAt: integer('feature_classification_at'),       // epoch ms
+  // ARCH-006 (migration 0031): EA Agent's per-domain architectural instructions
+  architecturalInstructionsJson: text('architectural_instructions_json').notNull().default('[]'),
+  eaDecomposedAt: integer('ea_decomposed_at'),
+  // TASKMGR-001 (migration 0032): Phase 2 worker-pool runtime state.
+  // Populated once a story leaves `ready_for_pickup` and enters the worker pool.
+  // assignedWorkerId points at worker_pool.id; codingSessionId is the stable
+  // Claude SDK session id so Fix-It Agent can re-invoke the same warm session
+  // for in-place fixes; worktreePath/featureBranch identify the on-disk state
+  // for the worker; prNumber/prUrl/prState mirror the PR lifecycle so the
+  // dashboard can render without a GitHub round-trip.
+  assignedWorkerId: text('assigned_worker_id'),
+  codingSessionId: text('coding_session_id'),
+  worktreePath: text('worktree_path'),
+  featureBranch: text('feature_branch'),
+  prNumber: integer('pr_number'),
+  prUrl: text('pr_url'),
+  prState: text('pr_state'),                                            // 'draft'|'open'|'merged'|'closed'
+  lastCommitSha: text('last_commit_sha'),
+  codingAttempts: integer('coding_attempts').notNull().default(0),
+  fixAttempts: integer('fix_attempts').notNull().default(0),
+  phase2Status: text('phase2_status'),                                  // 'coding_in_progress'|...|'done'|'escalated'
+  phase2BlockerId: text('phase2_blocker_id'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -444,11 +478,22 @@ export const stories = sqliteTable('stories', {
   index('story_lifecycle_idx').on(t.lifecycle),
   index('story_risk_idx').on(t.risk),
   index('story_priority_bucket_idx').on(t.priorityBucket),
+  // 0025: bundle endpoint reads input_dependencies on every load; scheduler
+  // scans for `satisfied_by IS NULL` to gate routing.
+  index('story_input_deps_idx').on(t.status, t.parentEntityId),
   // TEST-001 index (migration 0026)
   index('story_test_design_status_idx').on(t.testDesignStatus),
   // VAL-003 indexes (migration 0027)
   index('story_validation_status_idx').on(t.validationStatus),
   index('story_validation_attempts_idx').on(t.validationAttempts),
+  // FREG-006 index (migration 0029)
+  index('story_feature_classification_idx').on(t.featureClassification),
+  // ARCH-006 index (migration 0031)
+  index('story_ea_decomposed_idx').on(t.eaDecomposedAt),
+  // TASKMGR-001 indexes (migration 0032)
+  index('story_assigned_worker_idx').on(t.assignedWorkerId),
+  index('story_phase2_status_idx').on(t.phase2Status),
+  index('story_pr_state_idx').on(t.prState),
 ]);
 
 // story_revisions — append-only history of every story-tree edit
@@ -937,4 +982,221 @@ export const taskBuckets = sqliteTable('task_buckets', {
   // BUCKET-001 indexes (migration 0024)
   index('idx_tb_prompt_project_tech').on(t.promptId, t.projectSlug, t.techSubDomain),
   index('idx_tb_project_tech').on(t.projectSlug, t.techSubDomain),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// feature_registry — FREG-001 (migration 0028)
+//
+// Catalog of every shipped feature/route/component/agent. Powers the PO
+// Agent's new-vs-enhance lifecycle classification by way of a hybrid
+// sqlite-vec + FTS5 search. See @chiefaia/feature-registry for the Zod
+// schema, dedup-key helper, and search/write API.
+//
+// Embeddings live in a sibling vec0 virtual table (`feature_registry_vec`)
+// declared in the SQL migration; drizzle doesn't model virtual tables so
+// FREG-002 wires it via raw SQL on top of better-sqlite3.
+// ─────────────────────────────────────────────────────────────────────────────
+export const featureRegistry = sqliteTable('feature_registry', {
+  id: text('id').primaryKey(),
+  project: text('project').notNull(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  routePath: text('route_path'),
+  filePathsJson: text('file_paths_json').notNull().default('[]'),
+  componentName: text('component_name'),
+  apiEndpoint: text('api_endpoint'),
+  dbTablesJson: text('db_tables_json').notNull().default('[]'),
+  agentName: text('agent_name'),
+  shippedAt: integer('shipped_at').notNull(),
+  storyId: text('story_id'),
+  tagsJson: text('tags_json').notNull().default('[]'),
+  embeddingModel: text('embedding_model').notNull().default('nomic-embed-text'),
+  embeddingDim: integer('embedding_dim').notNull().default(768),
+  embeddingVersion: text('embedding_version').notNull().default('v1.5'),
+  source: text('source').notNull(),                       // FEATURE_REGISTRY_SOURCES
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  dedupKey: text('dedup_key').notNull().unique(),         // sha256 of (project,name,locator)
+}, (t) => [
+  index('freg_project_idx').on(t.project),
+  index('freg_shipped_idx').on(t.shippedAt),
+  index('freg_story_idx').on(t.storyId),
+  index('freg_source_idx').on(t.source),
+]);
+
+// feature_registry_search_log — FREG-001 (migration 0028)
+//
+// One row per `registry.search` invocation. Powers FREG-007's "top match
+// queries" + latency dashboards. Cleared on a 30-day TTL by a background
+// sweep (added when the dashboard ships).
+export const featureRegistrySearchLog = sqliteTable('feature_registry_search_log', {
+  id: text('id').primaryKey(),
+  query: text('query').notNull(),
+  project: text('project'),                                // optional restriction
+  classification: text('classification').notNull(),         // 'enhance'|'ambiguous'|'new'
+  topMatchId: text('top_match_id'),                         // feature_registry.id when present
+  topScore: real('top_score'),                              // cosine sim in [0,1]
+  thresholdUsed: real('threshold_used').notNull(),
+  latencyMs: integer('latency_ms').notNull(),
+  embedderTokens: integer('embedder_tokens').notNull().default(0),
+  hitCount: integer('hit_count').notNull().default(0),
+  caller: text('caller').notNull().default('po-agent'),     // 'po-agent'|'manual'|'validator'|...
+  createdAt: integer('created_at').notNull(),
+}, (t) => [
+  index('freg_log_created_idx').on(t.createdAt),
+  index('freg_log_classification_idx').on(t.classification),
+  index('freg_log_caller_idx').on(t.caller),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// arch_artifacts / arch_edges / arch_extract_runs — ARCH-001 (migration 0030)
+//
+// Architecture Knowledge Graph (AKG): structured catalog of every
+// architectural artifact in CAIA + sites — services, APIs, components,
+// themes, plugins, packages, schemas, migrations, integrations, domain
+// modules, observability signals, ADRs — plus the directed dependency
+// edges between them. The EA Agent (ARCH-006) queries this graph by
+// `tech_sub_domain` to produce per-domain technical implementation
+// instructions on every story.
+//
+// See @chiefaia/architecture-registry for the Zod schemas, dedup-key
+// helper, and per-domain query API. Embeddings live in a sibling vec0
+// virtual table (`arch_artifacts_vec`) wired by ARCH-004 — drizzle doesn't
+// model virtual tables so the bootstrap is in TS.
+// ─────────────────────────────────────────────────────────────────────────────
+export const archArtifacts = sqliteTable('arch_artifacts', {
+  id: text('id').primaryKey(),
+  kind: text('kind').notNull(),                       // ARTIFACT_KINDS
+  project: text('project').notNull(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  keySignature: text('key_signature'),
+  filePathsJson: text('file_paths_json').notNull().default('[]'),
+  entryPath: text('entry_path'),
+  routeSignature: text('route_signature'),            // 'GET /api/leaderboard'
+  tableName: text('table_name'),
+  owningService: text('owning_service'),
+  packageName: text('package_name'),
+  designSystemTier: text('design_system_tier'),       // primitive|pattern|feature|page
+  techSubDomainsJson: text('tech_sub_domains_json').notNull().default('[]'),
+  tagsJson: text('tags_json').notNull().default('[]'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+  source: text('source').notNull(),                   // ARCH_REGISTRY_SOURCES
+  contentHash: text('content_hash'),
+  extractedAtCommit: text('extracted_at_commit'),
+  embeddingModel: text('embedding_model').notNull().default('nomic-embed-text'),
+  embeddingDim: integer('embedding_dim').notNull().default(768),
+  embeddingVersion: text('embedding_version').notNull().default('v1.5'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  dedupKey: text('dedup_key').notNull().unique(),
+}, (t) => [
+  index('arch_artifacts_kind_idx').on(t.kind),
+  index('arch_artifacts_project_idx').on(t.project),
+  index('arch_artifacts_kind_project_idx').on(t.kind, t.project),
+  index('arch_artifacts_owning_service_idx').on(t.owningService),
+  index('arch_artifacts_package_idx').on(t.packageName),
+  index('arch_artifacts_route_idx').on(t.routeSignature),
+  index('arch_artifacts_table_idx').on(t.tableName),
+  index('arch_artifacts_source_idx').on(t.source),
+  index('arch_artifacts_updated_idx').on(t.updatedAt),
+]);
+
+export const archEdges = sqliteTable('arch_edges', {
+  id: text('id').primaryKey(),
+  fromId: text('from_id').notNull(),
+  toId: text('to_id').notNull(),
+  relation: text('relation').notNull(),               // EDGE_RELATIONS
+  weight: real('weight').notNull().default(1.0),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+  source: text('source').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  index('arch_edges_from_idx').on(t.fromId),
+  index('arch_edges_to_idx').on(t.toId),
+  index('arch_edges_relation_idx').on(t.relation),
+  index('arch_edges_from_relation_idx').on(t.fromId, t.relation),
+  index('arch_edges_to_relation_idx').on(t.toId, t.relation),
+]);
+
+export const archExtractRuns = sqliteTable('arch_extract_runs', {
+  id: text('id').primaryKey(),
+  extractor: text('extractor').notNull(),             // 'ts-morph'|'drizzle'|'package'|'adr'
+  startedAt: integer('started_at').notNull(),
+  finishedAt: integer('finished_at'),
+  durationMs: integer('duration_ms'),
+  commitSha: text('commit_sha'),
+  artifactsInserted: integer('artifacts_inserted').notNull().default(0),
+  artifactsUpdated: integer('artifacts_updated').notNull().default(0),
+  artifactsUnchanged: integer('artifacts_unchanged').notNull().default(0),
+  edgesInserted: integer('edges_inserted').notNull().default(0),
+  edgesUpdated: integer('edges_updated').notNull().default(0),
+  error: text('error'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+}, (t) => [
+  index('arch_extract_runs_extractor_idx').on(t.extractor),
+  index('arch_extract_runs_started_idx').on(t.startedAt),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// worker_pool — TASKMGR-001 (migration 0033)
+//
+// Durable registry of every Phase 2 worker process (Coding Agent + Fix-It
+// Test Agent). The Task Manager Agent maintains an in-process WorkerPoolRegistry
+// that mirrors this table. Workers self-register on startup, heartbeat every
+// 15s, and emit `worker.released` when finishing a story. Task Manager's
+// stale-detector sweeps every 30s and flips workers to `crashed` when their
+// last_heartbeat_at is older than 60s; the assigned story is requeued.
+//
+// Companion taxonomy:
+//   kind:
+//     'coding'    — Coding Agent worker (apps/worker-coding/)
+//     'fix-it'    — Fix-It Test Agent worker (apps/worker-fix-it/)
+//   status:
+//     'idle'      — registered, no current assignment.
+//     'busy'      — currently working `current_story_id`.
+//     'crashed'   — heartbeat is stale (> 60s); story was requeued.
+//     'released'  — worker explicitly shut down (set on `worker.released`
+//                   for terminal-state workers; useful for debugging).
+//
+//   capabilities is a JSON array of bucket ids the worker is willing to
+//   accept; an empty array means "any bucket" (default).
+// ─────────────────────────────────────────────────────────────────────────────
+export const workerPool = sqliteTable('worker_pool', {
+  id: text('id').primaryKey(),
+  kind: text('kind').notNull(),                                        // 'coding'|'fix-it'
+  capabilitiesJson: text('capabilities_json').notNull().default('[]'),
+  status: text('status').notNull(),                                     // 'idle'|'busy'|'crashed'|'released'
+  currentStoryId: text('current_story_id'),
+  lastHeartbeatAt: integer('last_heartbeat_at').notNull(),
+  registeredAt: integer('registered_at').notNull(),
+  releasedAt: integer('released_at'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+}, (t) => [
+  index('worker_pool_status_idx').on(t.status),
+  index('worker_pool_kind_idx').on(t.kind),
+  index('worker_pool_current_story_idx').on(t.currentStoryId),
+  index('worker_pool_heartbeat_idx').on(t.lastHeartbeatAt),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// bucket_health_history — TASKMGR-005 (migration 0034)
+//
+// Append-only ring-style history table written every 60s by
+// HealthMetricsEmitter. The /workers dashboard renders the last 60
+// entries per bucket as a sparkline so operators can see trends.
+// ─────────────────────────────────────────────────────────────────────────────
+export const bucketHealthHistory = sqliteTable('bucket_health_history', {
+  id: text('id').primaryKey(),
+  bucketId: text('bucket_id').notNull(),
+  ts: integer('ts').notNull(),
+  queueDepth: integer('queue_depth').notNull(),
+  throughputPerHour: real('throughput_per_hour').notNull(),
+  oldestReadyAgeS: integer('oldest_ready_age_s'),
+  workersAssigned: integer('workers_assigned').notNull(),
+  engaged: integer('engaged').notNull().default(0),                     // 0|1
+}, (t) => [
+  index('bhh_bucket_ts_idx').on(t.bucketId, t.ts),
+  index('bhh_ts_idx').on(t.ts),
 ]);

@@ -10,6 +10,9 @@ import { parseClaudeOutput, cleanupWorktree } from './dispatcher';
 import { checkAndBreak } from './breaker';
 import { publishEvent } from './publish-event';
 import { parseClaudeOutputRich } from './parse-claude-output-rich';
+import { logger } from './logger';
+
+const log = logger.child({ component: 'completion-hook' });
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 
@@ -101,7 +104,7 @@ async function runCompletenessCheck(cwd: string): Promise<boolean> {
       { cwd, timeout: 120_000, stdio: 'pipe' },
     );
     if (result.status !== 0) {
-      console.log(`[executor:hook] gate:publish failed in ${cwd}`);
+      log.warn('gate:publish failed', { cwd });
       return false;
     }
   } catch {
@@ -133,15 +136,26 @@ export async function handleCompletion(
 
   const task = await fetchTask(handle.taskId);
   if (!task) {
-    console.log(`[executor:hook] Task ${handle.taskId} not found — skipping completion hook`);
+    log.warn('task not found — skipping completion hook', {
+      task_id: handle.taskId,
+      entity_type: 'task',
+      entity_id: handle.taskId,
+    });
     return;
   }
 
   const newAttemptCount = task.attemptCount + 1;
 
+  const taskLog = log.child({
+    task_id: handle.taskId,
+    entity_type: 'task',
+    entity_id: handle.taskId,
+    correlation_id: task.rootPromptId ?? undefined,
+  });
+
   if (outcome.kind === 'done' && outcome.exitCode === 0 && parsed.resultOk) {
     // ── Success path ──────────────────────────────────────────────────────────
-    console.log(`[executor:hook] Task ${handle.taskId} completed successfully`);
+    taskLog.info('task completed successfully', { duration_ms: durationMs });
 
     await finalizeExecutorRun(
       handle.executorRunId, parsed.sessionId, 'done',
@@ -225,7 +239,7 @@ export async function handleCompletion(
           }),
         });
         if (!testResponse.ok) {
-          console.log(`[executor:hook] Testing agent trigger returned ${testResponse.status}`);
+          taskLog.warn('testing agent trigger non-ok', { status: testResponse.status });
         }
       } catch { /* non-fatal — testing agent is observability, not critical path */ }
     }
@@ -263,7 +277,7 @@ export async function handleCompletion(
       ? `process died (exit code: ${outcome.exitCode})`
       : `exit code ${(outcome as { exitCode: number }).exitCode}: ${parsed.summary.slice(0, 200)}`;
 
-    console.log(`[executor:hook] Task ${handle.taskId} failed: ${reason}`);
+    taskLog.error('task failed', { reason, attempt_n: newAttemptCount });
 
     await finalizeExecutorRun(
       handle.executorRunId, parsed.sessionId, 'failed',
@@ -302,7 +316,10 @@ export async function handleCompletion(
     });
 
     if (!tripped) {
-      console.log(`[executor:hook] Task ${handle.taskId} re-queued (attempt ${newAttemptCount}/${config.circuitBreakerThreshold})`);
+      taskLog.info('task re-queued', {
+        attempt_n: newAttemptCount,
+        threshold: config.circuitBreakerThreshold,
+      });
     }
 
     // Write timeline event

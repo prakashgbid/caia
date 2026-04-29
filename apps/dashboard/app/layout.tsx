@@ -31,6 +31,7 @@ const NAV_ITEMS = [
   //   subsystem is wired up we can re-add this nav item.
   // { path: '/backups', label: 'Backups', icon: '💾', tabKey: 'backups' },
   { path: '/metrics', label: 'Metrics', icon: '📊', tabKey: 'metrics' },
+  { path: '/registry', label: 'Registry', icon: '🗂️', tabKey: 'registry' },
   { path: '/events', label: 'Events', icon: '⚡', tabKey: 'events' },
   { path: '/builds', label: 'Builds', icon: '🔨', tabKey: 'builds' },
   { path: '/observability/health', label: 'Obs. Health', icon: '👁', tabKey: 'obs_health' },

@@ -359,11 +359,63 @@ export async function runEAAgent(
     }
   }
 
-  // Advance pipeline to ea_classified (between po_decomposed and ba_enriched).
+  // ARCH-006 (2026-04-28): EA's second pass — query the AKG per
+  // techSubDomain on every story and write architecturalInstructions[]
+  // to stories.architectural_instructions_json. We import lazily so EA
+  // unit tests can still run without a live Ollama daemon.
+  let akgStoriesProcessed = 0;
+  let akgInstructionsTotal = 0;
+  try {
+    const { runEaAkgInstructor } = await import('./ea-akg-instructor');
+    const out = await runEaAkgInstructor({ promptId, correlationId }, db);
+    akgStoriesProcessed = out.storiesProcessed;
+    akgInstructionsTotal = out.instructionsTotal;
+    // runEaAkgInstructor advances the pipeline stage itself once it
+    // finishes, so we don't double-advance below.
+    eventBus.publish({
+      type: 'ea-agent.classification.complete',
+      actor: 'ea-agent',
+      correlation_id: correlationId,
+      entity_type: 'prompt',
+      entity_id: promptId,
+      payload: {
+        promptId,
+        correlationId,
+        storiesClassified,
+        techSubDomainsAssigned,
+        qualityTagsAssigned,
+        blockedByMarkersFound,
+        storiesWithCriticalRisk,
+        storiesRequiringSplit,
+        akgStoriesProcessed,
+        akgInstructionsTotal,
+      },
+    });
+    return {
+      promptId,
+      storiesClassified,
+      techSubDomainsAssigned,
+      qualityTagsAssigned,
+      blockedByMarkersFound,
+      storiesWithCriticalRisk,
+      storiesRequiringSplit,
+    };
+  } catch (err) {
+    logger.warn(
+      { err, promptId, correlationId },
+      'EA Agent: AKG instructor failed; continuing with classification-only pass',
+    );
+    // Fall through to the legacy stage-advance path below so the pipeline
+    // still progresses even when the AKG path is broken.
+  }
+
+  // ARCH-006 (2026-04-28): renamed ea_classified → ea_decomposed and moved
+  // EA to run AFTER BA, so it can produce per-domain architectural
+  // instructions grounded in the AKG.
   advancePipelineStage(
     {
       promptId,
-      stage: 'ea_classified',
+      stage: 'ea_decomposed',
       correlationId,
       metadata: {
         storiesClassified,

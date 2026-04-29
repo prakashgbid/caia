@@ -1,0 +1,25 @@
+{
+  "name": "@chiefaia/feature-registry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fast, local, token-cheap feature registry. PO Agent queries it before classifying lifecycle (new vs enhance). Hybrid sqlite-vec + FTS5 search; nomic-embed-text via Ollama; zero Claude tokens per classification.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chiefaia/ticket-template": "workspace:*",
+    "nanoid": "^3.3.7",
+    "zod": "^3.23.8",
+    "better-sqlite3": "^12.6.2",
+    "sqlite-vec": "^0.1.9"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "@types/better-sqlite3": "^7.6.13"
+  }
+}
