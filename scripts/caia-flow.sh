@@ -24,6 +24,10 @@ die() { echo "✗ $*" >&2; exit 1; }
 info() { echo "→ $*"; }
 ok() { echo "✓ $*"; }
 
+# Canonical allowed-prefix regex — keep in sync with
+# .github/workflows/gitflow-conformance.yml and caia/docs/git-flow.md.
+ALLOWED_PREFIX_RE='^(feat|feature|fix|chore|docs|refactor|perf|test|build|ci|harden|arch|acr|freg|bucket|lai|dash|gate|phase2e|coding|taskmgr|val)(/|-)'
+
 repo_root() {
   git rev-parse --show-toplevel 2>/dev/null \
     || die "not inside a git repository."
@@ -44,13 +48,14 @@ require_clean_tree() {
 require_branch_prefix() {
   local b
   b="$(current_branch)"
-  case "${b}" in
-    feature/*|fix/*|chore/*) return 0 ;;
-    *)
-      die "current branch '${b}' is not a feature/ fix/ or chore/ branch.
-   Run 'pnpm flow start <id>-<slug>' first."
-      ;;
-  esac
+  if [[ "${b}" =~ ${ALLOWED_PREFIX_RE} ]]; then
+    return 0
+  fi
+  die "current branch '${b}' does not start with an approved prefix.
+   Approved prefixes (with '/' or '-' separator): feat, feature, fix, chore,
+   docs, refactor, perf, test, build, ci, harden, arch, acr, freg, bucket,
+   lai, dash, gate, phase2e, coding, taskmgr, val.
+   Run 'pnpm flow start <id>-<slug>' to cut a new feature branch."
 }
 
 usage_top() {
@@ -74,10 +79,15 @@ Subcommands:
 
 Flow (the only allowed path):
 
-  feature/<id>-<slug>  →  PR to develop  →  squash-merge  →  branch deleted
-  develop              →  release/<date> PR to main       →  merge
-  main                 ←  only develop or release/* may merge in
-  backup/<reason>      ←  preservation only, never merged
+  <prefix>/<id>-<slug>  →  PR to develop  →  squash-merge  →  branch deleted
+  develop               →  release/<date> PR to main       →  merge
+  main                  ←  only develop or release/* may merge in
+  backup/<reason>       ←  preservation only, never merged
+
+Approved <prefix> values (separator '/' or '-'):
+  feat, feature, fix, chore, docs, refactor, perf, test, build, ci,
+  harden, arch, acr, freg, bucket, lai, dash, gate, phase2e, coding,
+  taskmgr, val.
 
 Reference: caia/docs/git-flow.md, feedback_git_flow_enforced.md.
 EOF
@@ -89,10 +99,11 @@ cmd_start() {
   local slug="${1:-}"
   [[ -n "${slug}" ]] || die "missing <id>-<slug>. Example: pnpm flow start fix-013-test-isolation"
 
-  case "${slug}" in
-    feature/*|fix/*|chore/*) ;;
-    *) slug="feature/${slug}" ;;
-  esac
+  # If user supplied an already-prefixed branch, leave it alone; otherwise
+  # default to feature/<slug>.
+  if [[ ! "${slug}" =~ ${ALLOWED_PREFIX_RE} ]]; then
+    slug="feature/${slug}"
+  fi
 
   info "fetching origin/develop"
   git fetch origin develop --quiet
@@ -327,16 +338,21 @@ cmd_help() {
       cat <<EOF
 pnpm flow start <id>-<slug>
 
-Cuts a new feature branch from origin/develop. Branch name is normalised
-to feature/<id>-<slug> if you don't supply a prefix yourself.
+Cuts a new feature branch from origin/develop. If <id>-<slug> already
+starts with an approved prefix (feat/, feature/, fix/, chore/, docs/,
+refactor/, perf/, test/, build/, ci/, harden/, arch/, acr/, freg/,
+bucket/, lai/, dash/, gate/, phase2e/, coding/, taskmgr/, val/, with
+'/' or '-' separator), it is used as-is. Otherwise the branch is
+normalised to feature/<id>-<slug>.
 
 Example:
   pnpm flow start fix-013-test-isolation
   pnpm flow start chore/clean-stale-tasks
+  pnpm flow start arch/l5-router
 
 Side effects:
   - git fetch origin develop
-  - git checkout -b feature/<id>-<slug> origin/develop
+  - git checkout -b <branch> origin/develop
 EOF
       ;;
     ready)
