@@ -1,0 +1,232 @@
+/**
+ * DiffCommitter + PrOpener — CODING-005 (Phase 2C).
+ *
+ * After the Implementation Engine prints CODING_AGENT_DONE and the
+ * LocalTestRunner reports green, this module commits the worktree
+ * delta and opens a GitHub PR via the `gh` CLI.
+ *
+ * The PR body is generated from the bundle so the reviewer (or a
+ * downstream automation) sees the story's acceptance criteria + each
+ * test case the Fix-It Test Agent will run.
+ *
+ * The commit message follows the same conventional-commits format
+ * husky's commit-msg hook expects (lowercase subject, scope, story id
+ * in trailer). A small message generator is included for the
+ * subject/body; routing it through a local LLM lands in CODING-006
+ * (DoD self-check) when we wire the LAI track.
+ *
+ * @owner coding-agent (Phase 2C worker track)
+ */
+
+import { spawnSync, type SpawnSyncOptions } from 'child_process';
+import type { Bundle } from './bundle-reader';
+import type { Worktree } from './worktree-manager';
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+export interface CommitInput {
+  worktree: Worktree;
+  bundle: Bundle;
+  /** Optional override for the commit subject (skips auto-derivation). */
+  subjectOverride?: string;
+}
+
+export interface CommitResult {
+  sha: string;
+  branch: string;
+  message: string;
+}
+
+export interface OpenPrInput {
+  worktree: Worktree;
+  bundle: Bundle;
+  /** Push the branch first if the remote tracking branch isn't set up. */
+  pushFirst?: boolean;
+  /** Title override. Default derived from bundle. */
+  title?: string;
+  /** Body override. Default built by buildPrBody. */
+  body?: string;
+}
+
+export interface OpenPrResult {
+  prNumber: number;
+  prUrl: string;
+}
+
+export interface DiffCommitterOptions {
+  gitBin?: string;
+  ghBin?: string;
+  execImpl?: typeof spawnSync;
+}
+
+// ─── Class ──────────────────────────────────────────────────────────────────
+
+export class DiffCommitter {
+  private readonly git: string;
+  private readonly gh: string;
+  private readonly exec: typeof spawnSync;
+
+  constructor(opts: DiffCommitterOptions = {}) {
+    this.git = opts.gitBin ?? 'git';
+    this.gh = opts.ghBin ?? 'gh';
+    this.exec = opts.execImpl ?? spawnSync;
+  }
+
+  /**
+   * Stages every change, runs `git commit -m <message>`, returns the
+   * fresh sha and the branch name. No-op (returns existing HEAD) if the
+   * tree is clean.
+   */
+  commit(input: CommitInput): CommitResult {
+    const cwd = input.worktree.path;
+    const status = this.run(this.git, ['status', '--porcelain'], { cwd });
+    if (status.trim().length === 0) {
+      const head = this.run(this.git, ['rev-parse', 'HEAD'], { cwd }).trim();
+      return { sha: head, branch: input.worktree.branch, message: '(no changes)' };
+    }
+    this.run(this.git, ['add', '-A'], { cwd });
+    const message = input.subjectOverride ?? this.buildCommitMessage(input.bundle, input.worktree);
+    this.run(this.git, ['commit', '-m', message], { cwd });
+    const sha = this.run(this.git, ['rev-parse', 'HEAD'], { cwd }).trim();
+    return { sha, branch: input.worktree.branch, message };
+  }
+
+  /**
+   * Pushes the branch (if needed) and runs `gh pr create`. Returns the
+   * resulting PR url and number.
+   */
+  openPr(input: OpenPrInput): OpenPrResult {
+    const cwd = input.worktree.path;
+    if (input.pushFirst !== false) {
+      this.run(this.git, ['push', '-u', 'origin', input.worktree.branch], { cwd });
+    }
+    const title = input.title ?? this.derivePrTitle(input.bundle, input.worktree);
+    const body = input.body ?? this.buildPrBody(input.bundle, input.worktree);
+    const out = this.run(this.gh, [
+      'pr', 'create',
+      '--base', input.worktree.integrationBranch,
+      '--head', input.worktree.branch,
+      '--title', title,
+      '--body', body,
+    ], { cwd });
+    return parseGhPrCreateOutput(out);
+  }
+
+  // ─── Builders (public for snapshot tests) ─────────────────────────────────
+
+  buildCommitMessage(bundle: Bundle, worktree: Worktree): string {
+    const ticket = (bundle.ticket ?? {}) as Record<string, unknown>;
+    const lifecycle = String(ticket.lifecycle ?? 'enhance');
+    const type = lifecycle === 'bug' ? 'fix' : lifecycle === 'chore' || lifecycle === 'docs' ? 'chore' : 'feat';
+    const scope = bundle.bucket?.id ? bundle.bucket.id.replace(/^bkt_/, '') : 'caia';
+    const subject = bundle.story.title.toLowerCase().slice(0, 72);
+    const ac = Array.isArray(ticket.acceptanceCriteria) ? ticket.acceptanceCriteria : [];
+    const acLines = ac.slice(0, 5).map((a) => `- ${formatAc(a)}`).join('\n');
+    const testCount = Array.isArray(ticket.testCases) ? ticket.testCases.length : 0;
+    return `${type}(${scope}): ${subject}
+
+Story: ${bundle.story.id}
+Branch: ${worktree.branch}
+
+Acceptance criteria:
+${acLines || '- (none provided)'}
+
+Test cases attached: ${testCount} (Fix-It Test Agent will run them).
+
+Generated by CAIA Coding Agent.`;
+  }
+
+  derivePrTitle(bundle: Bundle, worktree: Worktree): string {
+    const ticket = (bundle.ticket ?? {}) as Record<string, unknown>;
+    const lifecycle = String(ticket.lifecycle ?? 'enhance');
+    const type = lifecycle === 'bug' ? 'fix' : lifecycle === 'chore' || lifecycle === 'docs' ? 'chore' : 'feat';
+    const scope = bundle.bucket?.id ? bundle.bucket.id.replace(/^bkt_/, '') : 'caia';
+    const subject = bundle.story.title.toLowerCase().slice(0, 72);
+    void worktree;
+    return `${type}(${scope}): ${subject}`;
+  }
+
+  buildPrBody(bundle: Bundle, worktree: Worktree): string {
+    const ticket = (bundle.ticket ?? {}) as Record<string, unknown>;
+    const ac = Array.isArray(ticket.acceptanceCriteria) ? ticket.acceptanceCriteria : [];
+    const testCases = Array.isArray(ticket.testCases) ? ticket.testCases : [];
+    const claims = (ticket.claims ?? {}) as Record<string, unknown>;
+    return `## ${bundle.story.title}
+
+**Story id:** ${bundle.story.id}
+**Branch:** \`${worktree.branch}\` → \`${worktree.integrationBranch}\`
+**Bucket:** ${bundle.bucket?.id ?? '(unset)'}
+
+## Acceptance criteria
+
+${ac.length > 0 ? ac.map((a, i) => `${i + 1}. ${formatAc(a)}`).join('\n') : '_(none provided)_'}
+
+## Test cases (Fix-It Test Agent will run all of these)
+
+${
+  testCases.length === 0
+    ? '_(none yet)_'
+    : testCases.map((t, i) => `${i + 1}. ${formatTestCase(t)}`).join('\n')
+}
+
+## Resource claims
+
+- **files:** ${formatList((claims.files ?? []) as string[])}
+- **schemas:** ${formatList((claims.schemas ?? []) as string[])}
+- **apiRoutes:** ${formatList((claims.apiRoutes ?? []) as string[])}
+- **domains:** ${formatList((claims.domains ?? []) as string[])}
+
+---
+
+🤖 Generated by CAIA Coding Agent. Fix-It Test Agent will run the test cases above; this PR auto-merges when they all pass.`;
+  }
+
+  // ─── Internals ────────────────────────────────────────────────────────────
+
+  private run(bin: string, args: string[], opts: SpawnSyncOptions): string {
+    const res = this.exec(bin, args, { encoding: 'utf8', ...opts });
+    if ((res.status ?? -1) !== 0) {
+      throw new Error(
+        `${bin} ${args.join(' ')} failed (exit=${res.status}): ${String(res.stderr || res.stdout)}`,
+      );
+    }
+    return String(res.stdout ?? '');
+  }
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+export function parseGhPrCreateOutput(out: string): OpenPrResult {
+  const trimmed = out.trim().split(/\s+/).find((tok) => tok.startsWith('https://')) ?? '';
+  if (!trimmed) {
+    throw new Error(`gh pr create did not return a URL (got: ${out.slice(0, 200)})`);
+  }
+  const m = /\/pull\/(\d+)/.exec(trimmed);
+  if (!m) {
+    throw new Error(`could not parse PR number from ${trimmed}`);
+  }
+  return { prUrl: trimmed, prNumber: Number.parseInt(m[1]!, 10) };
+}
+
+function formatAc(a: unknown): string {
+  if (typeof a === 'string') return a;
+  if (a && typeof a === 'object') {
+    const obj = a as Record<string, unknown>;
+    return String(obj.title ?? obj.statement ?? obj.given ?? JSON.stringify(a));
+  }
+  return JSON.stringify(a);
+}
+
+function formatTestCase(t: unknown): string {
+  if (!t || typeof t !== 'object') return JSON.stringify(t);
+  const obj = t as Record<string, unknown>;
+  const id = String(obj.id ?? '');
+  const title = String(obj.title ?? obj.summary ?? '');
+  const category = String(obj.category ?? '');
+  return `${id} ${category ? `[${category}] ` : ''}${title}`;
+}
+
+function formatList(xs: string[]): string {
+  if (xs.length === 0) return '_(none)_';
+  return xs.map((x) => `\`${x}\``).join(', ');
+}

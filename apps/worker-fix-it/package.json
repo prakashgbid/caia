@@ -1,0 +1,27 @@
+{
+  "name": "@caia-app/worker-fix-it",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Phase 2 Fix-It Test Agent — picks up coding_complete tickets, generates and runs tests, diagnoses failures, invokes the Coding Agent in-session to fix, retests until green or escalates.",
+  "main": "dist/src/main.js",
+  "bin": {
+    "worker-fix-it": "dist/src/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "bench": "jest --testMatch='**/*.bench.ts' --testTimeout=60000 --testPathIgnorePatterns='/node_modules/' '/dist/'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chiefaia/ticket-template": "workspace:*",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.4.0"
+  }
+}

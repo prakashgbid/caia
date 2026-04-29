@@ -1,16 +1,20 @@
 /**
  * Pipeline-stage advancement helper.
  *
- * Phase 1 + Phase A advance every prompt through this canonical sequence:
+ * Phase 1 + Phase A advance every prompt through this canonical sequence
+ * (reordered 2026-04-28 per ARCH-006: EA now runs AFTER BA, so it can read
+ * the BA-enriched ticket and produce per-domain architecturalInstructions
+ * grounded in the AKG):
  *
- *   ingested → scaffolded → po_decomposed → ea_classified → ba_enriched
+ *   ingested → scaffolded → po_decomposed → ba_enriched → ea_decomposed
  *   → validated → test_designed → bucket_placed → ready_for_pickup
  *
  * Stage owners:
  *   - ingested, scaffolded         — scaffolder agent (entry point)
  *   - po_decomposed                — PO agent
- *   - ea_classified                — EA agent (BUCKET-003)
  *   - ba_enriched                  — BA agent (cross-agent collab round)
+ *   - ea_decomposed                — EA agent (queries AKG, populates
+ *                                    architecturalInstructions[])
  *   - validated                    — Story Validator agent (VAL-### track)
  *   - test_designed                — Testing agent (TEST-### track)
  *   - bucket_placed,
@@ -34,9 +38,15 @@ export const PIPELINE_STAGE_ORDER = [
   'ingested',
   'scaffolded',
   'po_decomposed',
-  // BUCKET-003: EA classifies tech / quality / risk / effort between PO and BA.
-  'ea_classified',
+  // ARCH-006 (2026-04-28): BA runs before EA. BA enriches with cross-agent
+  // collab; EA then reads the enriched ticket and produces per-domain
+  // architecturalInstructions[] grounded in the AKG.
   'ba_enriched',
+  // ARCH-006: renamed from `ea_classified` to `ea_decomposed`. EA now
+  // produces architectural instructions referencing real AKG artifacts in
+  // addition to the BUCKET-003 taxonomy fields (techSubDomains, risk,
+  // effort, claims).
+  'ea_decomposed',
   // VAL-### track: Story Validator gate. Story enters here once BA enrichment
   // completes. Pass → advances to test_designed. Fail → re-invokes BA with
   // feedback (capped at VERDICT_THRESHOLDS.maxAttempts attempts).
@@ -60,6 +70,7 @@ export type PipelineStage = (typeof PIPELINE_STAGE_ORDER)[number];
 export const STAGE_VALIDATED = 'validated' satisfies PipelineStage;
 export const STAGE_TEST_DESIGNED = 'test_designed' satisfies PipelineStage;
 export const STAGE_BA_ENRICHED = 'ba_enriched' satisfies PipelineStage;
+export const STAGE_EA_DECOMPOSED = 'ea_decomposed' satisfies PipelineStage;
 export const STAGE_BUCKET_PLACED = 'bucket_placed' satisfies PipelineStage;
 export const STAGE_READY_FOR_PICKUP = 'ready_for_pickup' satisfies PipelineStage;
 

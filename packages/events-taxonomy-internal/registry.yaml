@@ -519,3 +519,47 @@ events:
     severity: info
     actor: [story-validator]
     payload: [storyId, promptId, correlationId, score, judgeProvider]
+
+  # Phase 2 worker-pool lifecycle (TASKMGR-002)
+  - type: worker.registered
+    severity: info
+    actor: [worker]
+    payload: [workerId, kind, capabilities, registeredAt]
+
+  - type: worker.heartbeat
+    severity: debug
+    actor: [worker]
+    payload: [workerId, status, currentStoryId, ts]
+
+  - type: worker.released
+    severity: info
+    actor: [worker]
+    payload: [workerId, lastStoryId, releasedAt, reason]
+
+  - type: worker.crashed
+    severity: error
+    actor: [task-scheduler]
+    payload: [workerId, lastStoryId, error, lastHeartbeatAt, ts]
+
+  # Phase 2 task assignment (TASKMGR-003)
+  - type: task.assigned
+    severity: info
+    actor: [task-scheduler]
+    payload: [storyId, workerId, bucketId, assignedAt, correlationId]
+
+  # Phase 2 backpressure (TASKMGR-004)
+  - type: task-scheduler.backpressure.engaged
+    severity: warning
+    actor: [task-scheduler]
+    payload: [bucketId, queueDepth, ceiling, ts]
+
+  - type: task-scheduler.backpressure.released
+    severity: info
+    actor: [task-scheduler]
+    payload: [bucketId, queueDepth, ts]
+
+  # Phase 2 bucket health metrics (TASKMGR-005)
+  - type: task-scheduler.bucket.health
+    severity: debug
+    actor: [task-scheduler]
+    payload: [bucketId, queueDepth, throughputPerHour, oldestReadyAgeS, workersAssigned, engaged, ts]

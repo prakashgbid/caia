@@ -44,7 +44,7 @@ const STATUS_COLOR: Record<string, string> = {
   queued: '#9ca3af', running: '#2563eb', completed: '#16a34a',
   blocked: '#f59e0b', done: '#16a34a', pending: '#9ca3af',
   ingested: '#6b7280', scaffolded: '#3182ce',
-  po_decomposed: '#805ad5', ba_enriched: '#dd6b20',
+  po_decomposed: '#805ad5', ba_enriched: '#dd6b20', ea_decomposed: '#319795', validated: '#2f855a', test_designed: '#3182ce',
   bucket_placed: '#38a169', ready_for_pickup: '#16a34a',
 };
 
@@ -207,7 +207,7 @@ export default function PromptJourneyPage({ params }: { params: { id: string } }
 
       <h3 style={{ marginBottom: 12 }}>Status journey (lifecycle)</h3>
       <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, fontFamily: 'monospace', fontSize: 12, color: '#374151' }}>
-        <div>Phase 1: ingested → scaffolded → po_decomposed → ba_enriched → bucket_placed → ready_for_pickup</div>
+        <div>Phase 1: ingested → scaffolded → po_decomposed → ba_enriched → ea_decomposed → validated → test_designed → bucket_placed → ready_for_pickup</div>
         <div style={{ marginTop: 8 }}>Task: queued → ready → dispatched → running → gate_pending → gate_passed → sentinel_pending → sentinel_passed → done</div>
         <div style={{ marginTop: 8, color: '#9ca3af' }}>Side branches: gate_failed → rework_queued → ready | sentinel_flagged → bug_filed | paused | blocked | cancelled</div>
       </div>

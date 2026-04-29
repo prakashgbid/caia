@@ -30,6 +30,9 @@ export {
   TEST_CASE_LAYERS,
   MIN_TEST_CASES,
   MAX_TEST_CASES,
+  // ARCH-006 architecturalInstructions[] schema
+  ArchitecturalInstructionSchema,
+  ARCH_INSTRUCTION_ACTIONS,
 } from './schema';
 export type {
   TicketTemplateV1,
@@ -50,6 +53,9 @@ export type {
   TestCaseCategory,
   TestCaseStatus,
   TestCaseLayer,
+  // ARCH-006 architectural-instruction types
+  ArchitecturalInstruction,
+  ArchInstructionAction,
 } from './schema';
 
 export {
