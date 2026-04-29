@@ -546,3 +546,14 @@ events:
     severity: info
     actor: [task-scheduler]
     payload: [storyId, workerId, bucketId, assignedAt, correlationId]
+
+  # Phase 2 backpressure (TASKMGR-004)
+  - type: task-scheduler.backpressure.engaged
+    severity: warning
+    actor: [task-scheduler]
+    payload: [bucketId, queueDepth, ceiling, ts]
+
+  - type: task-scheduler.backpressure.released
+    severity: info
+    actor: [task-scheduler]
+    payload: [bucketId, queueDepth, ts]

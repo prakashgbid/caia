@@ -451,6 +451,9 @@ export type EventType =
   | 'worker.crashed'
   // ─── Phase 2 task assignment (TASKMGR-003) ────────────────────────────────
   | 'task.assigned'
+  // ─── Phase 2 backpressure (TASKMGR-004) ───────────────────────────────────
+  | 'task-scheduler.backpressure.engaged'
+  | 'task-scheduler.backpressure.released'
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
@@ -565,6 +568,9 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'worker.crashed': 'error',
   // ─── Phase 2 task assignment (TASKMGR-003) ────────────────────────────────
   'task.assigned': 'info',
+  // ─── Phase 2 backpressure (TASKMGR-004) ───────────────────────────────────
+  'task-scheduler.backpressure.engaged': 'warning',
+  'task-scheduler.backpressure.released': 'info',
 };
 
 /** All valid event type strings from the registry */
