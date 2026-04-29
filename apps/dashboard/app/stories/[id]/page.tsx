@@ -21,6 +21,8 @@ const PHASE1_TRIGGERS = [
   'pipeline.stage.advanced',
   'po-agent.', 'ba-agent.', 'task-scheduler.', 'ticket.', 'scaffolder.team.assembled',
   'prompt.ingested', 'prompt.status_changed', 'story.',
+  // TEST-006 — story-driven testing framework lifecycle
+  'test.',
 ];
 
 function isPhase1EventType(type: string | undefined): boolean {
