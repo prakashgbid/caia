@@ -125,6 +125,12 @@ function stageEvidence(key: StageKey, p: Phase1Payload): string {
       const reps = p.agentMessages.filter((m) => m.messageType === 'input-received').length;
       return `${valid}/${p.stories.length} valid · ${reps}/${reqs} consultant replies`;
     }
+    case 'ea_decomposed':
+      return 'AKG queries → architecturalInstructions[] per story';
+    case 'validated':
+      return 'Story Validator gate';
+    case 'test_designed':
+      return 'Test cases generated from acceptance criteria';
     case 'bucket_placed': {
       const seq = p.buckets.filter((b) => b.kind === 'sequential').length;
       const par = p.buckets.filter((b) => b.kind === 'parallel').length;
