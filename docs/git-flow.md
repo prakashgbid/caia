@@ -6,9 +6,9 @@
 
 ```
                            ┌────────────────────────┐
-                           │ feature/<id>-<slug>    │ ◄── cut from origin/develop
-                           │ fix/<id>-<slug>        │     (never from main)
-                           │ chore/<id>-<slug>      │
+                           │ <prefix>/<id>-<slug>   │ ◄── cut from origin/develop
+                           │   (feat, fix, chore,   │     (never from main)
+                           │    arch, harden, …)    │
                            └─────────────┬──────────┘
                                          │ commit, push
                                          │
@@ -39,6 +39,27 @@
            backup/<reason>      preservation only — NEVER merged
 ```
 
+## Approved branch prefixes
+
+Every feature/fix/chore branch must start with one of these prefixes. The
+separator after the prefix may be `/` or `-` (legacy CAIA branches use `-`,
+new branches should prefer `/`).
+
+| Family                  | Prefixes                                                                |
+| ----------------------- | ----------------------------------------------------------------------- |
+| Conventional Commits    | `feat`, `feature`, `fix`, `chore`, `docs`, `refactor`, `perf`, `test`, `build`, `ci` |
+| CAIA work-stream        | `harden`, `arch`, `acr`, `freg`, `bucket`, `lai`, `dash`, `gate`, `phase2e`, `coding`, `taskmgr`, `val` |
+| Release / preservation  | `release/<date>` (PRs to main), `backup/<reason>` (preservation, never merged) |
+
+The canonical regex (server-side and client-side):
+
+```
+^(feat|feature|fix|chore|docs|refactor|perf|test|build|ci|harden|arch|acr|freg|bucket|lai|dash|gate|phase2e|coding|taskmgr|val)(/|-)
+```
+
+`feat/` is preferred (Conventional Commits); `feature/` is accepted for
+backward compatibility with the runbook examples.
+
 ## Lifecycle — the only allowed path
 
 ```
@@ -47,7 +68,7 @@ start  →  work  →  ready  →  ship  →  (release at end of day)
 
 | Step      | Command                          | What happens                                                                                                  |
 | --------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `start`   | `pnpm flow start <id>-<slug>`    | `git fetch origin develop && git checkout -b feature/<id>-<slug> origin/develop`                              |
+| `start`   | `pnpm flow start <id>-<slug>`    | `git fetch origin develop && git checkout -b <prefix>/<id>-<slug> origin/develop` (default prefix `feature/`) |
 | `work`    | edit, commit                     | Husky pre-commit blocks any commit on `main` or `develop`.                                                    |
 | `push`    | `git push`                       | Husky pre-push blocks any push to `main` or `develop`.                                                        |
 | `ready`   | `pnpm flow ready`                | Pushes the branch and opens (or marks ready) a PR vs `develop`.                                               |
@@ -59,15 +80,17 @@ start  →  work  →  ready  →  ship  →  (release at end of day)
 
 ## Branches
 
-| Prefix       | Cut from   | PRs into                                                       | Lifespan          | Notes                                                                |
-| ------------ | ---------- | -------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------- |
-| `feature/`   | `develop`  | `develop`                                                      | ≤ 24h ideal, 7d max | Where new work lives.                                                |
-| `fix/`       | `develop`  | `develop`                                                      | ≤ 24h            | Bug fixes; same lifecycle as feature.                                |
-| `chore/`     | `develop`  | `develop`                                                      | ≤ 24h            | Cleanup, refactors, doc-only.                                        |
-| `release/`   | `develop`  | `main`                                                         | hours            | Optional staged release PRs; tagged on merge.                        |
-| `backup/`    | anywhere   | (never)                                                        | forever           | Preservation only. Excluded from auto-PR + hygiene scanning.         |
-| `main`       | (release)  | (release)                                                      | forever           | Stable release branch. Server-side protected.                        |
-| `develop`    | (start)    | (release)                                                      | forever           | Integration branch. Server-side protected.                           |
+| Prefix                    | Cut from   | PRs into   | Lifespan          | Notes                                                                |
+| ------------------------- | ---------- | ---------- | ----------------- | -------------------------------------------------------------------- |
+| `feat/`, `feature/`       | `develop`  | `develop`  | ≤ 24h ideal, 7d max | New work. `feat/` is preferred (Conventional Commits).             |
+| `fix/`                    | `develop`  | `develop`  | ≤ 24h            | Bug fixes; same lifecycle as feature.                                |
+| `chore/`                  | `develop`  | `develop`  | ≤ 24h            | Cleanup, refactors, doc-only.                                        |
+| `docs/`, `refactor/`, `perf/`, `test/`, `build/`, `ci/` | `develop` | `develop` | ≤ 24h | Conventional Commits scopes — same lifecycle as feature. |
+| `harden/`, `arch/`, `acr/`, `freg/`, `bucket/`, `lai/`, `dash/`, `gate/`, `phase2e/`, `coding/`, `taskmgr/`, `val/` | `develop` | `develop` | ≤ 24h–7d | CAIA work-stream prefixes; legacy branches may use `-` separator. |
+| `release/`                | `develop`  | `main`     | hours            | Optional staged release PRs; tagged on merge.                        |
+| `backup/`                 | anywhere   | (never)    | forever           | Preservation only. Excluded from auto-PR + hygiene scanning.         |
+| `main`                    | (release)  | (release)  | forever           | Stable release branch. Server-side protected.                        |
+| `develop`                 | (start)    | (release)  | forever           | Integration branch. Server-side protected.                           |
 
 ## Mechanical enforcement layers
 
@@ -81,9 +104,9 @@ start  →  work  →  ready  →  ship  →  (release at end of day)
    Configured by [`scripts/setup-branch-protection.sh`](../scripts/setup-branch-protection.sh) — idempotent.
 
 2. **`gitflow-conformance` required check** ([`.github/workflows/gitflow-conformance.yml`](../.github/workflows/gitflow-conformance.yml)):
-   - Branch name matches `^(feature|fix|chore|release|backup)/`.
+   - Branch name matches the canonical prefix regex (see above).
    - target=main → head ∈ {develop, release/*}.
-   - target=develop → head ∈ {feature/*, fix/*, chore/*, main} (main allowed for back-merge after release).
+   - target=develop → head matches an approved prefix, OR head=main (back-merge after release).
    - `backup/*` may never be merged.
    - No merge commits in PR history (rebase, don't merge).
 
@@ -107,6 +130,9 @@ start  →  work  →  ready  →  ship  →  (release at end of day)
 
 ```
 pnpm flow start fix-013-test-isolation       # cuts feature/fix-013-test-isolation
+                                              # (default prefix is feature/ if you don't supply one)
+pnpm flow start chore/clean-stale-tasks      # explicit prefix → cuts chore/clean-stale-tasks
+pnpm flow start arch/l5-router               # explicit prefix → cuts arch/l5-router
 # ...edit, commit, push as needed...
 pnpm flow ready                              # opens PR
 pnpm flow ship                               # auto-merge (squash) when green
@@ -177,15 +203,17 @@ You're on `develop`. Switch to a feature branch:
 pnpm flow start <id>-<slug>
 ```
 
-### "gitflow-conformance: Branch name '<x>' does not match required pattern."
+### "gitflow-conformance: PRs to develop must come from an approved prefix branch …"
 
-Rename the branch:
+Your branch name doesn't match the canonical prefix regex. Rename the branch:
 
 ```
-git branch -m feature/<id>-<slug>
-git push origin --delete <old> && git push -u origin feature/<id>-<slug>
-gh pr edit <num> --head feature/<id>-<slug>
+git branch -m feat/<id>-<slug>
+git push origin --delete <old> && git push -u origin feat/<id>-<slug>
+gh pr edit <num> --head feat/<id>-<slug>
 ```
+
+The full prefix list is in the **Approved branch prefixes** section above.
 
 ### "gitflow-conformance: branch contains merge commits — use rebase, not merge."
 

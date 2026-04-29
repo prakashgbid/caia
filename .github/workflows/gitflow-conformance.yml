@@ -2,10 +2,17 @@ name: gitflow-conformance
 
 # Required status check on every PR. Enforces the canonical CAIA git flow:
 #
-#   feature/<id>-<slug>  →  PR to develop  →  squash-merge  →  branch deleted
-#   develop              →  release/<date> PR to main       →  merge → tag
-#   main                 ←  only develop or release/* may merge in
-#   backup/<reason>      ←  preservation only, never merged
+#   <prefix>/<id>-<slug>  →  PR to develop  →  squash-merge  →  branch deleted
+#   develop               →  release/<date> PR to main       →  merge → tag
+#   main                  ←  only develop or release/* may merge in
+#   backup/<reason>       ←  preservation only, never merged
+#
+# Allowed feature-branch prefixes (target=develop):
+#   conventional commit:  feat, feature, fix, chore, docs, refactor,
+#                         perf, test, build, ci
+#   CAIA-specific:        harden, arch, acr, freg, bucket, lai, dash,
+#                         gate, phase2e, coding, taskmgr, val
+# Separator after the prefix may be '/' or '-' (legacy CAIA branches use '-').
 #
 # Reference: caia/docs/git-flow.md and feedback_git_flow_enforced.md.
 
@@ -41,6 +48,11 @@ jobs:
             exit 1
           }
 
+          # Canonical allowed-prefix regex (head branch must start with one
+          # of these, followed by '/' or '-'). Keep this in sync with
+          # scripts/caia-flow.sh and caia/docs/git-flow.md.
+          ALLOWED_PREFIX_RE='^(feat|feature|fix|chore|docs|refactor|perf|test|build|ci|harden|arch|acr|freg|bucket|lai|dash|gate|phase2e|coding|taskmgr|val)(/|-)'
+
           # Rule 1: backup/* branches are preservation-only, never merged.
           if [[ "${HEAD_REF}" == backup/* ]]; then
             fail "backup/* branches must never be merged (head=${HEAD_REF})." \
@@ -57,18 +69,19 @@ jobs:
             exit 0
           fi
 
-          # Rule 3: target=develop allowed from feature/, fix/, chore/, or main (back-merge after release).
+          # Rule 3: target=develop allowed from an approved prefix branch
+          # or from main (back-merge after release).
           if [[ "${BASE_REF}" == "develop" ]]; then
-            case "${HEAD_REF}" in
-              feature/*|fix/*|chore/*|main)
-                echo "✓ target=develop from ${HEAD_REF} — allowed."
-                exit 0
-                ;;
-              *)
-                fail "PRs to develop must come from feature/<id>-<slug>, fix/<id>-<slug>, chore/<id>-<slug>, or main (back-merge). Got head=${HEAD_REF}." \
-                     "rename your branch: git branch -m feature/<id>-<slug>; force-push; then retarget the PR to develop."
-                ;;
-            esac
+            if [[ "${HEAD_REF}" == "main" ]]; then
+              echo "✓ target=develop from main (back-merge) — allowed."
+              exit 0
+            fi
+            if [[ "${HEAD_REF}" =~ ${ALLOWED_PREFIX_RE} ]]; then
+              echo "✓ target=develop from ${HEAD_REF} — allowed."
+              exit 0
+            fi
+            fail "PRs to develop must come from an approved prefix branch (feat|feature|fix|chore|docs|refactor|perf|test|build|ci|harden|arch|acr|freg|bucket|lai|dash|gate|phase2e|coding|taskmgr|val) using '/' or '-' as separator, or from main (back-merge). Got head=${HEAD_REF}." \
+                 "rename your branch: git branch -m feat/<id>-<slug>; force-push; then retarget the PR to develop."
           fi
 
           # Rule 4: every other base ref is unsupported.
