@@ -4,7 +4,7 @@
  *
  * Bundle = story row + parsed TicketTemplateV1 (validated) + linked
  * requirement row + bucket row + entity_label set + dependency / dependent
- * id lists.
+ * id lists + declared input dependencies (migration 0025).
  *
  * Used by `GET /stories/:id/bundle` (see api/routes/stories.ts) and by the
  * Phase 1 E2E test to assert the pipeline produced a valid, complete
@@ -15,6 +15,7 @@ import { eq, and } from 'drizzle-orm';
 import {
   TicketTemplateV1Schema,
   type TicketTemplateV1,
+  type InputDependency,
 } from '@chiefaia/ticket-template';
 import type { Db } from '../db/connection';
 import {
@@ -73,6 +74,16 @@ export interface TicketBundle {
     upstream: string[];
     downstream: string[];
   };
+  /**
+   * Migration 0025 — declarative input requirements for the story.
+   *
+   * Distinct from `dependencies` (which is story-to-story ordering): this
+   * field surfaces the inputs the story needs to start (capabilities, data,
+   * env vars, flags, routes, schemas, secrets) along with `satisfiedBy`
+   * pointers when a producing story has been identified. Empty array on
+   * legacy stories — populated by PO/BA/EA agents on new stories.
+   */
+  inputDependencies: InputDependency[];
 }
 
 function safeParseStringArray(value: string | null | undefined): string[] {
@@ -82,6 +93,25 @@ function safeParseStringArray(value: string | null | undefined): string[] {
     return Array.isArray(parsed)
       ? parsed.filter((d): d is string => typeof d === 'string')
       : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Parse `stories.input_dependencies_json` into a typed `InputDependency[]`.
+ * Drops any entry that isn't a plain object — keeps the bundle response
+ * shape stable even if a row was hand-edited.
+ */
+function safeParseInputDependencies(value: string | null | undefined): InputDependency[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (d): d is InputDependency =>
+        typeof d === 'object' && d !== null && 'kind' in d && 'name' in d,
+    );
   } catch {
     return [];
   }
@@ -188,6 +218,15 @@ export function getTicketBundle(
 
   const { ticket, parseError } = parseTicket(story.agentContributionsJson);
 
+  // 0025: input dependencies. Source of truth is the `inputDependencies`
+  // column on the parsed ticket when present (PO/BA write the canonical
+  // entries via the Zod schema); otherwise fall back to the dedicated
+  // `input_dependencies_json` column for tickets that haven't been
+  // re-validated yet.
+  const inputDependencies: InputDependency[] = ticket?.inputDependencies?.length
+    ? ticket.inputDependencies
+    : safeParseInputDependencies(story.inputDependenciesJson);
+
   return {
     story: {
       id: story.id,
@@ -234,5 +273,6 @@ export function getTicketBundle(
       : null,
     labels,
     dependencies: { upstream, downstream },
+    inputDependencies,
   };
 }
