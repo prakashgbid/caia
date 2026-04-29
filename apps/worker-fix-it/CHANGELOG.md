@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### FIX-002 — test code generator (this PR)
+
+- New `src/test-code-generator.ts`:
+  - `TemplateTestCodeGenerator` (real implementation of the
+    `TestCodeGenerator` port; replaces `StubTestCodeGenerator`).
+  - Layer dispatch: `unit` → vitest, `integration` → vitest with
+    setup hooks, `e2e` → Playwright, `visual` → Playwright
+    `toHaveScreenshot()`, `accessibility` → Playwright +
+    `@axe-core/playwright`.
+  - Idempotent: deterministic SHA-256/16-char hash over canonicalised
+    `(storyId, testCase)` is embedded in the spec header; identical
+    inputs early-return without rewriting the file.
+  - Selector hints from the BA UI section are emitted as comments at
+    the top of the test body so the fix loop can lift them when
+    refining selectors.
+- `src/main.ts` now plumbs `TemplateTestCodeGenerator` into the
+  `FixItOrchestrator`'s `generator` port.
+- 14 new vitest cases in `tests/test-code-generator.test.ts` covering:
+  - one-spec-per-case path + canonical layout
+  - byte-identical output across two consecutive `generate()` calls
+    with same inputs (mtime unchanged)
+  - rewrite when an existing file has a stale `@hash`
+  - `idempotent: false` always rewrites
+  - hash sensitivity to `(storyId, testCase)` deltas
+  - all five layer templates produce expected imports + scaffolding
+  - selector-hint comment emission
+  - `*/` and newline escaping in Gherkin → comment headers
+- 2 new microbenchmarks in `tests/test-code-generator.bench.ts`:
+  first-pass < 5 ms/case, idempotent-pass < 1 ms/case.
+
 ### FIX-001 — skeleton + event ingest (this PR)
 
 - Initial package scaffold (`package.json`, `tsconfig.json`,

@@ -85,8 +85,14 @@ change needed.
 - [x] Microbenchmark asserting orchestrator overhead bound.
 - [x] Event registry updated (`packages/events-taxonomy-internal/`).
 - [x] Operator runbook (this file).
-- [ ] Integration test wiring with the event bus — lands with FIX-006.
-- [ ] Real-browser test with seeded failure — FIX-007 ..  FIX-013.
+- [x] FIX-002: Real test code generator (`TemplateTestCodeGenerator`)
+      with layer dispatch and idempotency, plumbed into `bootstrap()`.
+- [ ] FIX-003: Real test runner (replaces `StubTestRunner`).
+- [ ] FIX-004: Real failure diagnoser (replaces `StubFailureDiagnoser`).
+- [ ] FIX-005: Real Coding Agent IPC client (replaces
+      `StubCodingIpcInvoker`; coordinates with CODING-007).
+- [ ] FIX-006: Re-test loop persistence + fix-stuck blocker writer.
+- [ ] Real-browser test with seeded failure — FIX-007 .. FIX-013.
 
 ## See also
 
