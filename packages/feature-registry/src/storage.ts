@@ -311,7 +311,7 @@ export function querySparse(
   // characters with special meaning (`OR`, `AND`, parens). Each token
   // becomes a prefix term so partial matches still count.
   const sanitized = queryText
-    .replace(/[^\w\s-]/g, ' ')
+    .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
     .filter((t) => t.length > 0)
     .map((t) => `${t}*`)
