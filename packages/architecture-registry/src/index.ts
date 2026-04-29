@@ -78,3 +78,16 @@ export type {
 
 export { computeArtifactDedupKey, computeEdgeDedupKey } from './dedup-key';
 export type { ArtifactDedupKeyInput, EdgeDedupKeyInput } from './dedup-key';
+
+// ARCH-002: ts-morph AST extractors.
+export {
+  extractComponentsFromFiles,
+  extractComponentsFromInMemorySources,
+  extractComponentsFromProject,
+  extractApisFromFiles,
+  extractApisFromInMemorySources,
+  extractApisFromProject,
+  extractServicesFromAppsRoot,
+  sha256,
+} from './extractors';
+export type { ExtractionResult, ExtractorOptions } from './extractors';
