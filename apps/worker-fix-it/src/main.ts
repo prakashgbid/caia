@@ -23,6 +23,7 @@
 import { FixItOrchestrator } from './orchestrator';
 import { TemplateTestCodeGenerator } from './test-code-generator';
 import { SubprocessTestRunner } from './test-runner';
+import { StructuredFailureDiagnoser } from './failure-diagnoser';
 
 export interface WorkerEnv {
   orchestratorUrl: string;
@@ -86,14 +87,15 @@ export async function bootstrap(env: WorkerEnv): Promise<{
   shutdown: () => Promise<void>;
 }> {
   // FIX-002 plumbs the real test code generator. FIX-003 plumbs the
-  // real subprocess-based runner. Diagnoser / IPC remain stubbed
-  // pending FIX-004..006.
+  // real subprocess-based runner. FIX-004 plumbs the real failure
+  // diagnoser. IPC stays stubbed pending FIX-005..006.
   const orchestrator = new FixItOrchestrator({
     generator: new TemplateTestCodeGenerator(),
     runner: new SubprocessTestRunner(),
+    diagnoser: new StructuredFailureDiagnoser(),
   });
   // Subsequent PRs:
-  //   - FIX-004 .. FIX-006: real diagnoser/IPC plumbed in
+  //   - FIX-005 .. FIX-006: real IPC plumbed in
   //   - FIX-007 .. FIX-013: heartbeat, register(), assignment IPC, dashboard
   return {
     orchestrator,
