@@ -48,7 +48,7 @@ import { eq } from 'drizzle-orm';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
-import * as schema from '../src/db/schema';
+import * as schema from '../../../src/db/schema';
 import {
   events,
   prompts,
@@ -56,35 +56,35 @@ import {
   stories,
   taskBuckets,
   blockers,
-} from '../src/db/schema';
+} from '../../../src/db/schema';
 import { eventBus } from '@chiefaia/event-bus-internal';
 import {
   TicketTemplateV1Schema,
   type TestCase,
 } from '@chiefaia/ticket-template';
 
-import { runPOAgent } from '../src/agents/po-agent';
-import { runBAAgent } from '../src/agents/ba-agent';
-import { runEAAgent } from '../src/agents/ea-agent';
-import { runValidatorLoop } from '../src/agents/validator-loop';
-import { runTestDesignAgent } from '../src/agents/test-design-agent';
-import { runTaskScheduler } from '../src/agents/task-scheduler';
-import { advancePipelineStage } from '../src/agents/pipeline-stages';
-import { getTicketBundle, type TicketBundle } from '../src/api/ticket-bundle';
-import type { JudgeAdapter } from '../src/agents/story-validator-agent';
+import { runPOAgent } from '../../../src/agents/po-agent';
+import { runBAAgent } from '../../../src/agents/ba-agent';
+import { runEAAgent } from '../../../src/agents/ea-agent';
+import { runValidatorLoop } from '../../../src/agents/validator-loop';
+import { runTestDesignAgent } from '../../../src/agents/test-design-agent';
+import { runTaskScheduler } from '../../../src/agents/task-scheduler';
+import { advancePipelineStage } from '../../../src/agents/pipeline-stages';
+import { getTicketBundle, type TicketBundle } from '../../../src/api/ticket-bundle';
+import type { JudgeAdapter } from '../../../src/agents/story-validator-agent';
 
 import {
   ImplementationEngine,
   MockLlmAdapter,
   DONE_MARKER,
-} from '../../worker-coding/src/implementation-engine';
-import type { Bundle as CoderBundle } from '../../worker-coding/src/bundle-reader';
-import type { Worktree } from '../../worker-coding/src/worktree-manager';
+} from '../../../../worker-coding/src/implementation-engine';
+import type { Bundle as CoderBundle } from '../../../../worker-coding/src/bundle-reader';
+import type { Worktree } from '../../../../worker-coding/src/worktree-manager';
 
-import { FixItOrchestrator } from '../../worker-fix-it/src/orchestrator';
-import type { CodingCompletePayload } from '../../worker-fix-it/src/types';
+import { FixItOrchestrator } from '../../../../worker-fix-it/src/orchestrator';
+import type { CodingCompletePayload } from '../../../../worker-fix-it/src/types';
 
-const MIGRATIONS_DIR = path.join(__dirname, '../src/db/migrations');
+const MIGRATIONS_DIR = path.join(__dirname, '../../../src/db/migrations');
 
 // ─── 10 diverse prompts ──────────────────────────────────────────────────────
 

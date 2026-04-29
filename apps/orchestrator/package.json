@@ -24,7 +24,10 @@
     "gate:a11y": "echo 'gate:a11y: no axe-core runner configured \u2014 skipping (add @axe-core/playwright + playwright config to enable)' && exit 0",
     "gate:brand-lock": "echo 'gate:brand-lock: not a pokerzeno repo \u2014 skipping' && exit 0",
     "build:run": "bash scripts/build-runner.sh",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:regression": "jest --testPathPattern \"tests/e2e/(pipeline|agents)\" --runInBand",
+    "test:regression:pipeline": "jest --testPathPattern \"tests/e2e/pipeline\" --runInBand",
+    "test:regression:agent": "jest --testPathPattern \"tests/e2e/agents\" --runInBand"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.14",

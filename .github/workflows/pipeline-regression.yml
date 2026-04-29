@@ -1,0 +1,93 @@
+name: Pipeline regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/orchestrator/**'
+      - 'apps/worker-coding/**'
+      - 'apps/worker-fix-it/**'
+      - 'packages/ticket-template/**'
+      - 'packages/agent-contract-registry/**'
+      - 'packages/architecture-registry/**'
+      - 'packages/feature-registry/**'
+      - 'apps/orchestrator/tests/e2e/**'
+      - '.github/workflows/pipeline-regression.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/orchestrator/**'
+      - 'apps/worker-coding/**'
+      - 'apps/worker-fix-it/**'
+      - 'packages/ticket-template/**'
+      - 'packages/agent-contract-registry/**'
+      - 'packages/architecture-registry/**'
+      - 'packages/feature-registry/**'
+      - 'apps/orchestrator/tests/e2e/**'
+      - '.github/workflows/pipeline-regression.yml'
+
+concurrency:
+  group: pipeline-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Pipeline E2E suite ─────────────────────────────────────────────────
+  pipeline-e2e:
+    name: Pipeline E2E (tests/e2e/pipeline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The pipeline E2E suite imports lazy module references that
+      # require the workspace's @chiefaia/* packages to be built so
+      # ts-jest's type resolution and runtime require both succeed.
+      - name: Build prerequisite packages
+        run: |
+          pnpm --filter @chiefaia/logger build
+          pnpm --filter @chiefaia/local-llm-router build
+          pnpm --filter @chiefaia/feature-registry build || true
+          pnpm --filter @chiefaia/architecture-registry build || true
+          pnpm --filter @chiefaia/agent-contract-registry build || true
+
+      - name: Run pipeline E2E suite
+        working-directory: apps/orchestrator
+        run: npx jest --testPathPattern "tests/e2e/pipeline" --runInBand
+
+  # ─── Per-agent regression suite ─────────────────────────────────────────
+  agents-regression:
+    name: Per-agent regression (tests/e2e/agents)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build prerequisite packages
+        run: |
+          pnpm --filter @chiefaia/logger build
+          pnpm --filter @chiefaia/local-llm-router build
+          pnpm --filter @chiefaia/feature-registry build || true
+          pnpm --filter @chiefaia/architecture-registry build || true
+          pnpm --filter @chiefaia/agent-contract-registry build || true
+
+      - name: Run per-agent regression suite
+        working-directory: apps/orchestrator
+        run: npx jest --testPathPattern "tests/e2e/agents" --runInBand
