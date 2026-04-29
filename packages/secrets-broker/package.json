@@ -23,6 +23,7 @@
     "start": "node dist/server.cjs"
   },
   "dependencies": {
+    "@chiefaia/logger": "workspace:*",
     "commander": "^12.1.0",
     "nanoid": "^3.3.7",
     "pino": "^9.5.0"

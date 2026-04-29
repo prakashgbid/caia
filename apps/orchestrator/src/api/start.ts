@@ -9,6 +9,8 @@ import { getDb, runMigrations } from '../db/connection';
 import type { Db } from '../db/connection';
 import { seedProjects } from '../db/seed-projects';
 import { seedAdr011 } from '../db/seed-adr';
+import { seedFeatures } from '../db/seed-features';
+import { seedSuggestions } from '../db/seed-suggestions';
 import { migrateFromJsonl } from '../db/migrate-from-jsonl';
 import { attachWsServer } from '../ws/index';
 import { createApp } from './app';
@@ -92,6 +94,17 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
 
   await seedProjects(db);
   await seedAdr011(db);
+
+  // DASH-302/303: backfill /features and /suggestions so the dashboard's
+  // empty state isn't permanent. Both seeders are idempotent (slug-keyed
+  // via a comment marker) and depend on seedProjects having run, so the
+  // ordering matters. Real features/suggestions emitted by future
+  // pipeline subsystems will simply append on top of these seeds.
+  const featResult = await seedFeatures(db);
+  const sugResult = await seedSuggestions(db);
+  if (featResult.inserted > 0 || sugResult.inserted > 0) {
+    console.error(`[conductor] Seeded ${featResult.inserted} features, ${sugResult.inserted} suggestions (${featResult.skipped} + ${sugResult.skipped} already present)`);
+  }
 
   const { migrated } = await migrateFromJsonl(db, conductorDir);
   if (migrated > 0) {
