@@ -86,3 +86,27 @@ export type {
   AgentSectionRule,
   SectionTrigger,
 } from './validation-rubric';
+
+// ACR-001 — Agent Section Contract Registry primitives.
+export {
+  STORY_SCOPES,
+  STORY_SCOPE_ORDER,
+  isStoryScope,
+  DEFAULT_STORY_SCOPE,
+  AGENT_ROLES,
+  AGENT_ORDER,
+  applyScopeOverride,
+  compareScopes,
+  isScopeAtLeastAsCoarseAs,
+} from './section-contract';
+export type {
+  StoryScope,
+  AgentRole,
+  ContractSeverity,
+  SectionRubric,
+  SectionExample,
+  SectionSpec,
+  SectionContract,
+  ComposedSectionEntry,
+  ComposedTemplate,
+} from './section-contract';

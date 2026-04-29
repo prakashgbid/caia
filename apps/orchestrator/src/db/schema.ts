@@ -443,6 +443,11 @@ export const stories = sqliteTable('stories', {
   featureClassification: text('feature_classification'),               // 'enhance'|'ambiguous'|'new'|null
   featureClassificationScore: real('feature_classification_score'),    // cosine sim of top match
   featureClassificationAt: integer('feature_classification_at'),       // epoch ms
+  // ACR-001 (migration 0030) — story_scope: SAFe / Jira hierarchy slot for the
+  // Agent Section Contract Registry. Validator composes per-scope rubrics from
+  // registered contracts (PO/BA/EA/Test-Design) per `composeTemplate(scope)`.
+  // Legacy rows backfill to 'story' (DEFAULT_STORY_SCOPE) — see ACR-008.
+  storyScope: text('story_scope').notNull().default('story'),          // STORY_SCOPES
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -466,6 +471,9 @@ export const stories = sqliteTable('stories', {
   index('story_validation_attempts_idx').on(t.validationAttempts),
   // FREG-006 index (migration 0029)
   index('story_feature_classification_idx').on(t.featureClassification),
+  // ACR-001 index (migration 0030) — dashboard /contracts page + Validator
+  // per-scope rubric cache lookup.
+  index('story_story_scope_idx').on(t.storyScope),
 ]);
 
 // story_revisions — append-only history of every story-tree edit
