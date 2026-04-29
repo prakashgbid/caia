@@ -23,13 +23,27 @@ interface BucketRow {
   id: string;
   kind: string;
   domainSlug: string | null;
+  // BUCKET-001/004 — multi-bucket placement key + level metadata.
+  projectSlug: string | null;
+  techSubDomain: string | null;
+  levels: string[][];
   sequenceIndex: number | null;
   status: string;
   promptId: string;
   createdAt: number;
   ticketCount: number;
   validTicketCount: number;
-  preview: Array<{ id: string; title: string; status: string; templateValidationStatus: string }>;
+  preview: Array<{
+    id: string;
+    title: string;
+    status: string;
+    templateValidationStatus: string;
+    projectSlug: string | null;
+    techSubDomainPrimary: string | null;
+    lifecycle: string | null;
+    risk: string | null;
+    priorityBucket: string | null;
+  }>;
 }
 
 interface BucketsResponse {
@@ -100,14 +114,26 @@ function BucketCard({
         transition: 'background 0.15s',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
         <span style={{ color: accent, fontWeight: 600, fontSize: 13 }}>
-          {b.domainSlug ?? 'parallel pool'}
+          {/* BUCKET-005: prefer (project / tech-sub-domain), fall back to domainSlug for legacy buckets. */}
+          {b.projectSlug && b.techSubDomain
+            ? `${b.projectSlug} / ${b.techSubDomain}`
+            : (b.domainSlug ?? 'parallel pool')}
           {b.sequenceIndex != null && (
             <span style={{ color: '#a0aec0', marginLeft: 6 }}>#{b.sequenceIndex}</span>
           )}
         </span>
         <StatusPill status={b.status} />
+        {b.levels.length > 1 && (
+          <span
+            data-testid={`bucket-levels-${b.id}`}
+            style={{ fontSize: 10, padding: '1px 5px', borderRadius: 3, background: '#553c9a', color: '#fff' }}
+            title={`${b.levels.length} levels — chain length ${b.levels.length}`}
+          >
+            {b.levels.length} levels
+          </span>
+        )}
         <span style={{ marginLeft: 'auto', color: '#a0aec0', fontSize: 11 }}>
           {b.ticketCount} ticket{b.ticketCount === 1 ? '' : 's'}
         </span>
