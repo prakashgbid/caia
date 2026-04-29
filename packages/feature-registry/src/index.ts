@@ -55,3 +55,6 @@ export type {
   EmbedResult,
   OllamaClientOpts,
 } from './embedding-client';
+
+export { search } from './search';
+export type { SearchOpts, SearchClientDeps } from './search';
