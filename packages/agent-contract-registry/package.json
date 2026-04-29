@@ -1,0 +1,22 @@
+{
+  "name": "@chiefaia/agent-contract-registry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent Section Contract Registry — declarative store of per-agent contracts (PO/BA/EA/Test-Design) + composeTemplate(scope) function. The Story Validator consumes the composed template at runtime instead of a hard-coded rubric.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "bench": "vitest bench --run"
+  },
+  "dependencies": {
+    "@chiefaia/ticket-template": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "zod": "^3.23.8"
+  }
+}

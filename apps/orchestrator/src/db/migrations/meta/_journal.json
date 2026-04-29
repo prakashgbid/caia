@@ -239,6 +239,20 @@
       "when": 1778400000000,
       "tag": "0034_bucket_health_history",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1778500000000,
+      "tag": "0035_story_scope",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1778500000001,
+      "tag": "0036_story_scope_backfill",
+      "breakpoints": true
     }
   ]
 }

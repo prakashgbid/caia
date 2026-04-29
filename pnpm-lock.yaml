@@ -106,6 +106,9 @@ importers:
       '@caia-app/pipeline-pulse':
         specifier: workspace:*
         version: link:../pipeline-pulse
+      '@chiefaia/agent-contract-registry':
+        specifier: workspace:*
+        version: link:../../packages/agent-contract-registry
       '@chiefaia/architecture-registry':
         specifier: workspace:*
         version: link:../../packages/architecture-registry
@@ -141,7 +144,7 @@ importers:
         version: 1.19.14(hono@4.12.15)
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0
-        version: 1.29.0(zod@4.3.6)
+        version: 1.29.0(zod@3.25.76)
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -169,6 +172,9 @@ importers:
       ws:
         specifier: ^8.20.0
         version: 8.20.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
     devDependencies:
       '@playwright/test':
         specifier: ^1.44.0
@@ -362,6 +368,25 @@ importers:
       vitest:
         specifier: '>=1'
         version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
+
+  packages/agent-contract-registry:
+    dependencies:
+      '@chiefaia/ticket-template':
+        specifier: workspace:*
+        version: link:../ticket-template
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
 
   packages/analytics:
     dependencies:
@@ -9015,6 +9040,28 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
+  '@modelcontextprotocol/sdk@1.29.0(zod@3.25.76)':
+    dependencies:
+      '@hono/node-server': 1.19.14(hono@4.12.15)
+      ajv: 8.20.0
+      ajv-formats: 3.0.1(ajv@8.20.0)
+      content-type: 1.0.5
+      cors: 2.8.6
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.0.8
+      express: 5.2.1
+      express-rate-limit: 8.4.1(express@5.2.1)
+      hono: 4.12.15
+      jose: 6.2.2
+      json-schema-typed: 8.0.2
+      pkce-challenge: 5.0.1
+      raw-body: 3.0.2
+      zod: 3.25.76
+      zod-to-json-schema: 3.25.2(zod@3.25.76)
+    transitivePeerDependencies:
+      - supports-color
+
   '@modelcontextprotocol/sdk@1.29.0(zod@4.3.6)':
     dependencies:
       '@hono/node-server': 1.19.14(hono@4.12.15)
@@ -14133,6 +14180,10 @@ snapshots:
   yocto-queue@1.2.2: {}
 
   zlibjs@0.3.1: {}
+
+  zod-to-json-schema@3.25.2(zod@3.25.76):
+    dependencies:
+      zod: 3.25.76
 
   zod-to-json-schema@3.25.2(zod@4.3.6):
     dependencies:

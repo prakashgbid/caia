@@ -33,12 +33,11 @@
 import { eq } from 'drizzle-orm';
 import {
   AC_ITEM_RULES,
-  AGENT_SECTION_RULES,
   COMPLETENESS_GESTALT_PROMPT_SEED,
   CROSS_SECTION_CONSISTENCY_PROMPT_SEED,
+  DEFAULT_STORY_SCOPE,
   RUBRIC_VERSION,
   SCORE_WEIGHTS,
-  TOP_LEVEL_SECTION_RULES,
   TicketTemplateV1,
   TicketTemplateV1Schema,
   UNIVERSAL_FORBIDDEN_SNIPPETS,
@@ -47,11 +46,11 @@ import {
   concatStrings,
   countWordsInValue,
   findForbiddenSnippets,
-  isSectionRequired,
+  isStoryScope,
   validateTicket,
   type AgentSectionKey,
-  type AgentSectionRule,
   type RubricSeverity,
+  type StoryScope,
 } from '@chiefaia/ticket-template';
 import { eventBus } from '../events/bus-adapter';
 import { getDb } from '../db/connection';
@@ -60,6 +59,11 @@ import {
   STAGE_VALIDATED,
   advancePipelineStage,
 } from './pipeline-stages';
+import {
+  getValidationRubricForStory,
+  type ResolvedAgentSectionRule,
+  type ResolvedRubric,
+} from './validation-rubric-source';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -288,7 +292,10 @@ function runSchemaStep(rawTicket: unknown): {
   };
 }
 
-function runSectionPresenceStep(ticket: TicketTemplateV1): {
+function runSectionPresenceStep(
+  ticket: TicketTemplateV1,
+  rubric: ResolvedRubric,
+): {
   step: StepResult;
   failures: ValidationFailure[];
 } {
@@ -318,11 +325,11 @@ function runSectionPresenceStep(ticket: TicketTemplateV1): {
     });
   }
 
-  // Per-agent sections — required only when the rubric trigger matches.
-  for (const rule of AGENT_SECTION_RULES) {
+  // Per-agent sections — required is pre-resolved from the composed
+  // template (or the legacy `isSectionRequired(rule, ticket)` fallback).
+  for (const rule of rubric.agentSectionRules) {
     const present = !!ticket.agentSections?.[rule.section];
-    const required = isSectionRequired(rule, ticket);
-    if (required && !present) {
+    if (rule.effectivelyRequired && !present) {
       failures.push({
         step: 'sectionPresence',
         section: `agentSections.${rule.section}`,
@@ -344,7 +351,10 @@ function runSectionPresenceStep(ticket: TicketTemplateV1): {
   };
 }
 
-function runDetailSufficiencyStep(ticket: TicketTemplateV1): {
+function runDetailSufficiencyStep(
+  ticket: TicketTemplateV1,
+  rubric: ResolvedRubric,
+): {
   step: StepResult;
   failures: ValidationFailure[];
   warnings: ValidationWarning[];
@@ -354,7 +364,7 @@ function runDetailSufficiencyStep(ticket: TicketTemplateV1): {
   const warnings: ValidationWarning[] = [];
 
   // Top-level rules.
-  for (const rule of TOP_LEVEL_SECTION_RULES) {
+  for (const rule of rubric.topLevelRules) {
     const value = (ticket as unknown as Record<string, unknown>)[rule.path];
     if (value == null) continue;
 
@@ -386,7 +396,7 @@ function runDetailSufficiencyStep(ticket: TicketTemplateV1): {
   }
 
   // Per-agent section rules — only enforced when the section is present.
-  for (const rule of AGENT_SECTION_RULES) {
+  for (const rule of rubric.agentSectionRules) {
     const section = ticket.agentSections?.[rule.section];
     if (!section) continue;
 
@@ -535,6 +545,7 @@ function runDetailSufficiencyStep(ticket: TicketTemplateV1): {
 async function runContentRelevanceStep(
   ticket: TicketTemplateV1,
   judge: JudgeAdapter,
+  rubric: ResolvedRubric,
 ): Promise<{
   step: PerSectionStepResult;
   failures: ValidationFailure[];
@@ -550,9 +561,9 @@ async function runContentRelevanceStep(
   const sectionsToJudge = (Object.keys(ticket.agentSections ?? {}) as AgentSectionKey[])
     .map((key) => ({
       key,
-      rule: AGENT_SECTION_RULES.find((r) => r.section === key) ?? null,
+      rule: rubric.agentSectionRules.find((r) => r.section === key) ?? null,
     }))
-    .filter((entry): entry is { key: AgentSectionKey; rule: AgentSectionRule } =>
+    .filter((entry): entry is { key: AgentSectionKey; rule: ResolvedAgentSectionRule } =>
       entry.rule !== null && entry.rule.runContentRelevance,
     );
 
@@ -913,6 +924,13 @@ export interface RunStoryValidatorOptions {
   judge?: JudgeAdapter;
   /** Skip pipeline-stage advancement on pass (used by the wiring layer). */
   skipStageAdvancement?: boolean;
+  /**
+   * ACR-007 Step B escape hatch — force the legacy hard-coded rubric even
+   * when contracts are registered. Used by parity tests asserting the
+   * composed-template path produces equivalent verdicts to the legacy
+   * path for the canonical 'story' scope.
+   */
+  forceLegacyRubric?: boolean;
 }
 
 export async function runStoryValidatorAgent(
@@ -1006,17 +1024,28 @@ export async function runStoryValidatorAgent(
 
   const ticket = schemaResult.ticket;
 
+  // ACR-007 Step B — resolve the rubric to apply to this story from the
+  // contract registry (`composeTemplate(scope)` → `toValidationRubric`),
+  // falling back to the legacy hard-coded rubric if no contracts are
+  // registered. The rubric carries `effectivelyRequired` per section so
+  // downstream loops don't have to re-evaluate any conditional triggers.
+  const rawScope: unknown = (existing as Record<string, unknown>).storyScope;
+  const scope: StoryScope = isStoryScope(rawScope) ? rawScope : DEFAULT_STORY_SCOPE;
+  const rubric = getValidationRubricForStory(ticket, scope, {
+    forceLegacy: options.forceLegacyRubric,
+  });
+
   // Steps 2 + 3 — deterministic.
-  const presence = runSectionPresenceStep(ticket);
+  const presence = runSectionPresenceStep(ticket, rubric);
   allFailures.push(...presence.failures);
 
-  const detail = runDetailSufficiencyStep(ticket);
+  const detail = runDetailSufficiencyStep(ticket, rubric);
   allFailures.push(...detail.failures);
   allWarnings.push(...detail.warnings);
 
   // Steps 4-6 — LLM judges (parallel).
   const [contentRelevance, crossSection, gestalt] = await Promise.all([
-    runContentRelevanceStep(ticket, judge),
+    runContentRelevanceStep(ticket, judge, rubric),
     runCrossSectionStep(ticket, judge),
     runCompletenessGestaltStep(ticket, judge),
   ]);

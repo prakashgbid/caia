@@ -465,6 +465,11 @@ export const stories = sqliteTable('stories', {
   fixAttempts: integer('fix_attempts').notNull().default(0),
   phase2Status: text('phase2_status'),                                  // 'coding_in_progress'|...|'done'|'escalated'
   phase2BlockerId: text('phase2_blocker_id'),
+  // ACR-001 (migration 0035) — story_scope: SAFe / Jira hierarchy slot for the
+  // Agent Section Contract Registry. Validator composes per-scope rubrics from
+  // registered contracts (PO/BA/EA/Test-Design) per `composeTemplate(scope)`.
+  // Legacy rows backfill to 'story' (DEFAULT_STORY_SCOPE) — see ACR-008.
+  storyScope: text('story_scope').notNull().default('story'),          // STORY_SCOPES
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -494,6 +499,9 @@ export const stories = sqliteTable('stories', {
   index('story_assigned_worker_idx').on(t.assignedWorkerId),
   index('story_phase2_status_idx').on(t.phase2Status),
   index('story_pr_state_idx').on(t.prState),
+  // ACR-001 index (migration 0035) — dashboard /contracts page + Validator
+  // per-scope rubric cache lookup.
+  index('story_story_scope_idx').on(t.storyScope),
 ]);
 
 // story_revisions — append-only history of every story-tree edit

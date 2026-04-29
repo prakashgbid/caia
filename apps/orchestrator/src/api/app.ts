@@ -26,6 +26,7 @@ import { registerBucketsRoutes } from './routes/buckets';
 import { registerMetricsPhase1Routes } from './routes/metrics-phase1';
 import { registerDagRoutes } from './routes/dag';
 import { registerFeatureRegistryRoutes } from './routes/feature-registry';
+import { registerContractsRoutes } from './routes/contracts';
 import { registerArchitectureRoutes } from './routes/architecture';
 import { registerWorkerRoutes } from './routes/workers';
 import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
@@ -88,6 +89,8 @@ export function createApp(db: Db, opts: CreateAppOptions = {}): Hono {
   registerMetricsPhase1Routes(app, db);
   // FREG-007 — feature registry dashboard backend
   registerFeatureRegistryRoutes(app, db);
+  // ACR-009 — Agent Section Contract Registry dashboard backend
+  registerContractsRoutes(app);
   registerArchitectureRoutes(app, db);
   registerDagRoutes(app, db);
   // TASKMGR-006 + CODING-007 — Phase 2 worker pool dashboard + lifecycle
