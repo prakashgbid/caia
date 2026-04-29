@@ -94,6 +94,7 @@ export function buildDraftTicket(input: DraftTicketInput): TicketTemplateV1 {
     inputDependencies: input.inputDependencies ?? [],
     agentSections: {},
     testCases: [],
+    architecturalInstructions: [],
     metadata: {
       templateVersion: TICKET_TEMPLATE_VERSION,
       poDecomposedAt: input.poDecomposedAt ?? now,

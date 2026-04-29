@@ -49,6 +49,7 @@
     "@chiefaia/feature-registry": "workspace:*",
     "@chiefaia/local-llm-router": "workspace:*",
     "@chiefaia/logger": "workspace:*",
+    "@chiefaia/architecture-registry": "workspace:*",
     "@chiefaia/ticket-template": "workspace:*"
   },
   "devDependencies": {
