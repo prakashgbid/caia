@@ -261,4 +261,80 @@ describe('getTicketBundle', () => {
     expect(bundle.ticket).toBeNull();
     expect(bundle.ticketParseError).toBeNull();
   });
+
+  // ─── TEST-006 — testCases + testDesign flow through the bundle ────────
+  it('round-trips testCases and testDesign on the parsed ticket payload', () => {
+    const db = createTestDb();
+    const fx = seedFixture(db);
+
+    // Patch the embedded ticket payload to include a designed test_cases
+    // array, mirroring what the Test-Design Agent persists.
+    const story = db.select().from(stories).where(eq(stories.id, fx.storyId)).get();
+    const ticket = JSON.parse(story!.agentContributionsJson);
+    const designedAt = 1_700_000_001_000;
+    ticket.testCases = [
+      {
+        id: 'tc-001',
+        title: 'happy path',
+        category: 'happy',
+        layer: 'integration',
+        given: 'a precondition',
+        when: 'an action',
+        then: 'an outcome',
+        selectorHints: [],
+        mocks: [],
+        required: true,
+        status: 'pending',
+        designedBy: 'test-design-agent',
+        designedAt,
+      },
+      {
+        id: 'tc-002',
+        title: 'error path',
+        category: 'error',
+        layer: 'integration',
+        given: 'a bad request',
+        when: 'it hits the API',
+        then: 'a 400 is returned',
+        selectorHints: [],
+        mocks: [],
+        required: true,
+        status: 'pending',
+        designedBy: 'test-design-agent',
+        designedAt,
+      },
+    ];
+    ticket.testDesign = {
+      designedBy: 'test-design-agent',
+      designedAt,
+      totalCases: 2,
+      categoryCounts: {
+        happy: 1, edge: 0, error: 1,
+        accessibility: 0, security: 0, performance: 0, visual: 0,
+      },
+      notes: 'unit test fixture',
+    };
+    ticket.metadata.testDesignedAt = designedAt;
+    ticket.metadata.lastUpdatedAt = designedAt;
+
+    db.update(stories)
+      .set({
+        agentContributionsJson: JSON.stringify(ticket),
+        testCasesJson: JSON.stringify(ticket.testCases),
+        testDesignedAt: designedAt,
+        testDesignStatus: 'designed',
+      })
+      .where(eq(stories.id, fx.storyId))
+      .run();
+
+    const bundle = getTicketBundle(db, fx.storyId)!;
+    expect(bundle.ticket).not.toBeNull();
+    expect(bundle.ticket!.testCases).toHaveLength(2);
+    expect(bundle.ticket!.testDesign?.totalCases).toBe(2);
+    expect(bundle.ticket!.testDesign?.categoryCounts.happy).toBe(1);
+    expect(bundle.ticket!.testDesign?.categoryCounts.error).toBe(1);
+
+    const parsed = TicketTemplateV1Schema.safeParse(bundle.ticket);
+    expect(parsed.success).toBe(true);
+  });
 });
