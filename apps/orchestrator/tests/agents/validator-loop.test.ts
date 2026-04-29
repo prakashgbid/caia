@@ -183,7 +183,7 @@ describe('runValidatorLoop — happy path', () => {
     const out = await runValidatorLoop(
       { promptId: 'prm_loop', correlationId: 'cor_loop' },
       db,
-      { judge: allGreenJudge, maxAttempts: 2, reInvokeBA: false },
+      { judge: allGreenJudge, maxAttempts: 2, reInvokeOnFail: false },
     );
 
     expect(out.storiesValidated).toBe(1);
@@ -228,7 +228,7 @@ describe('runValidatorLoop — happy path', () => {
     const out = await runValidatorLoop(
       { promptId: 'prm_loop', correlationId: 'cor_loop' },
       db,
-      { judge: allGreenJudge, maxAttempts: 2, reInvokeBA: false },
+      { judge: allGreenJudge, maxAttempts: 2, reInvokeOnFail: false },
     );
 
     expect(out.storiesValidated).toBe(0);
@@ -256,7 +256,7 @@ describe('runValidatorLoop — escalation path', () => {
     const out = await runValidatorLoop(
       { promptId: 'prm_loop', correlationId: 'cor_loop' },
       db,
-      { judge: allGreenJudge, maxAttempts: 2, reInvokeBA: false },
+      { judge: allGreenJudge, maxAttempts: 2, reInvokeOnFail: false },
     );
 
     expect(out.storiesEscalated).toBe(1);
@@ -330,7 +330,7 @@ describe('runValidatorLoop — escalation path', () => {
     const out = await runValidatorLoop(
       { promptId: 'prm_loop', correlationId: 'cor_loop' },
       db,
-      { judge: evolvingJudge, maxAttempts: 2, reInvokeBA: false },
+      { judge: evolvingJudge, maxAttempts: 2, reInvokeOnFail: false },
     );
 
     // After 2 attempts (no BA re-invocation in test mode), 2nd one passes.
@@ -366,7 +366,7 @@ describe('runValidatorLoop — multi-story prompt', () => {
     const out = await runValidatorLoop(
       { promptId: 'prm_loop', correlationId: 'cor_loop' },
       db,
-      { judge: allGreenJudge, maxAttempts: 2, reInvokeBA: false },
+      { judge: allGreenJudge, maxAttempts: 2, reInvokeOnFail: false },
     );
 
     expect(out.storiesValidated).toBe(3);
