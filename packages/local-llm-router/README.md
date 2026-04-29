@@ -35,13 +35,29 @@ await route('story-enrichment', prompt, {
 
 ## Routing rules
 
-See `src/routing-config.ts` for the full table.
+See `src/routing-config.ts` for the full table. Rule mix after LAI-005:
 
-- Local only: domain-classification, nature-classification, embedding-generation, dedup-check
-- Local preferred (Claude as fallback): story-enrichment, test-generation-simple, code-implementation-simple, changelog-generation, status-summarization
-- Claude only: hierarchy-decomposition, architecture-decision, code-implementation-complex, security-review
+**Always local — small generative + classification (warm 7B, ~170 ms):**
+- `domain-classification`, `nature-classification`, `dedup-check`, `requirement-deduplication`
+- `embedding-generation` (nomic-embed-text)
+- `commit-message`, `pr-summary`, `code-explanation`
+
+**Local preferred, Claude fallback — story / requirement / first-pass work:**
+- `story-enrichment`, `test-generation-simple`, `code-implementation-simple`
+- `changelog-generation`, `status-summarization`
+- `code-review-light` (qwen2.5-coder:14b — first-pass review only)
+- `formal-reasoning` (phi4 — math/STEM specialist)
+- `hierarchy-decomposition-rough` (qwen3:14b — sketch that a human / Claude refines)
+
+**Claude only — high-stakes, low-tolerance-for-error paths:**
+- `hierarchy-decomposition` (production decomposition)
+- `architecture-decision` (Claude Opus)
+- `code-implementation-complex`
+- `security-review`
 
 Unknown task types default to Claude Sonnet for safety.
+
+LAI-005 raised the local-share floor to ≥70% of all rules (asserted in tests).
 
 ## Requirements
 

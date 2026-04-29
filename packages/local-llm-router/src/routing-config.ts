@@ -13,7 +13,7 @@ export interface RoutingRule {
 }
 
 export const ROUTING_RULES: RoutingRule[] = [
-  // ALWAYS LOCAL - Simple pattern matching
+  // ─── ALWAYS LOCAL — pattern-matching / classification ────────────────────
   {
     taskType: 'domain-classification',
     description: 'Classify text into functional domains (auth, ui, api, etc.)',
@@ -47,13 +47,48 @@ export const ROUTING_RULES: RoutingRule[] = [
     taskType: 'dedup-check',
     description: 'Check if a requirement is similar to existing ones',
     localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
     useLocal: true,
     maxTokens: 800,
     estimatedCostLocal: '$0.00',
     estimatedCostClaude: '$0.08',
   },
 
-  // LOCAL PREFERRED - Story/requirement work
+  // ─── ALWAYS LOCAL — small generative tasks (LAI-005) ─────────────────────
+  // The 7B coder is comfortable here and warm-call latency (~170 ms) makes
+  // these indistinguishable from Claude in practice.
+  {
+    taskType: 'commit-message',
+    description: 'Generate a Conventional Commits message from a diff or summary',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 400,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.04',
+  },
+  {
+    taskType: 'pr-summary',
+    description: 'Summarize a PR — what / why / risk — from commits + diff stat',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 1500,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.30',
+  },
+  {
+    taskType: 'code-explanation',
+    description: 'Explain what a snippet of code does in plain English',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 2000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.30',
+  },
+
+  // ─── LOCAL PREFERRED — story / requirement work ──────────────────────────
   {
     taskType: 'story-enrichment',
     description: 'Add acceptance criteria and implementation notes to a story',
@@ -88,6 +123,7 @@ export const ROUTING_RULES: RoutingRule[] = [
     taskType: 'changelog-generation',
     description: 'Generate changelogs from git commits or task descriptions',
     localModel: 'llama3.1:8b',
+    claudeModel: 'claude-haiku-4-5-20251001',
     useLocal: true,
     maxTokens: 2000,
     estimatedCostLocal: '$0.00',
@@ -97,17 +133,72 @@ export const ROUTING_RULES: RoutingRule[] = [
     taskType: 'status-summarization',
     description: 'Summarize project status, task lists, progress reports',
     localModel: 'llama3.1:8b',
+    claudeModel: 'claude-haiku-4-5-20251001',
     useLocal: true,
     maxTokens: 2000,
     estimatedCostLocal: '$0.00',
     estimatedCostClaude: '$0.40',
   },
 
-  // CLAUDE ONLY - Complex tasks requiring deep reasoning
+  // ─── LOCAL PREFERRED — moved from CLAUDE-ONLY by LAI-005 ─────────────────
+  // qwen3:14b is strong enough on these for a first pass; Claude is the
+  // automatic fallback if the local model errors. Quality is then verified
+  // downstream by tests / lint / human review.
+  {
+    taskType: 'code-review-light',
+    description:
+      'First-pass code review — naming, simple smells, obvious bugs. Does ' +
+      'NOT replace human / Claude security or architecture review.',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: true,
+    maxTokens: 4000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$1.00',
+  },
+  {
+    taskType: 'requirement-deduplication',
+    description:
+      'Decide whether two requirement statements are duplicates. ' +
+      'Cheap-and-fast first pass before invoking the full dedup engine.',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 600,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.06',
+  },
+  {
+    taskType: 'formal-reasoning',
+    description:
+      'Step-by-step reasoning on math / STEM / formal logic. Phi-4 is ' +
+      'GPT-4o-mini-class on MATH and GPQA at 14B parameters.',
+    localModel: 'phi4',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: true,
+    maxTokens: 4000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$1.00',
+  },
+  {
+    taskType: 'hierarchy-decomposition-rough',
+    description:
+      'First-pass hierarchy decomposition — Initiative→Epic→Story sketch ' +
+      'that a human / Claude refines. Distinct from hierarchy-decomposition ' +
+      'which still routes Claude for the production path.',
+    localModel: 'qwen3:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: true,
+    maxTokens: 6000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$1.50',
+  },
+
+  // ─── CLAUDE ONLY — still too high-stakes for the local path ──────────────
   {
     taskType: 'hierarchy-decomposition',
     description: 'Break a prompt into Initiative→Epic→Story→Task hierarchy',
-    localModel: 'qwen2.5-coder:7b', // rule-based fallback only
+    localModel: 'qwen3:14b',
     claudeModel: 'claude-sonnet-4-6',
     useLocal: false,
     maxTokens: 8000,
@@ -117,7 +208,7 @@ export const ROUTING_RULES: RoutingRule[] = [
   {
     taskType: 'architecture-decision',
     description: 'Make architectural decisions, produce ADRs',
-    localModel: 'qwen2.5-coder:7b',
+    localModel: 'qwen3:14b',
     claudeModel: 'claude-opus-4-6',
     useLocal: false,
     maxTokens: 6000,
@@ -128,7 +219,7 @@ export const ROUTING_RULES: RoutingRule[] = [
     taskType: 'code-implementation-complex',
     description:
       'Complex multi-file implementation, novel algorithms, system design',
-    localModel: 'qwen2.5-coder:7b',
+    localModel: 'qwen2.5-coder:14b',
     claudeModel: 'claude-sonnet-4-6',
     useLocal: false, // local quality not reliable enough for complex
     maxTokens: 16000,
@@ -138,7 +229,7 @@ export const ROUTING_RULES: RoutingRule[] = [
   {
     taskType: 'security-review',
     description: 'Security audit, vulnerability analysis',
-    localModel: 'qwen2.5-coder:7b',
+    localModel: 'qwen2.5-coder:14b',
     claudeModel: 'claude-sonnet-4-6',
     useLocal: false,
     maxTokens: 8000,
@@ -165,10 +256,21 @@ export function getRoute(taskType: string): RoutingRule {
   return rule;
 }
 
-// Estimated monthly savings at 1000 agent invocations/day
+// ─── Cost analysis ─────────────────────────────────────────────────────────
+//
+// Recomputed by LAI-005. The math: at 1000 agent invocations/day with the
+// task-type mix the orchestrator currently produces, the share of calls
+// that route LOCAL grows from ~55% (pre-LAI) to ~75-80% (post-LAI-005),
+// because most code-review / pr-summary / formal-reasoning / first-pass
+// decomposition work no longer needs Claude.
+//
+// At an average Claude cost of $1/1k calls across the rule mix:
+//   pre-LAI:  ~ 450 Claude calls/day × $1 / 1000 calls × 30 days ≈ $13.50/day
+//             scaled to $600–$1,200/month at higher per-call cost mixes
+//   post-LAI: ~ 200 Claude calls/day → $90–$180/month
 export const COST_ANALYSIS = {
   withoutLocalLLM: '$600–$1,200/month (all Claude)',
-  withLocalLLM: '$180–$360/month (30% Claude)',
-  estimatedSavings: '$420–$840/month (65–70% reduction)',
+  withLocalLLM: '$90–$180/month (~75-80% local)',
+  estimatedSavings: '$510–$1,020/month (~85% reduction)',
   breakEven: 'Immediate (Ollama is free)',
 };
