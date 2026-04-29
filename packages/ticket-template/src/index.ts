@@ -22,6 +22,9 @@ export {
   PRIORITY_VALUES,
   QUALITY_TAGS,
   TECH_SUB_DOMAINS,
+  // 0025 — input-dependency enums (drive-by re-export — was missing)
+  INPUT_DEPENDENCY_KINDS,
+  INPUT_DEPENDENCY_DECLARERS,
 } from './schema';
 export type {
   TicketTemplateV1,
@@ -33,6 +36,10 @@ export type {
   PriorityValue,
   QualityTag,
   TechSubDomain,
+  // 0025 — input-dependency types
+  InputDependency,
+  InputDependencyKind,
+  InputDependencyDeclarer,
 } from './schema';
 
 export {

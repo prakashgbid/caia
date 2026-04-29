@@ -11,7 +11,13 @@
 
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
-import { classifyKeyword } from '@chiefaia/classifier';
+import {
+  classifyKeyword,
+  classifyProject,
+  classifyBusinessSubDomains,
+  classifyLifecycle,
+  classifyPriority,
+} from '@chiefaia/classifier';
 import { decompose } from '@chiefaia/decomposer';
 import { eventBus } from '../events/bus-adapter';
 import { getDb } from '../db/connection';
@@ -38,6 +44,13 @@ export interface POAgentOutput {
   classification: ReturnType<typeof classifyKeyword>;
   requirementsCreated: number;
   storiesCreated: number;
+  /** BUCKET-002 — prompt-level taxonomy returned for callers + tests. */
+  taxonomy: {
+    project: string;
+    projectConfidence: number;
+    lifecycle: string;
+    priorityBucket: string;
+  };
 }
 
 // ─── Main Agent Runner ───────────────────────────────────────────────────────
@@ -49,8 +62,13 @@ export async function runPOAgent(
   const { promptId, promptText, projectId, correlationId } = input;
   const now = new Date().toISOString();
 
-  // 1. Classify the prompt domain
+  // 1. Classify the prompt domain (legacy primaryDomain) plus the new
+  //    BUCKET-002 9-axis taxonomy fields (project / lifecycle / priority on
+  //    the prompt; per-story businessSubDomains computed below).
   const classification = classifyKeyword(promptText);
+  const projectClassification = classifyProject(promptText);
+  const promptLifecycle = classifyLifecycle(promptText);
+  const promptPriority = classifyPriority(promptText);
 
   // 2. Decompose into hierarchy (Claude if API key present, rule-based otherwise)
   const decomposition = await decompose(promptText);
@@ -90,6 +108,18 @@ export async function runPOAgent(
 
         const storyDbId = `story-${story.id}-${nanoid(4)}`;
 
+        // BUCKET-002 — per-story taxonomy. project + priority are inherited
+        // from the prompt-level classification; lifecycle is re-classified
+        // on the story body so a "fix bug X" story under a "build feature Y"
+        // prompt gets the correct lifecycle. business sub-domains are
+        // computed against the prompt-pinned project.
+        const storyText = `${story.title} ${story.description ?? ''}`;
+        const storyLifecycle = classifyLifecycle(storyText) || promptLifecycle;
+        const storyBusinessSubDomains = classifyBusinessSubDomains(
+          storyText,
+          projectClassification.slug,
+        );
+
         try {
           db.insert(stories).values({
             id: storyDbId,
@@ -103,6 +133,12 @@ export async function runPOAgent(
             parentEntityType: 'requirement',
             parentEntityId: reqId,
             createdAt: now,
+            // BUCKET-002 — 9-axis taxonomy fields populated by PO. EA fills
+            // techSubDomains/qualityTags/risk/effort/blockedBy in BUCKET-003.
+            projectSlug: projectClassification.slug,
+            businessSubDomainsJson: JSON.stringify(storyBusinessSubDomains),
+            lifecycle: storyLifecycle,
+            priorityBucket: promptPriority,
           }).run();
           storiesCreated++;
 
@@ -122,7 +158,9 @@ export async function runPOAgent(
     }
   }
 
-  // 4. Emit po-agent.decomposition.complete
+  // 4. Emit po-agent.decomposition.complete — payload now includes the
+  //    BUCKET-002 prompt-level taxonomy so downstream agents (EA, BA,
+  //    Validator, Testing) can read it without re-running the classifier.
   eventBus.publish({
     type: 'po-agent.decomposition.complete',
     actor: 'po-agent',
@@ -137,6 +175,11 @@ export async function runPOAgent(
       totalNodes: decomposition.totalNodes,
       summary: decomposition.summary,
       primaryDomain: classification.primaryDomain,
+      // BUCKET-002 prompt-level classification.
+      project: projectClassification.slug,
+      projectConfidence: projectClassification.confidence,
+      lifecycle: promptLifecycle,
+      priorityBucket: promptPriority,
     },
   });
 
@@ -178,5 +221,11 @@ export async function runPOAgent(
     classification,
     requirementsCreated,
     storiesCreated,
+    taxonomy: {
+      project: projectClassification.slug,
+      projectConfidence: projectClassification.confidence,
+      lifecycle: promptLifecycle,
+      priorityBucket: promptPriority,
+    },
   };
 }

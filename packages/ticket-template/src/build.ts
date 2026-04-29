@@ -16,6 +16,7 @@ import {
   PRIORITY_VALUES,
   QUALITY_TAGS,
   TECH_SUB_DOMAINS,
+  type InputDependency,
 } from './schema';
 
 export interface DraftTicketInput {
@@ -59,6 +60,9 @@ export interface DraftTicketInput {
     apiRoutes?: string[];
     domains?: string[];
   };
+  /** Migration 0025 — declarative input dependencies (PO seeds capability,
+   *  EA/BA refines kind + satisfiedBy). Optional; defaults to []. */
+  inputDependencies?: InputDependency[];
 }
 
 /**
@@ -92,6 +96,10 @@ export function buildDraftTicket(input: DraftTicketInput): TicketTemplateV1 {
       files: input.files ?? [],
     },
     agentSections: {},
+    // Required by the schema — defaults to [] so legacy callers don't break.
+    // (Parallel work added inputDependencies as a required field; BUCKET-002
+    // restores the default here so existing call-sites keep type-checking.)
+    inputDependencies: input.inputDependencies ?? [],
     metadata: {
       templateVersion: TICKET_TEMPLATE_VERSION,
       poDecomposedAt: input.poDecomposedAt ?? now,
