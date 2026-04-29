@@ -11,7 +11,10 @@
     "changeset": "changeset",
     "version": "changeset version",
     "release": "turbo run build && changeset publish",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "test:regression": "pnpm --filter @caia-app/core test:regression",
+    "test:regression:pipeline": "pnpm --filter @caia-app/core test:regression:pipeline",
+    "test:regression:agent": "pnpm --filter @caia-app/core test:regression:agent"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.1",
