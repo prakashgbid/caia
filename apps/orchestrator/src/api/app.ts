@@ -28,6 +28,8 @@ import { registerDagRoutes } from './routes/dag';
 import { registerFeatureRegistryRoutes } from './routes/feature-registry';
 import { registerArchitectureRoutes } from './routes/architecture';
 import { registerWorkerRoutes } from './routes/workers';
+// HARDEN-006: aggregated pipeline-run trace endpoint.
+import { registerPipelineTraceRoutes } from './routes/pipeline-trace';
 import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
 import type { Phase2Context } from '../agents/wire-phase2';
 
@@ -92,6 +94,8 @@ export function createApp(db: Db, opts: CreateAppOptions = {}): Hono {
   registerDagRoutes(app, db);
   // TASKMGR-006 + CODING-007 — Phase 2 worker pool dashboard + lifecycle
   registerWorkerRoutes(app, db, { registry: opts.phase2?.registry });
+  // HARDEN-006: pipeline-run trace + recent listing.
+  registerPipelineTraceRoutes(app, db);
 
   return app;
 }
