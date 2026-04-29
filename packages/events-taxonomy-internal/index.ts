@@ -27,7 +27,8 @@ export type EventActor =
   | 'ba-agent'
   | 'task-scheduler'
   | 'testing-agent'
-  | 'release-agent';
+  | 'release-agent'
+  | 'story-validator';
 
 /** Canonical envelope for every event emitted through the bus */
 export interface ConductorEvent {
@@ -387,6 +388,13 @@ export type EventType =
   // ─── Story-driven testing framework — Phase A (TEST-003) ──────────────────
   | 'test.cases_generated'
   | 'test.case_added'
+  // ─── Story Validator Agent — Phase A (VAL-003) ────────────────────────────
+  | 'story.validation_started'
+  | 'story.validation_passed'
+  | 'story.validation_failed'
+  | 'story.validation_escalated'
+  | 'ticket.validating'
+  | 'ticket.validated'
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
@@ -474,6 +482,13 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   // ─── Story-driven testing framework — Phase A (TEST-003) ──────────────────
   'test.cases_generated': 'info',
   'test.case_added': 'info',
+  // ─── Story Validator Agent — Phase A (VAL-003) ────────────────────────────
+  'story.validation_started': 'info',
+  'story.validation_passed': 'info',
+  'story.validation_failed': 'warning',
+  'story.validation_escalated': 'error',
+  'ticket.validating': 'info',
+  'ticket.validated': 'info',
 };
 
 /** All valid event type strings from the registry */
