@@ -15,6 +15,8 @@ import { migrateFromJsonl } from '../db/migrate-from-jsonl';
 import { attachWsServer } from '../ws/index';
 import { createApp } from './app';
 import { wireEventBus, eventBus } from '../events/bus-adapter';
+// FREG-003: subscribe FeatureRegistryWriter to story.completed at boot.
+import { registerFeatureRegistryWriter } from '../agents/feature-registry-writer';
 import { subscribeToEvents as subscribePriorityEvents, scoreAll } from '../prioritization/reprioritizer';
 import { tasks, executorRuns } from '../db/schema';
 
@@ -115,6 +117,12 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
 
   // Wire continuous reprioritization before server starts handling requests
   subscribePriorityEvents(db);
+
+  // FREG-003: wire the FeatureRegistryWriter so story.completed events
+  // auto-populate the @chiefaia/feature-registry catalog. Skipped quietly
+  // if the embedder (Ollama) is unreachable — the backfill script (FREG-004)
+  // will catch up later.
+  registerFeatureRegistryWriter();
 
   // Initial batch score of all unscored/stale tasks (fire-and-forget)
   scoreAll(db, 'system').catch(() => {});

@@ -28,7 +28,8 @@ export type EventActor =
   | 'task-scheduler'
   | 'testing-agent'
   | 'release-agent'
-  | 'story-validator';
+  | 'story-validator'
+  | 'feature-registry-writer';
 
 /** Canonical envelope for every event emitted through the bus */
 export interface ConductorEvent {
@@ -70,6 +71,41 @@ export interface StoryCreatedPayload { story_id: string; title: string; kind: st
 export interface StoryUpdatedPayload { story_id: string; fields_changed: string[] }
 export interface StoryStatusChangedPayload { story_id: string; from_status: string; to_status: string }
 export interface StoryDeletedPayload { story_id: string }
+
+// FREG-003 — story completion + feature_registry events
+export interface StoryCompletedPayload {
+  story_id: string;
+  project_slug?: string;
+  /** Terminal status — 'verified' | 'done' | 'partial'. */
+  status: string;
+  /** epoch ms */
+  completed_at: number;
+}
+
+export interface FeatureRegistryUpsertedPayload {
+  feature_id: string;
+  project: string;
+  /** 'story_completed' | 'backfill_codebase' | 'backfill_stories' | 'manual' */
+  source: string;
+  story_id?: string;
+  dedup_key: string;
+  embedding_model: string;
+  latency_ms: number;
+}
+
+export interface FeatureClassificationUncertainPayload {
+  story_id: string;
+  top_match_id: string;
+  top_score: number;
+  threshold_used: number;
+  project?: string;
+}
+
+export interface FeatureClassificationSkippedPayload {
+  story_id: string;
+  /** 'embedder_unavailable' | 'registry_empty' | 'registry_disabled' */
+  reason: string;
+}
 
 // ─── Task ────────────────────────────────────────────────────────────────────
 
@@ -331,6 +367,11 @@ export type EventType =
   | 'pipeline.started' | 'pipeline.completed' | 'pipeline.failed'
   | 'pipeline.decompose_started' | 'pipeline.decompose_completed'
   | 'story.created' | 'story.updated' | 'story.status_changed' | 'story.deleted'
+  // ─── FREG-003 — story completion + feature_registry events ─────────────
+  | 'story.completed'
+  | 'feature.registry.upserted'
+  | 'feature.classification.uncertain'
+  | 'feature.classification.skipped'
   | 'task.created' | 'task.queued' | 'task.started' | 'task.completed'
   | 'task.failed' | 'task.paused' | 'task.resumed' | 'task.status_changed'
   | 'executor.started' | 'executor.stopped' | 'executor.config_changed'
@@ -414,6 +455,11 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'pipeline.started': 'info', 'pipeline.completed': 'info', 'pipeline.failed': 'error',
   'pipeline.decompose_started': 'info', 'pipeline.decompose_completed': 'info',
   'story.created': 'info', 'story.updated': 'info', 'story.status_changed': 'info', 'story.deleted': 'warning',
+  // ─── FREG-003 — story completion + feature_registry events ─────────────
+  'story.completed': 'info',
+  'feature.registry.upserted': 'info',
+  'feature.classification.uncertain': 'warning',
+  'feature.classification.skipped': 'warning',
   'task.created': 'info', 'task.queued': 'info', 'task.started': 'info', 'task.completed': 'info',
   'task.failed': 'error', 'task.paused': 'warning', 'task.resumed': 'info', 'task.status_changed': 'info',
   'executor.started': 'info', 'executor.stopped': 'info', 'executor.config_changed': 'info',
