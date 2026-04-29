@@ -26,6 +26,17 @@ export type { ComposeOptions } from './compose-template';
 
 export { computeSignature } from './signature';
 
+// ACR-007 Step A — adapter that converts ComposedTemplate into the shape
+// the existing Story Validator (validation-rubric.ts) consumes. Lets the
+// Validator swap consumption from hard-coded constants to runtime-composed
+// templates without changing its scoring logic. See architecture report §7.
+export { toValidationRubric } from './validator-adapter';
+export type {
+  AdapterTopLevelRule,
+  AdapterAgentSectionRule,
+  AdapterRubric,
+} from './validator-adapter';
+
 // Re-export the contract types for convenience — callers don't need to
 // also import from @chiefaia/ticket-template just to type a registration.
 export type {
