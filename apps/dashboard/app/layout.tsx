@@ -35,13 +35,18 @@ const NAV_ITEMS = [
   { path: '/builds', label: 'Builds', icon: '🔨', tabKey: 'builds' },
   { path: '/observability/health', label: 'Obs. Health', icon: '👁', tabKey: 'obs_health' },
   { path: '/health/pulse', label: 'Pulse', icon: '💚', tabKey: 'pulse' },
+  { path: '/dag', label: 'Dependency Graph', icon: '🕸️', tabKey: 'dag' },
+  { path: '/quality', label: 'Quality', icon: '📊', tabKey: 'quality' },
   // /coverage retired from nav: conductor-specific Jest/Istanbul artifact
-  //   path. Replace with a CAIA-wide /quality page (DASH-314) once per-package
-  //   coverage aggregation is in place.
+  //   path. Replaced by the new /quality page above (DASH-314 Phase 1 —
+  //   surfaces orchestrator-wide quality signals; Phase 2 will add
+  //   per-package coverage from CI artifacts).
   // { path: '/coverage', label: 'Coverage', icon: '🎯', tabKey: 'coverage' },
   // /enforcement retired from nav: page is currently mocked (no
-  //   enforcement_rules table or backend route). Re-enable when DASH-308
-  //   ships the real backend.
+  //   enforcement_rules table or backend route). DASH-308 explicitly
+  //   defers the real backend (P2, large effort, out-of-MVP per gap
+  //   analysis). The route still works if hit directly. Re-enable this
+  //   nav entry when the enforcement_rules table + handlers ship.
   // { path: '/enforcement', label: 'Enforcement', icon: '🛡️', tabKey: 'enforcement' },
   { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
 ] as const;

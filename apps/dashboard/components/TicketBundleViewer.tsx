@@ -68,6 +68,49 @@ export interface TicketTemplateV1Like {
     enrichedAt: number;
     inputsRequested?: Array<{ agent: string; correlationId: string; status: string; expectedReplyBy?: number; repliedAt?: number }>;
   };
+  // TEST-006 — story-driven testing framework
+  testCases?: TestCaseLike[];
+  testDesign?: {
+    designedBy: string;
+    designedAt: number;
+    totalCases: number;
+    categoryCounts: Record<TestCaseCategoryLike, number>;
+    notes?: string;
+  };
+}
+
+export type TestCaseCategoryLike =
+  | 'happy'
+  | 'edge'
+  | 'error'
+  | 'accessibility'
+  | 'security'
+  | 'performance'
+  | 'visual';
+
+export type TestCaseStatusLike =
+  | 'pending'
+  | 'running'
+  | 'passed'
+  | 'failed'
+  | 'skipped'
+  | 'flaky';
+
+export interface TestCaseLike {
+  id: string;
+  title: string;
+  category: TestCaseCategoryLike;
+  layer: 'unit' | 'integration' | 'e2e' | 'visual' | 'accessibility';
+  given: string;
+  when: string;
+  then: string;
+  linkedAcceptanceCriterionIndex?: number;
+  selectorHints?: string[];
+  mocks?: Array<{ method: string; url: string; status: number; body: string }>;
+  required?: boolean;
+  status: TestCaseStatusLike;
+  designedBy: string;
+  designedAt: number;
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -216,6 +259,13 @@ export function TicketBundleViewer({ bundle }: { bundle: TicketBundle }) {
             </Section>
           ) : null)}
 
+          {ticket.testCases && ticket.testCases.length > 0 && (
+            <TestCasesSection
+              cases={ticket.testCases}
+              design={ticket.testDesign}
+            />
+          )}
+
           {ticket.baEnrichment && (
             <Section title="BA enrichment" testId="bundle-ba-enrichment">
               <KV k="enrichedBy" v={ticket.baEnrichment.enrichedBy} />
@@ -244,6 +294,10 @@ export function TicketBundleViewer({ bundle }: { bundle: TicketBundle }) {
         <KV k="downstream stories" v={<StringList items={dependencies.downstream} empty="none" />} />
       </Section>
 
+      {/* Test cases (TEST-006) — also rendered when ticket parses, but
+          re-surfaced here as a fallback when only the story.testCasesJson
+          column is populated. The detailed in-line render is preferred. */}
+
       {/* Labels */}
       <Section title="Entity labels" testId="bundle-labels">
         {labels.length === 0 ? (
@@ -266,5 +320,189 @@ export function TicketBundleViewer({ bundle }: { bundle: TicketBundle }) {
         )}
       </Section>
     </div>
+  );
+}
+
+// ─── TEST-006 — Test cases section ───────────────────────────────────────────
+
+const CATEGORY_COLOURS: Record<TestCaseCategoryLike, string> = {
+  happy: '#38a169',
+  edge: '#dd6b20',
+  error: '#e53e3e',
+  accessibility: '#3182ce',
+  security: '#805ad5',
+  performance: '#d69e2e',
+  visual: '#319795',
+};
+
+const STATUS_COLOURS: Record<TestCaseStatusLike, string> = {
+  pending: '#4a5568',
+  running: '#3182ce',
+  passed: '#38a169',
+  failed: '#e53e3e',
+  skipped: '#a0aec0',
+  flaky: '#dd6b20',
+};
+
+function CategoryPill({ category }: { category: TestCaseCategoryLike }) {
+  return (
+    <span
+      data-testid={`tc-category-${category}`}
+      style={{
+        background: CATEGORY_COLOURS[category],
+        color: '#fff',
+        padding: '2px 6px',
+        borderRadius: 3,
+        fontSize: 10,
+        fontWeight: 600,
+        textTransform: 'uppercase',
+        letterSpacing: 0.4,
+      }}
+    >
+      {category}
+    </span>
+  );
+}
+
+function StatusPillTC({ status }: { status: TestCaseStatusLike }) {
+  return (
+    <span
+      data-testid={`tc-status-${status}`}
+      style={{
+        background: STATUS_COLOURS[status],
+        color: '#fff',
+        padding: '2px 6px',
+        borderRadius: 3,
+        fontSize: 10,
+        fontWeight: 600,
+      }}
+    >
+      {status}
+    </span>
+  );
+}
+
+const ALL_CATEGORIES: TestCaseCategoryLike[] = [
+  'happy', 'edge', 'error', 'accessibility', 'security', 'performance', 'visual',
+];
+
+function TestCasesSection({
+  cases,
+  design,
+}: {
+  cases: TestCaseLike[];
+  design: TicketTemplateV1Like['testDesign'];
+}) {
+  // Compute per-category counts straight from the array so we never get
+  // out-of-sync with what we actually render.
+  const counts: Record<TestCaseCategoryLike, number> = {
+    happy: 0, edge: 0, error: 0,
+    accessibility: 0, security: 0, performance: 0, visual: 0,
+  };
+  for (const c of cases) counts[c.category] += 1;
+
+  const statusCounts: Record<TestCaseStatusLike, number> = {
+    pending: 0, running: 0, passed: 0, failed: 0, skipped: 0, flaky: 0,
+  };
+  for (const c of cases) statusCounts[c.status] += 1;
+
+  return (
+    <Section
+      title={`Test cases (${cases.length})`}
+      testId="bundle-test-cases"
+    >
+      {/* Category breakdown pills */}
+      <div
+        data-testid="bundle-test-cases-summary"
+        style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}
+      >
+        {ALL_CATEGORIES.filter((cat) => counts[cat] > 0).map((cat) => (
+          <span
+            key={cat}
+            data-testid={`tc-summary-${cat}`}
+            style={{
+              background: CATEGORY_COLOURS[cat],
+              color: '#fff',
+              padding: '2px 8px',
+              borderRadius: 12,
+              fontSize: 11,
+            }}
+          >
+            {cat} {counts[cat]}
+          </span>
+        ))}
+      </div>
+
+      {/* Status breakdown */}
+      <div
+        data-testid="bundle-test-cases-status"
+        style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}
+      >
+        {(['pending', 'running', 'passed', 'failed', 'skipped', 'flaky'] as TestCaseStatusLike[])
+          .filter((s) => statusCounts[s] > 0)
+          .map((s) => (
+            <span
+              key={s}
+              style={{
+                background: '#2d3748',
+                color: STATUS_COLOURS[s],
+                padding: '2px 8px',
+                borderRadius: 12,
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            >
+              {s} {statusCounts[s]}
+            </span>
+          ))}
+      </div>
+
+      {/* Designer attribution */}
+      {design && (
+        <div style={{ color: '#a0aec0', fontSize: 11, marginBottom: 10 }}>
+          designed by <code>{design.designedBy}</code> at{' '}
+          {new Date(design.designedAt).toLocaleString()} ·{' '}
+          {design.notes}
+        </div>
+      )}
+
+      {/* Per-case list */}
+      <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }}>
+        {cases.map((tc) => (
+          <li
+            key={tc.id}
+            data-testid={`tc-row-${tc.id}`}
+            style={{
+              padding: '8px 10px',
+              borderTop: '1px solid #2d3748',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <CategoryPill category={tc.category} />
+              <span style={{ background: '#2d3748', color: '#cbd5e0', padding: '2px 6px', borderRadius: 3, fontSize: 10, fontWeight: 600 }}>
+                {tc.layer}
+              </span>
+              <StatusPillTC status={tc.status} />
+              <span style={{ color: '#e2e8f0', fontSize: 12, flex: 1 }}>
+                {tc.title}
+              </span>
+              {tc.required === false && (
+                <span style={{ color: '#a0aec0', fontSize: 10, fontStyle: 'italic' }}>
+                  optional
+                </span>
+              )}
+            </div>
+            <div style={{ color: '#a0aec0', fontSize: 11, paddingLeft: 4 }}>
+              <div><strong style={{ color: '#cbd5e0' }}>Given</strong> {tc.given}</div>
+              <div><strong style={{ color: '#cbd5e0' }}>When</strong> {tc.when}</div>
+              <div><strong style={{ color: '#cbd5e0' }}>Then</strong> {tc.then}</div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }

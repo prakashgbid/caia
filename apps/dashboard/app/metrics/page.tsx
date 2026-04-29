@@ -32,6 +32,15 @@ function MetricsContent() {
         >
           📈 Phase 1 Metrics →
         </Link>
+        <Link
+          href="/metrics/llm"
+          style={{
+            background: '#2d3748', border: '1px solid #4a5568', color: '#90cdf4',
+            borderRadius: 4, padding: '6px 12px', fontSize: 12, textDecoration: 'none',
+          }}
+        >
+          🤖 LLM routing →
+        </Link>
       </div>
       <MetricsDashboard metrics={metrics} />
     </div>

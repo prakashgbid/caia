@@ -1,5 +1,16 @@
 'use client';
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
+import { useWebSocket } from '../../hooks/useWebSocket';
+
+// DASH-304: kinds that should trigger a /queue refetch when seen on the WS.
+// All four `priority.*` events are emitted by the reprioritizer / override
+// route, so any of them indicates the queue ordering or scores have moved.
+const QUEUE_REFRESH_KINDS = new Set<string>([
+  'priority.scored',
+  'priority.rebucketed',
+  'priority.reordered',
+  'priority.user_override',
+]);
 
 interface QueueTask {
   id: string;
@@ -145,6 +156,13 @@ function QueueContent() {
   const [loading, setLoading] = useState(true);
   const [rescoring, setRescoring] = useState(false);
   const [lastRescored, setLastRescored] = useState<string | null>(null);
+  const [liveTick, setLiveTick] = useState<number>(0);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // DASH-304: live updates. Subscribe to the WS and re-fetch on any
+  // `priority.*` event. Coalesce bursts (e.g. POST /priority/score-all
+  // emits 17+ events in tight succession) by debouncing 250 ms.
+  const { lastEvent, connected } = useWebSocket('ws://localhost:7776/events');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -156,6 +174,19 @@ function QueueContent() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!lastEvent?.kind) return;
+    if (!QUEUE_REFRESH_KINDS.has(lastEvent.kind)) return;
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => {
+      setLiveTick(t => t + 1);
+      load();
+    }, 250);
+    return () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    };
+  }, [lastEvent, load]);
 
   const handleRescore = async (taskId: string) => {
     await fetch(`/api/priority/score/${taskId}`, { method: 'POST' });
@@ -193,6 +224,14 @@ function QueueContent() {
             {data.total} active tasks
           </span>
         )}
+        <span
+          data-test-live-indicator
+          data-live-tick={liveTick}
+          title={connected ? 'Subscribed to priority.* events' : 'Reconnecting to event stream'}
+          style={{ color: connected ? '#68d391' : '#fc8181', fontSize: 11 }}
+        >
+          {connected ? '● live' : '○ reconnecting'}
+        </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           {lastRescored && (
             <span style={{ color: '#68d391', fontSize: 11 }}>{lastRescored}</span>

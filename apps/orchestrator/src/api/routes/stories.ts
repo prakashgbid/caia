@@ -200,6 +200,23 @@ export function registerCompletenessRoutes(app: Hono, db: Db): void {
     const findings = (body['findings'] as Array<Record<string, unknown>> | undefined) ?? [];
     const status = (body['status'] as string) ?? 'pending';
 
+    // DASH-305: emit run_started before the transaction so dashboard
+    // subscribers can pre-mark the entity as in-flight. Fires once per run
+    // regardless of outcome; pairs with the run_completed/check.completed
+    // events emitted after the transaction commits.
+    eventBus.publish({
+      type: 'completeness.run_started',
+      actor: 'completeness-sentinel',
+      entity_type: (body['entity_kind'] as string) ?? 'unknown',
+      entity_id: (body['entity_id'] as string) ?? 'unknown',
+      payload: {
+        entity_kind: (body['entity_kind'] as string) ?? 'unknown',
+        entity_id: (body['entity_id'] as string) ?? 'unknown',
+        checks_total: (body['checks_total'] as number) ?? 0,
+        started_at: now,
+      },
+    });
+
     const sqlite = getSqliteRaw();
     let runId = 0;
 
@@ -302,6 +319,30 @@ export function registerCompletenessRoutes(app: Hono, db: Db): void {
         score: (body['score_pct'] as number) ?? 0,
       },
     });
+
+    // DASH-305: emit one finding_filed event per finding so the dashboard's
+    // /completeness page (and the prioritizer, which already subscribes)
+    // can react in near-real-time without polling. Severity is preserved
+    // so the consumer can filter (e.g. only critical findings light up
+    // the badge).
+    for (const f of findings) {
+      eventBus.publish({
+        type: 'completeness.finding_filed',
+        actor: 'completeness-sentinel',
+        entity_type: (body['entity_kind'] as string) ?? 'unknown',
+        entity_id: (body['entity_id'] as string) ?? 'unknown',
+        severity: ((f['severity'] as string) === 'critical' ? 'error'
+          : (f['severity'] as string) === 'warning' ? 'warning' : 'info'),
+        payload: {
+          run_id: runId,
+          entity_kind: (body['entity_kind'] as string) ?? 'unknown',
+          entity_id: (body['entity_id'] as string) ?? 'unknown',
+          check_kind: (f['check_kind'] as string) ?? 'manual',
+          severity: (f['severity'] as string) ?? 'warning',
+          message: (f['message'] as string) ?? '',
+        },
+      });
+    }
 
     return c.json({ id: runId, status, runAt: now }, 201);
   });

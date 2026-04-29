@@ -41,20 +41,48 @@ export interface RouterOptions {
   fallbackOnError?: boolean;
 }
 
+interface OllamaCommonOptions {
+  temperature?: number;
+  num_predict?: number;
+}
+
 export interface OllamaGenerateRequest {
   model: string;
   prompt: string;
   system?: string;
   stream: boolean;
-  options?: {
-    temperature?: number;
-    num_predict?: number;
-  };
+  /** Go duration string ("10m", "1h", "-1" for forever). Default Ollama is 5m. */
+  keep_alive?: string;
+  options?: OllamaCommonOptions;
 }
 
 export interface OllamaGenerateResponse {
   model: string;
   response: string;
+  done: boolean;
+  prompt_eval_count?: number;
+  eval_count?: number;
+}
+
+export interface OllamaChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface OllamaChatRequest {
+  model: string;
+  messages: OllamaChatMessage[];
+  stream: boolean;
+  /** Suppress chain-of-thought emission for thinking-mode models (Qwen3). */
+  think?: boolean;
+  /** Go duration string for how long to keep the model loaded after this request. */
+  keep_alive?: string;
+  options?: OllamaCommonOptions;
+}
+
+export interface OllamaChatResponse {
+  model: string;
+  message?: { role: string; content: string };
   done: boolean;
   prompt_eval_count?: number;
   eval_count?: number;

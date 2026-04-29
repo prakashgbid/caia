@@ -268,12 +268,56 @@ export async function runScaffolder(
 
     poChain
       .then(() => {
+        // BUCKET-003: EA Agent runs between PO and BA — assigns techSubDomains,
+        // qualityTags, risk, effort, blockedBy, claims to every story.
+        if (agentsToActivate.includes('ea-agent') || agentsToActivate.includes('ba-agent')) {
+          return import('./ea-agent')
+            .then(({ runEAAgent }) =>
+              runEAAgent({ promptId, correlationId }, db),
+            )
+            .catch((err: unknown) => logger.warn({ err }, 'EA Agent failed'));
+        }
+      })
+      .then(() => {
         if (agentsToActivate.includes('ba-agent')) {
           return import('./ba-agent')
             .then(({ runBAAgent }) =>
               runBAAgent({ promptId, correlationId }, db),
             );
         }
+      })
+      .then(() => {
+        // TEST-005: Test-Design Agent runs after BA finishes its
+        // cross-agent enrichment. It generates test_cases for every
+        // valid story, advances the prompt to the `test_designed`
+        // pipeline stage, then yields to the Task Scheduler.
+        return import('./test-design-agent')
+          .then(({ runTestDesignAgent }) =>
+            runTestDesignAgent({ promptId, correlationId }, db),
+          )
+          .then((out) => {
+            // Advance the prompt-level pipeline stage once test-design
+            // has visited every valid story. We advance even if zero
+            // stories were eligible (e.g. all skipped) so downstream
+            // consumers always see the stage row appear.
+            const { advancePipelineStage } = require('./pipeline-stages') as
+              typeof import('./pipeline-stages');
+            advancePipelineStage(
+              {
+                promptId,
+                stage: 'test_designed',
+                correlationId,
+                metadata: {
+                  designedStories: out.designedStories,
+                  totalTestCases: out.totalTestCases,
+                  storiesSkipped: out.storiesSkipped,
+                  storiesErrored: out.storiesErrored,
+                },
+              },
+              db,
+            );
+          })
+          .catch((err: unknown) => logger.warn({ err }, 'Test-Design Agent failed'));
       })
       .then(() => {
         if (agentsToActivate.includes('task-scheduler')) {
@@ -283,7 +327,7 @@ export async function runScaffolder(
         }
       })
       .catch((err: unknown) =>
-        logger.warn({ err }, 'BA Agent / Task Scheduler chain failed'),
+        logger.warn({ err }, 'EA / BA / Test-Design / Task Scheduler chain failed'),
       );
   }, 5_000);
 }
