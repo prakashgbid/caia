@@ -120,6 +120,14 @@ function buildSandbox(): Sandbox {
 
   // ─── working repo ────────────────────────────────────────────────────────
   git(repo, ['init', '--initial-branch=main', '.']);
+  // Configure local identity so spawned git commits succeed in CI envs
+  // that don't ship a global user.name/user.email.
+  git(repo, ['config', 'user.name', 'caia-test']);
+  git(repo, ['config', 'user.email', 'caia@example.com']);
+  // Disable hooks (the consolidated repo's husky hooks won't be present
+  // in the sandbox, but be defensive: blank core.hooksPath suppresses any
+  // global pre-commit guard).
+  git(repo, ['config', 'core.hooksPath', '/dev/null']);
   git(repo, ['remote', 'add', 'origin', bareRemote]);
 
   // Seed package.json + a passing test.
@@ -263,6 +271,28 @@ function makeBundle(storyId: string): Bundle {
 // ─── The test ───────────────────────────────────────────────────────────────
 
 describe('Coding Agent — real-git E2E', () => {
+  // Inherit a deterministic identity into every git invocation the
+  // worker spawns. DiffCommitter's spawnSync inherits parent env; this
+  // is the simplest way to satisfy git's identity check in clean CI envs
+  // without modifying production code.
+  const ORIGINAL_GIT_AUTHOR = {
+    GIT_AUTHOR_NAME: process.env.GIT_AUTHOR_NAME,
+    GIT_AUTHOR_EMAIL: process.env.GIT_AUTHOR_EMAIL,
+    GIT_COMMITTER_NAME: process.env.GIT_COMMITTER_NAME,
+    GIT_COMMITTER_EMAIL: process.env.GIT_COMMITTER_EMAIL,
+  };
+  beforeAll(() => {
+    process.env.GIT_AUTHOR_NAME = process.env.GIT_AUTHOR_NAME ?? 'caia-test';
+    process.env.GIT_AUTHOR_EMAIL = process.env.GIT_AUTHOR_EMAIL ?? 'caia@example.com';
+    process.env.GIT_COMMITTER_NAME = process.env.GIT_COMMITTER_NAME ?? 'caia-test';
+    process.env.GIT_COMMITTER_EMAIL = process.env.GIT_COMMITTER_EMAIL ?? 'caia@example.com';
+  });
+  afterAll(() => {
+    for (const [k, v] of Object.entries(ORIGINAL_GIT_AUTHOR)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
   let sb: Sandbox;
   beforeAll(() => {
     if (!GIT_AVAILABLE) return;
