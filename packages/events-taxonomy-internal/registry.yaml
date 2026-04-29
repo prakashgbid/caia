@@ -519,3 +519,24 @@ events:
     severity: info
     actor: [story-validator]
     payload: [storyId, promptId, correlationId, score, judgeProvider]
+
+  # Phase 2 worker-pool lifecycle (TASKMGR-002)
+  - type: worker.registered
+    severity: info
+    actor: [worker]
+    payload: [workerId, kind, capabilities, registeredAt]
+
+  - type: worker.heartbeat
+    severity: debug
+    actor: [worker]
+    payload: [workerId, status, currentStoryId, ts]
+
+  - type: worker.released
+    severity: info
+    actor: [worker]
+    payload: [workerId, lastStoryId, releasedAt, reason]
+
+  - type: worker.crashed
+    severity: error
+    actor: [task-scheduler]
+    payload: [workerId, lastStoryId, error, lastHeartbeatAt, ts]
