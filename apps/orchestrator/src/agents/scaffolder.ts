@@ -287,6 +287,17 @@ export async function runScaffolder(
         }
       })
       .then(() => {
+        // VAL-005: Story Validator runs after BA enrichment. Per-story
+        // validation; on fail, re-invokes BA up to maxAttempts; on
+        // still-fail, escalates by filing a `validation-stuck` blocker.
+        // Advances the prompt to the `validated` pipeline stage at the end.
+        return import('./validator-loop')
+          .then(({ runValidatorLoop }) =>
+            runValidatorLoop({ promptId, correlationId }, db),
+          )
+          .catch((err: unknown) => logger.warn({ err }, 'Validator Loop failed'));
+      })
+      .then(() => {
         // TEST-005: Test-Design Agent runs after BA finishes its
         // cross-agent enrichment. It generates test_cases for every
         // valid story, advances the prompt to the `test_designed`
