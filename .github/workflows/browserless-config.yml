@@ -1,0 +1,44 @@
+name: browserless config
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/browserless/**'
+      - '.github/workflows/browserless-config.yml'
+  pull_request:
+    paths:
+      - 'infra/browserless/**'
+      - '.github/workflows/browserless-config.yml'
+
+concurrency:
+  group: browserless-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  config-smoke:
+    name: compose-smoke + shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yaml + shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml shellcheck
+
+      - name: compose-smoke (assert v2 envs, port, image pin, runbook)
+        run: ./infra/browserless/tests/compose-smoke.test.sh
+
+      - name: shellcheck (healthcheck + scripts)
+        run: |
+          shellcheck \
+            infra/browserless/healthcheck.sh \
+            infra/browserless/scripts/deploy-browserless.sh \
+            infra/browserless/scripts/smoke-test.sh \
+            infra/browserless/tests/compose-smoke.test.sh
+
+      - name: docker compose config (validate compose file)
+        run: |
+          export BROWSERLESS_TOKEN=stub-for-validation
+          docker compose -f infra/browserless/docker-compose.yml config > /dev/null
