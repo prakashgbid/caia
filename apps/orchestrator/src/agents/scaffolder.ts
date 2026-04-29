@@ -287,6 +287,39 @@ export async function runScaffolder(
         }
       })
       .then(() => {
+        // TEST-005: Test-Design Agent runs after BA finishes its
+        // cross-agent enrichment. It generates test_cases for every
+        // valid story, advances the prompt to the `test_designed`
+        // pipeline stage, then yields to the Task Scheduler.
+        return import('./test-design-agent')
+          .then(({ runTestDesignAgent }) =>
+            runTestDesignAgent({ promptId, correlationId }, db),
+          )
+          .then((out) => {
+            // Advance the prompt-level pipeline stage once test-design
+            // has visited every valid story. We advance even if zero
+            // stories were eligible (e.g. all skipped) so downstream
+            // consumers always see the stage row appear.
+            const { advancePipelineStage } = require('./pipeline-stages') as
+              typeof import('./pipeline-stages');
+            advancePipelineStage(
+              {
+                promptId,
+                stage: 'test_designed',
+                correlationId,
+                metadata: {
+                  designedStories: out.designedStories,
+                  totalTestCases: out.totalTestCases,
+                  storiesSkipped: out.storiesSkipped,
+                  storiesErrored: out.storiesErrored,
+                },
+              },
+              db,
+            );
+          })
+          .catch((err: unknown) => logger.warn({ err }, 'Test-Design Agent failed'));
+      })
+      .then(() => {
         if (agentsToActivate.includes('task-scheduler')) {
           return import('./task-scheduler').then(({ runTaskScheduler }) =>
             runTaskScheduler({ promptId, correlationId }, db),
@@ -294,7 +327,7 @@ export async function runScaffolder(
         }
       })
       .catch((err: unknown) =>
-        logger.warn({ err }, 'EA / BA Agent / Task Scheduler chain failed'),
+        logger.warn({ err }, 'EA / BA / Test-Design / Task Scheduler chain failed'),
       );
   }, 5_000);
 }
