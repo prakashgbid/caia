@@ -25,6 +25,8 @@ import {
 } from '@chiefaia/classifier';
 import { decompose } from '@chiefaia/decomposer';
 import { eventBus } from '../events/bus-adapter';
+import { EmbedderUnavailableError } from '@chiefaia/feature-registry';
+import { searchAndLog } from './feature-registry-search-client';
 import { getDb } from '../db/connection';
 import { requirements, stories } from '../db/schema';
 import { advancePipelineStage } from './pipeline-stages';
@@ -119,11 +121,79 @@ export async function runPOAgent(
         // prompt gets the correct lifecycle. business sub-domains are
         // computed against the prompt-pinned project.
         const storyText = `${story.title} ${story.description ?? ''}`;
-        const storyLifecycle = classifyLifecycle(storyText) || promptLifecycle;
+        let storyLifecycle = classifyLifecycle(storyText) || promptLifecycle;
         const storyBusinessSubDomains = classifyBusinessSubDomains(
           storyText,
           projectClassification.slug,
         );
+
+        // FREG-006 — Feature Registry classification.
+        // Before persisting the story we ask the registry whether this
+        // task matches an existing feature. If the top match clears the
+        // enhance threshold, override lifecycle to 'enhance' and record
+        // the matched feature_registry.id in linksTo. If the embedder
+        // or registry is unavailable, default to whatever
+        // classifyLifecycle returned + emit feature.classification.skipped.
+        let linksTo: string[] = [];
+        let featureClassification: 'enhance' | 'ambiguous' | 'new' | null = null;
+        let featureClassificationScore: number | null = null;
+        let featureClassificationAt: number | null = null;
+        try {
+          const fregResult = await searchAndLog(storyText, {
+            project: projectClassification.slug,
+            topK: 5,
+            storyId: storyDbId,
+            caller: 'po-agent',
+          });
+          featureClassification = fregResult.classification;
+          featureClassificationScore = fregResult.topMatch?.scoreDense ?? null;
+          featureClassificationAt = Date.now();
+          if (
+            (fregResult.classification === 'enhance' ||
+              fregResult.classification === 'ambiguous') &&
+            fregResult.topMatch !== null
+          ) {
+            // Override the keyword-based lifecycle. Even ambiguous
+            // matches set 'enhance' (the feature.classification.uncertain
+            // event lets BA / a human downgrade if needed).
+            storyLifecycle = 'enhance';
+            linksTo = [fregResult.topMatch.row.id];
+          }
+        } catch (err) {
+          if (err instanceof EmbedderUnavailableError) {
+            // Embedder unreachable — don't block the pipeline. Backfill
+            // can re-classify later when the embedder comes back up.
+            eventBus.publish({
+              type: 'feature.classification.skipped',
+              actor: 'po-agent',
+              entity_type: 'story',
+              entity_id: storyDbId,
+              project_slug: projectClassification.slug,
+              payload: {
+                story_id: storyDbId,
+                reason: 'embedder_unavailable',
+              },
+            });
+          } else {
+            // Anything else: log warn, continue with classifyLifecycle's
+            // verdict. Same skipped event for dashboard visibility.
+            logger.warn(
+              { err: (err as Error).message, storyDbId },
+              'feature-registry search failed; continuing without override',
+            );
+            eventBus.publish({
+              type: 'feature.classification.skipped',
+              actor: 'po-agent',
+              entity_type: 'story',
+              entity_id: storyDbId,
+              project_slug: projectClassification.slug,
+              payload: {
+                story_id: storyDbId,
+                reason: 'registry_error',
+              },
+            });
+          }
+        }
 
         try {
           db.insert(stories).values({
@@ -144,6 +214,11 @@ export async function runPOAgent(
             businessSubDomainsJson: JSON.stringify(storyBusinessSubDomains),
             lifecycle: storyLifecycle,
             priorityBucket: promptPriority,
+            // FREG-006 — registry classification metadata.
+            linksToJson: JSON.stringify(linksTo),
+            featureClassification,
+            featureClassificationScore,
+            featureClassificationAt,
           }).run();
           storiesCreated++;
 

@@ -431,6 +431,13 @@ export const stories = sqliteTable('stories', {
   validationAttempts: integer('validation_attempts').notNull().default(0),
   /** Epoch ms when the last validation run completed (pass or fail). */
   lastValidatedAt: integer('last_validated_at'),
+  // FREG-006 (migration 0029): PO Agent's feature_registry classification.
+  // links_to_json holds an array of feature_registry.id strings for the
+  // matched features. featureClassification reflects the verdict.
+  linksToJson: text('links_to_json').notNull().default('[]'),
+  featureClassification: text('feature_classification'),               // 'enhance'|'ambiguous'|'new'|null
+  featureClassificationScore: real('feature_classification_score'),    // cosine sim of top match
+  featureClassificationAt: integer('feature_classification_at'),       // epoch ms
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -449,6 +456,8 @@ export const stories = sqliteTable('stories', {
   // VAL-003 indexes (migration 0027)
   index('story_validation_status_idx').on(t.validationStatus),
   index('story_validation_attempts_idx').on(t.validationAttempts),
+  // FREG-006 index (migration 0029)
+  index('story_feature_classification_idx').on(t.featureClassification),
 ]);
 
 // story_revisions — append-only history of every story-tree edit
