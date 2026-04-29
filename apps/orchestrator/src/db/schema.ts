@@ -1019,3 +1019,94 @@ export const featureRegistrySearchLog = sqliteTable('feature_registry_search_log
   index('freg_log_classification_idx').on(t.classification),
   index('freg_log_caller_idx').on(t.caller),
 ]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// arch_artifacts / arch_edges / arch_extract_runs — ARCH-001 (migration 0030)
+//
+// Architecture Knowledge Graph (AKG): structured catalog of every
+// architectural artifact in CAIA + sites — services, APIs, components,
+// themes, plugins, packages, schemas, migrations, integrations, domain
+// modules, observability signals, ADRs — plus the directed dependency
+// edges between them. The EA Agent (ARCH-006) queries this graph by
+// `tech_sub_domain` to produce per-domain technical implementation
+// instructions on every story.
+//
+// See @chiefaia/architecture-registry for the Zod schemas, dedup-key
+// helper, and per-domain query API. Embeddings live in a sibling vec0
+// virtual table (`arch_artifacts_vec`) wired by ARCH-004 — drizzle doesn't
+// model virtual tables so the bootstrap is in TS.
+// ─────────────────────────────────────────────────────────────────────────────
+export const archArtifacts = sqliteTable('arch_artifacts', {
+  id: text('id').primaryKey(),
+  kind: text('kind').notNull(),                       // ARTIFACT_KINDS
+  project: text('project').notNull(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  keySignature: text('key_signature'),
+  filePathsJson: text('file_paths_json').notNull().default('[]'),
+  entryPath: text('entry_path'),
+  routeSignature: text('route_signature'),            // 'GET /api/leaderboard'
+  tableName: text('table_name'),
+  owningService: text('owning_service'),
+  packageName: text('package_name'),
+  designSystemTier: text('design_system_tier'),       // primitive|pattern|feature|page
+  techSubDomainsJson: text('tech_sub_domains_json').notNull().default('[]'),
+  tagsJson: text('tags_json').notNull().default('[]'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+  source: text('source').notNull(),                   // ARCH_REGISTRY_SOURCES
+  contentHash: text('content_hash'),
+  extractedAtCommit: text('extracted_at_commit'),
+  embeddingModel: text('embedding_model').notNull().default('nomic-embed-text'),
+  embeddingDim: integer('embedding_dim').notNull().default(768),
+  embeddingVersion: text('embedding_version').notNull().default('v1.5'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  dedupKey: text('dedup_key').notNull().unique(),
+}, (t) => [
+  index('arch_artifacts_kind_idx').on(t.kind),
+  index('arch_artifacts_project_idx').on(t.project),
+  index('arch_artifacts_kind_project_idx').on(t.kind, t.project),
+  index('arch_artifacts_owning_service_idx').on(t.owningService),
+  index('arch_artifacts_package_idx').on(t.packageName),
+  index('arch_artifacts_route_idx').on(t.routeSignature),
+  index('arch_artifacts_table_idx').on(t.tableName),
+  index('arch_artifacts_source_idx').on(t.source),
+  index('arch_artifacts_updated_idx').on(t.updatedAt),
+]);
+
+export const archEdges = sqliteTable('arch_edges', {
+  id: text('id').primaryKey(),
+  fromId: text('from_id').notNull(),
+  toId: text('to_id').notNull(),
+  relation: text('relation').notNull(),               // EDGE_RELATIONS
+  weight: real('weight').notNull().default(1.0),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+  source: text('source').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  index('arch_edges_from_idx').on(t.fromId),
+  index('arch_edges_to_idx').on(t.toId),
+  index('arch_edges_relation_idx').on(t.relation),
+  index('arch_edges_from_relation_idx').on(t.fromId, t.relation),
+  index('arch_edges_to_relation_idx').on(t.toId, t.relation),
+]);
+
+export const archExtractRuns = sqliteTable('arch_extract_runs', {
+  id: text('id').primaryKey(),
+  extractor: text('extractor').notNull(),             // 'ts-morph'|'drizzle'|'package'|'adr'
+  startedAt: integer('started_at').notNull(),
+  finishedAt: integer('finished_at'),
+  durationMs: integer('duration_ms'),
+  commitSha: text('commit_sha'),
+  artifactsInserted: integer('artifacts_inserted').notNull().default(0),
+  artifactsUpdated: integer('artifacts_updated').notNull().default(0),
+  artifactsUnchanged: integer('artifacts_unchanged').notNull().default(0),
+  edgesInserted: integer('edges_inserted').notNull().default(0),
+  edgesUpdated: integer('edges_updated').notNull().default(0),
+  error: text('error'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+}, (t) => [
+  index('arch_extract_runs_extractor_idx').on(t.extractor),
+  index('arch_extract_runs_started_idx').on(t.startedAt),
+]);

@@ -204,6 +204,13 @@
       "when": 1778000000000,
       "tag": "0029_story_feature_classification",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1778100000000,
+      "tag": "0030_architecture_registry",
+      "breakpoints": true
     }
   ]
 }
