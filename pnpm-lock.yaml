@@ -106,6 +106,9 @@ importers:
       '@caia-app/pipeline-pulse':
         specifier: workspace:*
         version: link:../pipeline-pulse
+      '@chiefaia/architecture-registry':
+        specifier: workspace:*
+        version: link:../../packages/architecture-registry
       '@chiefaia/classifier':
         specifier: workspace:*
         version: link:../../packages/classifier

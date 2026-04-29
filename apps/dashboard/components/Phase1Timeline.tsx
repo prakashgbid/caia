@@ -20,6 +20,11 @@ export const PHASE1_STAGES = [
   { key: 'scaffolded', label: 'Scaffolded', icon: '🏗️', actor: 'scaffolder' },
   { key: 'po_decomposed', label: 'PO Decomposed', icon: '📐', actor: 'po-agent' },
   { key: 'ba_enriched', label: 'BA Enriched', icon: '🤝', actor: 'ba-agent' },
+  // ARCH-006 (2026-04-28): EA now runs after BA, producing per-domain
+  // architecturalInstructions[] grounded in the AKG.
+  { key: 'ea_decomposed', label: 'EA Decomposed', icon: '🏛️', actor: 'ea-agent' },
+  { key: 'validated', label: 'Validated', icon: '🛡️', actor: 'validator' },
+  { key: 'test_designed', label: 'Test Designed', icon: '🧪', actor: 'test-design-agent' },
   { key: 'bucket_placed', label: 'Bucket Placed', icon: '🗂️', actor: 'task-scheduler' },
   { key: 'ready_for_pickup', label: 'Ready for Pickup', icon: '🟢', actor: 'task-scheduler' },
 ] as const;

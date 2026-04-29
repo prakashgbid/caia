@@ -443,6 +443,9 @@ export const stories = sqliteTable('stories', {
   featureClassification: text('feature_classification'),               // 'enhance'|'ambiguous'|'new'|null
   featureClassificationScore: real('feature_classification_score'),    // cosine sim of top match
   featureClassificationAt: integer('feature_classification_at'),       // epoch ms
+  // ARCH-006 (migration 0031): EA Agent's per-domain architectural instructions
+  architecturalInstructionsJson: text('architectural_instructions_json').notNull().default('[]'),
+  eaDecomposedAt: integer('ea_decomposed_at'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -466,6 +469,8 @@ export const stories = sqliteTable('stories', {
   index('story_validation_attempts_idx').on(t.validationAttempts),
   // FREG-006 index (migration 0029)
   index('story_feature_classification_idx').on(t.featureClassification),
+  // ARCH-006 index (migration 0031)
+  index('story_ea_decomposed_idx').on(t.eaDecomposedAt),
 ]);
 
 // story_revisions — append-only history of every story-tree edit

@@ -211,6 +211,13 @@
       "when": 1778100000000,
       "tag": "0030_architecture_registry",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1778200000000,
+      "tag": "0031_story_architectural_instructions",
+      "breakpoints": true
     }
   ]
 }

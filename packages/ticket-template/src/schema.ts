@@ -526,6 +526,37 @@ const BaEnrichment = z
   })
   .strict();
 
+
+// ─── ARCH-006: architecturalInstructions[] ──────────────────────────────────
+//
+// Populated by the EA Agent AFTER BA enrichment (per the 2026-04-28 pipeline
+// reorder). Each instruction is a concrete, per-domain directive: reuse an
+// existing AKG artifact, enhance one, or create a new one with proposed path
+// + signature. The Story Validator (VAL-###) and Test-Design Agent (TEST-###)
+// both read these instructions to scope their own work.
+//
+// Mirrors @chiefaia/architecture-registry's ArchitecturalInstructionSchema
+// inline (no import dependency) so ticket-template stays at the bottom of
+// the dependency graph.
+export const ARCH_INSTRUCTION_ACTIONS = ['reuse', 'enhance', 'create', 'no_op'] as const;
+export type ArchInstructionAction = (typeof ARCH_INSTRUCTION_ACTIONS)[number];
+
+export const ArchitecturalInstructionSchema = z
+  .object({
+    id: z.string().min(1),
+    techSubDomain: z.enum(TECH_SUB_DOMAINS),
+    action: z.enum(ARCH_INSTRUCTION_ACTIONS),
+    summary: z.string().min(1).max(500),
+    details: z.string().min(1).max(4000),
+    referencedArtifactIds: z.array(z.string()).default([]),
+    proposedPath: z.string().optional(),
+    proposedSignature: z.string().optional(),
+    enhancementOfArtifactId: z.string().optional(),
+    confidence: z.number().min(0).max(1).default(1.0),
+  })
+  .strict();
+export type ArchitecturalInstruction = z.infer<typeof ArchitecturalInstructionSchema>;
+
 // ─── Top-level template ──────────────────────────────────────────────────────
 
 const Metadata = z
@@ -598,6 +629,13 @@ export const TicketTemplateV1Schema = z
     testCases: TestCases.default([]),
     /** TEST-001: metadata about the test-design pass. */
     testDesign: TestDesign.optional(),
+    /**
+     * ARCH-006: per-domain architectural instructions populated by the EA
+     * Agent AFTER BA enrichment. Each instruction is `reuse | enhance |
+     * create | no_op` and references AKG artifact IDs where available.
+     * Empty array on legacy tickets.
+     */
+    architecturalInstructions: z.array(ArchitecturalInstructionSchema).default([]),
     metadata: Metadata,
   })
   .strict()

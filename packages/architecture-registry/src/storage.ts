@@ -399,7 +399,7 @@ export function querySparse(
   const filter = buildFilterSql(opts, 'a');
 
   const sanitized = queryText
-    .replace(/[^\w\s-]/g, ' ')
+    .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
     .filter((t) => t.length > 0)
     .map((t) => `${t}*`)
