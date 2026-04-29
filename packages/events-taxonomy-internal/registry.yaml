@@ -581,3 +581,50 @@ events:
     severity: debug
     actor: [task-scheduler]
     payload: [bucketId, queueDepth, throughputPerHour, oldestReadyAgeS, workersAssigned, engaged, ts]
+
+  # Phase 2C — Coding Agent worker handoff to Fix-It Test Agent (CODING-007).
+  # Emitted when local unit + integration tests are green and the PR is open.
+  # Subscribers: Fix-It Test Agent (triggers a testing session against the
+  # warm worktree); dashboard (renders pipeline stage advance).
+  - type: task.coding_complete
+    severity: info
+    actor: [worker]
+    payload: [storyId, workerId, prUrl, prNumber, sha, localTestsPassed, worktreePath, codingSessionId, completedAt, correlationId]
+
+  # Phase 2D — Fix-It Test Agent acknowledged a coding_complete and started.
+  - type: task.testing_started
+    severity: info
+    actor: [worker]
+    payload: [storyId, workerId, fixItSessionId, startedAt, correlationId]
+
+  # Phase 2D — per-(testCase, attempt) result row. Persisted to test_case_runs.
+  - type: task.test_case.result
+    severity: info
+    actor: [worker]
+    payload: [storyId, testCaseId, status, attempt, durationMs, traceUrl, error, correlationId]
+
+  # Phase 2D — Fix-It asked the Coding Agent (via IPC) to apply a fix.
+  - type: task.fix_requested
+    severity: warning
+    actor: [worker]
+    payload: [storyId, testCaseId, attempt, contextRef, fixRequestSummary, correlationId]
+
+  # Phase 2D — Coding Agent applied the fix (via IPC) and emitted a new sha.
+  - type: task.fix_applied
+    severity: info
+    actor: [worker]
+    payload: [storyId, testCaseId, attempt, sha, summary, correlationId]
+
+  # Phase 2D — Terminal success: every test case green.
+  - type: task.tested_and_done
+    severity: info
+    actor: [worker]
+    payload: [storyId, workerId, allPassedAt, totalAttempts, finalSha, correlationId]
+
+  # Phase 2D — Terminal failure: at least one case exhausted the fix loop.
+  # Task Manager files a `fix-stuck` blocker on receipt; dashboard surfaces
+  # it on /blockers.
+  - type: task.fix_loop_escalated
+    severity: error
+    actor: [worker]
+    payload: [storyId, workerId, exhaustedTestCaseIds, lastFailures, escalatedAt, correlationId]
