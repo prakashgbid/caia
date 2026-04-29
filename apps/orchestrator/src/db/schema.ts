@@ -418,6 +418,11 @@ export const stories = sqliteTable('stories', {
   softDependsOnJson: text('soft_depends_on_json').notNull().default('[]'),
   conflictsWithJson: text('conflicts_with_json').notNull().default('[]'),
   claimsJson: text('claims_json').notNull().default('{}'),
+  // Migration 0025 — declarative input dependencies. Distinct from
+  // `blockedByJson` (story-to-story ordering): this column lists inputs
+  // the story needs to start, with `satisfiedBy` filled in by EA/BA once
+  // a producing story exists. See `InputDependency` in @chiefaia/ticket-template.
+  inputDependenciesJson: text('input_dependencies_json').notNull().default('[]'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -431,6 +436,9 @@ export const stories = sqliteTable('stories', {
   index('story_lifecycle_idx').on(t.lifecycle),
   index('story_risk_idx').on(t.risk),
   index('story_priority_bucket_idx').on(t.priorityBucket),
+  // 0025: bundle endpoint reads input_dependencies on every load; scheduler
+  // scans for `satisfied_by IS NULL` to gate routing.
+  index('story_input_deps_idx').on(t.status, t.parentEntityId),
 ]);
 
 // story_revisions — append-only history of every story-tree edit

@@ -15,6 +15,7 @@ import { eq, and } from 'drizzle-orm';
 import {
   TicketTemplateV1Schema,
   type TicketTemplateV1,
+  type InputDependency,
 } from '@chiefaia/ticket-template';
 import type { Db } from '../db/connection';
 import {
@@ -73,6 +74,16 @@ export interface TicketBundle {
     upstream: string[];
     downstream: string[];
   };
+  /**
+   * Migration 0025 — declarative input requirements for the story.
+   *
+   * Distinct from `dependencies` (which is story-to-story ordering): this
+   * field surfaces the inputs the story needs to start (capabilities, data,
+   * env vars, flags, routes, schemas, secrets) along with `satisfiedBy`
+   * pointers when a producing story has been identified. Empty array on
+   * legacy stories — populated by PO/BA/EA agents on new stories.
+   */
+  inputDependencies: InputDependency[];
 }
 
 function safeParseStringArray(value: string | null | undefined): string[] {

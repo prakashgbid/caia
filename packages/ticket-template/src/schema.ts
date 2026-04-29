@@ -356,6 +356,59 @@ const Claims = z
   })
   .strict();
 
+// ─── Declarative input dependencies ─────────────────────────────────────────
+//
+// Captures input requirements as structured metadata, separate from blocker
+// relationships in `taxonomy.blockedBy`. Where `blockedBy` is "this story
+// must not start until story X completes" (a hard, ID-keyed relationship),
+// `inputDependencies` is "this story needs an input that may or may not
+// have a producer yet". Surfaces BEFORE the producing story exists, so
+// PO/BA can record it as soon as they realize the gap.
+//
+// Once the producing story exists, EA / BA fills in `satisfiedBy`. The
+// scheduler (BUCKET-009) gates routing on every required entry having a
+// `satisfiedBy` pointer; gaps fire `story.input_missing` events.
+
+/** What kind of input the story needs. */
+export const INPUT_DEPENDENCY_KINDS = [
+  'capability', // a behavior the system needs to expose, e.g. "login flow"
+  'data',       // a dataset / fixture / seed
+  'env',        // a build/runtime env var
+  'flag',       // a feature flag toggle
+  'route',      // an HTTP route / handler
+  'schema',     // a DB schema / migration
+  'secret',     // a vault secret
+] as const;
+export type InputDependencyKind = (typeof INPUT_DEPENDENCY_KINDS)[number];
+
+/** Who declared the input requirement. Mirrors the agent taxonomy. */
+export const INPUT_DEPENDENCY_DECLARERS = ['po', 'ba', 'ea', 'human'] as const;
+export type InputDependencyDeclarer = (typeof INPUT_DEPENDENCY_DECLARERS)[number];
+
+const InputDependency = z
+  .object({
+    kind: z.enum(INPUT_DEPENDENCY_KINDS),
+    /** Human-readable label, e.g. "login flow". Required, ≥1 char. */
+    name: z.string().min(1),
+    /** Optional clarifier — what specifically is needed. */
+    description: z.string().default(''),
+    /** Hard requirement (default true). False ⇒ "nice-to-have, soft gate". */
+    required: z.boolean().default(true),
+    /**
+     * Story ID that produces this input, once known. Set by EA or BA after
+     * decomposition lands a sibling story that fulfils the requirement.
+     * Until set, scheduler treats the dependency as un-satisfied.
+     */
+    satisfiedBy: z.string().optional(),
+    /** Who put this on the ticket. */
+    declaredBy: z.enum(INPUT_DEPENDENCY_DECLARERS),
+    /** Unix ms — when the entry was first added. */
+    declaredAt: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type InputDependency = z.infer<typeof InputDependency>;
+
 // ─── BA enrichment metadata ──────────────────────────────────────────────────
 
 const InputRequest = z
@@ -401,6 +454,14 @@ export const TicketTemplateV1Schema = z
     taxonomy: Taxonomy.optional(),
     /** BUCKET-009: scheduler resource claims populated by EA. */
     claims: Claims.optional(),
+    /**
+     * Declarative input requirements — what the story needs to start.
+     * Distinct from `taxonomy.blockedBy` (story-to-story ordering); this
+     * column captures inputs that may or may not have a producing story
+     * yet. PO seeds it during decomposition; BA / EA fill in `satisfiedBy`
+     * once a producing story is identified. Empty array on legacy tickets.
+     */
+    inputDependencies: z.array(InputDependency).default([]),
     agentSections: AgentSections,
     baEnrichment: BaEnrichment.optional(),
     metadata: Metadata,
