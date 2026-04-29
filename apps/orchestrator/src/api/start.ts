@@ -15,6 +15,8 @@ import { migrateFromJsonl } from '../db/migrate-from-jsonl';
 import { attachWsServer } from '../ws/index';
 import { createApp } from './app';
 import { wireEventBus, eventBus } from '../events/bus-adapter';
+import { wirePhase2 } from '../agents/wire-phase2';
+import type { Phase2Context } from '../agents/wire-phase2';
 // FREG-003: subscribe FeatureRegistryWriter to story.completed at boot.
 import { registerFeatureRegistryWriter } from '../agents/feature-registry-writer';
 import { subscribeToEvents as subscribePriorityEvents, scoreAll } from '../prioritization/reprioritizer';
@@ -113,7 +115,19 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
     console.error(`[conductor] Migrated ${migrated} records from JSONL to SQLite`);
   }
 
-  const app = createApp(db);
+  // CODING-007: wire Phase 2 task-manager subsystem (registry, ready-pool
+  // consumer, backpressure monitor, health-metrics emitter) before
+  // createApp so worker lifecycle routes can route through the registry.
+  // Set CAIA_PHASE2_DISABLED=1 to opt out (legacy behaviour: lifecycle
+  // endpoints fall back to direct DB writes without bus events).
+  const PHASE2_DISABLED = process.env['CAIA_PHASE2_DISABLED'] === '1';
+  let phase2: Phase2Context | undefined;
+  if (!PHASE2_DISABLED) {
+    phase2 = wirePhase2(db);
+    console.error('[conductor] Phase 2 task-manager wired (registry + consumer + monitor + emitter)');
+  }
+
+  const app = createApp(db, { phase2 });
 
   // Wire continuous reprioritization before server starts handling requests
   subscribePriorityEvents(db);
@@ -150,6 +164,7 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
   return {
     stop: () => {
       if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (phase2) phase2.stopAll();
       eventBus.publish({ type: 'system.shutdown', actor: 'system', payload: { component: 'conductor-api', reason: 'stop()' } });
       server.close();
     },
