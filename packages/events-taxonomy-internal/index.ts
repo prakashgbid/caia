@@ -289,6 +289,41 @@ export interface ReleaseAgentReportReadyPayload {
   blockers: string[];
 }
 
+// ─── Story-driven testing framework — Phase A (TEST-003) ─────────────────────
+
+export interface TestCasesGeneratedPayload {
+  storyId: string;
+  promptId: string;
+  correlationId: string;
+  totalCases: number;
+  categoryCounts: {
+    happy: number;
+    edge: number;
+    error: number;
+    accessibility: number;
+    security: number;
+    performance: number;
+    visual: number;
+  };
+  durationMs: number;
+}
+
+export interface TestCaseAddedPayload {
+  storyId: string;
+  promptId: string;
+  correlationId: string;
+  testCaseId: string;
+  category:
+    | 'happy'
+    | 'edge'
+    | 'error'
+    | 'accessibility'
+    | 'security'
+    | 'performance'
+    | 'visual';
+  layer: 'unit' | 'integration' | 'e2e' | 'visual' | 'accessibility';
+}
+
 // ─── Union type of all valid event types ─────────────────────────────────────
 
 export type EventType =
@@ -349,6 +384,9 @@ export type EventType =
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   | 'testing-agent.validation.complete'
   | 'release-agent.report.ready'
+  // ─── Story-driven testing framework — Phase A (TEST-003) ──────────────────
+  | 'test.cases_generated'
+  | 'test.case_added'
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
@@ -433,6 +471,9 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'artifact.approved': 'info',
   'artifact.rejected': 'warning',
   'artifact.superseded': 'warning',
+  // ─── Story-driven testing framework — Phase A (TEST-003) ──────────────────
+  'test.cases_generated': 'info',
+  'test.case_added': 'info',
 };
 
 /** All valid event type strings from the registry */

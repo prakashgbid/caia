@@ -444,3 +444,14 @@ events:
     severity: info
     actor: [task-scheduler]
     payload: [storyId, promptId, correlationId, bucketId, bucketKind]
+
+  # Story-driven testing framework — Phase A (TEST-003)
+  - type: test.cases_generated
+    severity: info
+    actor: [testing-agent]
+    payload: [storyId, promptId, correlationId, totalCases, categoryCounts, durationMs]
+
+  - type: test.case_added
+    severity: info
+    actor: [testing-agent]
+    payload: [storyId, promptId, correlationId, testCaseId, category, layer]
