@@ -1306,3 +1306,15 @@ export const spendRecords = sqliteTable('spend_records', {
   index('spend_records_ts_idx').on(t.tsMsEpoch),
 ]);
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// user_profiles — single default profile for local dashboard identity.
+// No auth; uses a well-known 'default' id.
+// ─────────────────────────────────────────────────────────────────────────────
+export const userProfiles = sqliteTable('user_profiles', {
+  id: text('id').primaryKey(),
+  displayName: text('display_name').notNull().default(''),
+  avatarUrl: text('avatar_url'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

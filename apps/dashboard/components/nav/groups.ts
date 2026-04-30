@@ -116,6 +116,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: '⚙️',
     defaultExpanded: false,
     leaves: [
+      { path: '/profile', label: 'Profile', icon: '👤', tabKey: 'profile' },
       { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
       { path: '/standards', label: 'Standards', icon: '📋', tabKey: 'standards' },
       { path: '/adrs', label: 'ADRs', icon: '📜', tabKey: 'adrs' },
