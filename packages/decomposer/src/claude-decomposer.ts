@@ -1,5 +1,16 @@
 import type { DecompositionResult, DecomposerConfig } from './types';
 
+/**
+ * @deprecated since 2026-04-30 / PO-DECOMP-### track.
+ *
+ * Single-shot Claude decomposer kept as the production path until the
+ * recursive engine in @chiefaia/decomposer-recursive ships P1 wiring.
+ * The new engine is gated by useRecursiveDecomposer() (env var
+ * PO_USE_RECURSIVE_DECOMPOSER, default OFF in P0).
+ *
+ * Empirical validation report: caia/docs/po-decomposer-validation-2026-04-30.md
+ */
+
 const DECOMPOSER_SYSTEM_PROMPT = `You are an expert product manager and software architect. Your job is to decompose user requirements into a structured hierarchy of work items.
 
 Given a prompt from a user, produce a JSON hierarchy with this exact structure:

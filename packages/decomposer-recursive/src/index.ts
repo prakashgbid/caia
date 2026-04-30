@@ -127,3 +127,15 @@ export type {
   JudgeInput,
   JudgePairResult,
 } from './judges.js';
+
+// ─── Feature flag (PR 4) ────────────────────────────────────────────────
+
+export {
+  PO_USE_RECURSIVE_DECOMPOSER_ENV,
+  STAGE_PO_DECOMPOSING,
+  useRecursiveDecomposer,
+} from './feature-flag.js';
+
+export type {
+  UseRecursiveDecomposerOptions,
+} from './feature-flag.js';
