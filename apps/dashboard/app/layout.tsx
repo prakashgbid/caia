@@ -49,7 +49,9 @@ const NAV_ITEMS = [
   //   analysis). The route still works if hit directly. Re-enable this
   //   nav entry when the enforcement_rules table + handlers ship.
   // { path: '/enforcement', label: 'Enforcement', icon: '🛡️', tabKey: 'enforcement' },
+  { path: '/admin/users', label: 'Users', icon: '👥', tabKey: 'admin_users' },
   { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
+  { path: '/profile', label: 'Profile', icon: '👤', tabKey: 'profile' },
 ] as const;
 
 // Map WS event kind prefix → tab key
