@@ -550,3 +550,274 @@ describe('runStoryValidatorAgent — input template version', () => {
     expect(out.passed).toBe(true);
   });
 });
+
+// ─── VAL-2026-04-30 enhancement tests ────────────────────────────────────────
+
+describe('runStoryValidatorAgent — error: story not found', () => {
+  it('throws when storyId does not exist in the database', async () => {
+    const db = createTestDb();
+    await expect(
+      runStoryValidatorAgent(
+        { storyId: 'nonexistent_id', promptId: 'prm_val', correlationId: 'cor_val' },
+        db,
+        { judge: allGreenJudge },
+      ),
+    ).rejects.toThrow('Story not found: nonexistent_id');
+  });
+});
+
+describe('runStoryValidatorAgent — malformed agentContributionsJson', () => {
+  it('falls back to empty object and hard-fails schema when JSON is unparseable', async () => {
+    const db = createTestDb();
+    seedPromptAndStory(db, '{ invalid json here :::');
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: allGreenJudge },
+    );
+    expect(out.passed).toBe(false);
+    expect(out.report.steps.schema.passed).toBe(false);
+    expect(out.nextAction).toBe('return_to_ba');
+  });
+});
+
+describe('runStoryValidatorAgent — judge failure resilience', () => {
+  it('treats cross-section judge throw as non-blocking (passed=true, score=0, judgeError in details)', async () => {
+    const t = buildHighQualityTicket();
+    const db = createTestDb();
+    seedPromptAndStory(db, JSON.stringify(t));
+
+    const crossThrowJudge: JudgeAdapter = {
+      judge: async ({ taskType }): Promise<JudgeResponse> => {
+        if (taskType === 'validation-cross-section') {
+          throw new Error('cross-section judge unavailable');
+        }
+        return {
+          json:
+            taskType === 'validation-content-relevance'
+              ? { score: 5, concerns: [] }
+              : { testingAgentReady: 5, codingAgentReady: 5, blockers: [], rationale: 'ok' },
+          raw: '{}',
+          provider: 'local',
+          model: 'qwen2.5-coder:7b',
+          durationMs: 1,
+        };
+      },
+    };
+
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: crossThrowJudge },
+    );
+    expect(out.report.steps.crossSectionConsistency.passed).toBe(true);
+    expect(out.report.steps.crossSectionConsistency.score).toBe(0);
+    expect(out.report.steps.crossSectionConsistency.details).toMatchObject({
+      judgeError: expect.any(String),
+    });
+  });
+
+  it('treats completeness-gestalt judge throw as non-blocking (passed=true)', async () => {
+    const t = buildHighQualityTicket();
+    const db = createTestDb();
+    seedPromptAndStory(db, JSON.stringify(t));
+
+    const gestaltThrowJudge: JudgeAdapter = {
+      judge: async ({ taskType }): Promise<JudgeResponse> => {
+        if (taskType === 'validation-completeness') {
+          throw new Error('gestalt judge unavailable');
+        }
+        return {
+          json:
+            taskType === 'validation-content-relevance'
+              ? { score: 5, concerns: [] }
+              : { score: 5, contradictions: [] },
+          raw: '{}',
+          provider: 'local',
+          model: 'qwen2.5-coder:7b',
+          durationMs: 1,
+        };
+      },
+    };
+
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: gestaltThrowJudge },
+    );
+    expect(out.report.steps.completenessGestalt.passed).toBe(true);
+    expect(out.passed).toBe(true);
+  });
+
+  it('sets judgeProvider="none" when all judge steps throw — overall verdict still passes deterministic checks', async () => {
+    const t = buildHighQualityTicket();
+    const db = createTestDb();
+    seedPromptAndStory(db, JSON.stringify(t));
+
+    const allThrowJudge: JudgeAdapter = {
+      judge: async (): Promise<JudgeResponse> => {
+        throw new Error('all judges unavailable');
+      },
+    };
+
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: allThrowJudge },
+    );
+    expect(out.report.judgeProvider).toBe('none');
+    expect(out.report.judgeModelTouchpoints).toHaveLength(0);
+    // All LLM steps gracefully pass (no failures pushed to allFailures) so
+    // deterministic steps alone decide the verdict → pass on a quality ticket.
+    expect(out.passed).toBe(true);
+  });
+});
+
+describe('runStoryValidatorAgent — judgeProvider aggregation', () => {
+  it('records judgeProvider="mixed" when content-relevance uses local and cross-section uses claude', async () => {
+    const t = buildHighQualityTicket();
+    const db = createTestDb();
+    seedPromptAndStory(db, JSON.stringify(t));
+
+    const mixedJudge: JudgeAdapter = {
+      judge: async ({ taskType }): Promise<JudgeResponse> => ({
+        json:
+          taskType === 'validation-content-relevance'
+            ? { score: 5, concerns: [] }
+            : taskType === 'validation-cross-section'
+              ? { score: 5, contradictions: [] }
+              : { testingAgentReady: 5, codingAgentReady: 5, blockers: [] },
+        raw: '{}',
+        provider: taskType === 'validation-content-relevance' ? 'local' : 'claude',
+        model:
+          taskType === 'validation-content-relevance' ? 'qwen2.5-coder:7b' : 'claude-3-haiku',
+        durationMs: 1,
+      }),
+    };
+
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: mixedJudge },
+    );
+    expect(out.report.judgeProvider).toBe('mixed');
+    expect(out.report.judgeModelTouchpoints).toContain('qwen2.5-coder:7b');
+    expect(out.report.judgeModelTouchpoints).toContain('claude-3-haiku');
+  });
+
+  it('records judgeProvider="claude" when all three judge steps use claude', async () => {
+    const t = buildHighQualityTicket();
+    const db = createTestDb();
+    seedPromptAndStory(db, JSON.stringify(t));
+
+    const claudeOnlyJudge: JudgeAdapter = {
+      judge: async ({ taskType }): Promise<JudgeResponse> => ({
+        json:
+          taskType === 'validation-content-relevance'
+            ? { score: 5, concerns: [] }
+            : taskType === 'validation-cross-section'
+              ? { score: 5, contradictions: [] }
+              : { testingAgentReady: 5, codingAgentReady: 5, blockers: [] },
+        raw: '{}',
+        provider: 'claude',
+        model: 'claude-3-haiku',
+        durationMs: 1,
+      }),
+    };
+
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: claudeOnlyJudge },
+    );
+    expect(out.report.judgeProvider).toBe('claude');
+    expect(out.report.judgeModelTouchpoints).toContain('claude-3-haiku');
+  });
+});
+
+describe('runStoryValidatorAgent — BDD fraction warning', () => {
+  it('generates a warning (not a hard fail) when fewer than threshold ACs use BDD phrasing', async () => {
+    // 1 of 3 ACs uses Given/When/Then → fraction ≈ 0.33, below threshold → warning only.
+    const t = buildTicket({
+      acceptanceCriteria: [
+        'Given I am logged out, when I click sign-in, then the OAuth flow begins for the user',
+        'The system renders the button when the user is unauthenticated in the navigation area',
+        'An error message is displayed to the user when the OAuth callback fails with detail',
+      ],
+    });
+    const db = createTestDb();
+    seedPromptAndStory(db, JSON.stringify(t));
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: allGreenJudge },
+    );
+    const bddWarning = out.report.warnings.find(
+      (w) => w.section === 'acceptanceCriteria' && w.message.includes('BDD'),
+    );
+    expect(bddWarning).toBeTruthy();
+    // Should NOT produce a hard-fail ruleId for the BDD fraction (zero case is different).
+    const bddZeroFail = out.report.failedChecks.find(
+      (f) => f.ruleId === 'detail:ac_bdd_fraction_zero',
+    );
+    expect(bddZeroFail).toBeUndefined();
+  });
+});
+
+describe('runStoryValidatorAgent — forceLegacyRubric', () => {
+  it('passes a high-quality ticket when the legacy rubric is forced via option', async () => {
+    const t = buildHighQualityTicket();
+    const db = createTestDb();
+    seedPromptAndStory(db, JSON.stringify(t));
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: allGreenJudge, forceLegacyRubric: true },
+    );
+    expect(out.passed).toBe(true);
+    expect(out.nextAction).toBe('proceed');
+  });
+
+  it('hard-fails a schema-invalid ticket even when the legacy rubric is forced', async () => {
+    const db = createTestDb();
+    seedPromptAndStory(db, JSON.stringify({ broken: true }));
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: allGreenJudge, forceLegacyRubric: true },
+    );
+    expect(out.passed).toBe(false);
+    expect(out.report.steps.schema.passed).toBe(false);
+  });
+});
+
+describe('runStoryValidatorAgent — fix-suggestion deduplication', () => {
+  it('deduplicates identical fix suggestions across multiple fluff failures in the same run', async () => {
+    // 3 ACs all containing "works correctly" → 3 fluff failedChecks, 1 deduped fixSuggestion.
+    const t = buildTicket({
+      acceptanceCriteria: [
+        'Given I am logged out, when I click sign-in, then it works correctly as expected for users',
+        'Given OAuth succeeds, when the callback returns, then the flow works correctly and I land on dashboard',
+        'Given OAuth fails, when an error occurs, then the system works correctly and shows a message',
+      ],
+    });
+    const db = createTestDb();
+    seedPromptAndStory(db, JSON.stringify(t));
+    const out = await runStoryValidatorAgent(
+      { storyId: 'stry_val', promptId: 'prm_val', correlationId: 'cor_val' },
+      db,
+      { judge: allGreenJudge },
+    );
+    const fluffChecks = out.report.failedChecks.filter(
+      (f) => f.ruleId === 'detail:ac_fluff',
+    );
+    expect(fluffChecks.length).toBeGreaterThanOrEqual(2);
+    const fluffFixSuggestion =
+      `Replace fluff phrase "works correctly" with a concrete observable behaviour.`;
+    const matchesInSuggestions = out.report.fixSuggestions.filter(
+      (s) => s === fluffFixSuggestion,
+    );
+    // Same fix suggestion appears exactly once despite multiple identical fluff failures.
+    expect(matchesInSuggestions).toHaveLength(1);
+  });
+});
