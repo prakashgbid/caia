@@ -732,6 +732,13 @@ importers:
       nanoid:
         specifier: ^5.0.0
         version: 5.1.9
+    devDependencies:
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
 
   packages/decomposer-recursive:
     dependencies:
