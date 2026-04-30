@@ -78,3 +78,35 @@ export {
 } from './atomicity-classifier.js';
 
 export type { ClassifyAtomicityOptions } from './atomicity-classifier.js';
+
+// ─── Engine (PR 2) ──────────────────────────────────────────────────────
+
+export {
+  PORecursiveDecomposer,
+  PORecursiveDecomposerCancelled,
+} from './decomposer.js';
+
+export type {
+  DecomposeOneOptions,
+  DecomposeRootOptions,
+  DecomposeRootResult,
+  DecomposedTreeNode,
+  ParentNode,
+} from './decomposer.js';
+
+export {
+  CHILD_SCOPE_OF,
+  DECOMPOSER_SYSTEM_PROMPTS,
+  DECOMPOSER_TASK_TYPES,
+} from './per-scope-prompts.js';
+
+export {
+  formatAkgHitsForPrompt,
+  formatFregHitsForPrompt,
+  querySubstrateStub,
+} from './freg-akg-stub.js';
+
+export type {
+  FregAkgQueryInput,
+  FregAkgQueryResult,
+} from './freg-akg-stub.js';
