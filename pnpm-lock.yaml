@@ -99,6 +99,9 @@ importers:
 
   apps/executor:
     dependencies:
+      '@chiefaia/capability-broker':
+        specifier: workspace:*
+        version: link:../../packages/capability-broker
       '@chiefaia/event-bus-internal':
         specifier: workspace:*
         version: link:../../packages/event-bus-internal
@@ -115,6 +118,9 @@ importers:
       typescript:
         specifier: '*'
         version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   apps/orchestrator:
     dependencies:
