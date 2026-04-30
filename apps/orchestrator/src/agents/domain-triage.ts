@@ -15,25 +15,24 @@
  */
 
 import { z } from 'zod';
-import { TECH_SUB_DOMAINS, type TechSubDomain, type TicketBundle } from '@chiefaia/ticket-template';
+import type { TechSubDomain } from '@chiefaia/ticket-template';
 import { route } from '@chiefaia/local-llm-router';
+import { classifyKeyword } from '@chiefaia/classifier';
 import { inferTechSubDomains } from './ea-agent';
+import type { TicketBundle } from '../api/ticket-bundle';
 
 // ─── Macro-domain definitions ──────────────────────────────────────────────────
 
-export type MacroDomain =
-  | 'ui'
-  | 'backend'
-  | 'data'
-  | 'platform'
-  | 'quality-security'
-  | 'integrations';
-
 export const MACRO_DOMAINS = ['ui', 'backend', 'data', 'platform', 'quality-security', 'integrations'] as const;
+
+export type MacroDomain = (typeof MACRO_DOMAINS)[number];
 
 /**
  * Map from TECH_SUB_DOMAINS to macro-categories per proposal §5.1.
  * This is the breadth routing: which specialists should be activated.
+ *
+ * MUST cover every member of TECH_SUB_DOMAINS — the Record<TechSubDomain,...>
+ * type guarantees this at compile-time.
  */
 const TECH_TO_MACRO: Record<TechSubDomain, MacroDomain> = {
   // UI domain
@@ -75,6 +74,7 @@ const TECH_TO_MACRO: Record<TechSubDomain, MacroDomain> = {
   'testing': 'quality-security',
   'security': 'quality-security',
   'performance': 'quality-security',
+  'compliance': 'quality-security',
 
   // Integrations domain
   'crm': 'integrations',
@@ -84,10 +84,10 @@ const TECH_TO_MACRO: Record<TechSubDomain, MacroDomain> = {
   'email': 'integrations',
   'ml-ai': 'integrations',
 
-  // Cross-cutting (can map to multiple, but we'll pick the primary for simplicity in P0)
-  'documentation': 'backend', // Defaults to backend but could span any
-  'prompt-engineering': 'backend', // Agent-related
-  'ticket-template': 'backend', // Infra
+  // Cross-cutting (default to backend; specialists handle nuance in Stage 2)
+  'documentation': 'backend',
+  'prompt-engineering': 'backend',
+  'ticket-template': 'backend',
 };
 
 // ─── Output schema (Zod for LLM response parsing) ────────────────────────────
@@ -109,7 +109,8 @@ function keywordTriage(text: string, primaryDomain: string): Set<MacroDomain> {
   const { all: techDomains } = inferTechSubDomains(text, primaryDomain);
   const macros = new Set<MacroDomain>();
   for (const tech of techDomains) {
-    const macro = TECH_TO_MACRO[tech];
+    // inferTechSubDomains returns string[]; widen the Record lookup safely.
+    const macro = (TECH_TO_MACRO as Record<string, MacroDomain | undefined>)[tech];
     if (macro) macros.add(macro);
   }
   // Always include backend as a baseline — most stories touch some service logic
@@ -151,11 +152,12 @@ Only include domains where the answer is YES.
 
   try {
     const response = await route('domain-triage', prompt, { forceLocal: true });
-    const parsed = JSON.parse(response.text);
+    const parsed = JSON.parse(response.response) as { inScopeDomains?: unknown };
     const refined = new Set<MacroDomain>();
-    for (const domain of parsed.inScopeDomains || []) {
-      if (MACRO_DOMAINS.includes(domain)) {
-        refined.add(domain);
+    const list = Array.isArray(parsed.inScopeDomains) ? parsed.inScopeDomains : [];
+    for (const domain of list) {
+      if (typeof domain === 'string' && (MACRO_DOMAINS as readonly string[]).includes(domain)) {
+        refined.add(domain as MacroDomain);
       }
     }
     // If LLM excluded everything, fall back to keywords
@@ -202,18 +204,28 @@ export async function runDomainTriage(
   }
 
   return {
-    inScopeDomains: Array.from(refinedDomains).sort(),
+    inScopeDomains: Array.from(refinedDomains).sort() as MacroDomain[],
     reasoning: `Keyword pass: ${Array.from(keywordDomains).join(', ')}. LLM refined to: ${Array.from(refinedDomains).join(', ')}`,
   };
 }
 
+/**
+ * Bundle-friendly variant: pulls title/description from a TicketBundle and
+ * derives primaryDomain via classifyKeyword (mirroring ba-agent + ea-agent).
+ */
 export async function runDomainTriageFromBundle(
-  ticketData: TicketBundle,
+  bundle: TicketBundle,
   options: DomainTriageOptions = {},
 ): Promise<TriageResult> {
-  return runDomainTriage({
-    title: ticketData.story.title,
-    description: ticketData.story.description || '',
-    primaryDomain: ticketData.story.primaryDomain,
-  }, options);
+  const title = bundle.story.title;
+  const description = bundle.story.description || '';
+  const classification = classifyKeyword(`${title} ${description}`);
+  return runDomainTriage(
+    {
+      title,
+      description,
+      primaryDomain: classification.primaryDomain,
+    },
+    options,
+  );
 }
