@@ -1,0 +1,3 @@
+-- 0041: reserved (no-op) — admin_users table not needed;
+-- the /admin/users route aggregates from the existing prompts table.
+-- This file is intentionally empty to hold the slot.
