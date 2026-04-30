@@ -41,6 +41,15 @@ export interface TicketBundle {
     templateValidationErrors: unknown[] | null;
     enrichedAt: number | null;
     updatedAt: number | null;
+    /**
+     * CAPSULE-FORMALIZE (migration 0037 / third-party paper §C.5) —
+     * frozen capsule metadata. The ticket field above carries the same
+     * fields embedded; these are exposed on `story` for dashboard
+     * rendering and event audit without re-parsing the ticket.
+     */
+    capsuleHash: string | null;
+    capsuleFrozenAt: number | null;
+    capsuleVersion: string | null;
   };
   ticket: TicketTemplateV1 | null;
   ticketParseError: string | null;
@@ -236,6 +245,9 @@ export function getTicketBundle(
       templateValidationErrors: parseValidationErrors(story.templateValidationErrors),
       enrichedAt: story.enrichedAt,
       updatedAt: story.updatedAt,
+      capsuleHash: story.capsuleHash ?? null,
+      capsuleFrozenAt: story.capsuleFrozenAt ?? null,
+      capsuleVersion: story.capsuleVersion ?? null,
     },
     ticket,
     ticketParseError: parseError,

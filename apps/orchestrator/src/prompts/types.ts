@@ -17,6 +17,8 @@ export interface Prompt {
   status: PromptStatus;
   completedAt?: string | null;
   elapsedMs?: number | null;
+  /** RUN-MODES (migration 0038): 'full' | 'plan-only' | 'test-only'. */
+  runMode?: import('../run-modes').RunMode;
 }
 
 export interface PromptResponse {
@@ -48,6 +50,8 @@ export interface CreatePromptParams {
   userId?: string;
   tokensIn?: number;
   metadata?: Record<string, unknown>;
+  /** Optional run mode; defaults to 'full' if absent. */
+  runMode?: import('../run-modes').RunMode;
 }
 
 export interface PromptDescendant {

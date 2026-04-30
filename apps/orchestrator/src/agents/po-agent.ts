@@ -28,7 +28,8 @@ import { eventBus } from '../events/bus-adapter';
 import { EmbedderUnavailableError } from '@chiefaia/feature-registry';
 import { searchAndLog } from './feature-registry-search-client';
 import { getDb } from '../db/connection';
-import { requirements, stories } from '../db/schema';
+import { prompts, requirements, stories } from '../db/schema';
+import { DEFAULT_RUN_MODE, isRunMode, type RunMode } from '../run-modes';
 import { advancePipelineStage } from './pipeline-stages';
 
 // Logger shim — replaced at runtime by the real pino logger if available
@@ -68,6 +69,18 @@ export async function runPOAgent(
 ): Promise<POAgentOutput> {
   const { promptId, promptText, projectId, correlationId } = input;
   const now = new Date().toISOString();
+
+  // RUN-MODES (migration 0038): inherit the parent prompt's run_mode so
+  // every story spawned from this prompt carries the same mode. The
+  // ReadyPoolConsumer reads stories.run_mode directly to gate worker
+  // assignment without joining prompts on every pump.
+  const promptRow = db.select({ runMode: prompts.runMode })
+    .from(prompts)
+    .where(eq(prompts.id, promptId))
+    .get();
+  const inheritedRunMode: RunMode = promptRow?.runMode && isRunMode(promptRow.runMode)
+    ? promptRow.runMode
+    : DEFAULT_RUN_MODE;
 
   // 1. Classify the prompt domain (legacy primaryDomain) plus the new
   //    BUCKET-002 9-axis taxonomy fields (project / lifecycle / priority on
@@ -214,6 +227,10 @@ export async function runPOAgent(
           db.insert(stories).values({
             id: storyDbId,
             kind: 'story',
+            // RUN-MODES (migration 0038): denormalised from the parent
+            // prompt at creation. ReadyPoolConsumer's pump query filters
+            // on this column.
+            runMode: inheritedRunMode,
             title: story.title,
             description: story.description ?? '',
             acceptanceCriteriaJson: JSON.stringify(story.acceptanceCriteria ?? []),
