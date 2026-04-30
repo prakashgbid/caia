@@ -1,19 +1,17 @@
 'use client';
 import { Suspense } from 'react';
 import { Sidebar } from '../components/nav/Sidebar';
+import { Breadcrumb } from '../components/Breadcrumb';
+import { AgentActivityRail } from '../components/agents/AgentActivityRail';
 import './globals.css';
 
 /**
- * Root layout — DASH-001 nav restructure.
+ * Root layout — DASH-001 (nav restructure) + DASH-003 (breadcrumb)
+ * + DASH-005 (agent activity rail).
  *
- * The 27-item flat sidebar previously inlined here was extracted into
- * `components/nav/Sidebar.tsx` as an accordion-grouped component. The
- * grouping (Work / Pipeline / Catalog / Quality / Operations / Settings)
- * follows the IA spec at caia/docs/dashboard-url-schema.md.
- *
- * URLs do not change in this PR — only the nav structure does. Route
- * migration to the canonical `/section/resource` schema lands in PR2
- * (`feat/dash-002-url-schema-redirect`).
+ * Three-column shell: left nav (220px) | main content | right rail (280px,
+ * collapsible to 40px). The breadcrumb renders at the top of main on every
+ * drill-down page; section landings and the root self-hide.
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -52,8 +50,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Main content area */}
         <main style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+          <Suspense fallback={null}>
+            <Breadcrumb />
+          </Suspense>
           {children}
         </main>
+
+        {/* Right rail — agent activity (DASH-005) */}
+        <Suspense fallback={null}>
+          <AgentActivityRail />
+        </Suspense>
       </body>
     </html>
   );
