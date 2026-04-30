@@ -16,8 +16,20 @@ import type { LLMRequest, LLMResponse } from './types.js';
 
 /** Default path to the `claude` binary. Overridable via env. */
 const DEFAULT_CLAUDE_BINARY = process.env['CLAUDE_BINARY_PATH'] ?? 'claude';
-/** Default subprocess timeout (ms). 3 minutes covers a slow Sonnet response. */
-const DEFAULT_TIMEOUT_MS = 180_000;
+/** Default subprocess timeout (ms).
+ *
+ * Lowered 2026-04-30 from 180_000 to 45_000. The original 3-minute window
+ * was sized for the legacy fetch-based adapter where the cost was network
+ * RTT + model time. The binary-spawn path adds ~6-10s session-init
+ * overhead per call, AND the orchestrator can have many in-flight
+ * validation calls; if Claude is unreachable, waiting 3 minutes per call
+ * before falling back to Ollama bottlenecks the whole pipeline.
+ *
+ * 45s covers a normal Sonnet response with margin while keeping fallback
+ * latency bounded. Overridable via opts.timeoutMs for callers that
+ * deliberately want a longer ceiling (e.g., bulk decomposition).
+ */
+const DEFAULT_TIMEOUT_MS = 45_000;
 
 /** Generic binary-spawn failure. Thrown for missing binary, non-zero exit,
  *  malformed JSON, or any other non-rate-limit error. */
