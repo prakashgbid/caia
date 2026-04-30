@@ -99,7 +99,12 @@ export function defaultTelemetryPath(date: Date = new Date()): string {
   const yyyy = date.getUTCFullYear().toString().padStart(4, '0');
   const mm = (date.getUTCMonth() + 1).toString().padStart(2, '0');
   const dd = date.getUTCDate().toString().padStart(2, '0');
-  return path.join(os.homedir(), '.caia', `ea-mesh-telemetry-${yyyy}-${mm}-${dd}.jsonl`);
+  // Re-strip path separators defensively even though the components are
+  // derived from Date(); satisfies the path-join-resolve-traversal lint
+  // and protects against any future caller passing a tainted Date proxy.
+  const dateStamp = `${yyyy}-${mm}-${dd}`.replace(/[^0-9-]/g, '');
+  const filename = path.basename(`ea-mesh-telemetry-${dateStamp}.jsonl`);
+  return path.join(os.homedir(), '.caia', filename);
 }
 
 // ─── Embedder default (mirrors ea-akg-instructor.ts) ───────────────────────
@@ -234,7 +239,9 @@ export class DomainSpecialistMesh {
         // failing domain shouldn't halt the rest).
         // eslint-disable-next-line no-console
         console.warn(
-          `[ea-mesh] specialist '${domain}' failed for story ${bundle.story.id}:`,
+          '[ea-mesh] specialist %s failed for story %s:',
+          domain,
+          bundle.story.id,
           outcome.reason,
         );
         this.telemetry.write({
@@ -306,7 +313,7 @@ export class DomainSpecialistMesh {
         domainsRunTotal += result.domainsRun.length;
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.warn('[ea-mesh] story failed', story.id, err);
+        console.warn('[ea-mesh] story failed: %s', story.id, err);
         storiesFailed++;
       }
     }
