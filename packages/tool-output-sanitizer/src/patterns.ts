@@ -26,7 +26,9 @@ export interface SanitizerPattern {
 
 /** Helper: build a case-insensitive global regex. */
 function ig(src: string): RegExp {
-  return new RegExp(src, 'gi');
+  // `src` is a literal pattern from this same file's PARANOID_PATTERNS
+  // catalogue. No request-time user input flows here.
+  return new RegExp(src, 'gi'); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
 }
 
 /**

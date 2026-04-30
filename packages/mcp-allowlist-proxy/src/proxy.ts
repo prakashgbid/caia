@@ -201,7 +201,9 @@ function compilePattern(pattern: string): RegExp {
     flags += flagBlob;
     body = body.slice(close + 1);
   }
-  return new RegExp(body, flags);
+  // Pattern is operator-supplied policy text (per-MCP json policy
+  // file), not request-time user input. Bounded by the static catalogue.
+  return new RegExp(body, flags); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
 }
 
 /** Resolve a dotted path against a nested object. */
@@ -210,7 +212,12 @@ function pluck(obj: Record<string, unknown>, path: string): unknown {
   let cur: unknown = obj;
   for (const p of parts) {
     if (cur === null || typeof cur !== 'object') return undefined;
-    cur = (cur as Record<string, unknown>)[p];
+    if (p === '__proto__' || p === 'constructor' || p === 'prototype') {
+      return undefined;
+    }
+    // Read-only access (no assignment). The proto-key guard above
+    // closes the only attack surface the rule worries about.
+    cur = (cur as Record<string, unknown>)[p]; // nosemgrep: javascript.lang.security.audit.prototype-pollution.prototype-pollution-loop.prototype-pollution-loop
   }
   return cur;
 }

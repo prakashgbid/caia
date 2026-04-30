@@ -109,7 +109,10 @@ export function sanitizeToolResult(
     }
     if (pat.action === 'strip') {
       // Build a fresh global regex so per-call lastIndex doesn't bite us.
-      const stripRe = new RegExp(pat.re.source, ensureGlobal(pat.re.flags));
+      // pat.re is the catalogue regex; we rebuild a fresh global instance
+      // here so .replace can iterate without lastIndex carryover. Source
+      // is the catalogue, not user input.
+      const stripRe = new RegExp(pat.re.source, ensureGlobal(pat.re.flags)); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
       text = text.replace(stripRe, '');
       flags.push({
         id: pat.id,

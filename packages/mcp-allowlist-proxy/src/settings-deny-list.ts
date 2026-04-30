@@ -77,7 +77,9 @@ function compileGlob(glob: string): RegExp {
       i += 1;
     }
   }
-  return new RegExp('^' + body + '$');
+  // Glob source is the static FORBIDDEN_SETTINGS_GLOBS catalogue,
+  // not user input. Pre-escaped via the char-by-char compiler above.
+  return new RegExp('^' + body + '$'); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
 }
 
 const COMPILED = FORBIDDEN_SETTINGS_GLOBS.map((g) => ({
