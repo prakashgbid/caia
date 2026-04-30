@@ -142,14 +142,9 @@ export async function callStructured<T extends z.ZodTypeAny>(
       `${options.systemPrompt}${JSON_ONLY_INSTRUCTION}\n\n` +
       `=== USER ===\n${userPrompt}\n=== END USER ===`;
 
-    let resp: LLMResponse;
-    try {
-      resp = await route(options.taskType, fullPrompt);
-    } catch (err) {
-      // Network / model errors propagate. The caller decides whether
-      // to escalate or retry at a higher level (model swap, etc.).
-      throw err;
-    }
+    // Network / model errors propagate. The caller decides whether
+    // to escalate or retry at a higher level (model swap, etc.).
+    const resp: LLMResponse = await route(options.taskType, fullPrompt);
 
     totalDurationMs += resp.durationMs;
     totalCostUsd += estimateCallCost(options.taskType, resp);
