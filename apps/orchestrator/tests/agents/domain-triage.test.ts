@@ -164,4 +164,103 @@ describe('runDomainTriage', () => {
       expect(MACRO_DOMAINS).toContain(domain as MacroDomain);
     }
   });
+
+  // ─── EA-MESH-006 — corpus-driven regression cases (2026-04-30) ──────────
+  // These tests pin keyword-pass coverage for the 5 gap classes surfaced by
+  // the 95-prompt static-replay audit (~/Documents/projects/reports/
+  // past-prompts-replay-2026-04-30.md). Each case names a real prompt class
+  // from the corpus so that future TECH_KEYWORDS edits can't silently
+  // regress these routings.
+
+  it('EA-MESH-006 — routes "persist to the users table" prompts to data', async () => {
+    const result = await runDomainTriage(
+      {
+        title: 'Add audit log',
+        description: 'Persist to the users table whenever a profile change lands.',
+        primaryDomain: 'backend',
+      },
+      { keywordOnly: true },
+    );
+    expect(result.inScopeDomains).toContain('data');
+  });
+
+  it('EA-MESH-006 — routes axe-core / CI job / audit pipeline prompts to quality-security', async () => {
+    const result = await runDomainTriage(
+      {
+        title: 'Wire WCAG 2.2 AA conformance',
+        description:
+          'Run axe-core in the audit pipeline as a CI job; add a regression test that fails the build on any new violation.',
+        primaryDomain: 'ui-frontend',
+      },
+      { keywordOnly: true },
+    );
+    expect(result.inScopeDomains).toContain('quality-security');
+  });
+
+  it('EA-MESH-006 — routes MCP server prompts to backend (agent-runtime tech)', async () => {
+    const result = await runDomainTriage(
+      {
+        title: 'Build the stolution-remote MCP server',
+        description:
+          'Stdio MCP server that exposes mcp__stolution-remote__bash and friends per the model context protocol.',
+        primaryDomain: 'backend',
+      },
+      { keywordOnly: true },
+    );
+    expect(result.inScopeDomains).toContain('backend');
+  });
+
+  it('EA-MESH-006 — routes PR-flow / git-flow prompts to platform', async () => {
+    const result = await runDomainTriage(
+      {
+        title: 'Enforce CAIA git flow',
+        description:
+          'Block direct commits to main; require pull request review and branch protection. Resolve any merge conflict via rebase.',
+        primaryDomain: 'devops',
+      },
+      { keywordOnly: true },
+    );
+    expect(result.inScopeDomains).toContain('platform');
+  });
+
+  it('EA-MESH-006 — routes launchd / pm2 prompts to platform (cron-scheduling tech)', async () => {
+    const result = await runDomainTriage(
+      {
+        title: 'Restart the orchestrator daemon',
+        description: 'The launchd plist is at ~/Library/LaunchAgents and pm2 supervises the worker pool.',
+        primaryDomain: 'devops',
+      },
+      { keywordOnly: true },
+    );
+    expect(result.inScopeDomains).toContain('platform');
+  });
+
+  it('EA-MESH-006 — does NOT spuriously route "user profile page" to quality-security', async () => {
+    // Pre-EA-MESH-006 the bare "profil" substring matched "profile" and
+    // surfaced quality-security on plain UI prompts. After tightening to
+    // explicit "profiling" / "profiler" tokens, the UI-only prompt below
+    // must not surface quality-security solely from the word "profile".
+    const result = await runDomainTriage(
+      {
+        title: 'Add user profile page',
+        description: 'A simple React component showing display-name and avatar.',
+        primaryDomain: 'ui-frontend',
+      },
+      { keywordOnly: true },
+    );
+    expect(result.inScopeDomains).toContain('ui');
+    expect(result.inScopeDomains).not.toContain('quality-security');
+  });
+
+  it('EA-MESH-006 — still routes profiling prompts to quality-security (positive case)', async () => {
+    const result = await runDomainTriage(
+      {
+        title: 'Profile the slow endpoint',
+        description: 'Run the profiler under load test; investigate hot paths via flame graphs.',
+        primaryDomain: 'backend',
+      },
+      { keywordOnly: true },
+    );
+    expect(result.inScopeDomains).toContain('quality-security');
+  });
 });

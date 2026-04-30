@@ -64,11 +64,25 @@ export interface EAAgentOutput {
  * (auth / ui-frontend / api-integration / data-storage / devops) is also
  * folded in via `mapPrimaryDomainToTech`.
  */
+// EA-MESH-006 (corpus-driven hardening, 2026-04-30):
+//   Extends keyword coverage based on a 95-prompt static replay against the
+//   past ~100 user requests. The replay surfaced (a) the three known gaps
+//   already documented in the EA P0 validation report (profil substring
+//   FP, missing `users table` / `persist to`, missing `axe-core` /
+//   `ci job` / `audit pipeline`), plus (b) two new gap classes not in the
+//   report — MCP-server prompts (9 corpus hits, 4 mis-routed) and GitHub
+//   PR-flow prompts (11 corpus hits, 1 mis-routed). Also adds explicit
+//   keywords for macOS launchd / pm2 process-supervisor work that
+//   previously fell through to the backend default. Each new keyword is
+//   covered by a regression test in
+//   apps/orchestrator/tests/agents/domain-triage.test.ts.
 const TECH_KEYWORDS: Record<string, string[]> = {
   frontend: ['component', 'react', 'next.js', 'page', ' ui ', 'tsx', 'css', 'tailwind'],
   bff: ['route handler', 'api route', '/api/', 'hono', 'gateway'],
   backend: ['service', 'business logic', 'worker'],
-  database: ['schema', 'migration', 'sqlite', 'postgres', 'drizzle', 'index'],
+  // EA-MESH-006: add 'table', 'persist to', 'users table' so prompts that
+  // express data work as "persist to the users table" route to data macro.
+  database: ['schema', 'migration', 'sqlite', 'postgres', 'drizzle', 'index', 'table', 'persist to', 'users table'],
   'event-driven': ['event bus', 'pub/sub', 'queue', 'async messaging'],
   observability: ['log', 'metric', 'trace', 'pino', 'opentelemetry'],
   'web-analytics': ['ga4', 'mixpanel', 'analytics event', 'tracking'],
@@ -80,9 +94,16 @@ const TECH_KEYWORDS: Record<string, string[]> = {
   email: ['sendgrid', 'resend', 'transactional email', 'marketing email'],
   caching: ['redis', 'cdn', 'cache'],
   infra: ['cloudflare', 'vercel', 'dns', 'hosting', 'infra'],
-  'ci-cd': ['github actions', 'workflow', 'release pipeline'],
+  // EA-MESH-006: extend ci-cd with PR-flow synonyms — corpus hit rate
+  // 11/95 had GitHub PR/branching language but only 'github actions' /
+  // 'workflow' were matching. Adding 'pull request', 'pr review',
+  // 'git flow', 'merge conflict', 'rebase', 'branch protection' so
+  // PR-hygiene and git-flow prompts land in platform.
+  'ci-cd': ['github actions', 'workflow', 'release pipeline', 'pull request', 'pr review', 'git flow', 'merge conflict', 'rebase', 'branch protection'],
   'ml-ai': ['model', 'inference', 'training', 'prompt engineering'],
-  testing: ['unit test', 'integration test', 'e2e test', 'playwright', 'vitest', 'behavior test'],
+  // EA-MESH-006: add 'axe-core', 'audit pipeline', 'regression test',
+  // 'ci job' (per EA P0 validation report gap #3 + corpus replay).
+  testing: ['unit test', 'integration test', 'e2e test', 'playwright', 'vitest', 'behavior test', 'axe-core', 'audit pipeline', 'regression test', 'ci job'],
   accessibility: ['wcag', 'a11y', 'accessib', 'aria', 'keyboard nav'],
   seo: ['meta tag', 'sitemap', 'canonical', 'json-ld', 'og:'],
   security: ['threat model', 'vault', 'secret', 'csp', 'xss'],
@@ -98,13 +119,24 @@ const TECH_KEYWORDS: Record<string, string[]> = {
   'secrets-management': ['vault', 'kms', 'env injection'],
   'dependency-management': ['renovate', 'dependabot', 'lockfile'],
   'data-pipeline': ['etl', 'batch job', 'warehouse'],
-  'cron-scheduling': ['cron', 'scheduled task', 'recurring job'],
-  'agent-runtime': ['agent', 'orchestrator', 'collab', 'po-agent', 'ba-agent', 'ea-agent'],
+  // EA-MESH-006: macOS launchd + pm2 are process supervisors — corpus
+  // surfaced 9 launchd prompts and 6 pm2 prompts; both belong in
+  // cron-scheduling (which maps to platform).
+  'cron-scheduling': ['cron', 'scheduled task', 'recurring job', 'launchd', 'pm2'],
+  // EA-MESH-006: MCP server work — 9 corpus hits, 4 mis-routed when no
+  // 'agent' / 'orchestrator' keyword was present. MCP semantically lives
+  // in the agent-runtime tech sub-domain (agents' tool-use protocol).
+  'agent-runtime': ['agent', 'orchestrator', 'collab', 'po-agent', 'ba-agent', 'ea-agent', 'mcp server', 'model context protocol', 'stdio mcp', 'mcp__'],
   'prompt-engineering': ['prompt template', 'prompt rule'],
   'ticket-template': ['ticket template', 'ticket-template'],
   'data-migration': ['backfill', 'data migration'],
   compliance: ['gdpr', 'aml', 'kyc', 'audit trail', 'compliance'],
-  performance: ['lighthouse', 'profil', 'bundle size', 'load test'],
+  // EA-MESH-006: tighten the 'profil' substring — the bare token also
+  // matched the unrelated word 'profile' (e.g. "user profile page") and
+  // spuriously surfaced quality-security on UI prompts. Replace with the
+  // explicit 'profiling' + 'profiler' tokens; both terminal forms are
+  // unambiguous so word boundaries are unnecessary.
+  performance: ['lighthouse', 'profiling', 'profiler', 'bundle size', 'load test'],
 };
 
 function mapPrimaryDomainToTech(primaryDomain: string): string[] {
@@ -149,7 +181,9 @@ export function inferTechSubDomains(text: string, primaryDomain: string): {
 const QUALITY_KEYWORDS: Record<string, string[]> = {
   accessibility: ['wcag', 'a11y', 'accessib', 'aria', 'keyboard nav', 'screen reader'],
   seo: ['seo', 'meta tag', 'sitemap', 'canonical', 'json-ld', 'og:', 'open graph'],
-  performance: ['performance', 'lighthouse', 'bundle size', 'load test', 'profil'],
+  // EA-MESH-006 (2026-04-30): replace ambiguous 'profil' substring with
+  // explicit 'profiling' + 'profiler' tokens — see TECH_KEYWORDS comment.
+  performance: ['performance', 'lighthouse', 'bundle size', 'load test', 'profiling', 'profiler'],
   security: ['security', 'threat', 'vault', 'csp', 'xss', 'csrf'],
   compliance: ['gdpr', 'aml', 'kyc', 'audit trail', 'compliance'],
   observability: ['observability', 'logging', 'tracing', 'metric', 'pino'],
