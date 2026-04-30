@@ -1,0 +1,30 @@
+{
+  "name": "@chiefaia/decomposer-recursive",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Recursive PO decomposition engine — scope detector, atomicity classifier, per-scope decomposers, and MECE judge pair (coverage + disjointness). Replaces the single-shot Claude path in @chiefaia/decomposer for vision-document-scale prompts.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/local-llm-router": "workspace:*",
+    "@chiefaia/ticket-template": "workspace:*",
+    "nanoid": "^5.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT"
+}
