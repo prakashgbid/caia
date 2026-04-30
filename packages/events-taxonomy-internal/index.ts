@@ -431,6 +431,8 @@ export type EventType =
   | 'ticket.ba-enriching'
   | 'ticket.ba-complete'
   | 'ticket.ready-for-pickup'
+  | 'ticket.capsule-frozen'
+  | 'ticket.capsule-drift'
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   | 'testing-agent.validation.complete'
   | 'release-agent.report.ready'
@@ -539,6 +541,8 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'ticket.ba-enriching': 'info',
   'ticket.ba-complete': 'info',
   'ticket.ready-for-pickup': 'info',
+  'ticket.capsule-frozen': 'info',
+  'ticket.capsule-drift': 'warning',
   // ─── Testing Agent + Release Agent events (Tier 4) ────────────────────────
   'testing-agent.validation.complete': 'info',
   'release-agent.report.ready': 'info',
