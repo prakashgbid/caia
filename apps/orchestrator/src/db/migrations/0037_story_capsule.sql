@@ -34,13 +34,22 @@
 -- We do not guard against re-application here because Drizzle's
 -- migration runner records the journal entry and never re-applies a
 -- migration with the same tag.
+--
+-- Multi-statement: this file uses Drizzle's `--> statement-breakpoint`
+-- markers because better-sqlite3's prepare() rejects multi-statement
+-- SQL strings, and Drizzle's migrator splits on the marker before
+-- handing each statement to prepare(). Every other migration in this
+-- folder follows the same convention.
 
 ALTER TABLE `stories` ADD COLUMN `capsule_hash` text;
+--> statement-breakpoint
 ALTER TABLE `stories` ADD COLUMN `capsule_frozen_at` integer;
+--> statement-breakpoint
 ALTER TABLE `stories` ADD COLUMN `capsule_version` text;
-
+--> statement-breakpoint
 -- Index supports the dashboard's /stories/[id]/journey page (which
 -- renders capsule lineage) and the Coding Agent's bundle endpoint
 -- (which reads capsule_hash on every load to populate the bundle).
 CREATE INDEX `story_capsule_hash_idx` ON `stories` (`capsule_hash`);
+--> statement-breakpoint
 CREATE INDEX `story_capsule_frozen_at_idx` ON `stories` (`capsule_frozen_at`);
