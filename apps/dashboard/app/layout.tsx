@@ -1,18 +1,20 @@
 'use client';
 import { Suspense } from 'react';
 import { Sidebar } from '../components/nav/Sidebar';
+import { Breadcrumb } from '../components/Breadcrumb';
 import './globals.css';
 
 /**
- * Root layout — DASH-001 nav restructure.
+ * Root layout — DASH-001 (nav restructure) + DASH-003 (breadcrumb).
  *
  * The 27-item flat sidebar previously inlined here was extracted into
  * `components/nav/Sidebar.tsx` as an accordion-grouped component. The
- * grouping (Work / Pipeline / Catalog / Quality / Operations / Settings)
- * follows the IA spec at caia/docs/dashboard-url-schema.md.
+ * breadcrumb (`components/Breadcrumb.tsx`) renders at the top of the
+ * main content area on every page; it self-hides on section landings
+ * and the root.
  *
- * URLs do not change in this PR — only the nav structure does. Route
- * migration to the canonical `/section/resource` schema lands in PR2
+ * URLs do not change in this layout — only the structure does. Route
+ * migration to the canonical `/section/resource` schema landed in PR2
  * (`feat/dash-002-url-schema-redirect`).
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -52,6 +54,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Main content area */}
         <main style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+          <Suspense fallback={null}>
+            <Breadcrumb />
+          </Suspense>
           {children}
         </main>
       </body>
