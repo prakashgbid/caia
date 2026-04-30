@@ -6,14 +6,12 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run"
   },
   "dependencies": {
     "nanoid": "^5.0.0"
   },
   "devDependencies": {
-    "vitest": "^1.6.0",
-    "typescript": "^5.4.5"
+    "vitest": "^1.6.0"
   }
 }
