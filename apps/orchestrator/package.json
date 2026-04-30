@@ -9,7 +9,8 @@
     "conductor": "dist/src/cli/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && pnpm run postbuild:copy-migrations",
+    "postbuild:copy-migrations": "node -e \"const fs=require('fs'),path=require('path');const src=path.join(__dirname,'src/db/migrations'),dst=path.join(__dirname,'dist/src/db/migrations');fs.mkdirSync(dst,{recursive:true});fs.cpSync(src,dst,{recursive:true});console.log('[postbuild] copied src/db/migrations -> dist/src/db/migrations');\"",
     "dev": "tsc -p tsconfig.json --watch",
     "test": "echo 'TODO: orchestrator jest config has stale module paths post-consolidation. Stubbed until cleanup PR.' && exit 0",
     "test:e2e": "playwright test",
