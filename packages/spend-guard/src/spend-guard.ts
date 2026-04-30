@@ -4,6 +4,13 @@
  * and pauses the orchestrator when a cap is breached.
  *
  * Reference: caia/docs/spend-guard.md, v2 §6.
+ *
+ * No-API-key constraint (Prakash 2026-04-30,
+ * `feedback_no_api_key_billing.md`): production callers MUST construct
+ * the guard with `rejectApiKeyVia: true` so any record() with
+ * `via: 'api-key'` throws `ApiKeyViaForbiddenError`. This catches
+ * regressions where a code path silently routes a call back through
+ * the legacy fetch adapter.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -33,6 +40,27 @@ export class BudgetExceededError extends Error {
       `BudgetExceeded: ${cap.scope}='${cap.resourceId}' currentUsd=${cap.currentUsd.toFixed(4)} + attempted=${attemptedUsd.toFixed(4)} > limit=${cap.limitUsd.toFixed(2)}`,
     );
     this.name = 'BudgetExceededError';
+  }
+}
+
+/**
+ * Thrown when a record uses `via: 'api-key'` while the guard is
+ * configured with `rejectApiKeyVia: true` (production wiring).
+ *
+ * Per Prakash 2026-04-30 — the pay-per-token Anthropic API path is
+ * forbidden. Production orchestrator wiring sets `rejectApiKeyVia: true`
+ * so any regression that reroutes Claude traffic through a fetch-based
+ * adapter is caught at record time.
+ */
+export class ApiKeyViaForbiddenError extends Error {
+  constructor(opts: { taskId: string; model: string; agentRole: string }) {
+    super(
+      `ApiKeyViaForbidden: refusing to record via='api-key' for ` +
+        `task='${opts.taskId}' model='${opts.model}' agent='${opts.agentRole}'. ` +
+        `The Anthropic pay-per-token path is disabled (Prakash 2026-04-30). ` +
+        `Use via='subscription' (claude binary) or via='ollama'.`,
+    );
+    this.name = 'ApiKeyViaForbiddenError';
   }
 }
 
@@ -71,8 +99,19 @@ export interface SpendGuardOptions {
     ev:
       | { kind: 'cap-breached'; scope: SpendCapScope; resourceId: string }
       | { kind: 'paused'; reason: string }
-      | { kind: 'resumed'; by: string },
+      | { kind: 'resumed'; by: string }
+      | { kind: 'api-key-rejected'; taskId: string; model: string },
   ) => void;
+  /**
+   * When true, `record({via:'api-key'})` throws `ApiKeyViaForbiddenError`
+   * instead of being persisted. Production orchestrator wiring sets
+   * this flag so any regression that calls the pay-per-token path is
+   * caught at the cap-record boundary.
+   *
+   * Defaults to false to preserve historical test/CI behaviour. Flip
+   * to `true` in `apps/orchestrator/src/safety/spend-guard-bridge.ts`.
+   */
+  rejectApiKeyVia?: boolean;
 }
 
 export class SpendGuard {
@@ -81,6 +120,7 @@ export class SpendGuard {
   private readonly caps: Record<SpendCapScope, number>;
   private readonly nowMs: () => number;
   private readonly log: SpendGuardOptions['log'];
+  private readonly rejectApiKeyVia: boolean;
   private pauseState: PauseState = {
     paused: false,
     reason: null,
@@ -93,6 +133,7 @@ export class SpendGuard {
     this.caps = { ...DEFAULT_CAPS_USD, ...(opts.caps ?? {}) };
     this.nowMs = opts.nowMs ?? (() => Date.now());
     if (opts.log) this.log = opts.log;
+    this.rejectApiKeyVia = opts.rejectApiKeyVia ?? false;
   }
 
   get pause(): PauseState {
@@ -184,6 +225,18 @@ export class SpendGuard {
     outputTokens: number;
     costUsd: number;
   }): Promise<SpendRecord> {
+    if (this.rejectApiKeyVia && opts.via === 'api-key') {
+      this.log?.({
+        kind: 'api-key-rejected',
+        taskId: opts.taskId,
+        model: opts.model,
+      });
+      throw new ApiKeyViaForbiddenError({
+        taskId: opts.taskId,
+        model: opts.model,
+        agentRole: opts.agentRole,
+      });
+    }
     const ts = this.nowMs();
     const record: SpendRecord = SpendRecordSchema.parse({
       id: randomUUID(),
