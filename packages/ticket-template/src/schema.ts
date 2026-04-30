@@ -557,6 +557,168 @@ export const ArchitecturalInstructionSchema = z
   .strict();
 export type ArchitecturalInstruction = z.infer<typeof ArchitecturalInstructionSchema>;
 
+
+// ─── ARCH-007: ArchitecturalInstructionV2 (additive over V1) ──────────────────
+//
+// P0 of the EA Multi-Domain Decomposition adds five new optional array fields
+// to ArchitecturalInstructionSchema. Each field is default-empty, preserving
+// V1 compatibility: existing V1 instructions parse as V2 with empty arrays.
+//
+// The Version-2 fields materialize the "breadth problem" solution:
+// - existingArtifactReferences[] captures concrete AKG hits with roles
+// - newArtifactSpecs[] lists artifacts to create with tooling choices
+// - integrationPoints[] specifies cross-domain boundaries (inbound/outbound/bidirectional)
+// - risks[] surfaces domain-specific threats + mitigations per OWASP/ISO 25010
+// - testHooks[] prescribes test cases by kind (unit/integration/e2e/security/a11y/etc)
+// - crossCuttingConcerns[] enumerates auth/idempotency/observability/etc that
+//   span multiple domains
+
+export const ARTIFACT_KINDS = [
+  'component',
+  'service',
+  'function',
+  'api',
+  'schema',
+  'migration',
+  'package',
+  'config',
+  'template',
+  'hook',
+  'middleware',
+  'integration',
+] as const;
+export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
+
+export const INTEGRATION_DIRECTIONS = ['inbound', 'outbound', 'bidirectional'] as const;
+export type IntegrationDirection = (typeof INTEGRATION_DIRECTIONS)[number];
+
+export const INTEGRATION_PROTOCOLS = ['http', 'ws', 'event', 'sql', 'cli', 'fs', 'rpc'] as const;
+export type IntegrationProtocol = (typeof INTEGRATION_PROTOCOLS)[number];
+
+export const RISK_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
+export type RiskSeverity = (typeof RISK_SEVERITIES)[number];
+
+export const TEST_HOOK_KINDS = [
+  'unit',
+  'integration',
+  'e2e',
+  'contract',
+  'load',
+  'a11y',
+  'security',
+  'visual',
+] as const;
+export type TestHookKind = (typeof TEST_HOOK_KINDS)[number];
+
+export const CROSS_CUTTING_CONCERNS = [
+  'auth',
+  'authz',
+  'audit_log',
+  'rate_limit',
+  'idempotency',
+  'retry',
+  'caching',
+  'csrf',
+  'xss',
+  'sqli',
+  'pii',
+  'i18n',
+  'a11y',
+  'observability_log',
+  'observability_metric',
+  'observability_trace',
+  'feature_flag',
+  'error_handling',
+] as const;
+export type CrossCuttingConcern = (typeof CROSS_CUTTING_CONCERNS)[number];
+
+export const ARTIFACT_ROLES = ['use_as_is', 'compose_with', 'replace', 'follow_pattern'] as const;
+export type ArtifactRole = (typeof ARTIFACT_ROLES)[number];
+
+export const RADAR_RINGS = ['adopt', 'trial', 'assess', 'hold'] as const;
+export type RadarRing = (typeof RADAR_RINGS)[number];
+
+const ExistingArtifactReference = z
+  .object({
+    artifactId: z.string().min(1).describe('arch_<id> format'),
+    role: z.enum(ARTIFACT_ROLES),
+    note: z.string().max(500).optional(),
+  })
+  .strict();
+
+export type ExistingArtifactReference = z.infer<typeof ExistingArtifactReference>;
+
+const NewArtifactSpec = z
+  .object({
+    proposedKind: z.enum(ARTIFACT_KINDS),
+    proposedName: z.string().min(1).max(255),
+    proposedPath: z.string().optional(),
+    proposedSignature: z.string().optional(),
+    toolingChoice: z.string().optional().describe('must resolve to tech-radar'),
+    radarRing: z.enum(RADAR_RINGS).optional(),
+  })
+  .strict();
+
+export type NewArtifactSpec = z.infer<typeof NewArtifactSpec>;
+
+const IntegrationPoint = z
+  .object({
+    direction: z.enum(INTEGRATION_DIRECTIONS),
+    protocol: z.enum(INTEGRATION_PROTOCOLS),
+    targetArtifactId: z.string().optional().describe('arch_<id> if known'),
+    contract: z.string().min(1).max(2000).describe('schema, route sig, event type'),
+  })
+  .strict();
+
+export type IntegrationPoint = z.infer<typeof IntegrationPoint>;
+
+const Risk = z
+  .object({
+    severity: z.enum(RISK_SEVERITIES),
+    summary: z.string().min(1).max(500),
+    mitigation: z.string().min(1).max(1000),
+  })
+  .strict();
+
+export type Risk = z.infer<typeof Risk>;
+
+const TestHook = z
+  .object({
+    kind: z.enum(TEST_HOOK_KINDS),
+    target: z.string().min(1).max(500).describe('file or behavior under test'),
+    rationale: z.string().min(1).max(500),
+  })
+  .strict();
+
+export type TestHook = z.infer<typeof TestHook>;
+
+const CandidateADR = z
+  .object({
+    title: z.string().min(1).max(200),
+    context: z.string().min(1).max(2000),
+    decision: z.string().min(1).max(2000),
+    consequences: z.array(z.string().max(500)).default([]),
+  })
+  .strict();
+
+export type CandidateADR = z.infer<typeof CandidateADR>;
+
+export const ArchitecturalInstructionV2Schema = ArchitecturalInstructionSchema.extend({
+  // V1 fields kept verbatim:
+  // id, techSubDomain, action, summary, details, referencedArtifactIds,
+  // proposedPath, proposedSignature, enhancementOfArtifactId, confidence
+
+  // V2 new fields (all optional, default-empty for backward compatibility):
+  existingArtifactReferences: z.array(ExistingArtifactReference).default([]),
+  newArtifactSpecs: z.array(NewArtifactSpec).default([]),
+  integrationPoints: z.array(IntegrationPoint).default([]),
+  risks: z.array(Risk).default([]),
+  testHooks: z.array(TestHook).default([]),
+  crossCuttingConcerns: z.array(z.enum(CROSS_CUTTING_CONCERNS)).default([]),
+  candidateAdr: CandidateADR.optional(),
+});
+
+export type ArchitecturalInstructionV2 = z.infer<typeof ArchitecturalInstructionV2Schema>;
 // ─── Top-level template ──────────────────────────────────────────────────────
 
 const Metadata = z
