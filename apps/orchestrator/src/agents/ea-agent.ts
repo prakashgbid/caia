@@ -366,10 +366,22 @@ export async function runEAAgent(
   let akgStoriesProcessed = 0;
   let akgInstructionsTotal = 0;
   try {
-    const { runEaAkgInstructor } = await import('./ea-akg-instructor');
-    const out = await runEaAkgInstructor({ promptId, correlationId }, db);
-    akgStoriesProcessed = out.storiesProcessed;
-    akgInstructionsTotal = out.instructionsTotal;
+    // EA-MESH-004: when EA_USE_DOMAIN_MESH=1, route to the V2 domain-
+    // specialist mesh; otherwise stay on the V1 single-pass instructor.
+    // Both write into the same architectural_instructions_json column, so
+    // downstream agents (Validator, Test-Design) read the same shape.
+    const { isMeshEnabled } = await import('./domain-specialist-mesh');
+    if (isMeshEnabled()) {
+      const { runDomainSpecialistMesh } = await import('./domain-specialist-mesh');
+      const meshOut = await runDomainSpecialistMesh({ promptId, correlationId }, db);
+      akgStoriesProcessed = meshOut.storiesProcessed;
+      akgInstructionsTotal = meshOut.instructionsTotal;
+    } else {
+      const { runEaAkgInstructor } = await import('./ea-akg-instructor');
+      const out = await runEaAkgInstructor({ promptId, correlationId }, db);
+      akgStoriesProcessed = out.storiesProcessed;
+      akgInstructionsTotal = out.instructionsTotal;
+    }
     // runEaAkgInstructor advances the pipeline stage itself once it
     // finishes, so we don't double-advance below.
     eventBus.publish({
