@@ -107,11 +107,17 @@ describe('routing-config', () => {
       expect(rule.useLocal).toBe(true);
     });
 
-    it('falls back to a Claude-default rule for unknown task types', () => {
+    it('falls back to a Local-default rule for unknown task types (LAI-002 follow-up 2026-04-30)', () => {
+      // Default flipped from useLocal:false to useLocal:true on 2026-04-30
+      // because the binary-spawn ClaudeAdapter has ~6-10s session-init
+      // overhead per call. Unregistered classification tasks (validation-*,
+      // etc.) bottlenecked the pipeline at the 180s timeout; defaulting to
+      // local Ollama makes them snappy and free.
       const rule = getRoute('totally-made-up-task');
       expect(rule.taskType).toBe('totally-made-up-task');
-      expect(rule.useLocal).toBe(false);
+      expect(rule.useLocal).toBe(true);
       expect(rule.claudeModel).toBe('claude-sonnet-4-6');
+      expect(rule.localModel).toBe('qwen2.5-coder:7b');
     });
   });
 
