@@ -281,6 +281,13 @@
       "when": 1779200000000,
       "tag": "0040_spend_caps",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1777588759196,
+      "tag": "0041_users",
+      "breakpoints": true
     }
   ]
 }

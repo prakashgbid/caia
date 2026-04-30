@@ -29,6 +29,7 @@ import { registerFeatureRegistryRoutes } from './routes/feature-registry';
 import { registerContractsRoutes } from './routes/contracts';
 import { registerArchitectureRoutes } from './routes/architecture';
 import { registerWorkerRoutes } from './routes/workers';
+import { registerAdminRoutes } from './routes/admin';
 import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
 import type { Phase2Context } from '../agents/wire-phase2';
 
@@ -95,6 +96,7 @@ export function createApp(db: Db, opts: CreateAppOptions = {}): Hono {
   registerDagRoutes(app, db);
   // TASKMGR-006 + CODING-007 — Phase 2 worker pool dashboard + lifecycle
   registerWorkerRoutes(app, db, { registry: opts.phase2?.registry });
+  registerAdminRoutes(app, db);
 
   return app;
 }

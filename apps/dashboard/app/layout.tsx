@@ -50,6 +50,7 @@ const NAV_ITEMS = [
   //   nav entry when the enforcement_rules table + handlers ship.
   // { path: '/enforcement', label: 'Enforcement', icon: '🛡️', tabKey: 'enforcement' },
   { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
+  { path: '/admin/users', label: 'Users', icon: '👥', tabKey: 'admin_users' },
 ] as const;
 
 // Map WS event kind prefix → tab key

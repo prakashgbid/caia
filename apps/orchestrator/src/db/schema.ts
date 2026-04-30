@@ -1265,6 +1265,35 @@ export const irreversibleActions = sqliteTable('irreversible_actions', {
 ]);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// users — core identity table.
+//
+// Persists a lightweight user record keyed by the same `user_id` string that
+// prompts.user_id references.  `id` equals the caller-supplied user_id so no
+// join key translation is needed.  `external_id` holds an optional upstream
+// identifier (OAuth sub, Clerk userId, etc.).  `metadata_json` is a JSON blob
+// for extensibility.
+//
+// The `upsertUser` helper in `src/db/users.ts` is the canonical write path.
+// ─────────────────────────────────────────────────────────────────────────────
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  externalId: text('external_id'),
+  handle: text('handle'),
+  displayName: text('display_name'),
+  email: text('email'),
+  avatarUrl: text('avatar_url'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+  firstSeenAt: text('first_seen_at').notNull(),
+  lastSeenAt: text('last_seen_at').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (t) => [
+  index('users_external_id_idx').on(t.externalId),
+  index('users_email_idx').on(t.email),
+  index('users_last_seen_idx').on(t.lastSeenAt),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // spend_caps + spend_records — SAFETY-004 spend-guard storage.
 //
 // Mirrors `apps/orchestrator/src/db/migrations/0040_spend_caps.sql`.
