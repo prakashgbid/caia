@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@chiefaia/ticket-template": "workspace:*",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "@chiefaia/capability-broker": "workspace:*"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
