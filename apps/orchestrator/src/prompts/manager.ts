@@ -12,6 +12,18 @@ import type {
   CreatePromptParams, PromptDescendant, PromptJourney,
   PromptListOptions, PromptStatus, TransitionActor,
 } from './types';
+import { DEFAULT_RUN_MODE, isRunMode, type RunMode } from '../run-modes';
+
+function resolveRunMode(params: CreatePromptParams): RunMode {
+  // Prefer the explicit field; fall back to metadata.run_mode for callers
+  // that route through metadata (e.g. CLI plan/test commands), and finally
+  // default to 'full'. Unknown values fall back to the default rather than
+  // throwing — the API route is responsible for validating user input.
+  if (params.runMode && isRunMode(params.runMode)) return params.runMode;
+  const fromMeta = (params.metadata as Record<string, unknown> | undefined)?.run_mode;
+  if (typeof fromMeta === 'string' && isRunMode(fromMeta)) return fromMeta;
+  return DEFAULT_RUN_MODE;
+}
 
 function makePromptId(): string {
   const ts = Date.now().toString(36).padStart(8, '0');
@@ -55,6 +67,7 @@ export function createPrompt(db: Db, params: CreatePromptParams): Prompt {
     status: 'received' as PromptStatus,
     completedAt: null,
     elapsedMs: null,
+    runMode: resolveRunMode(params),
   };
 
   db.insert(prompts).values(row).run();
