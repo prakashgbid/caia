@@ -49,6 +49,20 @@ Confirmed via `claude --help` on Claude Code 2.1.94. Output is JSON containing
   User must explicitly run `conductor exec start` before any tasks are picked up.
 - **Circuit breaker**: after `circuit_breaker_threshold` (default 3) consecutive failures,
   task is auto-paused and a human-review blocker is filed. Scheduler skips paused tasks.
+  - **Pause endpoint (EXEC-001)**: the breaker MUST `POST /executor/tasks/:id/pause` (the
+    contract endpoint). Calls to any other URL/method are a regression — the prior
+    implementation used `DELETE /unpause`, which silently 404'd and let tasks accumulate
+    3000+ retries (audit `outstanding-tasks-audit-2026-04-30.md`).
+  - **Auth-error fast-trip (EXEC-001)**: any worker failure whose reason matches the auth
+    predicate (`isAuthFailure` in `apps/executor/breaker.ts` — HTTP 401,
+    `authentication_error`, `Invalid authentication credentials`, OAuth token failures)
+    trips the breaker on attempt **1**, regardless of threshold. Retrying with bad
+    credentials only burns rate-limit budget. The blocker is filed at
+    `severity: critical, kind: auth-error` with credential-rotation steps.
+  - **Pause-failure observability (EXEC-001)**: if the pause endpoint returns non-2xx, the
+    breaker MUST emit `executor.breaker.pause_failed` so the dashboard / on-call surface
+    the regression. The breaker also emits `executor.breaker.tripped` on every successful
+    trip.
 - **Worktree isolation**: each dispatch creates a git worktree `exec-<task_id>-<ts>`.
   Success = auto-merge + cleanup. Failure = worktree left intact for review.
 - **Crash recovery**: on daemon restart, all `executor_runs.status = 'running'` with dead PIDs
@@ -88,7 +102,7 @@ POST /executor/pause           — disable executor
 POST /executor/resume          — enable executor
 POST /executor/drain           — disable + kill in-flight
 POST /executor/tasks/:id/run-now — manual nudge
-POST /executor/tasks/:id/pause   — pause specific task
+POST /executor/tasks/:id/pause   — pause specific task (CIRCUIT-BREAKER ENTRY POINT)
 POST /executor/tasks/:id/unpause — unpause (+ optional reset_attempts)
 GET  /executor/runs            — list executor_runs (filterable)
 GET  /tasks/:id/attempts       — attempt history for a task
