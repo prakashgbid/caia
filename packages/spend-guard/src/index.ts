@@ -32,6 +32,7 @@ export {
 export {
   SpendGuard,
   BudgetExceededError,
+  ApiKeyViaForbiddenError,
   InMemoryRecordSink,
   type PauseState,
   type SpendGuardOptions,
