@@ -36,6 +36,9 @@ import {
 } from '@chiefaia/capability-broker';
 
 function uniqueSocketPath(label: string): string {
+  // path components are all process-internal (label is a literal, pid +
+  // timestamp are local). Not user input.
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   return path.join(os.tmpdir(), `caia-broker-test-${label}-${process.pid}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}.sock`);
 }
 
