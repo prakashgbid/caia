@@ -22,13 +22,22 @@ function sha256(s: string): string {
 // @no-events — route registration wrapper, individual handlers emit events
 export function registerStoriesRoutes(app: Hono, db: Db): void {
   // GET /stories
+  // DASH-001: status filter was being silently ignored. Story rows have a
+  // `status` column ('pending'|'resolved'|...); GET /stories?status=pending
+  // historically returned all 383 rows because the handler never read the
+  // `status` query param. Audit `outstanding-tasks-audit-2026-04-30.md`.
   app.get('/stories', (c) => {
-    const { parent_id, project_slug, kind, root } = c.req.query();
+    const { parent_id, project_slug, kind, root, status } = c.req.query();
     let rows = db.select().from(stories).orderBy(stories.ordinal).all();
     if (root === 'true') rows = rows.filter(r => r.parentId === null);
     if (parent_id) rows = rows.filter(r => r.parentId === parent_id);
     if (project_slug) rows = rows.filter(r => r.projectSlug === project_slug);
     if (kind) rows = rows.filter(r => r.kind === kind);
+    if (status) {
+      // Comma-separated allowed: ?status=pending,resolved
+      const wanted = new Set(status.split(',').map(s => s.trim()).filter(Boolean));
+      rows = rows.filter(r => wanted.has(r.status));
+    }
     return c.json(rows);
   });
 
