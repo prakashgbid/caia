@@ -5,7 +5,13 @@
   "description": "AI-driven hierarchy decomposer — breaks natural language into Initiative → Epic → Module → Story → Task.",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "nanoid": "^5.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0"
   }
 }
