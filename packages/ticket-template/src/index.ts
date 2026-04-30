@@ -33,6 +33,16 @@ export {
   // ARCH-006 architecturalInstructions[] schema
   ArchitecturalInstructionSchema,
   ARCH_INSTRUCTION_ACTIONS,
+  // ARCH-007 — ArchitecturalInstructionV2 (additive over V1) + supporting enums
+  ArchitecturalInstructionV2Schema,
+  ARTIFACT_KINDS,
+  INTEGRATION_DIRECTIONS,
+  INTEGRATION_PROTOCOLS,
+  RISK_SEVERITIES,
+  TEST_HOOK_KINDS,
+  CROSS_CUTTING_CONCERNS,
+  ARTIFACT_ROLES,
+  RADAR_RINGS,
 } from './schema';
 export type {
   TicketTemplateV1,
@@ -56,6 +66,22 @@ export type {
   // ARCH-006 architectural-instruction types
   ArchitecturalInstruction,
   ArchInstructionAction,
+  // ARCH-007 architectural-instruction-v2 types
+  ArchitecturalInstructionV2,
+  ArtifactKind,
+  IntegrationDirection,
+  IntegrationProtocol,
+  RiskSeverity,
+  TestHookKind,
+  CrossCuttingConcern,
+  ArtifactRole,
+  RadarRing,
+  ExistingArtifactReference,
+  NewArtifactSpec,
+  IntegrationPoint,
+  Risk,
+  TestHook,
+  CandidateADR,
 } from './schema';
 
 export {
