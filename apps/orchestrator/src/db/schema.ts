@@ -668,7 +668,7 @@ export const executorConfig = sqliteTable('executor_config', {
   pollIntervalMs: integer('poll_interval_ms').notNull().default(10000),
   monitorIntervalMs: integer('monitor_interval_ms').notNull().default(30000),
   maxTurns: integer('max_turns').notNull().default(40),
-  permissionMode: text('permission_mode').notNull().default('bypassPermissions'),
+  permissionMode: text('permission_mode').notNull().default('hook-controlled'),
   updatedAt: text('updated_at').notNull(),
 });
 
@@ -1263,3 +1263,46 @@ export const irreversibleActions = sqliteTable('irreversible_actions', {
   index('irreversible_actions_capability_idx').on(t.capabilityName, t.ts),
   index('irreversible_actions_ts_idx').on(t.ts),
 ]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// spend_caps + spend_records — SAFETY-004 spend-guard storage.
+//
+// Mirrors `apps/orchestrator/src/db/migrations/0040_spend_caps.sql`.
+// The orchestrator wires `@chiefaia/spend-guard` to a SQLite-backed
+// `CapStore` writing here. Every Claude API call (and every Ollama call
+// routed through `@chiefaia/local-llm-router`) appends a row into
+// `spend_records`; before each call, the guard checks active rows in
+// `spend_caps` and pauses on `BudgetExceededError`.
+//
+// Reference: caia/docs/spend-guard.md, v2 §6.
+// ─────────────────────────────────────────────────────────────────────────────
+export const spendCaps = sqliteTable('spend_caps', {
+  scope: text('scope').notNull(),
+  resourceId: text('resource_id').notNull(),
+  periodSec: integer('period_sec').notNull(),
+  limitUsd: real('limit_usd').notNull(),
+  currentUsd: real('current_usd').notNull().default(0),
+  lastResetMsEpoch: integer('last_reset_ms_epoch').notNull(),
+  lockedUntilMsEpoch: integer('locked_until_ms_epoch'),
+}, (t) => [
+  primaryKey({ columns: [t.scope, t.resourceId] }),
+]);
+
+export const spendRecords = sqliteTable('spend_records', {
+  id: text('id').primaryKey(),
+  taskId: text('task_id').notNull(),
+  projectId: text('project_id'),
+  agentRole: text('agent_role').notNull(),
+  model: text('model').notNull(),
+  via: text('via').notNull(),
+  accountId: text('account_id'),
+  inputTokens: integer('input_tokens').notNull(),
+  outputTokens: integer('output_tokens').notNull(),
+  costUsd: real('cost_usd').notNull(),
+  tsMsEpoch: integer('ts_ms_epoch').notNull(),
+}, (t) => [
+  index('spend_records_task_id_idx').on(t.taskId),
+  index('spend_records_project_id_idx').on(t.projectId),
+  index('spend_records_ts_idx').on(t.tsMsEpoch),
+]);
+
