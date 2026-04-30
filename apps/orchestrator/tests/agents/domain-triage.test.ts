@@ -1,44 +1,54 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { runDomainTriage, MACRO_DOMAINS, type MacroDomain } from '../domain-triage';
+/**
+ * Domain Triage classifier tests (EA-MESH-002).
+ *
+ * Covers keyword-pass triage (deterministic) plus LLM-fallback resilience
+ * when the local-llm-router throws. Macro-domains: ui, backend, data,
+ * platform, quality-security, integrations.
+ */
+
+import { runDomainTriage, MACRO_DOMAINS, type MacroDomain } from '../../src/agents/domain-triage';
 import * as router from '@chiefaia/local-llm-router';
 
-// Mock the router
-vi.mock('@chiefaia/local-llm-router', () => ({
-  route: vi.fn(),
+jest.mock('@chiefaia/local-llm-router', () => ({
+  __esModule: true,
+  route: jest.fn(),
 }));
+
+const routeMock = router.route as jest.MockedFunction<typeof router.route>;
 
 describe('runDomainTriage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    routeMock.mockReset();
   });
 
-  it('should classify simple UI feature as ui only', async () => {
+  it('classifies a simple UI feature as ui', async () => {
     const result = await runDomainTriage(
       {
         title: 'Add user profile page',
         description: 'Create a React component to display user avatar and display-name',
         primaryDomain: 'ui-frontend',
       },
-      { keywordOnly: true }, // Skip LLM for determinism
+      { keywordOnly: true },
     );
-
     expect(result.inScopeDomains).toContain('ui');
   });
 
-  it('should classify cross-domain feature as multiple domains', async () => {
+  it('classifies cross-domain stories as multiple domains', async () => {
     const result = await runDomainTriage(
       {
         title: 'Add real-time notifications',
-        description: 'WebSocket UI component, BFF subscription route, notifications DB table, observability metrics',
+        description:
+          'WebSocket UI component, BFF subscription route, notifications DB table, observability metrics',
         primaryDomain: 'api-integration',
       },
       { keywordOnly: true },
     );
-
-    expect(result.inScopeDomains).toEqual(expect.arrayContaining(['ui', 'backend', 'data', 'platform']));
+    expect(result.inScopeDomains).toEqual(
+      expect.arrayContaining(['ui', 'backend', 'data', 'platform']),
+    );
   });
 
-  it('should classify data migration as data domain', async () => {
+  it('classifies data migration as data domain', async () => {
     const result = await runDomainTriage(
       {
         title: 'Migrate orders to event sourcing',
@@ -47,11 +57,10 @@ describe('runDomainTriage', () => {
       },
       { keywordOnly: true },
     );
-
     expect(result.inScopeDomains).toContain('data');
   });
 
-  it('should classify security work as quality-security', async () => {
+  it('classifies a11y/security work as quality-security', async () => {
     const result = await runDomainTriage(
       {
         title: 'Add WCAG 2.1 AA conformance tests',
@@ -60,11 +69,10 @@ describe('runDomainTriage', () => {
       },
       { keywordOnly: true },
     );
-
     expect(result.inScopeDomains).toContain('quality-security');
   });
 
-  it('should classify infrastructure work as platform', async () => {
+  it('classifies infrastructure work as platform', async () => {
     const result = await runDomainTriage(
       {
         title: 'Add observability instrumentation',
@@ -73,11 +81,10 @@ describe('runDomainTriage', () => {
       },
       { keywordOnly: true },
     );
-
     expect(result.inScopeDomains).toContain('platform');
   });
 
-  it('should classify Stripe integration as integrations', async () => {
+  it('classifies Stripe integration as integrations', async () => {
     const result = await runDomainTriage(
       {
         title: 'Add Stripe checkout',
@@ -86,11 +93,10 @@ describe('runDomainTriage', () => {
       },
       { keywordOnly: true },
     );
-
     expect(result.inScopeDomains).toContain('integrations');
   });
 
-  it('should default to backend if no domains match', async () => {
+  it('defaults to backend if no domains match the keyword pass', async () => {
     const result = await runDomainTriage(
       {
         title: 'Update README',
@@ -99,11 +105,10 @@ describe('runDomainTriage', () => {
       },
       { keywordOnly: true },
     );
-
     expect(result.inScopeDomains).toContain('backend');
   });
 
-  it('should always return sorted domains', async () => {
+  it('returns sorted domains', async () => {
     const result = await runDomainTriage(
       {
         title: 'Add real-time notifications with secure auth',
@@ -112,12 +117,11 @@ describe('runDomainTriage', () => {
       },
       { keywordOnly: true },
     );
-
     expect(result.inScopeDomains).toEqual([...result.inScopeDomains].sort());
   });
 
-  it('should fallback to keywords on LLM failure', async () => {
-    vi.mocked(router.route).mockRejectedValue(new Error('Ollama unavailable'));
+  it('falls back to keyword pass when the LLM call rejects', async () => {
+    routeMock.mockRejectedValueOnce(new Error('Ollama unavailable'));
 
     const result = await runDomainTriage({
       title: 'Add user profile page with database',
@@ -125,12 +129,11 @@ describe('runDomainTriage', () => {
       primaryDomain: 'api-integration',
     });
 
-    // Should have fallen back to keyword pass
     expect(result.inScopeDomains).toBeDefined();
     expect(result.inScopeDomains.length).toBeGreaterThan(0);
   });
 
-  it('should include all domains for multi-agent collab stories', async () => {
+  it('flags all six domains for an end-to-end e-commerce story', async () => {
     const result = await runDomainTriage(
       {
         title: 'E-commerce checkout feature',
@@ -146,18 +149,17 @@ describe('runDomainTriage', () => {
       },
       { keywordOnly: true },
     );
-
     expect(result.inScopeDomains).toEqual(
       expect.arrayContaining(['ui', 'backend', 'data', 'platform', 'quality-security', 'integrations']),
     );
   });
 
-  it('should have valid macro-domain values', async () => {
+  it('returns only valid macro-domain values', async () => {
+    routeMock.mockRejectedValue(new Error('skip llm'));
     const result = await runDomainTriage({
       title: 'Any ticket',
       description: 'Any description',
     });
-
     for (const domain of result.inScopeDomains) {
       expect(MACRO_DOMAINS).toContain(domain as MacroDomain);
     }
