@@ -477,6 +477,24 @@ events:
     actor: [task-scheduler]
     payload: [storyId, promptId, correlationId, bucketId, bucketKind]
 
+  # Context Capsule formalization (CAPSULE-FORMALIZE — third-party paper §C.5)
+  # Fired by the Task Scheduler at bucket_placed → ready_for_pickup, once
+  # per story. status='frozen' on success; status='skipped' when the
+  # ticket cannot be parsed (the worker still picks up the story but
+  # emits capsule-drift on first verify and escalates).
+  - type: ticket.capsule-frozen
+    severity: info
+    actor: [task-scheduler]
+    payload: [storyId, promptId, status, capsuleHash, capsuleFrozenAt, capsuleVersion, reason]
+
+  # Fired by the Coding Agent (worker-coding) when verifyCapsule fails on
+  # a freshly-claimed story. The worker raises a `capsule-drift` blocker
+  # rather than acting on stale context.
+  - type: ticket.capsule-drift
+    severity: warning
+    actor: [worker-coding]
+    payload: [storyId, promptId, expectedHash, actualHash, reason, blockerId]
+
   # Story-driven testing framework — Phase A (TEST-003)
   - type: test.cases_generated
     severity: info

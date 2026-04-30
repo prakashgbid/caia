@@ -17,6 +17,7 @@ import { tasks } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { placeStoriesInBuckets, type BucketPlacement } from './bucket-placer';
 import { advancePipelineStage } from './pipeline-stages';
+import { freezePromptCapsules } from './capsule-freezer';
 
 export interface SchedulerInput {
   promptId: string;
@@ -165,6 +166,17 @@ export async function runTaskScheduler(
       },
       db,
     );
+
+    // CAPSULE-FORMALIZE (third-party paper §C.5) — freeze the Context
+    // Capsule on every story before the Coding Agent picks it up. This
+    // pins a SHA-256 of the canonicalised ticket projection so the
+    // Coding Agent's first action (verifyCapsule) can detect drift if
+    // an upstream agent re-edits the ticket between hand-off and pickup.
+    // Non-blocking: a per-story freeze that fails (parse error, etc.)
+    // emits a `ticket.capsule-frozen` skip event; the worker will emit
+    // `capsule-drift` (no-frozen-hash) on first verify and escalate via
+    // the standard blocker path.
+    freezePromptCapsules(promptId, db, { correlationId });
 
     // Per-story ticket lifecycle event: ready-for-pickup.
     for (const p of placement.placements) {

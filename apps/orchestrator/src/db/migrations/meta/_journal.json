@@ -253,6 +253,13 @@
       "when": 1778500000001,
       "tag": "0036_story_scope_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1778600000001,
+      "tag": "0037_story_capsule",
+      "breakpoints": true
     }
   ]
 }

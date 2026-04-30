@@ -470,6 +470,16 @@ export const stories = sqliteTable('stories', {
   // registered contracts (PO/BA/EA/Test-Design) per `composeTemplate(scope)`.
   // Legacy rows backfill to 'story' (DEFAULT_STORY_SCOPE) — see ACR-008.
   storyScope: text('story_scope').notNull().default('story'),          // STORY_SCOPES
+  // CAPSULE-FORMALIZE (migration 0037 — third-party paper §C.5) — frozen
+  // SHA-256 of the canonicalised Context Capsule (spec_slice + contracts +
+  // acceptance_tests + file_allowlist + tool_allowlist + budget). The
+  // orchestrator calls `freezeCapsule(ticket)` from
+  // @chiefaia/ticket-template at the bucket_placed → ready_for_pickup
+  // transition; the Coding Agent calls `verifyCapsule(ticket)` as its
+  // first action and escalates `capsule-drift` on hash mismatch.
+  capsuleHash: text('capsule_hash'),
+  capsuleFrozenAt: integer('capsule_frozen_at'),
+  capsuleVersion: text('capsule_version'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -502,6 +512,11 @@ export const stories = sqliteTable('stories', {
   // ACR-001 index (migration 0035) — dashboard /contracts page + Validator
   // per-scope rubric cache lookup.
   index('story_story_scope_idx').on(t.storyScope),
+  // CAPSULE-FORMALIZE indexes (migration 0037) — bundle endpoint reads
+  // capsule_hash on every load; dashboard journey page sorts by
+  // capsule_frozen_at to render lineage.
+  index('story_capsule_hash_idx').on(t.capsuleHash),
+  index('story_capsule_frozen_at_idx').on(t.capsuleFrozenAt),
 ]);
 
 // story_revisions — append-only history of every story-tree edit
