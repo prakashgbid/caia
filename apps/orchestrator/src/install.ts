@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { wrapMcpEntry } from './mcp/sandboxed-mcp-config';
 import * as path from 'path';
 import * as os from 'os';
 
@@ -89,10 +90,24 @@ function installMcpConfig(): void {
   if (!mcp.mcpServers) mcp.mcpServers = {};
 
   if (!mcp.mcpServers['conductor']) {
-    mcp.mcpServers['conductor'] = { command: 'conductor', args: ['mcp'] };
+    // SAFETY-002: wrap the conductor MCP entry through sandbox-exec so
+    // when Claude Code spawns it, the process is jailed by the
+    // mcp-sandbox.sb profile (file-system + network restrictions).
+    // On non-Darwin platforms the wrapper falls through to the original
+    // entry but still enforces the spawn-command allowlist + public-bind
+    // guards. See packages/mcp-allowlist-proxy/src/sandbox.ts.
+    const rawConductor = { command: 'conductor', args: ['mcp'] };
+    let entry: { command: string; args: string[] };
+    try {
+      entry = wrapMcpEntry(rawConductor);
+    } catch (err) {
+      console.error('  ✗ Conductor MCP entry rejected by sandbox guards:', (err as Error).message);
+      throw err;
+    }
+    mcp.mcpServers['conductor'] = entry;
     fs.mkdirSync(CLAUDE_DIR, { recursive: true });
     fs.writeFileSync(mcpPath, JSON.stringify(mcp, null, 2));
-    console.log('  Added conductor MCP entry to ~/.claude/mcp.json');
+    console.log('  Added sandboxed conductor MCP entry to ~/.claude/mcp.json');
   } else {
     console.log('  Conductor MCP already configured, skipping');
   }
