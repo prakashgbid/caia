@@ -99,6 +99,9 @@ importers:
 
   apps/executor:
     dependencies:
+      '@chiefaia/capability-broker':
+        specifier: workspace:*
+        version: link:../../packages/capability-broker
       '@chiefaia/event-bus-internal':
         specifier: workspace:*
         version: link:../../packages/event-bus-internal
@@ -115,6 +118,9 @@ importers:
       typescript:
         specifier: '*'
         version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   apps/orchestrator:
     dependencies:
@@ -154,9 +160,18 @@ importers:
       '@chiefaia/logger':
         specifier: workspace:*
         version: link:../../packages/logger
+      '@chiefaia/mcp-allowlist-proxy':
+        specifier: workspace:*
+        version: link:../../packages/mcp-allowlist-proxy
+      '@chiefaia/spend-guard':
+        specifier: workspace:*
+        version: link:../../packages/spend-guard
       '@chiefaia/ticket-template':
         specifier: workspace:*
         version: link:../../packages/ticket-template
+      '@chiefaia/tool-output-sanitizer':
+        specifier: workspace:*
+        version: link:../../packages/tool-output-sanitizer
       '@hono/node-server':
         specifier: ^1.19.14
         version: 1.19.14(hono@4.12.15)
@@ -233,6 +248,9 @@ importers:
       typescript:
         specifier: ^5.4.0
         version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   apps/orchestrator-middleware:
     dependencies:
