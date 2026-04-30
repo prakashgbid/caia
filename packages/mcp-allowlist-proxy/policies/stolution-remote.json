@@ -1,0 +1,121 @@
+{
+  "name": "stolution-remote",
+  "description": "First-party CAIA MCP serving the Stolution remote box (s903 user). Reached via SSH; the upstream binary lives at /home/s903/stolution-mcp/dist/index.js. The allowlist constrains paths to the projects directory + the stolution-vault subtree, and forbids any tool that would mutate /etc, /root, /var/spool, etc.",
+  "pinnedSha": "0000000000000000000000000000000000000000",
+  "sourceUrl": "https://github.com/prakashgbid/stolution-mcp",
+  "trustTier": "first-party-caia",
+  "tools": [
+    {
+      "name": "stolution_bash",
+      "argsConstraints": {
+        "command": {
+          "kind": "maxLength",
+          "value": 8000
+        }
+      },
+      "maxPerTask": 200
+    },
+    {
+      "name": "stolution_read_file",
+      "argsConstraints": {
+        "path": {
+          "kind": "regex",
+          "pattern": "^/(home/s903|tmp|opt)"
+        }
+      },
+      "maxPerTask": 500
+    },
+    {
+      "name": "stolution_write_file",
+      "argsConstraints": {
+        "path": {
+          "kind": "regex",
+          "pattern": "^/(home/s903|tmp)"
+        },
+        "content": {
+          "kind": "maxLength",
+          "value": 1048576
+        }
+      },
+      "maxPerTask": 200
+    },
+    {
+      "name": "stolution_grep",
+      "argsConstraints": {
+        "path": {
+          "kind": "regex",
+          "pattern": "^/(home/s903|tmp|opt)"
+        }
+      },
+      "maxPerTask": 200
+    },
+    {
+      "name": "stolution_list_dir",
+      "argsConstraints": {
+        "path": {
+          "kind": "regex",
+          "pattern": "^/(home/s903|tmp|opt)"
+        }
+      },
+      "maxPerTask": 200
+    },
+    {
+      "name": "stolution_git",
+      "argsConstraints": {
+        "cwd": {
+          "kind": "regex",
+          "pattern": "^/home/s903"
+        }
+      },
+      "maxPerTask": 200
+    },
+    {
+      "name": "stolution_db_query",
+      "argsConstraints": {
+        "query": {
+          "kind": "forbid",
+          "pattern": "(?i)\\b(drop|truncate|alter)\\b"
+        }
+      },
+      "maxPerTask": 200
+    },
+    {
+      "name": "stolution_db_schema",
+      "maxPerTask": 50
+    },
+    {
+      "name": "stolution_docker_logs",
+      "maxPerTask": 100
+    },
+    {
+      "name": "stolution_docker_ps",
+      "maxPerTask": 100
+    },
+    {
+      "name": "stolution_pm2_list",
+      "maxPerTask": 100
+    },
+    {
+      "name": "stolution_pm2_logs",
+      "maxPerTask": 100
+    },
+    {
+      "name": "stolution_pm2_restart",
+      "maxPerTask": 5
+    },
+    {
+      "name": "stolution_vault_get",
+      "maxPerTask": 50
+    },
+    {
+      "name": "stolution_vault_list",
+      "maxPerTask": 50
+    }
+  ],
+  "allowedHosts": [
+    "127.0.0.1",
+    "localhost",
+    "stolution"
+  ],
+  "sandboxProfile": "scripts/mcp-sandbox.sb"
+}

@@ -19,6 +19,11 @@
  */
 
 import { spawnSync, type SpawnSyncOptions } from 'child_process';
+import {
+  assertCapabilityForCommand,
+  type GuardContext,
+  type GuardRule,
+} from '@chiefaia/capability-broker';
 import type { Bundle } from './bundle-reader';
 import type { Worktree } from './worktree-manager';
 
@@ -57,6 +62,20 @@ export interface DiffCommitterOptions {
   gitBin?: string;
   ghBin?: string;
   execImpl?: typeof spawnSync;
+  /**
+   * Optional runtime-guard context. When set, every `git push`, `gh pr
+   * merge`, etc. issued by this committer is checked against the
+   * `CapabilityBroker`'s default rules before the underlying spawn fires.
+   * Backward-compatible: omit to keep the legacy unguarded behaviour
+   * (used by existing tests that mock execImpl).
+   */
+  guard?: GuardContext;
+  /**
+   * Optional override for the default guard rules. Useful for tests + for
+   * site-specific allowlists (e.g. allowing `gh repo create` on a managed
+   * org but blocking `gh repo delete`).
+   */
+  guardRules?: readonly GuardRule[];
 }
 
 // ─── Class ──────────────────────────────────────────────────────────────────
@@ -65,11 +84,15 @@ export class DiffCommitter {
   private readonly git: string;
   private readonly gh: string;
   private readonly exec: typeof spawnSync;
+  private readonly guard: GuardContext | undefined;
+  private readonly guardRules: readonly GuardRule[] | undefined;
 
   constructor(opts: DiffCommitterOptions = {}) {
     this.git = opts.gitBin ?? 'git';
     this.gh = opts.ghBin ?? 'gh';
     this.exec = opts.execImpl ?? spawnSync;
+    this.guard = opts.guard;
+    this.guardRules = opts.guardRules;
   }
 
   /**
@@ -184,6 +207,11 @@ ${
   // ─── Internals ────────────────────────────────────────────────────────────
 
   private run(bin: string, args: string[], opts: SpawnSyncOptions): string {
+    if (this.guard) {
+      // Throws CapabilityGuardError if `bin args...` requires a capability
+      // that is not currently held. Safe commands pass through.
+      assertCapabilityForCommand(bin, args, this.guard, this.guardRules);
+    }
     const res = this.exec(bin, args, { encoding: 'utf8', ...opts });
     if ((res.status ?? -1) !== 0) {
       throw new Error(

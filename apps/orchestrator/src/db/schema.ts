@@ -1208,3 +1208,31 @@ export const bucketHealthHistory = sqliteTable('bucket_health_history', {
   index('bhh_bucket_ts_idx').on(t.bucketId, t.ts),
   index('bhh_ts_idx').on(t.ts),
 ]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// irreversible_actions — capability-broker append-only ledger (HARDEN-009)
+//
+// Mirrors the migration in
+// `packages/capability-broker/migrations/0001_irreversible_actions.sql`.
+// The capability-broker's `IrreversibleActionLedger` interface has a
+// SQLite-backed implementation (in apps/orchestrator) that writes here,
+// and the dashboard "Capability ledger" page reads from here.
+//
+// Reference: caia/docs/capability-broker.md, third-party-paper §C.1.
+// ─────────────────────────────────────────────────────────────────────────────
+export const irreversibleActions = sqliteTable('irreversible_actions', {
+  id: text('id').primaryKey(),
+  ts: integer('ts').notNull(),
+  agentRole: text('agent_role').notNull(),
+  taskId: text('task_id').notNull(),
+  capabilityName: text('capability_name').notNull(),
+  scope: text('scope').notNull(),
+  reason: text('reason').notNull(),
+  actionPayloadJson: text('action_payload_json').notNull(),
+  resultJson: text('result_json').notNull(),
+  undoToken: text('undo_token'),
+}, (t) => [
+  index('irreversible_actions_task_idx').on(t.taskId, t.ts),
+  index('irreversible_actions_capability_idx').on(t.capabilityName, t.ts),
+  index('irreversible_actions_ts_idx').on(t.ts),
+]);

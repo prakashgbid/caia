@@ -1,0 +1,44 @@
+{
+  "name": "@chiefaia/mcp-allowlist-proxy",
+  "version": "0.1.0",
+  "description": "Deterministic command-allowlist proxy in front of an MCP server. Pins the upstream commit SHA, wraps spawn in macOS sandbox-exec, and rejects any tool call not on the policy allowlist before forwarding.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "mcp-allowlist-proxy": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "policies"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
