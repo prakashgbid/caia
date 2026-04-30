@@ -39,4 +39,15 @@ export {
   type HookPreToolUseOutput,
   type HookPostToolUseInput,
   type HookPostToolUseOutput,
+  type HookControlledOptions,
 } from './hook-controlled.js';
+export {
+  BrokerSocketServer,
+  type BrokerSocketServerOptions,
+  type BrokerWireFrame,
+} from './socket-server.js';
+export {
+  callBrokerSocket,
+  type BrokerSocketClientOptions,
+  type BrokerSocketClientFailure,
+} from './socket-client.js';
