@@ -19,7 +19,7 @@
 -- Wired in:
 --   - producer:  apps/orchestrator/src/agents/task-scheduler.ts (or
 --                pipeline-stages.ts) at the
---                bucket_placed → ready_for_pickup transition.
+--                bucket_placed -> ready_for_pickup transition.
 --   - consumer:  apps/worker-coding/src/main.ts — first action on a
 --                claimed story is `verifyCapsule(ticket)`; on drift
 --                the worker raises a `capsule-drift` blocker rather
@@ -30,16 +30,15 @@
 -- through the orchestrator, and the schema's superRefine treats
 -- "all three NULL" as the legitimate pre-capsule state.
 --
--- Idempotency: ALTER TABLE … ADD COLUMN is non-idempotent in SQLite.
+-- Idempotency: ALTER TABLE add column is non-idempotent in SQLite.
 -- We do not guard against re-application here because Drizzle's
 -- migration runner records the journal entry and never re-applies a
 -- migration with the same tag.
 --
--- Multi-statement: this file uses Drizzle's `--> statement-breakpoint`
--- markers because better-sqlite3's prepare() rejects multi-statement
--- SQL strings, and Drizzle's migrator splits on the marker before
--- handing each statement to prepare(). Every other migration in this
--- folder follows the same convention.
+-- Multi-statement: this file uses Drizzle's standard breakpoint
+-- markers between statements because better-sqlite3's prepare()
+-- rejects multi-statement SQL strings, and Drizzle's migrator
+-- splits on the marker before handing each statement to prepare().
 
 ALTER TABLE `stories` ADD COLUMN `capsule_hash` text;
 --> statement-breakpoint
@@ -47,9 +46,6 @@ ALTER TABLE `stories` ADD COLUMN `capsule_frozen_at` integer;
 --> statement-breakpoint
 ALTER TABLE `stories` ADD COLUMN `capsule_version` text;
 --> statement-breakpoint
--- Index supports the dashboard's /stories/[id]/journey page (which
--- renders capsule lineage) and the Coding Agent's bundle endpoint
--- (which reads capsule_hash on every load to populate the bundle).
 CREATE INDEX `story_capsule_hash_idx` ON `stories` (`capsule_hash`);
 --> statement-breakpoint
 CREATE INDEX `story_capsule_frozen_at_idx` ON `stories` (`capsule_frozen_at`);
