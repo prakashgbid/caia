@@ -216,3 +216,68 @@ describe('SAFETY-004 spend-guard bridge', () => {
     expect(bridge.pauseState().paused).toBe(false);
   });
 });
+
+
+// ─── No-API-key constraint (Prakash 2026-04-30) ──────────────────────────
+//
+// The bridge defaults rejectApiKeyVia to TRUE. Test 13 asserts default
+// behaviour — every record() with via:'api-key' is refused. Test 14
+// asserts the legacy escape hatch still works for tests that pass
+// `rejectApiKeyVia: false` (no production code does).
+
+import { ApiKeyViaForbiddenError } from '@chiefaia/spend-guard';
+
+describe('SAFETY-004 + LAI-001 no-API-key constraint', () => {
+  it('13. production default rejects via=api-key', async () => {
+    const bridge = buildSpendGuardBridge();
+    await expect(
+      bridge.record({
+        taskId: 't13',
+        projectId: null,
+        agentRole: 'po',
+        model: 'claude-sonnet-4-6',
+        via: 'api-key',
+        accountId: 'apikey-default',
+        inputTokens: 1,
+        outputTokens: 1,
+        costUsd: 0.0001,
+      }),
+    ).rejects.toBeInstanceOf(ApiKeyViaForbiddenError);
+  });
+
+  it('14. opt-out rejectApiKeyVia:false still records api-key (legacy / test only)', async () => {
+    const sink = new InMemoryRecordSink();
+    const bridge = buildSpendGuardBridge({ recordSink: sink, rejectApiKeyVia: false });
+    await bridge.record({
+      taskId: 't14',
+      projectId: null,
+      agentRole: 'po',
+      model: 'claude-sonnet-4-6',
+      via: 'api-key',
+      accountId: 'apikey-default',
+      inputTokens: 1,
+      outputTokens: 1,
+      costUsd: 0.0001,
+    });
+    expect(sink.records).toHaveLength(1);
+    expect(sink.records[0]?.via).toBe('api-key');
+  });
+
+  it('15. via=subscription is accepted under default config (binary-spawn adapter path)', async () => {
+    const sink = new InMemoryRecordSink();
+    const bridge = buildSpendGuardBridge({ recordSink: sink });
+    await bridge.record({
+      taskId: 't15',
+      projectId: null,
+      agentRole: 'coding',
+      model: 'claude-sonnet-4-6',
+      via: 'subscription',
+      accountId: 'acct-1',
+      inputTokens: 5,
+      outputTokens: 5,
+      costUsd: 0.001,
+    });
+    expect(sink.records).toHaveLength(1);
+    expect(sink.records[0]?.via).toBe('subscription');
+  });
+});
