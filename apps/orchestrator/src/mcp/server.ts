@@ -28,13 +28,24 @@ import {
 import type { PromptReceivedVia, PromptStatus, TransitionActor } from '../prompts/types';
 import { scoreOne, scoreAll } from '../prioritization/reprioritizer';
 import type { PriorityRationale } from '../prioritization/types';
+import { sanitizeOutboundMcpResult, buildToolResultSanitizer } from '../safety/tool-result-sanitizer-bridge';
 
 const HTTP_PORT = parseInt(process.env['CONDUCTOR_HTTP_PORT'] ?? '7776', 10);
 
 function toolResult(data: unknown): { content: Array<{ type: 'text'; text: string }> } {
-  return {
-    content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+  const envelope = {
+    content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
   };
+  // SAFETY-003: sanitize outbound payloads from the conductor MCP. The
+  // conductor server is first-party so strictness defaults to lenient
+  // for its own tools — but since this helper doesn't know the tool name
+  // we pass 'conductor.outbound' as a synthetic name (paranoid by
+  // default). Errors swallowed; never break a successful tool call.
+  return sanitizeOutboundMcpResult(envelope, {
+    toolName: 'conductor.outbound',
+    taskId: 'mcp-server',
+    agentRole: 'orchestrator',
+  });
 }
 
 function toolError(message: string): { content: Array<{ type: 'text'; text: string }>; isError: true } {
