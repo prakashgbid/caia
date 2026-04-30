@@ -194,6 +194,126 @@ export const ROUTING_RULES: RoutingRule[] = [
     estimatedCostClaude: '$1.50',
   },
 
+  // ─── PO recursive decomposer (PO-DECOMP-### track) ───────────────────────
+  // Per the proposal in `reports/po-decomposition-architecture-proposal-2026-04-29.md`,
+  // the recursive decomposer fans out into a small number of task-types:
+  // classification (Ollama-first), per-scope decomposition (Sonnet for high
+  // scopes, Ollama-first for deep scopes), and a judge pair (Sonnet, with
+  // ensemble for initiative/epic).
+  {
+    taskType: 'po-decomposer-scope-detection',
+    description:
+      'Adaptive scope detector — classify a prompt as initiative | epic | ' +
+      'module | story | task | subtask. Cheap classification call.',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 400,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.04',
+  },
+  {
+    taskType: 'po-decomposer-atomicity-classification',
+    description:
+      'Per-scope atomicity classifier — does a candidate child satisfy the ' +
+      'INVEST/SAFe/DDD rubric for its scope? Cheap classification call.',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 600,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.06',
+  },
+  {
+    taskType: 'po-decomposer-initiative',
+    description:
+      'Initiative → epic decomposition. High-stakes (multi-quarter scope).',
+    localModel: 'qwen3:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: false,
+    maxTokens: 8000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$2.00',
+  },
+  {
+    taskType: 'po-decomposer-epic',
+    description:
+      'Epic → module decomposition. High-stakes (single PI scope).',
+    localModel: 'qwen3:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: false,
+    maxTokens: 8000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$2.00',
+  },
+  {
+    taskType: 'po-decomposer-module',
+    description:
+      'Module → story decomposition. Medium-stakes (bounded-context scope).',
+    localModel: 'qwen3:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: true,
+    maxTokens: 6000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$1.50',
+  },
+  {
+    taskType: 'po-decomposer-story',
+    description:
+      'Story → task decomposition. Medium-stakes (single-PR scope).',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: true,
+    maxTokens: 4000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$1.00',
+  },
+  {
+    taskType: 'po-decomposer-task',
+    description:
+      'Task → subtask decomposition. Low-stakes (single-day scope) — Ollama-first.',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: true,
+    maxTokens: 3000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.75',
+  },
+  {
+    taskType: 'po-decomposer-subtask',
+    description:
+      'Subtask → mechanical-step decomposition. Rarely needed; Ollama-first.',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 1500,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.15',
+  },
+  {
+    taskType: 'po-decomposer-coverage-judge',
+    description:
+      'Parent-coverage MECE judge. Did the children cover the parent\'s scope? ' +
+      'Sonnet — judging is high-leverage low-cost relative to regenerating downstream.',
+    localModel: 'qwen3:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: false,
+    maxTokens: 1500,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.40',
+  },
+  {
+    taskType: 'po-decomposer-disjointness-judge',
+    description:
+      'Sibling-disjointness MECE judge. Do any two children overlap?',
+    localModel: 'qwen3:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: false,
+    maxTokens: 1500,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.40',
+  },
+
   // ─── CLAUDE ONLY — still too high-stakes for the local path ──────────────
   {
     taskType: 'hierarchy-decomposition',
