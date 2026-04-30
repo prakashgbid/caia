@@ -116,3 +116,27 @@ export type {
   ComposedSectionEntry,
   ComposedTemplate,
 } from './section-contract';
+
+// CAPSULE-FORMALIZE — Context Capsule formalization (third-party paper §C.5).
+export {
+  CAPSULE_SLICE_KEYS,
+  CAPSULE_VERSION,
+  canonicalize,
+  canonicalJSON,
+  computeCapsuleHash,
+  extractCapsule,
+  freezeCapsule,
+  verifyCapsule,
+} from './capsule';
+export type {
+  AgentSections,
+  CapsuleBudget,
+  CapsuleContent,
+  CapsuleDrift,
+  CapsuleSliceKey,
+  CapsuleVerification,
+  CapsuleVersion,
+  FreezeOptions,
+  TicketWithCapsule,
+  VerifiableTicket,
+} from './capsule';

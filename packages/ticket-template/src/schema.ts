@@ -618,6 +618,33 @@ export const TicketTemplateV1Schema = z
     /** BUCKET-009: scheduler resource claims populated by EA. */
     claims: Claims.optional(),
     /**
+     * CAPSULE-FORMALIZE (third-party paper analysis §C.5) — frozen
+     * SHA-256 hex digest of the canonicalised six-slice capsule
+     * projection (spec_slice + contracts + acceptance_tests +
+     * file_allowlist + tool_allowlist + budget). Set by the orchestrator
+     * at the `bucket_placed → ready_for_pickup` transition via
+     * `freezeCapsule()`. The Coding Agent's first action calls
+     * `verifyCapsule()` and escalates a `capsule-drift` blocker on
+     * mismatch rather than acting on stale context. Optional so legacy
+     * tickets continue to validate.
+     */
+    capsuleHash: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/, 'capsuleHash must be 64-char lowercase hex sha256')
+      .optional(),
+    /**
+     * Epoch ms when `freezeCapsule()` produced the current `capsuleHash`.
+     * Companion to capsuleHash; both fields are set together or neither.
+     */
+    capsuleFrozenAt: z.number().int().nonnegative().optional(),
+    /**
+     * Capsule slice-set version. Bumped when the slice list changes
+     * (e.g., adding a 7th slice in a future track). 'v1' is the
+     * current shape: spec_slice + contracts + acceptance_tests +
+     * file_allowlist + tool_allowlist + budget.
+     */
+    capsuleVersion: z.literal('v1').optional(),
+    /**
      * Migration 0025 — declarative input requirements. PO seeds during
      * decomposition; EA/BA fill `satisfiedBy` once a producing story is
      * identified. Empty array on legacy tickets.
@@ -640,6 +667,27 @@ export const TicketTemplateV1Schema = z
   })
   .strict()
   .superRefine((ticket, ctx) => {
+    // CAPSULE-FORMALIZE: capsuleHash + capsuleFrozenAt + capsuleVersion
+    // must all be present together or all be absent. A ticket with a
+    // hash but no timestamp (or vice versa) is an integrity violation
+    // that downstream consumers can't reason about.
+    const capsuleFields: ReadonlyArray<readonly [string, unknown]> = [
+      ['capsuleHash', ticket.capsuleHash],
+      ['capsuleFrozenAt', ticket.capsuleFrozenAt],
+      ['capsuleVersion', ticket.capsuleVersion],
+    ];
+    const present = capsuleFields.filter(([, v]) => v !== undefined);
+    if (present.length !== 0 && present.length !== capsuleFields.length) {
+      const missing = capsuleFields
+        .filter(([, v]) => v === undefined)
+        .map(([k]) => k);
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `capsule fields must be set together; missing: ${missing.join(', ')}`,
+        path: ['capsuleHash'],
+      });
+    }
+
     // TEST-001: testDesign + testCases consistency — when one is present,
     // the other must be too, and the counts must match.
     if (ticket.testDesign) {
