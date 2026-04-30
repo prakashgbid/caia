@@ -24,11 +24,15 @@
  * @owner task-manager (Phase 2 worker-pool track)
  */
 
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, ne } from 'drizzle-orm';
 import type { Db } from '../db/connection';
 import { stories, workerPool } from '../db/schema';
 import { eventBus } from '../events/bus-adapter';
 import { recompute, snapshotStory, type StorySnapshot } from '../scheduling/ready-pool';
+// RUN-MODES (migration 0038) — the plan-only gate is enforced inline
+// in pump()'s SELECT clause; no run-modes helper imports needed here
+// because the 'plan-only' string literal is the only mode we reject.
+// (See run-modes/index.ts for the canonical mode list.)
 import { WorkerPoolRegistry, type WorkerKind } from './worker-pool-registry';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -102,10 +106,21 @@ export class ReadyPoolConsumer {
     //    `ready_for_pickup` (per the canonical pipeline) — those are
     //    represented by phase2_status IS NULL AND status='pending' once
     //    bucket-placer has run. We additionally require bucket_id IS NOT NULL.
+    // RUN-MODES (migration 0038): plan-only runs reach `bucket_placed` /
+    // `ready_for_pickup` but are NEVER assigned to a worker. The story's
+    // `run_mode` column is denormalised from the parent prompt at story
+    // creation time so this gate is a single-table read with no join.
+    // 'full' and 'test-only' both pass through; 'test-only' is the
+    // capability-broker's job downstream (the worker still gets the
+    // assignment).
     const rows = this.db
       .select()
       .from(stories)
-      .where(and(eq(stories.status, 'pending'), isNull(stories.assignedWorkerId)))
+      .where(and(
+        eq(stories.status, 'pending'),
+        isNull(stories.assignedWorkerId),
+        ne(stories.runMode, 'plan-only'),
+      ))
       .all();
 
     const snapshots: StorySnapshot[] = rows.map((r) => snapshotStory(r));

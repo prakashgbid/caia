@@ -480,6 +480,10 @@ export const stories = sqliteTable('stories', {
   capsuleHash: text('capsule_hash'),
   capsuleFrozenAt: integer('capsule_frozen_at'),
   capsuleVersion: text('capsule_version'),
+  // RUN-MODES (migration 0038): denormalised from the parent prompt's
+  // run_mode so ReadyPoolConsumer can gate worker assignment on a single
+  // table read. Always inherits from the prompt at story creation time.
+  runMode: text('run_mode').notNull().default('full'),
 }, (t) => [
   index('story_parent_idx').on(t.parentId),
   index('story_project_idx').on(t.projectSlug),
@@ -517,6 +521,10 @@ export const stories = sqliteTable('stories', {
   // capsule_frozen_at to render lineage.
   index('story_capsule_hash_idx').on(t.capsuleHash),
   index('story_capsule_frozen_at_idx').on(t.capsuleFrozenAt),
+  // RUN-MODES (migration 0038) — ReadyPoolConsumer scans for
+  // run_mode != 'full' to short-circuit worker assignment for plan-only
+  // runs.
+  index('story_run_mode_idx').on(t.runMode),
 ]);
 
 // story_revisions — append-only history of every story-tree edit
@@ -777,11 +785,15 @@ export const prompts = sqliteTable('prompts', {
   status: text('status').notNull().default('received'), // received|analyzing|decomposed|answered|failed
   completedAt: text('completed_at'),
   elapsedMs: integer('elapsed_ms'),
+  // RUN-MODES (migration 0038): controls how far the pipeline runs.
+  // 'full' (default) | 'plan-only' | 'test-only'. See run-modes/index.ts.
+  runMode: text('run_mode').notNull().default('full'),
 }, (t) => [
   index('prm_received_idx').on(t.receivedAt),
   index('prm_user_idx').on(t.userId, t.receivedAt),
   index('prm_status_idx').on(t.status),
   index('prm_hash_idx').on(t.hash),
+  index('prm_run_mode_idx').on(t.runMode),
 ]);
 
 // prompt_responses — responses attached to a prompt (migration 0010)

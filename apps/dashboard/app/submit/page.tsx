@@ -17,8 +17,14 @@ interface Project {
 interface SubmitResponse {
   prompt_id?: string;
   correlation_id?: string;
+  run_mode?: string;
   error?: string;
 }
+
+// RUN-MODES (migration 0038): three submission modes the user can pick
+// from on the submit form. See run-modes/index.ts in the orchestrator
+// for the canonical contract.
+type RunMode = 'full' | 'plan-only' | 'test-only';
 
 // ─── Inline classifier ────────────────────────────────────────────────────────
 // Lightweight client-side classification — no network call needed.
@@ -320,6 +326,11 @@ export default function SubmitPage() {
   const [projectId, setProjectId] = useState('');
   const [priority, setPriority] = useState<Priority>('normal');
   const [skipDecomposition, setSkipDecomposition] = useState(false);
+  // RUN-MODES (migration 0038): default 'full' preserves prior behaviour
+  // for the existing "Submit to your AI team" button; the two new
+  // buttons set this to 'plan-only' or 'test-only' before invoking
+  // the same submit handler.
+  const [runMode, setRunMode] = useState<RunMode>('full');
   const [notifyOnComplete, setNotifyOnComplete] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -368,15 +379,17 @@ export default function SubmitPage() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !submitting && !submitted && text.trim()) {
-        void handleSubmit();
+        void handleSubmit(runMode);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   });
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (modeOverride?: RunMode) => {
     if (!text.trim() || submitting || submitted) return;
+    const effectiveMode = modeOverride ?? runMode;
+    setRunMode(effectiveMode);
     setSubmitting(true);
     setErrorMsg(null);
 
@@ -390,6 +403,7 @@ export default function SubmitPage() {
           priority,
           source: 'dashboard',
           skipDecomposition,
+          runMode: effectiveMode,
         }),
       });
 
@@ -403,7 +417,7 @@ export default function SubmitPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [text, projectId, priority, skipDecomposition, submitting, submitted]);
+  }, [text, projectId, priority, skipDecomposition, runMode, submitting, submitted]);
 
   const activeAgents = getActiveAgents(classification?.requestType?.id ?? null);
   const activeProjects = projects.filter(p => p.status === 'active');
@@ -818,51 +832,102 @@ export default function SubmitPage() {
             </div>
           )}
 
-          {/* Submit button */}
+          {/* RUN-MODES (migration 0038): three submission buttons.
+              Run full   — existing default behaviour.
+              Run plan only — pipeline runs PO+BA+EA+Validator+Test-Design+
+                              Task Manager but no worker assignment.
+                              Output is the WorkGraph + estimated cost.
+              Run test only — full pipeline runs but the broker strips
+                              deploy/publish/push-main capabilities. */}
           {!submitted && (
-            <button
-              className="submit-btn"
-              onClick={() => void handleSubmit()}
-              disabled={submitting || !text.trim() || submitted}
-              style={{
-                width: '100%',
-                padding: '14px 24px',
-                background: text.trim() ? '#1a3a7f' : '#2d3748',
-                color: text.trim() ? '#90cdf4' : '#4a5568',
-                border: `1px solid ${text.trim() ? '#2a5aaf' : '#2d3748'}`,
-                borderRadius: 9,
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: text.trim() && !submitting ? 'pointer' : 'not-allowed',
-                transition: 'all 0.15s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                letterSpacing: '-0.01em',
-              }}
-              aria-label="Submit to your AI team"
-            >
-              {submitting ? (
-                <>
-                  <span
-                    style={{
-                      width: 16,
-                      height: 16,
-                      border: '2px solid #4299e144',
-                      borderTop: '2px solid #63b3ed',
-                      borderRadius: '50%',
-                      animation: 'spin 0.7s linear infinite',
-                      display: 'inline-block',
-                      flexShrink: 0,
-                    }}
-                  />
-                  Submitting to your AI team…
-                </>
-              ) : (
-                'Submit to your AI team →'
-              )}
-            </button>
+            <div data-testid="run-mode-buttons" style={{ display: 'grid', gap: 10 }}>
+              <button
+                type="button"
+                className="submit-btn submit-btn-full"
+                onClick={() => void handleSubmit('full')}
+                disabled={submitting || !text.trim() || submitted}
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  background: text.trim() ? '#1a3a7f' : '#2d3748',
+                  color: text.trim() ? '#90cdf4' : '#4a5568',
+                  border: `1px solid ${text.trim() ? '#2a5aaf' : '#2d3748'}`,
+                  borderRadius: 9,
+                  fontSize: 15,
+                  fontWeight: 700,
+                  cursor: text.trim() && !submitting ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.15s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  letterSpacing: '-0.01em',
+                }}
+                aria-label="Run the full pipeline (writes code, opens PRs)"
+              >
+                {submitting && runMode === 'full' ? (
+                  <>
+                    <span
+                      style={{
+                        width: 16,
+                        height: 16,
+                        border: '2px solid #4299e144',
+                        borderTop: '2px solid #63b3ed',
+                        borderRadius: '50%',
+                        animation: 'spin 0.7s linear infinite',
+                        display: 'inline-block',
+                        flexShrink: 0,
+                      }}
+                    />
+                    Running full pipeline…
+                  </>
+                ) : (
+                  'Run full →'
+                )}
+              </button>
+              <button
+                type="button"
+                className="submit-btn submit-btn-plan-only"
+                onClick={() => void handleSubmit('plan-only')}
+                disabled={submitting || !text.trim() || submitted}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  background: text.trim() ? '#21384a' : '#2d3748',
+                  color: text.trim() ? '#a0d2eb' : '#4a5568',
+                  border: `1px solid ${text.trim() ? '#3a5a7a' : '#2d3748'}`,
+                  borderRadius: 9,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: text.trim() && !submitting ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.15s',
+                }}
+                aria-label="Plan only — show me the cost without running code"
+              >
+                {submitting && runMode === 'plan-only' ? 'Planning…' : 'Run plan only — show me the cost'}
+              </button>
+              <button
+                type="button"
+                className="submit-btn submit-btn-test-only"
+                onClick={() => void handleSubmit('test-only')}
+                disabled={submitting || !text.trim() || submitted}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  background: text.trim() ? '#2d2839' : '#2d3748',
+                  color: text.trim() ? '#cbb4f0' : '#4a5568',
+                  border: `1px solid ${text.trim() ? '#5a4a7a' : '#2d3748'}`,
+                  borderRadius: 9,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: text.trim() && !submitting ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.15s',
+                }}
+                aria-label="Test only — write code and run tests, but never deploy or push to main"
+              >
+                {submitting && runMode === 'test-only' ? 'Running tests only…' : 'Run test only — code but don\u2019t deploy'}
+              </button>
+            </div>
           )}
         </div>
 

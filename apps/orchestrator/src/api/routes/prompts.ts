@@ -13,6 +13,7 @@ import type { PromptStatus, PromptReceivedVia, PromptListOptions } from '../../p
 import { classifyKeyword } from '@chiefaia/classifier';
 import { check as dedupCheck } from '@chiefaia/dedup-engine';
 import { runScaffolder } from '../../agents/scaffolder';
+import { isRunMode, RUN_MODES, estimateRunCost, type RunMode } from '../../run-modes';
 
 // @no-events — route registration wrapper; business events are emitted by manager functions
 export function registerPromptsRoutes(app: Hono, db: Db): void {
@@ -25,10 +26,20 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
       user_id?: string;
       tokens_in?: number;
       metadata?: Record<string, unknown>;
+      run_mode?: string;
     };
 
     if (!body.body || typeof body.body !== 'string') {
       return c.json({ error: 'body is required' }, 400);
+    }
+
+    // RUN-MODES (migration 0038): validate `run_mode` at the API
+    // boundary. Unknown values are 400'd rather than silently coerced
+    // to 'full' so callers learn about typos immediately.
+    if (body.run_mode !== undefined && !isRunMode(body.run_mode)) {
+      return c.json({
+        error: `run_mode must be one of ${RUN_MODES.join(', ')} (got ${JSON.stringify(body.run_mode)})`,
+      }, 400);
     }
 
     const prompt = createPrompt(db, {
@@ -38,6 +49,7 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
       userId: body.user_id,
       tokensIn: body.tokens_in,
       metadata: body.metadata,
+      runMode: body.run_mode as RunMode | undefined,
     });
 
     // Emit prompt.ingested event and create pipeline stage tracking
@@ -180,6 +192,55 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
     };
     const rows = listPrompts(db, opts);
     return c.json({ prompts: rows, total: rows.length });
+  });
+
+  // RUN-MODES (migration 0038): plan-only output preview for a prompt.
+  // Returns the WorkGraph (story IDs + parent/child links) +
+  // per-story architecturalInstructions[] + estimated tokens / cost,
+  // computed from the run-modes/cost estimator. Only meaningful for
+  // run_mode='plan-only' prompts; for others the same data is
+  // available but the cost estimate excludes coding-agent tokens that
+  // *will* be consumed downstream.
+  app.get('/prompts/:id/plan-output', async (c) => {
+    const { id } = c.req.param();
+    const prompt = getPrompt(db, id);
+    if (!prompt) return c.json({ error: 'not found' }, 404);
+
+    const storyRows = db.select({
+      id: stories.id,
+      title: stories.title,
+      parentId: stories.parentId,
+      bucketId: stories.bucketId,
+      runMode: stories.runMode,
+      agentContributionsJson: stories.agentContributionsJson,
+      acceptanceCriteriaJson: stories.acceptanceCriteriaJson,
+    }).from(stories).where(eq(stories.rootPromptId, id)).all();
+
+    const storyIds = storyRows.map((s) => s.id);
+    const mode = (prompt.runMode ?? 'full') as RunMode;
+    const cost = estimateRunCost(mode, storyIds);
+
+    return c.json({
+      promptId: id,
+      runMode: mode,
+      stories: storyRows.map((s) => {
+        let architecturalInstructions: unknown[] = [];
+        try {
+          const parsed = JSON.parse(s.agentContributionsJson || '{}') as {
+            architecturalInstructions?: unknown[];
+          };
+          architecturalInstructions = parsed.architecturalInstructions ?? [];
+        } catch { /* ignore parse errors */ }
+        return {
+          id: s.id,
+          title: s.title,
+          parentId: s.parentId,
+          bucketId: s.bucketId,
+          architecturalInstructions,
+        };
+      }),
+      cost,
+    });
   });
 
   // Get a single prompt with its response and top-level descendants

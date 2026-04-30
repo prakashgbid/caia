@@ -88,10 +88,23 @@ export function freezeStoryCapsule(
     .where(eq(stories.id, storyId))
     .run();
 
+  // RUN-MODES (migration 0038): surface the story's run_mode in the
+  // capsule-frozen event so downstream consumers (capability broker,
+  // dashboard) can apply mode-specific restrictions without re-reading
+  // the row. The capsule's `tool_allowlist` is computed from
+  // architecturalInstructions and is intentionally not mutated by run
+  // mode (changing the capsule shape would be a v2 hash change). The
+  // capability broker (Track 1) is responsible for restricting its own
+  // per-run capability allowlist via run-modes/restrictAllowlistForMode
+  // when it consumes this event.
+  // TODO(track-1-broker): once the broker package lands, swap this
+  // event-emission-only plumbing for a direct call into the broker's
+  // allowlist API at story pickup.
   emitFrozen(storyId, options, 'frozen', {
     capsuleHash: frozen.capsuleHash,
     capsuleFrozenAt: frozen.capsuleFrozenAt,
     capsuleVersion: frozen.capsuleVersion,
+    runMode: story.runMode ?? 'full',
   });
 
   return {
