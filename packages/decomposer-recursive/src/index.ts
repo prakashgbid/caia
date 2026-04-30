@@ -110,3 +110,20 @@ export type {
   FregAkgQueryInput,
   FregAkgQueryResult,
 } from './freg-akg-stub.js';
+
+// ─── Judges (PR 3) ──────────────────────────────────────────────────────
+
+export {
+  COVERAGE_JUDGE_TASK_TYPE,
+  DISJOINTNESS_JUDGE_TASK_TYPE,
+  JUDGE_PASS_THRESHOLD,
+  normaliseJudgeScore,
+  runJudgePair,
+} from './judges.js';
+
+export type {
+  CoverageVerdict,
+  DisjointnessVerdict,
+  JudgeInput,
+  JudgePairResult,
+} from './judges.js';
