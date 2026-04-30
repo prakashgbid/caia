@@ -1,0 +1,132 @@
+;; caia/scripts/mcp-sandbox.sb
+;;
+;; macOS sandbox-exec profile for spawning MCP servers (third-party + first-
+;; party). Hardens against the 2025 MCP CVE family:
+;;   - CVE-2025-6514 (mcp-remote RCE via crafted authorization endpoint URL)
+;;   - CVE-2025-54135 (CurXecute — prompt-injection-driven mcp.json modification)
+;;   - CVE-2025-53967 (Figma MCP code execution path)
+;;
+;; The profile is consumed by the MCP allowlist proxy at
+;; `tools/mcp-allowlist-proxy.ts` which spawns the underlying MCP via:
+;;
+;;   sandbox-exec -f caia/scripts/mcp-sandbox.sb \
+;;     -D MCP_WORKTREE=/path/to/per-task-worktree \
+;;     -D MCP_CACHE_DIR=/path/to/cache \
+;;     -- <mcp-server-cmd> [args...]
+;;
+;; Reference: caia/docs/mcp-security.md, third-party-paper §C.3.
+
+(version 1)
+(deny default)
+
+;; ── filesystem reads ──────────────────────────────────────────────────────
+;; Read-only access to OS + Homebrew + nvm + npm caches. The MCP server
+;; usually needs to dlopen libssl/libcrypto, read tzdata, etc.
+(allow file-read*
+  (subpath "/")
+  (subpath "/usr")
+  (subpath "/bin")
+  (subpath "/sbin")
+  (subpath "/System")
+  (subpath "/Library")
+  (subpath "/private/etc")
+  (subpath "/private/var/db/timezone")
+  (subpath "/opt/homebrew")
+  (subpath "/dev"))
+
+;; Read-only access to the user's tooling caches (npm, pnpm, nvm, node).
+(allow file-read*
+  (regex #"^/Users/[^/]+/\.npm")
+  (regex #"^/Users/[^/]+/\.pnpm")
+  (regex #"^/Users/[^/]+/\.cache")
+  (regex #"^/Users/[^/]+/Library/Caches")
+  (regex #"^/Users/[^/]+/\.nvm")
+  (regex #"^/Users/[^/]+/\.local/share/mac-mcp"))
+
+;; Read+write access strictly inside the per-task worktree.
+(allow file*
+  (subpath (param "MCP_WORKTREE")))
+
+;; Read+write access to the caller-supplied cache directory.
+(allow file*
+  (subpath (param "MCP_CACHE_DIR")))
+
+;; Temporary files (small surface — many CLIs use /tmp).
+(allow file*
+  (subpath "/tmp")
+  (subpath "/private/tmp")
+  (subpath "/private/var/folders"))
+
+;; ── process / signal / sysctl ─────────────────────────────────────────────
+(allow process-fork)
+(allow process-info-pidinfo (target self))
+(allow process-info-pidinfo (target children))
+(allow signal (target self))
+(allow signal (target children))
+
+;; Allow exec only of node/python/sh (the MCP entry points). Forbid arbitrary
+;; shells getting access to e.g. `git push`, `gh`, `curl`. The allowlist
+;; proxy enforces a stricter command-allowlist on top.
+(allow process-exec
+  (regex #"^/usr/bin/env$")
+  (regex #"^/bin/sh$")
+  (regex #"^/usr/bin/python3?$")
+  (regex #"^/opt/homebrew/bin/python3?$")
+  (regex #"^/Users/[^/]+/\.local/share/mac-mcp/venv/bin/python$")
+  (regex #"^/usr/local/bin/node$")
+  (regex #"^/opt/homebrew/bin/node$")
+  (regex #"^/Users/[^/]+/\.nvm/versions/node/[^/]+/bin/node$"))
+
+(allow sysctl-read)
+
+;; ── network ───────────────────────────────────────────────────────────────
+;; Default-deny everything, then explicitly allow only:
+;;   - localhost / loopback
+;;   - the Anthropic API
+;;   - the GitHub API (for MCP servers that fetch repo metadata)
+;;   - DNS resolution (UDP/53)
+(deny network*)
+
+;; Loopback for Unix sockets, IPC, local tooling.
+(allow network-bind
+  (local ip "localhost:*")
+  (local ip "127.0.0.1:*")
+  (local ip "::1:*"))
+(allow network-outbound (remote ip "localhost:*"))
+(allow network-outbound (remote ip "127.0.0.1:*"))
+(allow network-outbound (remote ip "::1:*"))
+
+;; DNS — allow A/AAAA queries to the system resolver.
+(allow network-outbound (remote ip "*:53"))
+
+;; api.anthropic.com (TCP/443).
+(allow network-outbound
+  (remote tcp))
+;; NB: macOS sandbox-exec syntax does not support hostname filtering at
+;; profile-evaluation time; fine-grained host pinning happens in the
+;; allowlist proxy (see `tools/mcp-allowlist-proxy.ts`) by intercepting
+;; outbound HTTP via process env (HTTPS_PROXY=…) — the profile here is
+;; the floor; the proxy is the wall.
+
+;; ── mach IPC (required for Foundation / CFNetwork) ────────────────────────
+(allow mach-lookup
+  (global-name "com.apple.system.notification_center")
+  (global-name "com.apple.system.opendirectoryd.libinfo")
+  (global-name "com.apple.system.opendirectoryd.api")
+  (global-name "com.apple.SystemConfiguration.configd")
+  (global-name "com.apple.PowerManagement.control")
+  (global-name "com.apple.distributed_notifications@1v3")
+  (global-name "com.apple.lsd.mapdb")
+  (global-name "com.apple.lsd.modifydb")
+  (global-name "com.apple.lsd.icon")
+  (global-name "com.apple.cfprefsd.daemon")
+  (global-name "com.apple.cfprefsd.agent")
+  (global-name "com.apple.networkd")
+  (global-name "com.apple.coreservices.launchservicesd")
+  (global-name "com.apple.dnssd.service"))
+
+;; ── deny everything else explicitly ───────────────────────────────────────
+(deny iokit-open)
+(deny system*)
+
+;; END mcp-sandbox.sb

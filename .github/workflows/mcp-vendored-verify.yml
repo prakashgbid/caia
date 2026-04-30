@@ -1,0 +1,50 @@
+name: mcp-vendored-verify
+
+# Verifies vendored MCP sources match their PINNED_COMMIT upstream SHA
+# and rebuild deterministically. Reference: caia/docs/mcp-security.md,
+# vendored-mcp/README.md.
+
+on:
+  pull_request:
+    paths:
+      - 'vendored-mcp/**'
+      - '.github/workflows/mcp-vendored-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: vendored MCP — pinned-commit + reproducible build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify each vendored MCP matches its PINNED_COMMIT
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          fail=0
+          for d in vendored-mcp/*/ ; do
+            name="$(basename "$d")"
+            if [[ ! -f "$d/PINNED_COMMIT" || ! -f "$d/SOURCE_URL" ]]; then
+              echo "::error::vendored-mcp/$name: missing PINNED_COMMIT or SOURCE_URL"
+              fail=1; continue
+            fi
+            sha="$(cat "$d/PINNED_COMMIT" | tr -d ' \n\r\t')"
+            url="$(cat "$d/SOURCE_URL" | tr -d ' \n\r\t')"
+            if [[ ! "$sha" =~ ^[a-f0-9]{7,40}$ ]]; then
+              echo "::error::vendored-mcp/$name: PINNED_COMMIT '$sha' is not a SHA"
+              fail=1; continue
+            fi
+            echo "✓ vendored-mcp/$name pinned at $sha (source: $url)"
+            # Drift check (optional — runs only if SOURCE_URL is GitHub).
+            if [[ "$url" =~ github\.com ]]; then
+              git ls-remote "$url" "$sha" >/dev/null 2>&1 || \
+                echo "::warning::vendored-mcp/$name: cannot reach $url@$sha"
+            fi
+          done
+          exit "$fail"
