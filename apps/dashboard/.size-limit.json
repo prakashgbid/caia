@@ -1,0 +1,22 @@
+[
+  {
+    "name": "dashboard / total client JS (gzip)",
+    "path": [
+      ".next/static/chunks/**/*.js",
+      ".next/static/css/**/*.css"
+    ],
+    "limit": "500 KB",
+    "gzip": true
+  },
+  {
+    "name": "dashboard / first-load JS (gzip)",
+    "path": [
+      ".next/static/chunks/main-*.js",
+      ".next/static/chunks/webpack-*.js",
+      ".next/static/chunks/framework-*.js",
+      ".next/static/chunks/pages/_app-*.js"
+    ],
+    "limit": "200 KB",
+    "gzip": true
+  }
+]

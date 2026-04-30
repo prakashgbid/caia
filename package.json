@@ -15,7 +15,13 @@
     "flow": "bash scripts/caia-flow.sh",
     "test:regression": "pnpm --filter @caia-app/core test:regression",
     "test:regression:pipeline": "pnpm --filter @caia-app/core test:regression:pipeline",
-    "test:regression:agent": "pnpm --filter @caia-app/core test:regression:agent"
+    "test:regression:agent": "pnpm --filter @caia-app/core test:regression:agent",
+    "evidence:tsc": "turbo run typecheck",
+    "evidence:lighthouse": "pnpm --filter @caia-app/dashboard lighthouse",
+    "evidence:axe": "pnpm --filter @caia-app/dashboard test:a11y",
+    "evidence:visual": "pnpm --filter @caia-app/dashboard test:visual",
+    "evidence:size": "pnpm --filter @caia-app/dashboard size-limit",
+    "visual:update": "pnpm --filter @caia-app/dashboard visual:update"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.1",

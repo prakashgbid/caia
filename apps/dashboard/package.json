@@ -4,7 +4,13 @@
   "scripts": {
     "dev": "next dev -p 7777",
     "build": "next build",
-    "start": "next start -p 7777"
+    "start": "next start -p 7777",
+    "typecheck": "tsc --noEmit",
+    "lighthouse": "lhci autorun --config=./lighthouserc.cjs",
+    "test:a11y": "playwright test tests/a11y.spec.ts",
+    "test:visual": "playwright test tests/visual.spec.ts",
+    "visual:update": "playwright test tests/visual.spec.ts --update-snapshots",
+    "size-limit": "size-limit"
   },
   "dependencies": {
     "next": "^14.2.0",
@@ -13,8 +19,13 @@
     "swr": "^2.2.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@lhci/cli": "^0.14.0",
+    "@playwright/test": "^1.48.0",
+    "@size-limit/preset-app": "^11.1.0",
     "@types/node": "^20",
     "@types/react": "^18",
+    "size-limit": "^11.1.0",
     "typescript": "^5"
   }
 }

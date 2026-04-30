@@ -1,0 +1,196 @@
+name: Evidence Gate
+
+# Deterministic-evidence gate at PR-merge time. Per
+# third-party-caia-paper-analysis-2026-04-29.md §C.2.
+#
+# The premise (from Anthropic's claude.ai-clone post-mortem cited in §C.2):
+# the agent doesn't need to be trustworthy if the evidence is. So instead
+# of trusting an LLM "QA" verdict, every PR must produce concrete green
+# checks from deterministic tools.
+#
+# 7 parallel jobs:
+#   typecheck       — pnpm tsc --noEmit (blocking)
+#   semgrep         — auto rule set + .semgrep/caia-rules.yml (blocking)
+#   gitleaks        — high-confidence-only secrets scan (blocking)
+#   bundle-size     — size-limit, dashboard JS ≤ 500 KB gzipped (blocking)
+#   lighthouse      — perf ≥80, a11y ≥90, best-practices ≥90, SEO ≥90 (warn-only, day-1)
+#   axe             — zero serious + critical violations (warn-only, day-1)
+#   visual          — 0.1% pixel-diff vs baselines (warn-only, day-1)
+#
+# "Warn-only, day-1" = `continue-on-error: true` so we surface real
+# scores on this PR without blocking it. Promotion to blocking is a
+# separate follow-up PR after one daily release cycle, per the operator
+# mandate's "don't ship a gate that day-1 blocks every legitimate PR"
+# rule.
+#
+# Required-check propagation: see scripts/setup-branch-protection.sh.
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: write
+
+concurrency:
+  group: evidence-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_CACHE_FOLDER: .pnpm-store
+
+jobs:
+
+  # ─── 1. typecheck ─────────────────────────────────────────────────────
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: pnpm typecheck (turbo)
+        run: pnpm typecheck
+
+  # ─── 2. semgrep ───────────────────────────────────────────────────────
+  semgrep:
+    name: semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: semgrep — auto + .semgrep/caia-rules.yml
+        # `semgrep ci` exits non-zero on findings by default. Custom
+        # configs are layered on top of the `auto` rule pack.
+        run: |
+          semgrep ci \
+            --config=auto \
+            --config=.semgrep/caia-rules.yml
+        env:
+          SEMGREP_SEND_METRICS: "off"
+
+  # ─── 3. gitleaks ──────────────────────────────────────────────────────
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks — diff scan (high-confidence)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Block on any high-confidence finding. The .gitleaks.toml
+          # extends defaults + adds CAIA-specific patterns.
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_NOTIFY_USER_LIST: ""
+          GITLEAKS_ENABLE_COMMENTS: false
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
+
+  # ─── 4. bundle-size ───────────────────────────────────────────────────
+  bundle-size:
+    name: bundle-size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build dashboard
+        run: pnpm --filter @caia-app/dashboard build
+      - name: size-limit — dashboard bundle ≤ 500 KB gzipped
+        run: pnpm --filter @caia-app/dashboard size-limit
+
+  # ─── 5. lighthouse (warn-only day-1) ─────────────────────────────────
+  lighthouse:
+    name: lighthouse
+    runs-on: ubuntu-latest
+    continue-on-error: true   # day-1 warn-only; promote to blocking next cycle
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build dashboard
+        run: pnpm --filter @caia-app/dashboard build
+      - name: Lighthouse CI (LHCI autorun)
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+        run: |
+          npx --yes @lhci/cli@0.14.x autorun \
+            --config=apps/dashboard/lighthouserc.cjs
+
+  # ─── 6. axe a11y (warn-only day-1) ───────────────────────────────────
+  axe:
+    name: axe
+    runs-on: ubuntu-latest
+    continue-on-error: true   # day-1 warn-only; promote to blocking next cycle
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build dashboard
+        run: pnpm --filter @caia-app/dashboard build
+      - name: Install Playwright browsers
+        run: pnpm --filter @caia-app/dashboard exec playwright install --with-deps chromium
+      - name: axe-core — accessibility audit
+        run: pnpm --filter @caia-app/dashboard test:a11y
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-report
+          path: apps/dashboard/playwright-report/
+          retention-days: 7
+
+  # ─── 7. visual regression (warn-only day-1) ──────────────────────────
+  visual:
+    name: visual
+    runs-on: ubuntu-latest
+    continue-on-error: true   # day-1 warn-only; promote to blocking next cycle
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build dashboard
+        run: pnpm --filter @caia-app/dashboard build
+      - name: Install Playwright browsers
+        run: pnpm --filter @caia-app/dashboard exec playwright install --with-deps chromium
+      - name: Playwright — toHaveScreenshot vs baselines
+        run: pnpm --filter @caia-app/dashboard test:visual
+      - name: Upload diff artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: apps/dashboard/test-results/
+          retention-days: 14
