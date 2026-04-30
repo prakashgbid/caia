@@ -52,6 +52,39 @@ export function resetDb(): void {
   _sqlite = null;
 }
 
+/**
+ * Apply pending migrations from `dist/src/db/migrations` (or `src/...`
+ * when running under tsx) using drizzle's stock better-sqlite3 migrator.
+ *
+ * ⚠ Quirk — drizzle's skip-logic is timestamp-based, not hash-based.
+ *
+ * The runner walks `meta/_journal.json` in order and, for each entry,
+ * checks `Number(lastDbMigration.created_at) < migration.folderMillis`
+ * before applying it. If a DB has any `__drizzle_migrations` row whose
+ * `created_at` is `>=` every journal `when`, drizzle considers the DB
+ * "caught up" and skips _everything_ after that row — even migrations
+ * with new SHA-256 hashes. Conversely, if a manually-applied migration
+ * recorded `created_at = Date.now()` while the journal `when` values
+ * are pinned far in the future (e.g. `1779200000000` ≈ 2026-05-15),
+ * drizzle re-runs everything and crashes on duplicate `ADD COLUMN`s.
+ *
+ * Practical implications:
+ * - Manually applying a migration via `sqlite3 < .sql` _must_ insert a
+ *   matching `__drizzle_migrations` row whose `created_at` matches or
+ *   exceeds the `when` of every later journal entry, OR set it to a
+ *   pinned future value (e.g. 9_999_999_999_999) so the per-entry skip
+ *   check never fires for already-applied migrations.
+ * - New journal entries should keep `when` strictly monotonically
+ *   increasing past the last value (we currently increment by
+ *   100_000_000_000, ≈ 3 years per slot, to leave headroom).
+ * - The whole batch runs inside a single BEGIN/COMMIT, so a failure
+ *   on migration N rolls back N-1, N-2 ... too. Any partial-success
+ *   recovery has to bypass drizzle (apply manually, write the
+ *   `__drizzle_migrations` rows by hand).
+ *
+ * See `caia/docs/migration-runner.md` for the full rationale, the
+ * 2026-04-30 daemon-repoint case study, and recovery recipes.
+ */
 export function runMigrations(dbUrl?: string): void {
   const db = getDb(dbUrl);
   const migrationsFolder = path.join(__dirname, 'migrations');
