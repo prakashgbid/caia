@@ -9,6 +9,10 @@
 #   - Require status checks green:
 #       * "Build · Test · Lint · Typecheck"  (.github/workflows/ci.yml)
 #       * "gitflow-conformance"              (.github/workflows/gitflow-conformance.yml)
+#       * "typecheck"                        (.github/workflows/evidence-gate.yml)
+#       * "semgrep"                          (.github/workflows/evidence-gate.yml)
+#       * "gitleaks"                         (.github/workflows/evidence-gate.yml)
+#       * "bundle-size"                      (.github/workflows/evidence-gate.yml)
 #   - Require strict status checks (branch up-to-date with target before merge).
 #   - Require linear history (squash or rebase merge only).
 #   - No force-push, no deletion.
@@ -16,9 +20,15 @@
 #   - Require conversation resolution before merge.
 #   - 0 required reviewers (solo founder; the PR + CI gates are the protection).
 #
+# Evidence-gate warn-only jobs (lighthouse, axe, visual) are NOT yet required.
+# Promotion to required is a separate follow-up after one daily release cycle
+# proves they pass. See caia/docs/evidence-gate.md.
+#
 # Reference:
-#   - feedback_git_flow_enforced.md
+#   - feedback_pr_lifecycle_and_branching.md
 #   - caia/docs/git-flow.md
+#   - caia/docs/evidence-gate.md
+#   - third-party-caia-paper-analysis-2026-04-29.md §C.2
 #
 # Usage:
 #   scripts/setup-branch-protection.sh [main|develop|all]   (default: all)
@@ -35,7 +45,18 @@ TARGET="${1:-all}"
 # pipeline-regression is path-conditional in its workflow file, so it cannot
 # be a globally-required check (it would false-fail PRs that don't touch its
 # trigger paths). The workflow itself fails the PR when it does run.
-REQUIRED_CONTEXTS_JSON='["Build · Test · Lint · Typecheck", "gitflow-conformance"]'
+#
+# Evidence-gate's lighthouse / axe / visual jobs are warn-only at day-1
+# (continue-on-error: true) and are intentionally NOT in this list yet.
+# Promote them in a follow-up PR after one clean daily release cycle.
+REQUIRED_CONTEXTS_JSON='[
+  "Build · Test · Lint · Typecheck",
+  "gitflow-conformance",
+  "typecheck",
+  "semgrep",
+  "gitleaks",
+  "bundle-size"
+]'
 
 protection_body() {
   cat <<EOF
