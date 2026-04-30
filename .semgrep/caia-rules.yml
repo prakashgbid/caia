@@ -1,0 +1,142 @@
+# caia/.semgrep/caia-rules.yml
+#
+# Project-specific Semgrep rules layered on top of the `auto` rule set.
+# Run via: semgrep ci --config=auto --config=.semgrep/caia-rules.yml
+#
+# Reference: docs/evidence-gate.md, third-party-caia-paper-analysis-2026-04-29.md §C.2.
+
+rules:
+  # ─── No --admin merges (bypasses required status checks) ───────────────
+  - id: caia-no-admin-merge
+    message: |
+      `gh pr merge --admin` bypasses required status checks. The CAIA git-flow
+      forbids this — every PR must satisfy the deterministic-evidence gate.
+      Remove the `--admin` flag and let CI run.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      include:
+        - "scripts/**"
+        - ".github/**"
+        - "**/*.sh"
+        - "**/*.ts"
+        - "**/*.js"
+        - "**/*.yml"
+        - "**/*.yaml"
+        - "docs/**"
+        - "**/*.md"
+      exclude:
+        - "**/*.test.ts"
+        - "**/*.spec.ts"
+        - "**/__visual_baselines__/**"
+        - ".semgrep/**"
+        - "docs/evidence-gate.md"
+    pattern-either:
+      - pattern: gh pr merge $...ARGS --admin
+      - pattern: gh pr merge --admin $...ARGS
+      - pattern: gh pr merge $A --admin $...B
+
+  # ─── No git push --force outside backup/* branches ────────────────────
+  - id: caia-no-force-push-non-backup
+    message: |
+      `git push --force` rewrites shared history. The CAIA git-flow only
+      permits force-push on `backup/*` branches (preservation-only).
+      Use `--force-with-lease` on a feature branch if you must, but the
+      target ref must be inside the `backup/` namespace.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      include:
+        - "scripts/**"
+        - ".github/**"
+        - "**/*.sh"
+        - "docs/**"
+      exclude:
+        - "**/*.test.ts"
+        - "**/*.spec.ts"
+        - "scripts/caia-flow.sh"          # the wrapper itself enforces the rule
+        - ".semgrep/**"
+        - "docs/evidence-gate.md"
+        - "docs/git-flow.md"
+    pattern-either:
+      - pattern: git push --force origin
+      - pattern: git push -f origin
+      - pattern: git push --force-with-lease origin main
+      - pattern: git push --force-with-lease origin develop
+
+  # ─── No hardcoded vault keys (CAIA secrets discipline) ─────────────────
+  # Catches the *names* of vault keys appearing as raw values in source —
+  # gitleaks catches the value shape; this rule catches the cleartext-key
+  # leakage pattern (e.g. someone pasting a vault key into a fixture).
+  - id: caia-no-hardcoded-vault-keys
+    message: |
+      A CAIA vault key name appears alongside what looks like a literal
+      secret value. Vault keys must be resolved at runtime via
+      `scripts/get-vault-secret.sh` or the orchestrator's vault adapter,
+      never hardcoded in source.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      exclude:
+        - "**/*.test.ts"
+        - "**/*.spec.ts"
+        - "**/__fixtures__/**"
+        - "**/__visual_baselines__/**"
+        - "**/node_modules/**"
+        - "**/dist/**"
+        - "**/.next/**"
+        - ".semgrep/**"
+        - "docs/evidence-gate.md"
+        - "docs/legacy-*/**"
+    pattern-regex: '(ANTHROPIC_API_KEY|CLAUDE_SUBSCRIPTION_TOKEN|CF_API_TOKEN|CLOUDFLARE_API_TOKEN|GITHUB_PAT|GH_TOKEN|SUPABASE_SERVICE_KEY|VAULT_TOKEN)\s*[:=]\s*["''](?!process\.env|\$\{|<%|\$\(|\${{)([A-Za-z0-9_\-]{20,})["'']'
+
+  # ─── No direct PAT usage — must go through capability broker ──────────
+  - id: caia-no-direct-pat-in-source
+    message: |
+      Direct use of a GitHub PAT or `gh auth token` outside scripts/.
+      Privileged tokens must be brokered through the capability broker
+      (capability-broker package, per analysis §C.1) so every privileged
+      action is logged in the irreversible-action ledger.
+    severity: WARNING
+    languages: [generic]
+    paths:
+      include:
+        - "apps/**"
+        - "packages/**"
+      exclude:
+        - "**/*.test.ts"
+        - "**/*.spec.ts"
+        - "**/__fixtures__/**"
+        - "**/node_modules/**"
+        - "**/dist/**"
+        - "**/.next/**"
+        - "packages/capability-broker/**"
+    pattern-either:
+      - pattern: process.env.GITHUB_PAT
+      - pattern: process.env.GH_TOKEN
+      - pattern-regex: 'execSync\(\s*["''`]gh auth token'
+      - pattern-regex: 'spawn\(\s*["''`]gh["''`].*"auth".*"token"'
+
+  # ─── Forbid writes to mcp.json / .mcp.json (CVE-2025-54135) ───────────
+  # Tool-result-driven write to MCP registration would let a hostile MCP
+  # server install a sibling. Per analysis §C.3.
+  - id: caia-no-mcp-json-write
+    message: |
+      Writing to mcp.json / .mcp.json / .cursor/mcp.json from agent code
+      can be exploited by a hostile MCP server that returns crafted
+      tool-call results (CurXecute, CVE-2025-54135). Route through the
+      capability broker's deny-list.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      include:
+        - "apps/**"
+        - "packages/**"
+      exclude:
+        - "**/*.test.ts"
+        - "**/*.spec.ts"
+        - "**/node_modules/**"
+        - "**/dist/**"
+    pattern-either:
+      - pattern-regex: 'fs\.(write|writeFile|writeFileSync|append|appendFile|appendFileSync)[^,]*[,\s]*["''`][^"''`]*\.?mcp\.json'
+      - pattern-regex: 'writeFileSync\(\s*[^,]*\.cursor/mcp\.json'
