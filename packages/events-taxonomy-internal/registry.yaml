@@ -176,6 +176,21 @@ events:
     actor: [executor]
     payload: [taskRunId, taskId, rootPromptId, error, retryCount, circuitBreakerTripped]
 
+  # EXEC-001 — circuit breaker observability (PR #222).
+  # tripped fires every time the breaker pauses a task. pause_failed is the
+  # regression sentinel — fires when the pause endpoint returns non-2xx, which
+  # is exactly the failure mode the EXEC-001 fix closed (silent 404 on the
+  # wrong DELETE /unpause call).
+  - type: executor.breaker.tripped
+    severity: warning
+    actor: [executor]
+    payload: [taskId, attemptCount, reason, kind, severity, paused]
+
+  - type: executor.breaker.pause_failed
+    severity: error
+    actor: [executor]
+    payload: [taskId, httpStatus, reason, attemptCount]
+
   # Worker events
   - type: worker.spawned
     severity: info

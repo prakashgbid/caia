@@ -401,6 +401,9 @@ export type EventType =
   | 'executor.claude.tool_call'
   | 'executor.claude.completed'
   | 'executor.task.failed'
+  // EXEC-001 — circuit breaker observability (PR #222)
+  | 'executor.breaker.tripped'
+  | 'executor.breaker.pause_failed'
   | 'completeness.check.completed'
   | 'pipeline.stage.advanced'
   // ─── Scaffolder agent events (migration 0017) ─────────────────────────────
@@ -511,6 +514,12 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'executor.claude.tool_call': 'debug',
   'executor.claude.completed': 'info',
   'executor.task.failed': 'error',
+  // EXEC-001 — circuit breaker observability (PR #222). `tripped` is the
+  // canonical signal that a task was paused by the breaker; `pause_failed`
+  // is the regression sentinel that fires if the pause endpoint returns
+  // non-2xx (the original pre-fix bug — silent 404 — is now visible).
+  'executor.breaker.tripped': 'warning',
+  'executor.breaker.pause_failed': 'error',
   'completeness.check.completed': 'info',
   'pipeline.stage.advanced': 'info',
   // ─── Scaffolder agent events (migration 0017) ─────────────────────────────
