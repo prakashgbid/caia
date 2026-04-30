@@ -109,7 +109,7 @@ export function p0ToolToCommand(_toolName: string, _toolArgs: Record<string, unk
  * registry is empty so nothing requires one. Returns an empty context.
  */
 export function emptyTokensFor(_taskId: string): GuardContext {
-  return { tokens: [] };
+  return { tokensByName: new Map() };
 }
 
 export async function startBrokerIntegration(opts: StartBrokerOptions = {}): Promise<BrokerIntegration> {
@@ -126,7 +126,7 @@ export async function startBrokerIntegration(opts: StartBrokerOptions = {}): Pro
   const ledger = new InMemoryLedger();
   // CapabilityExecutor isn't used in the hook path itself, but we wire
   // it so the audit-log surface is available to the dashboard query.
-  void new CapabilityExecutor({ broker, ledger, handlers: new Map() });
+  void new CapabilityExecutor({ broker, ledger, handlers: {} });
 
   const hook = new HookControlledMode({
     broker,

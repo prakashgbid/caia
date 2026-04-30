@@ -91,7 +91,7 @@ describe('SAFETY-001 broker wireup', () => {
       const registry = new CapabilityRegistry();
       const broker = new CapabilityBroker({
         registry,
-        signingKey: new StaticSigningKeyProvider('test-key'),
+        signingKey: new StaticSigningKeyProvider('test-key-at-least-16-bytes-long'),
       });
       const hook = new HookControlledMode({
         broker,
@@ -103,7 +103,7 @@ describe('SAFETY-001 broker wireup', () => {
           }
           return null;
         },
-        tokensFor: (_taskId): GuardContext => ({ tokens: [] }),
+        tokensFor: (_taskId): GuardContext => ({ tokensByName: new Map() }),
         guardRules: DEFAULT_GUARD_RULES,
       });
       const sockPath = uniqueSocketPath('deny');
@@ -136,7 +136,7 @@ describe('SAFETY-001 broker wireup', () => {
       const registry = new CapabilityRegistry();
       const broker = new CapabilityBroker({
         registry,
-        signingKey: new StaticSigningKeyProvider('test-key'),
+        signingKey: new StaticSigningKeyProvider('test-key-at-least-16-bytes-long'),
       });
       const hook = new HookControlledMode({
         broker,
@@ -147,7 +147,7 @@ describe('SAFETY-001 broker wireup', () => {
           }
           return null;
         },
-        tokensFor: (_t): GuardContext => ({ tokens: [] }),
+        tokensFor: (_t): GuardContext => ({ tokensByName: new Map() }),
         guardRules: DEFAULT_GUARD_RULES,
       });
       const sockPath = uniqueSocketPath('irrev');
