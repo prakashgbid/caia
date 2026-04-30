@@ -2,12 +2,14 @@
   "name": "@chiefaia/architecture-registry",
   "version": "0.1.0",
   "private": true,
-  "description": "Architecture Knowledge Graph (AKG): structured catalog of every architectural artifact in the CAIA monorepo + sites — services, APIs, components, themes, plugins, packages, schemas, migrations, integrations, domain modules, observability signals — with dependency edges and shared sqlite-vec embeddings (reuses @chiefaia/feature-registry infra). Powers the EA Agent's per-domain technical instructions per story.",
+  "description": "Architecture Knowledge Graph (AKG): structured catalog of every architectural artifact in the CAIA monorepo + sites \u2014 services, APIs, components, themes, plugins, packages, schemas, migrations, integrations, domain modules, observability signals \u2014 with dependency edges and shared sqlite-vec embeddings (reuses @chiefaia/feature-registry infra). Powers the EA Agent's per-domain technical instructions per story.",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@chiefaia/feature-registry": "workspace:*",
@@ -23,5 +25,8 @@
     "typescript": "^5.4.5",
     "vitest": "^1.6.0",
     "@types/better-sqlite3": "^7.6.13"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }

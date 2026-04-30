@@ -6,13 +6,16 @@
   "types": "src/index.ts",
   "sideEffects": false,
   "files": [
+    "dist",
     "src",
     "tsconfig.json"
   ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "peerDependencies": {
     "next": ">=14.0.0",

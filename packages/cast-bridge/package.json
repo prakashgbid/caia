@@ -2,7 +2,7 @@
   "name": "@pokerzeno/cast-bridge",
   "version": "0.1.0",
   "private": true,
-  "description": "Reusable casting utility for PokerZeno and Roulette Community — BroadcastChannel two-tab sync + Chrome tab-mirror casting",
+  "description": "Reusable casting utility for PokerZeno and Roulette Community \u2014 BroadcastChannel two-tab sync + Chrome tab-mirror casting",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {
@@ -12,10 +12,12 @@
     "./filters": "./src/filters/index.ts"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0",
@@ -37,5 +39,8 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "public"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }
