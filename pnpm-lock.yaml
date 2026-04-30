@@ -127,6 +127,9 @@ importers:
       '@chiefaia/architecture-registry':
         specifier: workspace:*
         version: link:../../packages/architecture-registry
+      '@chiefaia/capability-broker':
+        specifier: workspace:*
+        version: link:../../packages/capability-broker
       '@chiefaia/classifier':
         specifier: workspace:*
         version: link:../../packages/classifier
@@ -306,6 +309,9 @@ importers:
 
   apps/worker-coding:
     dependencies:
+      '@chiefaia/capability-broker':
+        specifier: workspace:*
+        version: link:../../packages/capability-broker
       '@chiefaia/ticket-template':
         specifier: workspace:*
         version: link:../../packages/ticket-template

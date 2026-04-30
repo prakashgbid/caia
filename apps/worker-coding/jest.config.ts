@@ -8,6 +8,7 @@ const config: Config = {
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   moduleNameMapper: {
     '^@chiefaia/ticket-template$': '<rootDir>/../../packages/ticket-template/src/index.ts',
+    '^@chiefaia/capability-broker$': '<rootDir>/../../packages/capability-broker/src/index.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {
