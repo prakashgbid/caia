@@ -65,7 +65,47 @@ export interface HookPostToolUseOutput {
   recordToLedger: boolean;
   /** Optional sanitized result the orchestrator should substitute. */
   sanitizedResult?: unknown;
+  /**
+   * SAFETY-003: per-pattern flags emitted by the tool-output sanitizer
+   * (e.g. "owasp-llm-01-prompt-injection"). The dashboard's "Tool output
+   * rejected" page renders these. Empty when no sanitizer is wired.
+   */
+  sanitizerFlags?: ReadonlyArray<{
+    id: string;
+    description: string;
+    action: 'stripped' | 'flagged' | 'rejected' | 'truncated';
+    matchCount: number;
+  }>;
+  /** True when the entire payload was rejected and substituted with a stub. */
+  sanitizerRejected?: boolean;
 }
+
+/**
+ * SAFETY-003 sanitizer plug-in shape — a function that takes the raw
+ * tool result + context and returns a sanitized payload + flags. The
+ * caller (orchestrator) wires this in via {@link HookControlledOptions}.
+ *
+ * We keep the plug-in shape narrow so the broker doesn't need to depend
+ * on `@chiefaia/tool-output-sanitizer`. The orchestrator imports both
+ * and bridges them.
+ */
+export type ToolResultSanitizer = (input: {
+  toolName: string;
+  toolArgs: Record<string, unknown>;
+  result: unknown;
+  taskId: string;
+  agentRole: string;
+}) => {
+  /** Substituted result. Falsy means "leave the result as-is". */
+  sanitizedResult?: unknown;
+  flags: ReadonlyArray<{
+    id: string;
+    description: string;
+    action: 'stripped' | 'flagged' | 'rejected' | 'truncated';
+    matchCount: number;
+  }>;
+  rejected: boolean;
+};
 
 export interface HookControlledOptions {
   broker: CapabilityBroker;
@@ -86,6 +126,29 @@ export interface HookControlledOptions {
   tokensFor: (taskId: string) => GuardContext;
   /** Optional override list of guard rules. Falls through to defaults. */
   guardRules?: readonly GuardRule[];
+  /**
+   * SAFETY-003: optional sanitizer. When set, every postToolUse call
+   * runs the result through it and surfaces flags + a substituted
+   * payload via {@link HookPostToolUseOutput}.
+   */
+  sanitizer?: ToolResultSanitizer;
+  /**
+   * SAFETY-003: optional audit-log sink for sanitizer flags. Called
+   * synchronously per postToolUse; failures are swallowed to keep the
+   * hook fast.
+   */
+  auditLog?: (entry: {
+    taskId: string;
+    agentRole: string;
+    toolName: string;
+    flags: ReadonlyArray<{
+      id: string;
+      action: 'stripped' | 'flagged' | 'rejected' | 'truncated';
+      matchCount: number;
+    }>;
+    rejected: boolean;
+    tsMsEpoch: number;
+  }) => void;
 }
 
 export class HookControlledMode {
@@ -93,12 +156,16 @@ export class HookControlledMode {
   private readonly toolToCommand: HookControlledOptions['toolToCommand'];
   private readonly tokensFor: HookControlledOptions['tokensFor'];
   private readonly guardRules: readonly GuardRule[] | undefined;
+  private readonly sanitizer: ToolResultSanitizer | undefined;
+  private readonly auditLog: HookControlledOptions['auditLog'] | undefined;
 
   constructor(opts: HookControlledOptions) {
     this.broker = opts.broker;
     this.toolToCommand = opts.toolToCommand;
     this.tokensFor = opts.tokensFor;
     this.guardRules = opts.guardRules;
+    this.sanitizer = opts.sanitizer;
+    this.auditLog = opts.auditLog;
   }
 
   /**
@@ -156,16 +223,41 @@ export class HookControlledMode {
   }
 
   /**
-   * postToolUse — called after Claude Code has run a tool. Mostly
-   * advisory; the orchestrator-side recording is what matters. We
-   * surface a sanitized result (via the tool-output sanitizer) and a
-   * recordToLedger flag the caller should honour.
+   * postToolUse — called after Claude Code has run a tool. Sanitizes
+   * the result (when a sanitizer is wired) so the agent's context
+   * receives the cleaned payload, and emits an audit-log entry per
+   * flag the sanitizer raised.
    */
   postToolUse(input: HookPostToolUseInput): HookPostToolUseOutput {
-    void input;
     void this.broker;
-    return {
+    if (!this.sanitizer) {
+      return { recordToLedger: true };
+    }
+    const r = this.sanitizer({
+      toolName: input.toolName,
+      toolArgs: input.toolArgs,
+      result: input.result,
+      taskId: input.taskId,
+      agentRole: input.agentRole,
+    });
+    if (this.auditLog && r.flags.length > 0) {
+      try {
+        this.auditLog({
+          taskId: input.taskId,
+          agentRole: input.agentRole,
+          toolName: input.toolName,
+          flags: r.flags.map((f) => ({ id: f.id, action: f.action, matchCount: f.matchCount })),
+          rejected: r.rejected,
+          tsMsEpoch: Date.now(),
+        });
+      } catch { /* audit log must never break the hook path */ }
+    }
+    const out: HookPostToolUseOutput = {
       recordToLedger: true,
+      sanitizerFlags: r.flags,
+      sanitizerRejected: r.rejected,
     };
+    if (r.sanitizedResult !== undefined) out.sanitizedResult = r.sanitizedResult;
+    return out;
   }
 }
