@@ -361,13 +361,25 @@ export const ROUTING_RULES: RoutingRule[] = [
 export function getRoute(taskType: string): RoutingRule {
   const rule = ROUTING_RULES.find((r) => r.taskType === taskType);
   if (!rule) {
-    // Default: use Claude Sonnet for unknown task types
+    // Default: prefer LOCAL Ollama for unknown task types.
+    //
+    // Updated 2026-04-30 (LAI-002 follow-up): the binary-spawn ClaudeAdapter
+    // takes ~6-10s session init + the prompt cost. For short classification
+    // tasks (validation-*, decomposer-recursive helpers, etc.) Ollama is
+    // strictly faster AND free. Defaulting to local also avoids the
+    // launchd-scoped "claude binary timed out" spiral that blocked the
+    // 2026-04-30 multi-pass validation when validation-content-relevance
+    // and similar unregistered task types fell through to a 180s Claude
+    // wait per call.
+    //
+    // Callers that explicitly want Claude can either register the task in
+    // ROUTING_RULES with useLocal:false or pass options.forceClaude=true.
     return {
       taskType,
-      description: 'Unknown task type',
+      description: 'Unknown task type (defaults to local Ollama)',
       localModel: 'qwen2.5-coder:7b',
       claudeModel: 'claude-sonnet-4-6',
-      useLocal: false,
+      useLocal: true,
       maxTokens: 4000,
       estimatedCostLocal: '$0.00',
       estimatedCostClaude: '$1.00',
