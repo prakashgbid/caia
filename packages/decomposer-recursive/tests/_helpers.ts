@@ -16,7 +16,7 @@ import {
 
 export interface FakeAdapterConfig {
   /** Sequence of responses to return on successive `generate` calls. */
-  responses: Array<Partial<LLMResponse> & { response: string }>;
+  responses: Array<Partial<LLMResponse> & { response: string; match?: string }>;
   /** Whether the local adapter advertises itself as available. Default true. */
   available?: boolean;
   /** When set, the adapter throws this error instead of returning. */
@@ -50,14 +50,34 @@ export function fakeOllama(config: FakeAdapterConfig): OllamaAdapter {
 
 /**
  * Create a Claude-style fake. Same semantics as fakeOllama.
+ *
+ * If the test's `responses` array contains entries with a `match` field,
+ * the fake routes by checking whether the request prompt INCLUDES that
+ * substring — useful for parallel Promise.all calls where ordering is
+ * non-deterministic. Fall-through when no match: returns the responses
+ * in queue order.
  */
 export function fakeClaude(config: FakeAdapterConfig): ClaudeAdapter {
   let cursor = 0;
+  const used = new Set<number>();
   return {
-    generate: vi.fn(async (model: string): Promise<LLMResponse> => {
+    generate: vi.fn(async (model: string, req: { prompt: string }): Promise<LLMResponse> => {
       if (config.throws) throw config.throws;
-      const idx = Math.min(cursor, config.responses.length - 1);
-      cursor++;
+      // Try match-based routing first.
+      const promptText = req?.prompt ?? '';
+      let idx = -1;
+      for (let i = 0; i < config.responses.length; i++) {
+        const r = config.responses[i] as Partial<LLMResponse> & { response: string; match?: string };
+        if (r.match && !used.has(i) && promptText.includes(r.match)) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx === -1) {
+        idx = Math.min(cursor, config.responses.length - 1);
+        cursor++;
+      }
+      used.add(idx);
       const next = config.responses[idx];
       if (!next) throw new Error('fakeClaude: no responses configured');
       return {
