@@ -6,6 +6,12 @@
  * Verified: `claude --help` confirms -p/--print and --output-format flags exist.
  * The output is streamed to stdout and captured; session_id is extracted from
  * the final JSON line.
+ *
+ * SAFETY-001 (2026-04-30): when `permissionMode` is `hook-controlled`,
+ * we replace `bypassPermissions` with the broker-controlled hook flow per
+ * `caia/docs/capability-broker.md`. The in-process broker server is a
+ * lazily-started singleton (per executor process) and the hook subprocess
+ * connects to it over a Unix-domain socket.
  */
 
 import * as child_process from 'child_process';
@@ -13,6 +19,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { publishEvent } from './publish-event';
+import {
+  PERMISSION_MODE_HOOK_CONTROLLED,
+  PERMISSION_MODE_BYPASS,
+  startBrokerIntegration,
+  type BrokerIntegration,
+} from './broker-integration';
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 
@@ -189,6 +201,65 @@ async function registerExecutorRun(
   return 0;
 }
 
+// Lazy singleton — first hook-controlled dispatch boots the broker server.
+// Subsequent dispatches reuse it. The opt-out env var lets ops fall back to
+// `bypassPermissions` without a code change if the broker misbehaves.
+let _brokerSingleton: Promise<BrokerIntegration> | null = null;
+async function getBroker(): Promise<BrokerIntegration> {
+  if (!_brokerSingleton) {
+    _brokerSingleton = startBrokerIntegration();
+  }
+  return _brokerSingleton;
+}
+
+/** Test hook — reset the broker singleton between vitest runs. */
+export function _resetBrokerForTests(): void {
+  _brokerSingleton = null;
+}
+
+function brokerEnabled(permissionMode: string): boolean {
+  if (process.env['CAIA_BROKER_DISABLED'] === '1') return false;
+  return permissionMode === PERMISSION_MODE_HOOK_CONTROLLED;
+}
+
+export interface BuildClaudeArgsResult {
+  args: string[];
+  env: NodeJS.ProcessEnv;
+  /** Set when broker was wired in. Caller is NOT responsible for shutdown. */
+  broker: BrokerIntegration | null;
+}
+
+/**
+ * Compose the argv + env for the claude subprocess. Pure-ish — only side
+ * effect is lazily booting the broker socket server when hook-controlled.
+ *
+ * Exported so tests can assert the wiring without spawning claude.
+ */
+export async function buildClaudeArgs(
+  task: DispatchTask,
+  config: DispatchConfig,
+  prompt: string,
+  model: string,
+): Promise<BuildClaudeArgsResult> {
+  const baseArgs = [
+    '--print',
+    '--output-format', 'json',
+    '--permission-mode', config.permissionMode,
+    '--model', model,
+    prompt,
+  ];
+  if (!brokerEnabled(config.permissionMode)) {
+    return { args: baseArgs, env: { ...process.env }, broker: null };
+  }
+  const broker = await getBroker();
+  const args = broker.augmentClaudeArgs(baseArgs);
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    ...broker.hookEnv(task.id, 'coding-agent'),
+  };
+  return { args, env, broker };
+}
+
 export async function dispatch(
   task: DispatchTask,
   config: DispatchConfig,
@@ -199,22 +270,17 @@ export async function dispatch(
   const model = selectModel(task);
   const now = new Date().toISOString();
 
-  const claudeArgs = [
-    '--print',
-    '--output-format', 'json',
-    '--permission-mode', config.permissionMode,
-    '--model', model,
-    prompt,
-  ];
+  const { args: claudeArgs, env: spawnEnv, broker } = await buildClaudeArgs(task, config, prompt, model);
 
   if (process.env['EXECUTOR_DEBUG']) {
-    process.stderr.write(`[executor:task-${task.id}] model=${model}\n`);
+    process.stderr.write(`[executor:task-${task.id}] model=${model} broker=${broker ? 'on' : 'off'}\n`);
   }
 
   const proc = child_process.spawn('claude', claudeArgs, {
     cwd: task.cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
     detached: false,
+    env: spawnEnv,
   });
 
   const outputLines: string[] = [];
@@ -268,6 +334,8 @@ export async function dispatch(
     worktreePath,
     model,
     attemptN,
+    permissionMode: config.permissionMode,
+    brokerWired: broker !== null,
   }, { correlationId: task.rootPromptId ?? null, entityType: 'task', entityId: task.id });
 
   return {
@@ -336,3 +404,6 @@ export function cleanupWorktree(worktreePath: string): void {
     } catch { /* best effort */ }
   }
 }
+
+// Re-export so daemon shutdown can call it.
+export { PERMISSION_MODE_HOOK_CONTROLLED, PERMISSION_MODE_BYPASS };
