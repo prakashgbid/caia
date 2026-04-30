@@ -1,6 +1,7 @@
 'use client';
 import useSWR from 'swr';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -144,9 +145,18 @@ function StoryNodeCard({ node, allNodes, depth }: { node: StoryNode; allNodes: S
   );
 }
 
-export default function StoriesPage() {
+function StoriesContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { data: stories, isLoading, error, mutate } = useSWR<StoryNode[]>('/api/stories-proxy', fetcher, { refreshInterval: 30000 });
-  const [projectFilter, setProjectFilter] = useState('');
+  const projectFilter = searchParams.get('project') ?? '';
+
+  function setProjectFilter(value: string) {
+    const p = new URLSearchParams(searchParams.toString());
+    if (value) p.set('project', value);
+    else p.delete('project');
+    router.push(`/stories?${p.toString()}`);
+  }
 
   if (isLoading) return <div style={{ color: '#a0aec0', padding: 24 }}>Loading stories...</div>;
   if (error) return <div style={{ color: '#fc8181', padding: 24 }}>Failed to load stories. Is Conductor running?</div>;
@@ -217,5 +227,13 @@ export default function StoriesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function StoriesPage() {
+  return (
+    <Suspense fallback={<div style={{ color: '#a0aec0', padding: 24 }}>Loading stories...</div>}>
+      <StoriesContent />
+    </Suspense>
   );
 }

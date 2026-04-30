@@ -6,6 +6,7 @@
     "build": "next build",
     "start": "next start -p 7777",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "lighthouse": "lhci autorun --config=./lighthouserc.cjs",
     "test:a11y": "playwright test tests/a11y.spec.ts",
     "test:visual": "playwright test tests/visual.spec.ts",
@@ -23,9 +24,15 @@
     "@lhci/cli": "^0.14.0",
     "@playwright/test": "^1.48.0",
     "@size-limit/preset-app": "^11.1.0",
+    "@testing-library/jest-dom": "^6.4.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20",
     "@types/react": "^18",
+    "@vitejs/plugin-react": "^4.3.0",
+    "jsdom": "^24.1.0",
     "size-limit": "^11.1.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^1.6.0"
   }
 }
