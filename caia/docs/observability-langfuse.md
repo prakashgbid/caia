@@ -244,3 +244,139 @@ docker compose --env-file .env.local -f docker-compose.langfuse.yml down -v
 - Langfuse v3 docs: https://langfuse.com/self-hosting/docker-compose
 - OTel `gen_ai.*` semantic conventions:
   https://opentelemetry.io/docs/specs/semconv/gen-ai/
+
+
+## Foundation PR matrix (2026-05-01)
+
+The seven PRs that brought up the obs foundation, in landing order:
+
+| PR   | Branch                                | Adds                                                                                          |
+|------|----------------------------------------|-----------------------------------------------------------------------------------------------|
+| #261 | `feat/obs-001-langfuse-self-host`    | This document + the docker-compose stack on 127.0.0.1:3001                                    |
+| #262 | `feat/obs-002-router-otel`           | OTel `gen_ai.*` spans on every `route()` call (12 vitest cases)                                |
+| #264 | `feat/obs-003-agents-otel`           | `wrapAgent` / `wrapPipelineStage` / `recordJudgeScore` helpers (18 jest cases)                 |
+| #265 | `feat/obs-004-trace-verifier`        | `scripts/verify-traces.sh` deployment readiness check                                          |
+| #266 | `feat/obs-005-dashboard-link`        | `/operations/observability` Next.js route                                                      |
+| #267 | `feat/obs-006-trace-export`          | Daily JSONL trace export at `~/.caia/traces/<date>.jsonl` (8 vitest cases)                     |
+| #268 | `chore/obs-007-runbook`              | This addendum + memory file `reports/observability_foundation_2026-04-30.md`                   |
+
+## Trace anatomy (what every span looks like)
+
+```
+pipeline.<stage>                        ← pipeline-stage span (obs-003)
+  span_attrs:
+    pipeline.stage                      (e.g. "po_decomposed")
+    pipeline.prompt_id
+    pipeline.story_id
+    pipeline.correlation_id
+  └── agent.<name>                      ← agent span (obs-003)
+        span_attrs:
+          agent.name                    (e.g. "po-agent")
+          agent.role                    (closed enum, e.g. "po-decomposer")
+          agent.input_schema            (e.g. "POAgentInputV1")
+          agent.output_schema
+          agent.duration_ms
+          agent.judge_score             (when applicable)
+          agent.attempt
+          agent.ok
+          gen_ai.agent.name             (mirror of agent.name for Langfuse)
+          gen_ai.agent.type             (mirror of agent.role)
+        └── llm.route <task_type>       ← router span (obs-002)
+              span_attrs:
+                gen_ai.system           ("ollama" | "claude-binary" | "cache")
+                                        NEVER "api-key"
+                gen_ai.provider.name    ("ollama" | "subscription")
+                gen_ai.operation.name   ("chat")
+                gen_ai.request.model    + .max_tokens + .temperature
+                gen_ai.response.model
+                gen_ai.usage.input_tokens / output_tokens / total_tokens
+                gen_ai.usage.prompt_tokens / completion_tokens (legacy aliases)
+                caia.task_type
+                caia.route_decision     ("local" | "claude" | "cache_hit")
+                caia.cache_hit
+                caia.fallback_from / caia.fallback_reason
+                caia.router_version
+              status: OK | ERROR (with recorded exception event)
+```
+
+## Daily routine
+
+**On the developer's Mac, set once:**
+
+```bash
+launchctl setenv LANGFUSE_PUBLIC_KEY pk-lf-...
+launchctl setenv LANGFUSE_SECRET_KEY sk-lf-...
+launchctl setenv LANGFUSE_HOST       http://localhost:3001
+```
+
+**On every dashboard restart:** the `/operations/observability` route
+will read those env vars and surface live Langfuse data.
+
+**On every orchestrator restart (legitimate, not during a validation
+campaign):** the `apps/orchestrator` plist is configured to invoke
+the router's `initRouterOtel()` at boot, and every `runXxx` call
+(once obs-003a/b/c follow-on wirings land) emits `agent.<name>`
+spans nested under `pipeline.<stage>` spans nested under
+`llm.route` spans.
+
+**Daily 03:05 UTC:** the `com.caia.export-traces-for-dspy` launchd
+job (PR #267) pulls the last 24h of traces from Langfuse and
+writes JSONL at `~/.caia/traces/<YYYY-MM-DD>.jsonl`. To install:
+
+```bash
+cp scripts/plist/com.caia.export-traces-for-dspy.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.caia.export-traces-for-dspy.plist
+```
+
+## Verification (fail-loud)
+
+Both must exit 0 for the foundation to be considered operational:
+
+```bash
+cd caia/observability && ./smoke-test.sh    # synthetic trace round-trip
+scripts/verify-traces.sh                    # end-to-end attribute check
+```
+
+`verify-traces.sh` asserts that **no observation in any test trace
+ever reports `gen_ai.system="api-key"`** — the no-API-key constraint
+from `feedback_no_api_key_billing.md` is structurally enforceable
+at the trace store now.
+
+## How to add instrumentation to a new agent / package
+
+See `reports/observability_foundation_2026-04-30.md` for the full
+how-to. Quick version:
+
+```ts
+// apps/orchestrator/src/agents/foo-agent.ts
+import { wrapAgent } from '../observability/agent-otel.js';
+
+export async function runFooAgent(input: FooInput): Promise<FooOutput> {
+  return wrapAgent(
+    {
+      name: 'foo-agent',
+      role: 'foo-role',           // add to AgentRole closed enum first
+      inputSchema: 'FooInputV1',
+      outputSchema: 'FooOutputV1',
+      promptId: input.promptId,
+    },
+    async (span) => {
+      // ... existing body ...
+      // Optional: recordJudgeScore(span, 0.87);
+      return result;
+    },
+  );
+}
+```
+
+The router calls inside `runFooAgent` will already emit `llm.route`
+spans (PR #262); they automatically nest under the agent span.
+
+## Open follow-ups (post-foundation)
+
+| Track       | Description                                                                                     |
+|-------------|-------------------------------------------------------------------------------------------------|
+| obs-003a/b/c | Wire `wrapAgent` into each `runXxx` runner (PR #264 ships only the helper). Reviewable per-agent. |
+| dspy-001    | DSPy compile job — consumes `~/.caia/traces/*.jsonl` and writes prompts-registry candidates. P0.6 in proposal. |
+| smart-cicd  | The §6A.5 worked example. P1.9 in proposal.                                                     |
+| stop-fetch  | `@chiefaia/decomposer/src/claude-decomposer.ts` legacy fetch-based path → migrate or drop. Already flagged in `feedback_no_api_key_billing.md`. |
