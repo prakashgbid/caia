@@ -19,3 +19,20 @@ export type {
   PredictResult,
   RequestId,
 } from './protocol.js';
+
+// ─── Typed program wrappers ─────────────────────────────────────────────
+//
+// One file per registered DSPy program. The orchestrator imports these
+// rather than calling `bridge.predict(...)` directly so the Node side
+// stays type-safe across the JSONL boundary.
+export {
+  runPoScopeDetector,
+  PoScopeDetectorError,
+  SCOPE_VOCAB,
+  PO_SCOPE_DETECTOR_PROGRAM,
+} from './programs/po-scope-detector.js';
+export type {
+  PoScopeDetectorInput,
+  PoScopeDetectorOutput,
+  StoryScope,
+} from './programs/po-scope-detector.js';
