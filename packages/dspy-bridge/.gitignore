@@ -1,0 +1,8 @@
+dist/
+node_modules/
+python/.venv/
+python/.dspy-cache/
+python/uv.lock
+*.tsbuildinfo
+.turbo/
+coverage/
