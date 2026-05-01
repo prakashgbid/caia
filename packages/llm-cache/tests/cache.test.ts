@@ -40,8 +40,8 @@ function makeMockEmbedder(): EmbeddingFn {
   };
 }
 
-afterEach(() => {
-  cache.close();
+afterEach(async () => {
+  await cache.close();
 });
 
 describe('PromptCache (exact-only mode)', () => {
@@ -52,10 +52,10 @@ describe('PromptCache (exact-only mode)', () => {
   it('starts empty and counts misses', async () => {
     const hit = await cache.lookup(key('hello'));
     expect(hit).toBeUndefined();
-    const stats = cache.stats();
-    expect(stats.exactHits).toBe(0);
-    expect(stats.misses).toBe(1);
-    expect(stats.size).toBe(0);
+    const s = await cache.stats();
+    expect(s.exactHits).toBe(0);
+    expect(s.misses).toBe(1);
+    expect(s.size).toBe(0);
   });
 
   it('returns an exact hit on identical prompt + model + namespace', async () => {
@@ -65,7 +65,8 @@ describe('PromptCache (exact-only mode)', () => {
     expect(hit?.kind).toBe('exact');
     expect(hit?.similarity).toBe(1);
     expect(hit?.value).toEqual(SAMPLE_RESPONSE);
-    expect(cache.stats().exactHits).toBe(1);
+    const s = await cache.stats();
+    expect(s.exactHits).toBe(1);
   });
 
   it('does not match across different namespaces', async () => {
@@ -107,7 +108,7 @@ describe('PromptCache (exact-only mode)', () => {
   });
 
   it('expires entries past the TTL', async () => {
-    cache.close();
+    await cache.close();
     cache = new PromptCache({ dbPath: ':memory:', ttlMs: 1_000 });
     const t0 = 1_000;
     await cache.put(key('hi'), SAMPLE_RESPONSE, t0);
@@ -122,15 +123,17 @@ describe('PromptCache (exact-only mode)', () => {
   });
 
   it('sweep evicts expired rows', async () => {
-    cache.close();
+    await cache.close();
     cache = new PromptCache({ dbPath: ':memory:', ttlMs: 1_000 });
     await cache.put(key('a'), SAMPLE_RESPONSE, 0);
     await cache.put(key('b'), SAMPLE_RESPONSE, 0);
-    expect(cache.stats().size).toBe(2);
+    const s0 = await cache.stats();
+    expect(s0.size).toBe(2);
 
-    const removed = cache.sweep(10_000);
+    const removed = await cache.sweep(10_000);
     expect(removed.exact).toBe(2);
-    expect(cache.stats().size).toBe(0);
+    const s1 = await cache.stats();
+    expect(s1.size).toBe(0);
   });
 });
 
@@ -160,6 +163,7 @@ describe('PromptCache (semantic mode)', () => {
   });
 
   it('falls through to miss when no cached prompt clears the threshold', async () => {
+    await cache.close();
     cache = new PromptCache({
       dbPath: ':memory:',
       embed: makeMockEmbedder(),
@@ -168,15 +172,17 @@ describe('PromptCache (semantic mode)', () => {
     await cache.put(key('user signs in with email auth'), SAMPLE_RESPONSE);
     const hit = await cache.lookup(key('totally unrelated query'));
     expect(hit).toBeUndefined();
-    expect(cache.stats().misses).toBeGreaterThan(0);
+    const s = await cache.stats();
+    expect(s.misses).toBeGreaterThan(0);
   });
 
   it('prefers exact match over semantic when both could fire', async () => {
     await cache.put(key('hello world'), SAMPLE_RESPONSE);
     const hit = await cache.lookup(key('hello world'));
     expect(hit?.kind).toBe('exact');
-    expect(cache.stats().exactHits).toBe(1);
-    expect(cache.stats().semanticHits).toBe(0);
+    const s = await cache.stats();
+    expect(s.exactHits).toBe(1);
+    expect(s.semanticHits).toBe(0);
   });
 
   it('stats counters segment by hit kind', async () => {
@@ -184,7 +190,7 @@ describe('PromptCache (semantic mode)', () => {
     await cache.lookup(key('hello world')); // exact
     await cache.lookup(key('hello world cup')); // semantic-or-miss
     await cache.lookup(key('completely orthogonal text 123 xyz'));
-    const s = cache.stats();
+    const s = await cache.stats();
     expect(s.exactHits).toBe(1);
     // Don't assert exact counts on the mock embedder; just sanity-check
     // they sum to the number of lookups.

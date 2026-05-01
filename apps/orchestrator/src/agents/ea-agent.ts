@@ -67,10 +67,14 @@ export interface EAAgentOutput {
 const TECH_KEYWORDS: Record<string, string[]> = {
   frontend: ['component', 'react', 'next.js', 'page', ' ui ', 'tsx', 'css', 'tailwind'],
   bff: ['route handler', 'api route', '/api/', 'hono', 'gateway'],
-  backend: ['service', 'business logic', 'worker'],
-  database: ['schema', 'migration', 'sqlite', 'postgres', 'drizzle', 'index'],
-  'event-driven': ['event bus', 'pub/sub', 'queue', 'async messaging'],
-  observability: ['log', 'metric', 'trace', 'pino', 'opentelemetry'],
+  // 'architecture' added so architectural migration stories map to backend (P1 gap ea-he)
+  backend: ['service', 'business logic', 'worker', 'architecture'],
+  // 'persist to' / 'users table' added (VAL-2026-04-30-051730-8-ea-he P1 gap #2)
+  database: ['schema', 'migration', 'sqlite', 'postgres', 'drizzle', 'index', 'persist to', 'users table', 'table'],
+  // event-sourced / cqrs / projections added so ea-heavy prompts map to backend (P1 gap ea-he)
+  'event-driven': ['event bus', 'pub/sub', 'queue', 'async messaging', 'event-sourced', 'event store', 'event log', 'cqrs', 'projections'],
+  // 'log' → 'logging' to prevent false positive on "event log" mapping to platform (P1 gap ea-he)
+  observability: ['logging', 'metric', 'trace', 'pino', 'opentelemetry'],
   'web-analytics': ['ga4', 'mixpanel', 'analytics event', 'tracking'],
   crm: ['crm', 'customer relationship'],
   cms: ['sanity', 'contentful', 'cms'],
@@ -80,9 +84,12 @@ const TECH_KEYWORDS: Record<string, string[]> = {
   email: ['sendgrid', 'resend', 'transactional email', 'marketing email'],
   caching: ['redis', 'cdn', 'cache'],
   infra: ['cloudflare', 'vercel', 'dns', 'hosting', 'infra'],
-  'ci-cd': ['github actions', 'workflow', 'release pipeline'],
-  'ml-ai': ['model', 'inference', 'training', 'prompt engineering'],
-  testing: ['unit test', 'integration test', 'e2e test', 'playwright', 'vitest', 'behavior test'],
+  // 'ci job' added (VAL-2026-04-30-051730-8-ea-he P1 gap #3)
+  'ci-cd': ['github actions', 'workflow', 'release pipeline', 'ci job'],
+  // 'model' → 'language model' to prevent false positive on "CRUD model" (P1 gap ea-he)
+  'ml-ai': ['language model', 'llm', 'inference', 'training', 'prompt engineering'],
+  // 'axe-core' / 'audit pipeline' / 'regression test' added (P1 gap #3)
+  testing: ['unit test', 'integration test', 'e2e test', 'playwright', 'vitest', 'behavior test', 'axe-core', 'audit pipeline', 'regression test'],
   accessibility: ['wcag', 'a11y', 'accessib', 'aria', 'keyboard nav'],
   seo: ['meta tag', 'sitemap', 'canonical', 'json-ld', 'og:'],
   security: ['threat model', 'vault', 'secret', 'csp', 'xss'],
@@ -102,9 +109,11 @@ const TECH_KEYWORDS: Record<string, string[]> = {
   'agent-runtime': ['agent', 'orchestrator', 'collab', 'po-agent', 'ba-agent', 'ea-agent'],
   'prompt-engineering': ['prompt template', 'prompt rule'],
   'ticket-template': ['ticket template', 'ticket-template'],
-  'data-migration': ['backfill', 'data migration'],
+  // 'migration strategy' / 'migrate from' added so ea-heavy maps to data (P1 gap ea-he)
+  'data-migration': ['backfill', 'data migration', 'migration strategy', 'migrate from'],
   compliance: ['gdpr', 'aml', 'kyc', 'audit trail', 'compliance'],
-  performance: ['lighthouse', 'profil', 'bundle size', 'load test'],
+  // 'profil' → 'profiling' to prevent false positive on "user profile" (P1 gap #1)
+  performance: ['lighthouse', 'profiling', 'bundle size', 'load test'],
 };
 
 function mapPrimaryDomainToTech(primaryDomain: string): string[] {
@@ -149,7 +158,7 @@ export function inferTechSubDomains(text: string, primaryDomain: string): {
 const QUALITY_KEYWORDS: Record<string, string[]> = {
   accessibility: ['wcag', 'a11y', 'accessib', 'aria', 'keyboard nav', 'screen reader'],
   seo: ['seo', 'meta tag', 'sitemap', 'canonical', 'json-ld', 'og:', 'open graph'],
-  performance: ['performance', 'lighthouse', 'bundle size', 'load test', 'profil'],
+  performance: ['performance', 'lighthouse', 'bundle size', 'load test', 'profiling'],
   security: ['security', 'threat', 'vault', 'csp', 'xss', 'csrf'],
   compliance: ['gdpr', 'aml', 'kyc', 'audit trail', 'compliance'],
   observability: ['observability', 'logging', 'tracing', 'metric', 'pino'],

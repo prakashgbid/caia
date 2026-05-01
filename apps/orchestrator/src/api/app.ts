@@ -29,6 +29,16 @@ import { registerFeatureRegistryRoutes } from './routes/feature-registry';
 import { registerContractsRoutes } from './routes/contracts';
 import { registerArchitectureRoutes } from './routes/architecture';
 import { registerWorkerRoutes } from './routes/workers';
+import { registerUsersRoutes } from './routes/users';
+import { registerNotificationsRoutes } from './routes/notifications';
+import { registerSubscriptionsRoutes } from './routes/subscriptions';
+import { registerStripeRoutes } from './routes/stripe';
+import { registerCheckoutRoutes } from './routes/checkout';
+import { registerRedisCacheOptionsRoutes } from './routes/redis-cache-options';
+import { registerCacheStatsRoutes } from './routes/cache-stats';
+import { registerProjectionsRoutes } from './routes/projections';
+import { registerOssRegistryRoutes } from './routes/implement-core-rewrite-for-the-open-source-re-functionality';
+import { registerChoresRoutes } from './routes/chores';
 import { promRegistry, httpRequestsTotal } from '../metrics/prometheus';
 import type { Phase2Context } from '../agents/wire-phase2';
 
@@ -95,6 +105,25 @@ export function createApp(db: Db, opts: CreateAppOptions = {}): Hono {
   registerDagRoutes(app, db);
   // TASKMGR-006 + CODING-007 — Phase 2 worker pool dashboard + lifecycle
   registerWorkerRoutes(app, db, { registry: opts.phase2?.registry });
+  // NOTIF-001 — user identity + persistent notification inbox
+  registerUsersRoutes(app, db);
+  registerNotificationsRoutes(app, db);
+  // SUB-001 — email subscription BFF routes
+  registerSubscriptionsRoutes(app, db);
+  // STRIPE-001 — Stripe checkout + webhook integration
+  registerStripeRoutes(app, db);
+  // CHECKOUT — BFF checkout flow & state
+  registerCheckoutRoutes(app, db);
+  // REDIS-001 — redis cache options config + ping
+  registerRedisCacheOptionsRoutes(app, db);
+  // CACHE-001 — cache stats monitoring
+  registerCacheStatsRoutes(app, db);
+  // PROJ-001 — projection health endpoint
+  registerProjectionsRoutes(app, db);
+  // OSS-001 — open-source package registry
+  registerOssRegistryRoutes(app);
+  // CHOR-001 — single-domain chore task backend (VAL-2026-04-30-051730-10-chor)
+  registerChoresRoutes(app, db);
 
   return app;
 }

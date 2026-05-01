@@ -19,6 +19,7 @@ import {
   verifyTokenSignature,
   type SigningKeyProvider,
 } from './signing.js';
+import type { CapabilityBrokerMetrics } from './metrics.js';
 
 export interface BrokerClock {
   now(): number;
@@ -36,6 +37,8 @@ export interface BrokerOptions {
    * its audit_log.
    */
   onDecision?: (decision: BrokerDecision) => void;
+  /** Optional metrics collector. When provided, issuance and validation outcomes are counted. */
+  metrics?: CapabilityBrokerMetrics;
 }
 
 export type BrokerDecision =
@@ -83,6 +86,7 @@ export class CapabilityBroker {
   private readonly signingKey: SigningKeyProvider;
   private readonly clock: BrokerClock;
   private readonly onDecision?: (d: BrokerDecision) => void;
+  private readonly metrics?: CapabilityBrokerMetrics;
   /** Per-task call counts keyed by `${taskId}|${name}`. */
   private readonly perTaskCounts = new Map<string, number>();
   /** Token-ids that have been redeemed (single-use enforcement). */
@@ -93,6 +97,7 @@ export class CapabilityBroker {
     this.signingKey = opts.signingKey;
     this.clock = opts.clock ?? realClock;
     if (opts.onDecision) this.onDecision = opts.onDecision;
+    if (opts.metrics) this.metrics = opts.metrics;
   }
 
   /**
@@ -105,6 +110,7 @@ export class CapabilityBroker {
     if (!cap) {
       const reason = `unknown capability '${parsed.name}'`;
       this.emitDecision({ kind: 'rejected', reason, request: parsed });
+      this.metrics?.tokensRejectedTotal.inc({ capability: parsed.name, code: 'unknown_capability' });
       throw new CapabilityBrokerError('unknown_capability', reason);
     }
     const allowEntry = this.registry.findAllowlistMatch(
@@ -115,6 +121,7 @@ export class CapabilityBroker {
     if (!allowEntry) {
       const reason = `allowlist miss: agent='${parsed.agentRole}' name='${parsed.name}' scope='${parsed.scope}'`;
       this.emitDecision({ kind: 'rejected', reason, request: parsed });
+      this.metrics?.tokensRejectedTotal.inc({ capability: parsed.name, code: 'allowlist_miss' });
       throw new CapabilityBrokerError('allowlist_miss', reason);
     }
     if (allowEntry.maxPerTask !== undefined) {
@@ -123,6 +130,7 @@ export class CapabilityBroker {
       if (used >= allowEntry.maxPerTask) {
         const reason = `budget exceeded: ${parsed.name} task=${parsed.taskId} used=${used} limit=${allowEntry.maxPerTask}`;
         this.emitDecision({ kind: 'rejected', reason, request: parsed });
+        this.metrics?.tokensRejectedTotal.inc({ capability: parsed.name, code: 'budget_exceeded' });
         throw new CapabilityBrokerError('budget_exceeded', reason);
       }
       this.perTaskCounts.set(key, used + 1);
@@ -147,6 +155,7 @@ export class CapabilityBroker {
     const signature = signTokenPayload(unsigned, this.signingKey);
     const token = CapabilityTokenSchema.parse({ ...unsigned, signature });
     this.emitDecision({ kind: 'issued', token, request: parsed });
+    this.metrics?.tokensIssuedTotal.inc({ capability: parsed.name, agent_role: parsed.agentRole });
     return token;
   }
 
@@ -162,18 +171,21 @@ export class CapabilityBroker {
   }): void {
     const { token, expectedName, expectedScope } = opts;
     if (token.name !== expectedName) {
+      this.metrics?.tokenValidationErrorsTotal.inc({ capability: token.name, code: 'wrong_capability' });
       throw new CapabilityBrokerError(
         'wrong_capability',
         `token name='${token.name}' does not match expected='${expectedName}'`,
       );
     }
     if (token.scope !== expectedScope) {
+      this.metrics?.tokenValidationErrorsTotal.inc({ capability: token.name, code: 'wrong_scope' });
       throw new CapabilityBrokerError(
         'wrong_scope',
         `token scope='${token.scope}' does not match expected='${expectedScope}'`,
       );
     }
     if (!verifyTokenSignature(token, this.signingKey)) {
+      this.metrics?.tokenValidationErrorsTotal.inc({ capability: token.name, code: 'invalid_signature' });
       throw new CapabilityBrokerError(
         'invalid_signature',
         'capability token signature does not verify against the configured key set',
@@ -181,12 +193,14 @@ export class CapabilityBroker {
     }
     const now = this.clock.now();
     if (now >= token.expiresAt) {
+      this.metrics?.tokenValidationErrorsTotal.inc({ capability: token.name, code: 'expired_token' });
       throw new CapabilityBrokerError(
         'expired_token',
         `token expired at ${new Date(token.expiresAt).toISOString()} (now=${new Date(now).toISOString()})`,
       );
     }
     if (token.singleUse && this.redeemedTokens.has(token.tokenId)) {
+      this.metrics?.tokenValidationErrorsTotal.inc({ capability: token.name, code: 'token_already_used' });
       throw new CapabilityBrokerError(
         'token_already_used',
         `single-use token ${token.tokenId} has already been redeemed`,
@@ -201,6 +215,7 @@ export class CapabilityBroker {
       name: token.name,
       taskId: token.taskId,
     });
+    this.metrics?.tokensRedeemedTotal.inc({ capability: token.name });
   }
 
   /** Test-only helper exposed for assertions. */

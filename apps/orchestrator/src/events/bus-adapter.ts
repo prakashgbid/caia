@@ -3,7 +3,7 @@
  * Called once during API server startup, after migrations have run.
  */
 
-import { eq, desc } from 'drizzle-orm';
+import { eq, gt, desc, and, type SQL } from 'drizzle-orm';
 import type { Db } from '../db/connection';
 import { events } from '../db/schema';
 import { eventBus, type EventDb, type DbEventRow, type EventQueryOpts } from '@chiefaia/event-bus-internal';
@@ -32,16 +32,25 @@ export function wireEventBus(db: Db): void {
     },
 
     queryEvents(opts: EventQueryOpts): DbEventRow[] {
-      let q = db.select().from(events).orderBy(desc(events.occurredAt)).limit(opts.limit ?? 200);
+      // Catchup queries (since) order ASC so projections process in
+      // chronological order; all other reads use DESC (most recent first).
+      const orderBy = opts.since
+        ? db.select().from(events).orderBy(events.occurredAt)
+        : db.select().from(events).orderBy(desc(events.occurredAt));
 
-      if (opts.correlationId) {
-        q = q.where(eq(events.correlationId, opts.correlationId)) as typeof q;
-      } else if (opts.entityId) {
-        q = q.where(eq(events.entityId, opts.entityId)) as typeof q;
-      } else if (opts.type) {
-        q = q.where(eq(events.type, opts.type)) as typeof q;
-      } else if (opts.projectSlug) {
-        q = q.where(eq(events.projectSlug, opts.projectSlug)) as typeof q;
+      let q = orderBy.limit(opts.limit ?? 200);
+
+      const conditions: SQL<unknown>[] = [];
+      if (opts.since) conditions.push(gt(events.occurredAt, opts.since));
+      if (opts.correlationId) conditions.push(eq(events.correlationId, opts.correlationId));
+      if (opts.entityId) conditions.push(eq(events.entityId, opts.entityId));
+      if (opts.type) conditions.push(eq(events.type, opts.type));
+      if (opts.projectSlug) conditions.push(eq(events.projectSlug, opts.projectSlug));
+
+      if (conditions.length === 1) {
+        q = q.where(conditions[0]) as typeof q;
+      } else if (conditions.length > 1) {
+        q = q.where(and(...conditions)) as typeof q;
       }
 
       return q.all().map(r => ({

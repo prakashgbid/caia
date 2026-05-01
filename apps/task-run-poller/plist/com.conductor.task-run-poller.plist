@@ -7,7 +7,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/node</string>
-        <string>/Users/MAC/Documents/projects/conductor/apps/task-run-poller/index.cjs</string>
+        <string>/Users/MAC/Documents/projects/caia/apps/task-run-poller/index.cjs</string>
     </array>
     <key>EnvironmentVariables</key>
     <dict>

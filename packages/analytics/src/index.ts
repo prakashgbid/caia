@@ -26,8 +26,23 @@ export { trackLessonStarted, trackLessonCompleted, trackArticleRead, trackPaperR
 
 export { trackGroupJoined, trackThreadPosted, trackCommentAdded, trackReactionAdded } from "./events/community";
 
-export { trackProductViewed, trackAddToCart, trackCheckoutStarted } from "./events/commerce";
-export type { ProductParams } from "./events/commerce";
+export {
+  trackProductViewed,
+  trackAddToCart,
+  trackRemoveFromCart,
+  trackCartViewed,
+  trackCartUpdated,
+  trackCartItemRemoved,
+  trackCartAbandoned,
+  trackCartCleared,
+  trackCartRecoveryEmailSent,
+  trackCartRecoveryEmailClicked,
+  trackCartRecovered,
+  trackCheckoutStarted,
+  trackCheckoutAbandoned,
+  trackCheckoutCompleted,
+} from "./events/commerce";
+export type { ProductParams, CartItem, CartParams } from "./events/commerce";
 
 export { trackCTAClicked } from "./events/cta";
 export type { CTAClickedParams } from "./events/cta";
@@ -35,6 +50,10 @@ export type { CTAClickedParams } from "./events/cta";
 export { trackScrollDepth, trackTimeOnPage, trackFullscreenToggled, trackSoundToggled, trackUserPreferenceChanged } from "./events/engagement";
 
 export { trackSignup, trackEmailCaptured, trackFirstBet, trackCertificationAchieved, trackReferralSent } from "./events/conversion";
+
+// ── Cart abandonment hook ─────────────────────────────────────────────────────
+export { useCartAbandonment } from "./useCartAbandonment";
+export type { UseCartAbandonmentOptions, UseCartAbandonmentReturn } from "./useCartAbandonment";
 
 // ── Low-level GA4 (use sparingly — prefer typed helpers above) ────────────────
 export { sendEvent, isValidMeasurementId } from "./integrations/ga4";

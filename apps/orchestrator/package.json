@@ -28,7 +28,10 @@
     "test:regression": "jest --testPathPattern \"tests/e2e/(pipeline|agents)\" --runInBand",
     "test:regression:pipeline": "jest --testPathPattern \"tests/e2e/pipeline\" --runInBand",
     "test:regression:agent": "jest --testPathPattern \"tests/e2e/agents\" --runInBand",
-    "test:safety": "vitest run --config vitest.safety.config.ts"
+    "test:safety": "vitest run --config vitest.safety.config.ts",
+    "test:notifications": "vitest run --config vitest.notifications.config.ts",
+    "test:stripe": "vitest run --config vitest.stripe.config.ts",
+    "test:billing": "vitest run --config vitest.billing.config.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.14",
@@ -55,10 +58,12 @@
     "@chiefaia/logger": "workspace:*",
     "@chiefaia/architecture-registry": "workspace:*",
     "@chiefaia/ticket-template": "workspace:*",
+    "@chiefaia/cache": "workspace:*",
     "@chiefaia/capability-broker": "workspace:*",
     "@chiefaia/mcp-allowlist-proxy": "workspace:*",
     "@chiefaia/tool-output-sanitizer": "workspace:*",
-    "@chiefaia/spend-guard": "workspace:*"
+    "@chiefaia/spend-guard": "workspace:*",
+    "stripe": "^17.7.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0",

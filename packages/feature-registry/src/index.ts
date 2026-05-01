@@ -59,3 +59,6 @@ export type {
 
 export { search } from './search';
 export type { SearchOpts, SearchClientDeps } from './search';
+
+export { recommendOne } from './recommend-one';
+export type { RecommendOneOpts, RecommendOneResult } from './recommend-one';

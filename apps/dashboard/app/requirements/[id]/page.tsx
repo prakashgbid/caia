@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { NotificationsPanel } from '../../../components/NotificationsPanel';
 
 interface Requirement {
   id: string;
@@ -107,6 +108,10 @@ export default function RequirementDetailPage({ params }: { params: { id: string
             <div style={{ fontSize: 13, color: '#a0aec0' }}>{row.value}</div>
           </div>
         ))}
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <NotificationsPanel requirementId={req.id} limit={20} />
       </div>
     </div>
   );

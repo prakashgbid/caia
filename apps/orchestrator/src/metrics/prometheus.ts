@@ -115,3 +115,40 @@ export const llmEstimatedSavedUsd = new Counter({
   labelNames: ['provider'],
   registers: [promRegistry],
 });
+
+// ─── Pipeline observability counters (G8) ─────────────────────────────────────
+// Populated by wirePipelineMetrics() in metrics/pipeline-metrics.ts.
+
+export const pipelineStagesTotal = new Counter({
+  name: 'conductor_pipeline_stages_total',
+  help: 'Total pipeline stage transitions (pipeline.stage.advanced events)',
+  labelNames: ['stage'],
+  registers: [promRegistry],
+});
+
+export const agentRunsTotal = new Counter({
+  name: 'conductor_agent_runs_total',
+  help: 'Total agent-run completions by agent role and outcome',
+  labelNames: ['agent', 'outcome'],
+  registers: [promRegistry],
+});
+
+export const storiesTotal = new Counter({
+  name: 'conductor_stories_total',
+  help: 'Total story lifecycle outcomes (validation_passed|failed, completed, pipeline_failed)',
+  labelNames: ['outcome'],
+  registers: [promRegistry],
+});
+
+export const workerCrashesTotal = new Counter({
+  name: 'conductor_worker_crashes_total',
+  help: 'Total worker crashes detected via stale heartbeat (worker.crashed events)',
+  registers: [promRegistry],
+});
+
+export const capsuleFreezesTotal = new Counter({
+  name: 'conductor_capsule_freezes_total',
+  help: 'Total ticket capsule-frozen events by status and skip reason',
+  labelNames: ['status', 'reason'],
+  registers: [promRegistry],
+});

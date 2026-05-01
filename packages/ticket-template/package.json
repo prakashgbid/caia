@@ -2,7 +2,7 @@
   "name": "@chiefaia/ticket-template",
   "version": "0.2.0",
   "private": true,
-  "description": "Strict, Zod-validated ticket template (v1) \u2014 the contract between Phase 1 agents (PO, BA, EA, DBA, BFF, UI, Security, Testing, Release) and the executor.",
+  "description": "Zod-validated structured ticket schema defining the interface between planning agents and the execution pipeline",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {

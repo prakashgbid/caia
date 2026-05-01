@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { parseTradeoffs } from '../lib/adr-tradeoffs';
 
 export interface Adr {
   id: string;
@@ -25,6 +26,51 @@ const STATUS_COLORS: Record<string, string> = {
   deprecated: '#718096',
   superseded: '#E53E3E',
 };
+
+function MiniTradeOffs({ consequences }: { consequences: string }) {
+  if (!consequences) return null;
+
+  const { positive, negative, raw, structured } = parseTradeoffs(consequences);
+
+  if (!structured) {
+    return <p style={{ color: '#e2e8f0', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>{raw}</p>;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {positive.length > 0 && (
+        <div style={{ background: '#1a2e1a', border: '1px solid #276749', borderRadius: 6, padding: '8px 10px' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#68d391', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+            ✓ Positive · {positive.length}
+          </div>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+            {positive.map((item, i) => (
+              <li key={i} style={{ display: 'flex', gap: 6, marginBottom: i < positive.length - 1 ? 4 : 0, alignItems: 'flex-start' }}>
+                <span style={{ color: '#68d391', marginTop: 3, flexShrink: 0, fontSize: 7 }}>▸</span>
+                <span style={{ color: '#c6f6d5', fontSize: 12, lineHeight: 1.5 }}>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {negative.length > 0 && (
+        <div style={{ background: '#2d1f0e', border: '1px solid #744210', borderRadius: 6, padding: '8px 10px' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#f6ad55', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+            ! Trade-offs · {negative.length}
+          </div>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+            {negative.map((item, i) => (
+              <li key={i} style={{ display: 'flex', gap: 6, marginBottom: i < negative.length - 1 ? 4 : 0, alignItems: 'flex-start' }}>
+                <span style={{ color: '#f6ad55', marginTop: 3, flexShrink: 0, fontSize: 7 }}>▸</span>
+                <span style={{ color: '#fbd38d', fontSize: 12, lineHeight: 1.5 }}>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AdrsList({ adrs }: Props) {
   const [search, setSearch] = useState('');
@@ -128,16 +174,16 @@ export function AdrsList({ adrs }: Props) {
               <div style={{ padding: '0 16px 16px', borderTop: '1px solid #2d3748' }}>
                 <div style={{ marginTop: '12px' }}>
                   <h4 style={{ color: '#718096', fontSize: '11px', textTransform: 'uppercase', marginBottom: '4px' }}>Context</h4>
-                  <p style={{ color: '#e2e8f0', fontSize: '13px', lineHeight: 1.6 }}>{adr.context}</p>
+                  <p style={{ color: '#e2e8f0', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>{adr.context}</p>
                 </div>
                 <div style={{ marginTop: '12px' }}>
                   <h4 style={{ color: '#718096', fontSize: '11px', textTransform: 'uppercase', marginBottom: '4px' }}>Decision</h4>
-                  <p style={{ color: '#e2e8f0', fontSize: '13px', lineHeight: 1.6 }}>{adr.decision}</p>
+                  <p style={{ color: '#e2e8f0', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>{adr.decision}</p>
                 </div>
                 {adr.consequences && (
                   <div style={{ marginTop: '12px' }}>
-                    <h4 style={{ color: '#718096', fontSize: '11px', textTransform: 'uppercase', marginBottom: '4px' }}>Consequences</h4>
-                    <p style={{ color: '#e2e8f0', fontSize: '13px', lineHeight: 1.6 }}>{adr.consequences}</p>
+                    <h4 style={{ color: '#718096', fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px' }}>Consequences</h4>
+                    <MiniTradeOffs consequences={adr.consequences} />
                   </div>
                 )}
               </div>

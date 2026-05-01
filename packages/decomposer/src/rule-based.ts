@@ -18,20 +18,30 @@ export type VerbIntent =
   | 'refactor' // restructure existing code without behaviour change
   | 'extract' // pull a module/function/component out into its own unit
   | 'audit' // enumerate scope, automated checks, manual pass, report
+  | 'spike' // research/investigate: frame → research → recommend → document
+  | 'multi' // multi-agent collaboration: protocol → per-agent impl → orchestration → e2e test
   | 'add'; // default: feature-add (the original template set)
 
 const FIX_VERBS = ['fix', 'broken', 'bug', 'crash', 'regress', 'not working', "doesn't work", "won't load", 'error', 'unresponsive'];
 const REFACTOR_VERBS = ['refactor', 'restructure', 'simplify', 'clean up', 'consolidate', 'decouple', 'modularize'];
 const EXTRACT_VERBS = ['extract', 'pull out', 'split out', 'move into a package', 'move to a package', 'separate package'];
 const AUDIT_VERBS = ['audit', 'review', 'assess', 'inspect', 'compliance', 'wcag', 'a11y', 'accessibility audit', 'security audit', 'inventory'];
+const SPIKE_VERBS = ['research', 'investigate', 'compare', 'evaluate', 'benchmark', 'proof of concept', 'poc', 'trade-off', 'trade off', 'tradeoff', 'recommend', 'spike'];
+const MULTI_VERBS = ['multi-agent', 'multi agent', 'agent collab', 'agent collaboration', 'orchestrate agents', 'coordinate agents', 'agent handoff', 'agent pipeline', 'agent workflow', 'agentic pipeline', 'agentic workflow'];
 
 function detectVerbIntent(prompt: string): VerbIntent {
   const lower = prompt.toLowerCase();
 
   // Order matters: extract is more specific than refactor, audit is more
   // specific than fix (an "audit for bugs" should not become a fix story).
+  // Spike is checked before audit/fix — "research + compare + recommend"
+  // is a distinct workflow that shouldn't collapse into an audit or add.
+  // Multi-agent is checked before extract/refactor as it is the most
+  // specific orchestration intent and must not collapse into a generic add.
+  if (MULTI_VERBS.some((v) => lower.includes(v))) return 'multi';
   if (EXTRACT_VERBS.some((v) => lower.includes(v))) return 'extract';
   if (AUDIT_VERBS.some((v) => lower.includes(v))) return 'audit';
+  if (SPIKE_VERBS.some((v) => lower.includes(v))) return 'spike';
   if (REFACTOR_VERBS.some((v) => lower.includes(v))) return 'refactor';
   if (FIX_VERBS.some((v) => lower.includes(v))) return 'fix';
   return 'add';
@@ -227,6 +237,85 @@ function templatesFor(verb: VerbIntent, sectionLabel: string): Array<{
         },
       ];
 
+    case 'spike':
+      return [
+        {
+          title: `Frame the research question: ${trimmed}`,
+          description: `Define what you are trying to decide, the evaluation criteria (performance, maintenance burden, licence, ecosystem fit), and the constraints that rule options out before any comparison begins.`,
+          acceptance: [
+            'A research brief exists with the decision question, criteria, and constraints.',
+            'Out-of-scope options are explicitly listed with one-line rationale.',
+          ],
+        },
+        {
+          title: `Research and compare options: ${trimmed}`,
+          description: `For each candidate, collect empirical evidence: benchmarks, integration complexity, community health, and any show-stopper issues. Record raw data in a comparable format.`,
+          acceptance: [
+            'Each candidate is evaluated against every criterion in the research brief.',
+            'Benchmark data (or links to authoritative benchmarks) is attached.',
+            'At least one proof-of-concept or integration test drives real numbers where available.',
+          ],
+        },
+        {
+          title: `Evaluate trade-offs and recommend: ${trimmed}`,
+          description: `Score or rank the options against the criteria. Surface the key trade-offs. State a clear recommendation with the reasoning — not just a ranking table.`,
+          acceptance: [
+            'A recommendation is stated with primary and secondary reasons.',
+            'Risks of the chosen option are listed with mitigations.',
+            'Dissenting options are addressed ("why not X") for the top 1–2 alternatives.',
+          ],
+        },
+        {
+          title: `Document findings in an ADR: ${trimmed}`,
+          description: `Write up the decision as an Architecture Decision Record (or equivalent lightweight doc). Land it in caia/docs/ or the relevant docs folder so the decision is discoverable and reversible.`,
+          acceptance: [
+            'An ADR (or decision doc) is committed to the agreed docs location.',
+            'The doc includes: context, decision, consequences, and superseded-by field.',
+            'A one-paragraph summary is added to the relevant README or runbook.',
+          ],
+        },
+      ];
+
+    case 'multi':
+      return [
+        {
+          title: `Design agent interaction protocol: ${trimmed}`,
+          description: `Define the message contracts, sequencing rules, and failure semantics for every agent-to-agent hand-off in the pipeline. Commit this as a typed schema (e.g. Zod or JSON Schema) before any implementation begins.`,
+          acceptance: [
+            'A typed message schema exists for every inter-agent exchange.',
+            'Sequencing rules (serial vs parallel) are documented with a diagram or table.',
+            'Failure/timeout semantics (retry, dead-letter, escalation) are specified.',
+          ],
+        },
+        {
+          title: `Implement per-agent responsibilities: ${trimmed}`,
+          description: `Build each agent in isolation: input validation, core logic, output emission. Each agent must be unit-testable without spinning up the full pipeline.`,
+          acceptance: [
+            'Each agent has its own module with a typed input/output contract.',
+            'Unit tests cover happy path + at least one error path per agent.',
+            'No agent imports another agent directly — coupling is through the message contract only.',
+          ],
+        },
+        {
+          title: `Wire orchestration and agent handoffs: ${trimmed}`,
+          description: `Connect agents through the orchestration layer (queue, event bus, or direct call per the ADR). Implement the coordination logic: routing, fan-out/fan-in, result aggregation, and timeout handling.`,
+          acceptance: [
+            'The orchestrator routes messages between agents as per the interaction protocol.',
+            'Fan-out (parallel dispatch) and fan-in (result aggregation) are tested.',
+            'A timeout or circuit-breaker is in place for every remote agent call.',
+          ],
+        },
+        {
+          title: `Validate end-to-end agent pipeline: ${trimmed}`,
+          description: `Run the full agent workflow from trigger to final output against realistic input. Confirm deterministic output in test mode, measure latency in live mode, and verify that every failure path surfaces an observable error rather than silently hanging.`,
+          acceptance: [
+            'An integration test drives the full pipeline with a representative prompt and asserts the expected final output.',
+            'Every failure path emits an observable error (log + metric + non-zero exit / rejected promise).',
+            'Wall-clock latency is measured and within the agreed SLO (or explicitly documented as a known gap).',
+          ],
+        },
+      ];
+
     case 'add':
     default:
       return [
@@ -288,6 +377,8 @@ export function decomposeRuleBased(prompt: string, _config: DecomposerConfig = {
     if (verb === 'add') {
       storyCount = Math.min(Math.max(2, Math.ceil(section.split(/\s+/).length / 10)), 4);
     } else {
+      // fix/refactor/extract/audit/spike/multi: always emit the full template
+      // set because each step is an irreducible part of the workflow.
       storyCount = templates.length;
     }
     const stories: DecompositionNode[] = [];

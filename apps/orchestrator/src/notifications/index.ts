@@ -6,6 +6,8 @@ import { execSync } from 'child_process';
 const { nanoid } = require('nanoid') as { nanoid: (size?: number) => string };
 
 import type { NotificationChannel, NotificationKind } from '../requirements/types';
+import type { Db } from '../db/connection';
+import { getNotificationStore } from './store';
 
 export interface PendingNotification {
   id: string;
@@ -19,10 +21,16 @@ export interface PendingNotification {
 export class NotificationQueue {
   private queue: PendingNotification[] = [];
   private readonly logPath: string;
+  private db: Db | null = null;
 
   constructor(conductorDir?: string) {
     const dir = conductorDir ?? path.join(os.homedir(), '.conductor');
     this.logPath = path.join(dir, 'notifications.log');
+  }
+
+  /** Attach a Drizzle DB instance so enqueue() also persists to SQLite. */
+  attachDb(db: Db): void {
+    this.db = db;
   }
 
   enqueue(
@@ -40,6 +48,14 @@ export class NotificationQueue {
       ts: new Date().toISOString(),
     };
     this.queue.push(notif);
+
+    if (this.db) {
+      try {
+        getNotificationStore(this.db).insert({ requirementId, kind, message, channel });
+      } catch {
+        // best-effort persistence — in-memory queue remains the source of truth
+      }
+    }
 
     if (channel === 'native' || channel === 'both') {
       this.sendNative(message, kind);

@@ -25,6 +25,7 @@ import { usePathname } from 'next/navigation';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useUnseenBadges } from '../../hooks/useUnseenBadges';
 import { NavProjectSelector } from '../NavProjectSelector';
+import { NotificationBell } from '../NotificationBell';
 import { NAV_GROUPS, NAV_LEAVES, kindToTab, groupUnseenCount } from './groups';
 
 const STORAGE_KEY = 'nav.expanded';
@@ -185,7 +186,10 @@ export function Sidebar() {
     >
       {/* Brand header */}
       <div style={{ padding: '0 16px 16px', borderBottom: '1px solid #2d3748', marginBottom: 4 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#90cdf4' }}>🎼 Conductor</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#90cdf4' }}>🎼 Conductor</div>
+          <NotificationBell />
+        </div>
         <div style={{ fontSize: 11, color: connected ? '#68d391' : '#fc8181', marginTop: 4 }}>
           {connected ? '● live' : '○ reconnecting...'}
         </div>

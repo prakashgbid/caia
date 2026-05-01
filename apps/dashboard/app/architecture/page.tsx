@@ -105,14 +105,18 @@ const C = {
 
 /* ─── helpers ────────────────────────────────────────────────────────────── */
 
-async function jsonOrNull<T>(url: string): Promise<T | null> {
+async function jsonFetch<T>(url: string): Promise<{ data: T | null; ok: boolean }> {
   try {
     const r = await fetch(url);
-    if (!r.ok) return null;
-    return (await r.json()) as T;
+    if (!r.ok) return { data: null, ok: false };
+    return { data: (await r.json()) as T, ok: true };
   } catch {
-    return null;
+    return { data: null, ok: false };
   }
+}
+
+async function jsonOrNull<T>(url: string): Promise<T | null> {
+  return (await jsonFetch<T>(url)).data;
 }
 
 function relTime(epochMs: number): string {
@@ -434,15 +438,18 @@ export default function ArchitecturePage() {
     const refresh = async () => {
       setFetchError(null);
       try {
-        const [s, r, e] = await Promise.all([
-          jsonOrNull<Summary>('/api/architecture/summary'),
-          jsonOrNull<{ rows: ArtifactRow[] }>('/api/architecture/recent?limit=15'),
-          jsonOrNull<{ rows: ExtractRun[] }>('/api/architecture/extract-runs?limit=10'),
+        const [sRes, rRes, eRes] = await Promise.all([
+          jsonFetch<Summary>('/api/architecture/summary'),
+          jsonFetch<{ rows: ArtifactRow[] }>('/api/architecture/recent?limit=15'),
+          jsonFetch<{ rows: ExtractRun[] }>('/api/architecture/extract-runs?limit=10'),
         ]);
         if (cancelled) return;
-        setSummary(s);
-        setRecent(r?.rows ?? []);
-        setExtractRuns(e?.rows ?? []);
+        if (!sRes.ok || !rRes.ok || !eRes.ok) {
+          setFetchError('Failed to load data from the server.');
+        }
+        setSummary(sRes.data);
+        setRecent(rRes.data?.rows ?? []);
+        setExtractRuns(eRes.data?.rows ?? []);
         setLoadedAt(Date.now());
       } catch (err) {
         if (!cancelled) setFetchError(String((err as Error)?.message ?? err));
@@ -568,24 +575,28 @@ export default function ArchitecturePage() {
 
         {/* ── Panel 2: Per-domain browser ── */}
         <Panel id="arch-domain" title="Browse by tech sub-domain">
-          <div role="group" aria-label="Tech sub-domain filter" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-            {TECH_SUB_DOMAINS.map((tsd) => (
-              <button
-                key={tsd}
-                onClick={() => { setSelectedDomain(tsd); setDomainSearch(''); }}
-                aria-pressed={tsd === selectedDomain}
-                style={{
-                  padding: '4px 12px', borderRadius: 14, fontSize: 12, cursor: 'pointer',
-                  border: tsd === selectedDomain ? `2px solid ${C.accent}` : `1px solid ${C.border}`,
-                  background: tsd === selectedDomain ? `${C.accent}20` : C.panelAlt,
-                  color: tsd === selectedDomain ? C.accent : C.muted,
-                  fontWeight: tsd === selectedDomain ? 600 : 400,
-                  transition: 'all 0.12s',
-                }}
-              >
-                {tsd}
-              </button>
-            ))}
+          <div style={{ marginBottom: 12 }}>
+            <label
+              htmlFor="arch-domain-select"
+              style={{ color: C.faint, fontSize: 11, display: 'block', marginBottom: 4 }}
+            >
+              Tech sub-domain
+            </label>
+            <select
+              id="arch-domain-select"
+              aria-label="Tech sub-domain"
+              value={selectedDomain}
+              onChange={(e) => { setSelectedDomain(e.target.value); setDomainSearch(''); }}
+              style={{
+                background: C.panelAlt, border: `1px solid ${C.border}`, borderRadius: 6,
+                color: C.text, padding: '6px 10px', fontSize: 12,
+                width: '100%', outline: 'none',
+              }}
+            >
+              {TECH_SUB_DOMAINS.map((tsd) => (
+                <option key={tsd} value={tsd}>{tsd}</option>
+              ))}
+            </select>
           </div>
 
           {/* search within domain */}

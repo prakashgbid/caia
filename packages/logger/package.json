@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/logger",
   "version": "0.3.0",
-  "description": "Structured logging (Pino-backed) for CAIA applications",
+  "description": "Structured logging (Pino-backed) with built-in secret redaction for Node.js applications",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

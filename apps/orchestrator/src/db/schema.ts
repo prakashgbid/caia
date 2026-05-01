@@ -1306,3 +1306,171 @@ export const spendRecords = sqliteTable('spend_records', {
   index('spend_records_ts_idx').on(t.tsMsEpoch),
 ]);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// users — lightweight user identity for notification ownership.
+// Mirrors `apps/orchestrator/src/db/migrations/0041_users.sql`.
+// ─────────────────────────────────────────────────────────────────────────────
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  displayName: text('display_name').notNull().default(''),
+  avatarUrl: text('avatar_url'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// notifications — persistent notification inbox for the orchestrator.
+// Mirrors `apps/orchestrator/src/db/migrations/0042_notifications.sql`.
+//
+// Replaces the ephemeral in-memory NotificationQueue for durability: every
+// enqueue() call writes a row here so notifications survive process restarts
+// and are queryable via the REST API.
+//
+// kind: 'started' | 'progress' | 'completed' | 'blocked'
+// channel: 'chat' | 'native' | 'both'
+// metadata: JSON-encoded arbitrary extra payload (e.g. worktree path, PR url)
+// ─────────────────────────────────────────────────────────────────────────────
+export const notifications = sqliteTable('notifications', {
+  id: text('id').primaryKey(),
+  requirementId: text('requirement_id'),
+  taskId: text('task_id'),
+  kind: text('kind').notNull(),
+  message: text('message').notNull(),
+  channel: text('channel').notNull().default('both'),
+  isRead: integer('is_read', { mode: 'boolean' }).notNull().default(false),
+  readAt: text('read_at'),
+  metadata: text('metadata'),
+  createdAt: text('created_at').notNull(),
+}, (t) => [
+  index('notifications_requirement_id_idx').on(t.requirementId),
+  index('notifications_task_id_idx').on(t.taskId),
+  index('notifications_kind_idx').on(t.kind),
+  index('notifications_is_read_idx').on(t.isRead),
+  index('notifications_created_at_idx').on(t.createdAt),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// subscriptions — email subscription inbox for the orchestrator.
+// Mirrors `apps/orchestrator/src/db/migrations/0043_subscriptions.sql`.
+//
+// plan: 'free' | 'pro' | 'enterprise'
+// status: 'active' | 'cancelled' | 'expired'
+// cancelledAt: ISO timestamp when soft-deleted
+// ─────────────────────────────────────────────────────────────────────────────
+export const subscriptions = sqliteTable('subscriptions', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull(),
+  plan: text('plan').notNull().default('free'),
+  status: text('status').notNull().default('active'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+  cancelledAt: text('cancelled_at'),
+  // Stripe billing fields (0046_stripe_integration)
+  stripeCustomerId: text('stripe_customer_id').unique(),
+  stripeSubscriptionId: text('stripe_subscription_id').unique(),
+  stripePriceId: text('stripe_price_id'),
+}, (t) => [
+  index('subscriptions_email_idx').on(t.email),
+  index('subscriptions_status_idx').on(t.status),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// recommendations — formal recommendation records for spike/research tasks
+// (migration 0045).
+//
+// When an AI worker completes a spike or research task and must "recommend one"
+// option from multiple alternatives, it writes a row here via the
+// `recommend_one` MCP tool. The `chosen` field names the selected option;
+// `alternatives` (JSON array of {name, reason}) captures the options that were
+// considered but not chosen, preserving the decision rationale for audit.
+//
+// id prefix: rcm_
+// ─────────────────────────────────────────────────────────────────────────────
+export const recommendations = sqliteTable('recommendations', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  chosen: text('chosen').notNull(),
+  rationale: text('rationale').notNull().default(''),
+  alternatives: text('alternatives').notNull().default('[]'),
+  context: text('context').notNull().default(''),
+  taskId: text('task_id'),
+  requirementId: text('requirement_id'),
+  projectId: text('project_id').references(() => projects.id),
+  scope: text('scope').notNull().default('global'),
+  createdAt: text('created_at').notNull(),
+}, (t) => [
+  index('rcm_project_idx').on(t.projectId),
+  index('rcm_task_idx').on(t.taskId),
+  index('rcm_created_idx').on(t.createdAt),
+]);
+
+// projection_checkpoints — last-processed event cursor per named projection
+// (migration 0047). See apps/orchestrator/src/projections/runner.ts.
+export const projectionCheckpoints = sqliteTable('projection_checkpoints', {
+  projectionName: text('projection_name').primaryKey(),
+  lastEventId: text('last_event_id'),
+  lastEventOccurredAt: text('last_event_occurred_at'),
+  processedCount: integer('processed_count').notNull().default(0),
+  errorCount: integer('error_count').notNull().default(0),
+  lastError: text('last_error'),
+  lastErrorAt: integer('last_error_at'),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  index('pc_updated_idx').on(t.updatedAt),
+]);
+
+// chores — single-domain backend tasks routed directly to the backend specialist.
+// Target SLO: 20 s. No multi-agent collaboration required. (migration 0048)
+// status: 'queued' | 'triaging' | 'executing' | 'done' | 'failed'
+export const chores = sqliteTable('chores', {
+  id: text('id').primaryKey(),
+  prompt: text('prompt').notNull(),
+  status: text('status').notNull().default('queued'),
+  domain: text('domain').notNull().default('backend'),
+  sloMs: integer('slo_ms').notNull().default(20000),
+  storyId: text('story_id'),
+  projectId: text('project_id').references(() => projects.id),
+  scope: text('scope').notNull().default('global'),
+  createdAt: text('created_at').notNull(),
+  startedAt: text('started_at'),
+  finishedAt: text('finished_at'),
+  errorMessage: text('error_message'),
+}, (t) => [
+  index('chore_status_idx').on(t.status),
+  index('chore_project_idx').on(t.projectId),
+  index('chore_story_idx').on(t.storyId),
+  index('chore_created_idx').on(t.createdAt),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// redis_cache_options — per-project Redis cache configuration (migration 0044).
+//
+// Stores Redis connection params and cache policy settings so agents and
+// services can discover named Redis configs without hard-coding connection
+// strings. The src/cache/redis-options.ts store wraps this table.
+//
+// status: 'active' | 'disabled' | 'deleted'  (soft-delete via 'deleted')
+// enabled: quick on/off toggle without changing status
+// ─────────────────────────────────────────────────────────────────────────────
+export const redisCacheOptions = sqliteTable('redis_cache_options', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  projectId: text('project_id').references(() => projects.id),
+  host: text('host').notNull().default('localhost'),
+  port: integer('port').notNull().default(6379),
+  dbIndex: integer('db_index').notNull().default(0),
+  password: text('password'),
+  keyPrefix: text('key_prefix').notNull().default(''),
+  ttlSeconds: integer('ttl_seconds').notNull().default(3600),
+  maxEntries: integer('max_entries'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  status: text('status').notNull().default('active'),
+  scope: text('scope').notNull().default('global'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (t) => [
+  index('rco_project_idx').on(t.projectId),
+  index('rco_enabled_status_idx').on(t.enabled, t.status),
+  index('rco_scope_idx').on(t.scope),
+]);
+

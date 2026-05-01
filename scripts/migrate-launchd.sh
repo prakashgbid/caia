@@ -17,7 +17,12 @@ echo ""
 
 # Step 1: ensure the daemons are actually built. The launchd plists point at dist/* artifacts.
 echo "=== Step 1: build daemon apps ==="
-( cd "$CAIA_ROOT" && pnpm --filter '@caia-app/core' --filter '@caia-app/completeness-sentinel' build )
+( cd "$CAIA_ROOT" && pnpm \
+    --filter '@caia-app/core' \
+    --filter '@caia-app/completeness-sentinel' \
+    --filter '@caia-app/story-backfiller' \
+    --filter '@caia-app/task-run-poller' \
+    build )
 
 # Plists to migrate. Format: label|old|new
 PLAN=(

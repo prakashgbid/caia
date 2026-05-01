@@ -1,5 +1,7 @@
 'use client';
 
+import { VerbIntentBadge, type VerbIntent } from './VerbIntentBadge';
+
 type TaskStatus = 'queued' | 'running' | 'blocked' | 'completed' | 'failed' | 'cancelled';
 
 interface Task {
@@ -12,6 +14,7 @@ interface Task {
   startedAt?: string;
   completedAt?: string;
   blockedBy?: string[];
+  verbIntent?: VerbIntent;
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
@@ -74,7 +77,12 @@ export function TaskTable({ tasks }: { tasks: Task[] }) {
               active.map(task => (
                 <tr key={task.id} style={{ borderBottom: '1px solid #2d3748' }}>
                   <td style={{ padding: '8px', fontFamily: 'monospace', color: '#90cdf4' }}>{task.id}</td>
-                  <td style={{ padding: '8px' }}>{task.title}</td>
+                  <td style={{ padding: '8px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' as const }}>
+                      {task.verbIntent && <VerbIntentBadge intent={task.verbIntent} size="sm" />}
+                      {task.title}
+                    </span>
+                  </td>
                   <td style={{ padding: '8px' }}><Badge status={task.status} /></td>
                   <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '11px', color: '#718096' }}>
                     {task.cwd.replace(process.env['HOME'] ?? '', '~')}

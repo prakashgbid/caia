@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/cli",
   "version": "0.1.0",
-  "description": "CAIA CLI \u2014 scaffold utilities, sites, and agents",
+  "description": "CLI for scaffolding AI-driven software pipelines, packages, and agents",
   "type": "module",
   "bin": {
     "caia": "./bin/caia.js"

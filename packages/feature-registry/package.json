@@ -2,7 +2,7 @@
   "name": "@chiefaia/feature-registry",
   "version": "0.1.0",
   "private": true,
-  "description": "Fast, local, token-cheap feature registry. PO Agent queries it before classifying lifecycle (new vs enhance). Hybrid sqlite-vec + FTS5 search; nomic-embed-text via Ollama; zero Claude tokens per classification.",
+  "description": "Fast, local feature registry with hybrid SQLite full-text and vector search (nomic-embed-text via Ollama). Enables zero-token feature classification and lifecycle detection (new vs. enhancement).",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {

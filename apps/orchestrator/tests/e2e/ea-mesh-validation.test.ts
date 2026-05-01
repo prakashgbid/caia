@@ -130,11 +130,9 @@ const PROMPT_CASES: readonly PromptCase[] = [
     tag: 'test-heavy',
     scenario: 'test-heavy',
     body: 'add an accessibility audit pipeline + WCAG 2.1 AA conformance tests — every page rendered should pass axe-core checks; add a CI job that fails on regressions',
-    // Accessibility maps to 'ui' per TECH_TO_MACRO. The 'ci-cd' / 'testing'
-    // keywords ('axe-core', 'CI job', 'audit pipeline') are not yet wired
-    // into the keyword triage — surfaced as a P1 gap in the validation
-    // report rather than treated as a mesh-side defect.
-    expectedDomains: ['ui'],
+    // P1 fix (VAL-2026-04-30-051730-8-ea-he): 'axe-core' → testing (quality-security),
+    // 'audit pipeline' → ci-cd (platform). Updated expected to reflect wired keywords.
+    expectedDomains: ['ui', 'quality-security', 'platform'],
   },
   {
     tag: 'chore',

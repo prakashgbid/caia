@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
+import { VerbIntentBadge, type VerbIntent } from './VerbIntentBadge';
 
 type RequirementState =
   | 'captured' | 'refining' | 'specced' | 'ready'
@@ -34,6 +35,7 @@ interface Requirement {
   spec?: RequirementSpec;
   linkedTaskIds: string[];
   notes: RequirementNote[];
+  verbIntent?: VerbIntent;
 }
 
 const COLUMNS: RequirementState[] = [
@@ -321,6 +323,7 @@ function RequirementDrawer({ req, onClose }: { req: Requirement; onClose: () => 
       <span style={{ ...styles.badge, background: PRIORITY_COLORS[req.priority] ?? '#718096', color: '#1a202c', fontSize: '11px' }}>
         {PRIORITY_LABELS[req.priority]}
       </span>
+      {req.verbIntent && <>{'  '}<VerbIntentBadge intent={req.verbIntent} size="md" /></>}
       <p style={styles.drawerLabel}>ID</p>
       <p style={{ ...styles.drawerValue, fontFamily: 'monospace', fontSize: '12px' }}>{req.id}</p>
       <p style={styles.drawerLabel}>Description</p>
@@ -368,15 +371,20 @@ function RequirementDrawer({ req, onClose }: { req: Requirement; onClose: () => 
   );
 }
 
+const VERB_INTENTS: VerbIntent[] = ['fix', 'refactor', 'extract', 'audit', 'spike', 'add'];
+
 export function RequirementsKanban() {
   const { data: reqs = [], mutate: reload } = useSWR<Requirement[]>('/api/requirements', fetcher, { refreshInterval: 3000 });
   const [selected, setSelected] = useState<Requirement | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [stateFilter, setStateFilter] = useState<RequirementState | null>(null);
+  const [intentFilter, setIntentFilter] = useState<VerbIntent | null>(null);
+
+  const filteredReqs = intentFilter ? reqs.filter(r => r.verbIntent === intentFilter) : reqs;
 
   const byState: Record<RequirementState, Requirement[]> = {} as Record<RequirementState, Requirement[]>;
   for (const s of COLUMNS) byState[s] = [];
-  for (const r of reqs) {
+  for (const r of filteredReqs) {
     if (byState[r.state]) byState[r.state].push(r);
   }
 
@@ -398,7 +406,7 @@ export function RequirementsKanban() {
   return (
     <div style={styles.container}>
       <div style={styles.topBar}>
-        <span style={{ fontSize: '12px', color: '#718096' }}>Filter:</span>
+        <span style={{ fontSize: '12px', color: '#718096' }}>State:</span>
         {COLUMNS.map(s => (
           <button
             key={s}
@@ -410,6 +418,22 @@ export function RequirementsKanban() {
           >
             {s}
             {byState[s].length > 0 && ` (${byState[s].length})`}
+          </button>
+        ))}
+      </div>
+      <div style={{ ...styles.topBar, marginBottom: '12px' }}>
+        <span style={{ fontSize: '12px', color: '#718096' }}>Intent:</span>
+        {VERB_INTENTS.map(v => (
+          <button
+            key={v}
+            style={{
+              ...styles.filterChip,
+              ...(intentFilter === v ? styles.filterChipActive : {}),
+              padding: '3px 8px',
+            }}
+            onClick={() => setIntentFilter(intentFilter === v ? null : v)}
+          >
+            <VerbIntentBadge intent={v} size="sm" />
           </button>
         ))}
         <button style={styles.createBtn} onClick={() => setShowCreate(true)}>+ New Requirement</button>
@@ -444,6 +468,7 @@ export function RequirementsKanban() {
                     ...styles.priorityDot,
                     background: PRIORITY_COLORS[req.priority] ?? '#718096',
                   }} />
+                  {req.verbIntent && <VerbIntentBadge intent={req.verbIntent} size="sm" />}
                   {req.labels.slice(0, 2).map(l => <span key={l} style={styles.badge}>{l}</span>)}
                   {req.linkedTaskIds.length > 0 && (
                     <span style={{ ...styles.badge, background: '#553c9a' }}>

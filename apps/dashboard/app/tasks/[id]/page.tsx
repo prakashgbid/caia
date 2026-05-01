@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { NotificationsPanel } from '../../../components/NotificationsPanel';
 
 interface Task {
   id: string;
@@ -126,6 +127,10 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       )}
+
+      <div style={{ marginTop: 24 }}>
+        <NotificationsPanel taskId={task.id} limit={20} />
+      </div>
     </div>
   );
 }
