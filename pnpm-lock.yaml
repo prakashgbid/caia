@@ -178,6 +178,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0
         version: 1.29.0(zod@3.25.76)
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -209,6 +212,9 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      '@opentelemetry/sdk-trace-base':
+        specifier: ^2.7.0
+        version: 2.7.0(@opentelemetry/api@1.9.1)
       '@playwright/test':
         specifier: ^1.44.0
         version: 1.59.1
@@ -1019,6 +1025,19 @@ importers:
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/local-llm-router:
+    dependencies:
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
+      '@opentelemetry/exporter-trace-otlp-http':
+        specifier: ^0.215.0
+        version: 0.215.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources':
+        specifier: ^2.7.0
+        version: 2.7.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-node':
+        specifier: ^0.215.0
+        version: 0.215.0(@opentelemetry/api@1.9.1)
     devDependencies:
       '@chiefaia/eslint-config':
         specifier: workspace:*
@@ -1029,6 +1048,9 @@ importers:
       '@chiefaia/vitest-config':
         specifier: workspace:*
         version: link:../../configs/vitest-config
+      '@opentelemetry/sdk-trace-base':
+        specifier: ^2.7.0
+        version: 2.7.0(@opentelemetry/api@1.9.1)
       '@types/node':
         specifier: ^20
         version: 20.19.39

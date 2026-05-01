@@ -1,0 +1,275 @@
+# caia/observability/docker-compose.langfuse.yml
+#
+# Self-hosted Langfuse v3 stack for CAIA observability.
+#
+# Tier-1 of the AI-first feedback loop blueprint (per
+# `reports/caia-ai-tech-modernization-proposal-2026-04-30.md` §7):
+# this is the substrate that ingests every OTel `gen_ai.*` span the
+# orchestrator + router + agents emit. Without this stack running,
+# the daily DSPy compile (P0.6 in §8) has nothing to read and the
+# smart CI/CD agent has no introspection surface.
+#
+# Constraint flags:
+# - Self-hosted only. No SaaS Langfuse Cloud. Per
+#   `feedback_no_api_key_billing.md` and §8 anti-pattern C.
+# - All ports bound to 127.0.0.1. No exposure off-Mac.
+# - Default UI port 3001 (free on Mac; conflicts with Mac dashboard
+#   7777 and orchestrator 7776 are intentionally avoided).
+# - Admin password sourced from Vault at bootstrap time via
+#   `init-langfuse-secrets.sh`. Never committed in plaintext.
+# - Runs as its own Docker stack, isolated from the orchestrator
+#   daemon (which is launchd-managed, not Docker). Bringing this
+#   stack up / down does NOT touch the orchestrator.
+#
+# Operator runbook: `caia/docs/observability-langfuse.md`.
+# Startup:  ./init-langfuse-secrets.sh && docker compose -f docker-compose.langfuse.yml up -d
+# Healthcheck: ./smoke-test.sh
+# Shutdown: docker compose -f docker-compose.langfuse.yml down
+
+name: caia-observability
+
+services:
+  # ───────────────────────────────────────────────────────────────
+  # Postgres — Langfuse metadata store (users, projects, prompts,
+  # datasets, sessions, evals). Trace events live in ClickHouse.
+  # ───────────────────────────────────────────────────────────────
+  langfuse-postgres:
+    image: postgres:15-alpine
+    container_name: caia-langfuse-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LANGFUSE_POSTGRES_DB:-langfuse}
+      POSTGRES_USER: ${LANGFUSE_POSTGRES_USER:-langfuse}
+      POSTGRES_PASSWORD: ${LANGFUSE_POSTGRES_PASSWORD:?LANGFUSE_POSTGRES_PASSWORD must be set}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - langfuse-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LANGFUSE_POSTGRES_USER:-langfuse} -d ${LANGFUSE_POSTGRES_DB:-langfuse}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - langfuse-internal
+    # 127.0.0.1-only is enforced by NOT publishing the postgres port.
+    # Inter-container comms use the langfuse-internal docker network.
+
+  # ───────────────────────────────────────────────────────────────
+  # ClickHouse — high-volume trace + observation event store. Sized
+  # for ~5M spans/day per §6.7 of the modernization proposal.
+  # ───────────────────────────────────────────────────────────────
+  langfuse-clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    container_name: caia-langfuse-clickhouse
+    restart: unless-stopped
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: ${LANGFUSE_CLICKHOUSE_DB:-default}
+      CLICKHOUSE_USER: ${LANGFUSE_CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:?LANGFUSE_CLICKHOUSE_PASSWORD must be set}
+    volumes:
+      - langfuse-clickhouse-data:/var/lib/clickhouse
+      - langfuse-clickhouse-logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - langfuse-internal
+
+  # ───────────────────────────────────────────────────────────────
+  # Redis — queue between langfuse-web (ingest) and langfuse-worker
+  # (background processing).
+  # ───────────────────────────────────────────────────────────────
+  langfuse-redis:
+    image: redis:7-alpine
+    container_name: caia-langfuse-redis
+    restart: unless-stopped
+    command:
+      - --requirepass
+      - ${LANGFUSE_REDIS_PASSWORD:?LANGFUSE_REDIS_PASSWORD must be set}
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    volumes:
+      - langfuse-redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $${LANGFUSE_REDIS_PASSWORD} ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      LANGFUSE_REDIS_PASSWORD: ${LANGFUSE_REDIS_PASSWORD}
+    networks:
+      - langfuse-internal
+
+  # ───────────────────────────────────────────────────────────────
+  # MinIO — S3-compatible blob store for Langfuse raw event payloads
+  # (the trace payloads themselves; ClickHouse stores indexed metadata).
+  # ───────────────────────────────────────────────────────────────
+  langfuse-minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    container_name: caia-langfuse-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9091"
+    environment:
+      MINIO_ROOT_USER: ${LANGFUSE_MINIO_ROOT_USER:-langfuse-minio-admin}
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_MINIO_ROOT_PASSWORD:?LANGFUSE_MINIO_ROOT_PASSWORD must be set}
+    volumes:
+      - langfuse-minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - langfuse-internal
+
+  # ───────────────────────────────────────────────────────────────
+  # langfuse-worker — background processor: ingestion queue drainer,
+  # eval runners, scheduled batch exports.
+  # ───────────────────────────────────────────────────────────────
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    container_name: caia-langfuse-worker
+    restart: unless-stopped
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${LANGFUSE_POSTGRES_USER:-langfuse}:${LANGFUSE_POSTGRES_PASSWORD}@langfuse-postgres:5432/${LANGFUSE_POSTGRES_DB:-langfuse}
+      SALT: ${LANGFUSE_SALT:?LANGFUSE_SALT must be set}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?LANGFUSE_ENCRYPTION_KEY must be set}
+      TELEMETRY_ENABLED: "false"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: ${LANGFUSE_CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_ENABLED: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse-events
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_ROOT_USER:-langfuse-minio-admin}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_ROOT_PASSWORD}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_ENABLED: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse-media
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_ROOT_USER:-langfuse-minio-admin}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_ROOT_PASSWORD}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: ${LANGFUSE_REDIS_PASSWORD}
+    networks:
+      - langfuse-internal
+
+  # ───────────────────────────────────────────────────────────────
+  # langfuse-web — UI + ingest API + read API. The only port we
+  # publish, on 127.0.0.1:${LANGFUSE_PORT:-3001}.
+  # ───────────────────────────────────────────────────────────────
+  langfuse-web:
+    image: langfuse/langfuse:3
+    container_name: caia-langfuse-web
+    restart: unless-stopped
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+    ports:
+      # 127.0.0.1-only per security rule. No 0.0.0.0 exposure.
+      - "127.0.0.1:${LANGFUSE_PORT:-3001}:3000"
+    environment:
+      DATABASE_URL: postgresql://${LANGFUSE_POSTGRES_USER:-langfuse}:${LANGFUSE_POSTGRES_PASSWORD}@langfuse-postgres:5432/${LANGFUSE_POSTGRES_DB:-langfuse}
+      NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3001}
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?LANGFUSE_NEXTAUTH_SECRET must be set}
+      SALT: ${LANGFUSE_SALT}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY}
+      TELEMETRY_ENABLED: "false"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+
+      # First-run admin org/user/project seed. Pulled from Vault
+      # at bootstrap time. If unset, Langfuse renders the sign-up
+      # form and the operator must create credentials manually.
+      LANGFUSE_INIT_ORG_ID: ${LANGFUSE_INIT_ORG_ID:-caia}
+      LANGFUSE_INIT_ORG_NAME: ${LANGFUSE_INIT_ORG_NAME:-CAIA}
+      LANGFUSE_INIT_PROJECT_ID: ${LANGFUSE_INIT_PROJECT_ID:-caia-orchestrator}
+      LANGFUSE_INIT_PROJECT_NAME: ${LANGFUSE_INIT_PROJECT_NAME:-CAIA Orchestrator}
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:-}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:-}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
+      LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-CAIA Operator}
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
+
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: ${LANGFUSE_CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_ENABLED: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse-events
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_ROOT_USER:-langfuse-minio-admin}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_ROOT_PASSWORD}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_ENABLED: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse-media
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_ROOT_USER:-langfuse-minio-admin}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_ROOT_PASSWORD}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: ${LANGFUSE_REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/public/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - langfuse-internal
+
+networks:
+  langfuse-internal:
+    name: caia-langfuse-internal
+    driver: bridge
+
+volumes:
+  langfuse-postgres-data:
+    name: caia-langfuse-postgres-data
+  langfuse-clickhouse-data:
+    name: caia-langfuse-clickhouse-data
+  langfuse-clickhouse-logs:
+    name: caia-langfuse-clickhouse-logs
+  langfuse-redis-data:
+    name: caia-langfuse-redis-data
+  langfuse-minio-data:
+    name: caia-langfuse-minio-data
