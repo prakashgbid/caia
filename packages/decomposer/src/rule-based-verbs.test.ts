@@ -1,12 +1,19 @@
 /**
  * Regression suite — rule-based decomposer must emit ≥3 stories for
- * fix / refactor / audit / extract phrasings.
+ * fix / refactor / audit / extract / spike / multi phrasings.
  *
  * Triggered by the live-pipeline validation on 2026-04-30 where 3/10
  * prompts (bug-fix, refactor, test-heavy) stalled at `test_designed`
  * with 0 stories because the decomposer's only verb template was
  * "Implement core / Add UI/UX / Write tests / Document". This file
  * keeps that gap closed.
+ *
+ * VAL-2026-04-30-051730-6-spike added: spike/research prompts also
+ * fell through to the generic "add" template producing generic stories.
+ *
+ * VAL-2026-04-30-051730-7-multi added: multi-agent-collab prompts must
+ * produce a protocol-design → per-agent-impl → orchestration → e2e
+ * template instead of the generic "Implement core" set.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -73,6 +80,32 @@ describe('rule-based decomposer — verb-widened templates', () => {
       expect(titles).toContain('automated checks');
       expect(titles).toContain('audit report');
     });
+
+    it('spike: "research the best caching library for our use case"', () => {
+      const prompt =
+        '[VAL-2026-04-30-051730-6-spike] research the best caching library for our use case — compare lru-cache, node-cache, keyv, and redis-based options, document trade-offs in an ADR, and recommend one';
+      const result = decomposeRuleBased(prompt);
+      const stories = flattenStories(result.hierarchy);
+      expect(stories.length).toBeGreaterThanOrEqual(3);
+      expect(getInitiativeMeta(result.hierarchy)?.['verbIntent']).toBe('spike');
+      const titles = stories.map((s) => s.title.toLowerCase()).join(' | ');
+      expect(titles).toContain('frame the research question');
+      expect(titles).toContain('research and compare');
+      expect(titles).toContain('recommend');
+    });
+
+    it('multi-agent-collab: coordinate BA, PO, and Coding agents for a multi-domain feature', () => {
+      const prompt =
+        '[VAL-2026-04-30-051730-7-multi] implement a multi-agent collaboration pipeline where the BA agent decomposes requirements, the PO agent generates stories, and the Coding agent implements each story — agents hand off via BullMQ and results aggregate in a single pipeline run record';
+      const result = decomposeRuleBased(prompt);
+      const stories = flattenStories(result.hierarchy);
+      expect(stories.length).toBeGreaterThanOrEqual(3);
+      expect(getInitiativeMeta(result.hierarchy)?.['verbIntent']).toBe('multi');
+      const titles = stories.map((s) => s.title.toLowerCase()).join(' | ');
+      expect(titles).toContain('design agent interaction protocol');
+      expect(titles).toContain('per-agent responsibilities');
+      expect(titles).toContain('orchestration');
+    });
   });
 
   // ─── verb classification ──────────────────────────────────────────────
@@ -106,6 +139,36 @@ describe('rule-based decomposer — verb-widened templates', () => {
     it('a "review for security issues" classifies as audit, not add', () => {
       const r = decomposeRuleBased('review the dependency tree for security issues');
       expect(getInitiativeMeta(r.hierarchy)?.['verbIntent']).toBe('audit');
+    });
+
+    it('classifies "research X" as spike', () => {
+      const r = decomposeRuleBased('research the best state-management library for our React app');
+      expect(getInitiativeMeta(r.hierarchy)?.['verbIntent']).toBe('spike');
+    });
+
+    it('classifies "compare X and Y" as spike', () => {
+      const r = decomposeRuleBased('compare postgres full-text search vs meilisearch for our product catalogue');
+      expect(getInitiativeMeta(r.hierarchy)?.['verbIntent']).toBe('spike');
+    });
+
+    it('classifies "spike on X" as spike', () => {
+      const r = decomposeRuleBased('spike on websocket vs SSE for live dashboard updates');
+      expect(getInitiativeMeta(r.hierarchy)?.['verbIntent']).toBe('spike');
+    });
+
+    it('classifies "multi-agent X" as multi', () => {
+      const r = decomposeRuleBased('build a multi-agent pipeline for automated code review');
+      expect(getInitiativeMeta(r.hierarchy)?.['verbIntent']).toBe('multi');
+    });
+
+    it('classifies "coordinate agents" as multi', () => {
+      const r = decomposeRuleBased('coordinate agents to decompose, plan, and implement a feature end-to-end');
+      expect(getInitiativeMeta(r.hierarchy)?.['verbIntent']).toBe('multi');
+    });
+
+    it('classifies "agent collaboration pipeline" as multi', () => {
+      const r = decomposeRuleBased('design an agent collaboration pipeline with handoff contracts between BA, PO, and Coding agents');
+      expect(getInitiativeMeta(r.hierarchy)?.['verbIntent']).toBe('multi');
     });
   });
 
@@ -156,12 +219,36 @@ describe('rule-based decomposer — verb-widened templates', () => {
       expect(titles[3]).toContain('audit report');
     });
 
-    it('every fix/refactor/extract/audit story has acceptance criteria (≥2 each)', () => {
+    it('spike produces frame / research / recommend / document steps', () => {
+      const r = decomposeRuleBased('research the best caching library for our use case');
+      const stories = flattenStories(r.hierarchy);
+      expect(stories.length).toBe(4);
+      const titles = stories.map((s) => s.title.toLowerCase());
+      expect(titles[0]).toContain('frame the research question');
+      expect(titles[1]).toContain('research and compare');
+      expect(titles[2]).toContain('evaluate trade-offs and recommend');
+      expect(titles[3]).toContain('document findings');
+    });
+
+    it('multi produces protocol-design / per-agent-impl / orchestration / e2e steps', () => {
+      const r = decomposeRuleBased('build a multi-agent workflow for automated PR review');
+      const stories = flattenStories(r.hierarchy);
+      expect(stories.length).toBe(4);
+      const titles = stories.map((s) => s.title.toLowerCase());
+      expect(titles[0]).toContain('design agent interaction protocol');
+      expect(titles[1]).toContain('per-agent responsibilities');
+      expect(titles[2]).toContain('wire orchestration');
+      expect(titles[3]).toContain('validate end-to-end');
+    });
+
+    it('every fix/refactor/extract/audit/spike/multi story has acceptance criteria (≥2 each)', () => {
       const verbs = [
         'fix the login button',
         'refactor the user-auth module',
         'extract the cache layer',
         'audit the public API',
+        'research the best queue library',
+        'build a multi-agent pipeline for deployments',
       ];
       for (const p of verbs) {
         const r = decomposeRuleBased(p);

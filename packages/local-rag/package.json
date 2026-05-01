@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/local-rag",
   "version": "0.1.0",
-  "description": "Local-first RAG over the CAIA monorepo — Ollama embeddings + SQLite vector store, no cloud calls.",
+  "description": "Local-first retrieval-augmented generation (RAG) — Ollama embeddings + SQLite vector store, no cloud dependencies",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

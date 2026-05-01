@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/test-kit",
   "version": "0.1.1",
-  "description": "Test utilities, mocks, and fixtures for CAIA packages",
+  "description": "Shared test utilities, mocks, and fixtures for the @chiefaia package ecosystem",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

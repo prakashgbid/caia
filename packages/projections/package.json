@@ -1,0 +1,40 @@
+{
+  "name": "@chiefaia/projections",
+  "version": "0.1.0",
+  "description": "Framework for building event-sourced read models and projection pipelines",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "picomatch": "^4.0.0"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/picomatch": "^2.3.4",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { schedule } from './scheduler';
-import { dispatch } from './dispatcher';
+import { dispatch, selectModel } from './dispatcher';
 import {
   createMonitor,
   addWorker,
@@ -21,6 +21,7 @@ import {
 import { handleCompletion } from './completion-hook';
 import type { MonitoredWorker } from './monitor';
 import { logger } from './logger';
+import { metrics, classifySkipReason, startMetricsServer } from './metrics';
 
 const log = logger.child({ component: 'daemon' });
 
@@ -147,6 +148,7 @@ async function recoverInFlight(): Promise<void> {
           task_id: run.task_id,
           pid: run.pid,
         });
+        metrics.recoveryRestores.inc();
       }
     }
   } catch { /* non-fatal */ }
@@ -197,8 +199,9 @@ async function tick(
     },
   });
 
-  if (schedulerResult.skipped.length > 0 && process.env['EXECUTOR_DEBUG']) {
-    for (const s of schedulerResult.skipped) {
+  for (const s of schedulerResult.skipped) {
+    metrics.schedulerSkips.inc({ reason: classifySkipReason(s.reason) });
+    if (process.env['EXECUTOR_DEBUG']) {
       log.debug('scheduler skipped task', { task_id: s.id, reason: s.reason });
     }
   }
@@ -239,6 +242,10 @@ async function tick(
 
       addWorker(stillRunning, handle);
       dispatchedThisTick++;
+      metrics.tasksDispatched.inc({
+        model: selectModel({ id: task.id, title: task.title, cwd: task.cwd || '', notes: task.notes, declaredFiles: [], domainSlug: task.domainSlug, projectId: task.projectId, rootPromptId: task.rootPromptId ?? null }),
+        domain: task.domainSlug ?? 'none',
+      });
       log.info('spawned task', {
         task_id: taskId,
         pid: handle.pid,
@@ -247,6 +254,7 @@ async function tick(
         entity_id: taskId,
       });
     } catch (err) {
+      metrics.dispatchFailures.inc();
       log.error('dispatch failed', {
         task_id: taskId,
         err: err instanceof Error ? err.message : String(err),
@@ -257,6 +265,8 @@ async function tick(
     }
   }
 
+  metrics.inFlightWorkers.set(stillRunning.length);
+  metrics.queueDepth.set(queued.length);
   writeHeartbeat(stillRunning.length, queued.length);
   return { workers: stillRunning, dispatched: dispatchedThisTick };
 }
@@ -276,6 +286,8 @@ async function main(): Promise<void> {
     api: API_BASE,
     drain_limit: DRAIN_LIMIT ?? null,
   });
+
+  startMetricsServer();
 
   // Recover any in-flight tasks from previous run
   await recoverInFlight();

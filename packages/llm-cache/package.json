@@ -21,7 +21,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "better-sqlite3": "^12.6.2"
+    "better-sqlite3": "^12.6.2",
+    "redis": "^4.7.0"
   },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",

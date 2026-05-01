@@ -1,6 +1,7 @@
 const User = require('../../models/User');
 const { createSendToken } = require('../../utils/jwtUtils');
 const userProfile = require('../user/profile');
+const bankroll = require('../bankroll');
 
 exports.register = async (req, res) => {
   try {
@@ -11,7 +12,7 @@ exports.register = async (req, res) => {
       return res.status(400).json({ status: 'fail', message: 'Email or username already in use' });
     }
 
-    const newUser = await User.create({ email, password, username, bankroll: 1000 });
+    const newUser = await User.create({ email, password, username, bankroll: bankroll.DEFAULT_BANKROLL });
     createSendToken(newUser, 201, res);
   } catch (error) {
     res.status(400).json({ status: 'fail', message: error.message });

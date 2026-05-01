@@ -2,6 +2,8 @@ const User = require('../../models/User');
 
 const DEFAULT_BANKROLL = 1000;
 
+exports.DEFAULT_BANKROLL = DEFAULT_BANKROLL;
+
 exports.initBalance = async (userId) => {
   return User.findByIdAndUpdate(userId, { bankroll: DEFAULT_BANKROLL }, { new: true });
 };

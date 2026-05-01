@@ -51,3 +51,4 @@ export {
   type BrokerSocketClientOptions,
   type BrokerSocketClientFailure,
 } from './socket-client.js';
+export { CapabilityBrokerMetrics } from './metrics.js';

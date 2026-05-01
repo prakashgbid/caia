@@ -281,6 +281,41 @@
       "when": 1779200000000,
       "tag": "0040_spend_caps",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1779300000000,
+      "tag": "0041_users",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1779400000000,
+      "tag": "0042_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "6",
+      "when": 1779500000000,
+      "tag": "0044_redis_cache_options",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1779600000000,
+      "tag": "0045_recommendations",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1746500000000,
+      "tag": "0048_chores",
+      "breakpoints": true
     }
   ]
 }

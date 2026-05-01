@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { EVENTS } from "../src/events/taxonomy";
 import { initGa4, loadGa4Script, sendEvent, isValidMeasurementId, _resetForTesting } from "../src/integrations/ga4";
+import { trackCartAbandoned, trackCartRecoveryEmailSent } from "../src/events/commerce";
 
 // Mock document.createElement to capture script injection
 const appendedScripts: HTMLScriptElement[] = [];
@@ -70,5 +71,48 @@ describe("event taxonomy constants", () => {
     expect(EVENTS.CERTIFICATION_ACHIEVED).toBe("certification_achieved");
     expect(EVENTS.CONSENT_CHANGED).toBe(undefined); // not in taxonomy
     expect(Object.keys(EVENTS).length).toBeGreaterThanOrEqual(25);
+  });
+
+  it("has all cart abandonment event names", () => {
+    expect(EVENTS.CART_VIEWED).toBe("cart_viewed");
+    expect(EVENTS.CART_UPDATED).toBe("cart_updated");
+    expect(EVENTS.CART_ITEM_REMOVED).toBe("cart_item_removed");
+    expect(EVENTS.CART_ABANDONED).toBe("cart_abandoned");
+    expect(EVENTS.CART_CLEARED).toBe("cart_cleared");
+    expect(EVENTS.CART_RECOVERY_EMAIL_SENT).toBe("cart_recovery_email_sent");
+    expect(EVENTS.CART_RECOVERY_EMAIL_CLICKED).toBe("cart_recovery_email_clicked");
+    expect(EVENTS.CART_RECOVERED).toBe("cart_recovered");
+    expect(EVENTS.REMOVE_FROM_CART).toBe("remove_from_cart");
+    expect(EVENTS.CHECKOUT_ABANDONED).toBe("checkout_abandoned");
+    expect(EVENTS.CHECKOUT_COMPLETED).toBe("checkout_completed");
+  });
+});
+
+describe("cart abandonment tracking helpers", () => {
+  it("exports all cart abandonment helpers", async () => {
+    const mod = await import("../src/events/commerce");
+    expect(typeof mod.trackCartViewed).toBe("function");
+    expect(typeof mod.trackCartUpdated).toBe("function");
+    expect(typeof mod.trackCartItemRemoved).toBe("function");
+    expect(typeof mod.trackRemoveFromCart).toBe("function");
+    expect(typeof mod.trackCartAbandoned).toBe("function");
+    expect(typeof mod.trackCartCleared).toBe("function");
+    expect(typeof mod.trackCartRecoveryEmailSent).toBe("function");
+    expect(typeof mod.trackCartRecoveryEmailClicked).toBe("function");
+    expect(typeof mod.trackCartRecovered).toBe("function");
+    expect(typeof mod.trackCheckoutAbandoned).toBe("function");
+    expect(typeof mod.trackCheckoutCompleted).toBe("function");
+  });
+
+  it("trackCartAbandoned is a no-op when GA4 not loaded", () => {
+    const gtagSpy = vi.spyOn(window, "gtag" as keyof Window);
+    trackCartAbandoned({ cart_id: "abc", value: 49.99, item_count: 2 });
+    expect(gtagSpy).not.toHaveBeenCalled();
+  });
+
+  it("trackCartRecoveryEmailSent is a no-op when GA4 not loaded", () => {
+    const gtagSpy = vi.spyOn(window, "gtag" as keyof Window);
+    trackCartRecoveryEmailSent({ cart_id: "abc", email_hash: "sha256hash" });
+    expect(gtagSpy).not.toHaveBeenCalled();
   });
 });

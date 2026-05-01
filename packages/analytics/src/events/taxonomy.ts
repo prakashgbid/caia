@@ -29,7 +29,20 @@ export const EVENTS = {
   // ── Commerce ──────────────────────────────────────────────────────────────
   PRODUCT_VIEWED: "product_viewed",
   ADD_TO_CART: "add_to_cart",
+  REMOVE_FROM_CART: "remove_from_cart",
   CHECKOUT_STARTED: "checkout_started",
+  CHECKOUT_ABANDONED: "checkout_abandoned",
+  CHECKOUT_COMPLETED: "checkout_completed",
+
+  // ── Cart Abandonment ──────────────────────────────────────────────────────
+  CART_VIEWED: "cart_viewed",
+  CART_UPDATED: "cart_updated",
+  CART_ITEM_REMOVED: "cart_item_removed",
+  CART_ABANDONED: "cart_abandoned",
+  CART_CLEARED: "cart_cleared",
+  CART_RECOVERY_EMAIL_SENT: "cart_recovery_email_sent",
+  CART_RECOVERY_EMAIL_CLICKED: "cart_recovery_email_clicked",
+  CART_RECOVERED: "cart_recovered",
 
   // ── CTA / UI ──────────────────────────────────────────────────────────────
   CTA_CLICKED: "cta_clicked",

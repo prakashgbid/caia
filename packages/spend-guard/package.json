@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/spend-guard",
   "version": "0.1.0",
-  "description": "Programmatic Anthropic-spend cap with hard auto-pause + serial account-pool fallback (per v2 §6). Tracks token spend in real-time via response headers, enforces per-task / per-project / global-day / global-week budgets, and pauses the orchestrator when caps are breached. ToS-aware: warns once if multi-account pool is configured.",
+  "description": "Programmatic Anthropic API spend cap with hard auto-pause and account-pool fallback. Tracks token spend in real-time via response headers and enforces per-task, per-project, and rolling daily/weekly budgets.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

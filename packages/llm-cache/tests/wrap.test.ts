@@ -19,8 +19,8 @@ const RESPONSE_B: CachedResponse = {
   durationMs: 200,
 };
 
-afterEach(() => {
-  cache.close();
+afterEach(async () => {
+  await cache.close();
 });
 
 describe('withCache', () => {

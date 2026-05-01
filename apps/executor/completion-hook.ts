@@ -11,6 +11,7 @@ import { checkAndBreak } from './breaker';
 import { publishEvent } from './publish-event';
 import { parseClaudeOutputRich } from './parse-claude-output-rich';
 import { logger } from './logger';
+import { metrics } from './metrics';
 
 const log = logger.child({ component: 'completion-hook' });
 
@@ -104,6 +105,7 @@ async function runCompletenessCheck(cwd: string): Promise<boolean> {
       { cwd, timeout: 120_000, stdio: 'pipe' },
     );
     if (result.status !== 0) {
+      metrics.completenessFailures.inc();
       log.warn('gate:publish failed', { cwd });
       return false;
     }
@@ -155,6 +157,8 @@ export async function handleCompletion(
 
   if (outcome.kind === 'done' && outcome.exitCode === 0 && parsed.resultOk) {
     // ── Success path ──────────────────────────────────────────────────────────
+    metrics.taskCompletions.inc({ outcome: 'done' });
+    metrics.taskDurationMs.observe(durationMs);
     taskLog.info('task completed successfully', { duration_ms: durationMs });
 
     await finalizeExecutorRun(
@@ -277,6 +281,8 @@ export async function handleCompletion(
       ? `process died (exit code: ${outcome.exitCode})`
       : `exit code ${(outcome as { exitCode: number }).exitCode}: ${parsed.summary.slice(0, 200)}`;
 
+    metrics.taskCompletions.inc({ outcome: outcome.kind });
+    metrics.taskDurationMs.observe(durationMs);
     taskLog.error('task failed', { reason, attempt_n: newAttemptCount });
 
     await finalizeExecutorRun(

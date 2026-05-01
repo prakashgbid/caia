@@ -7,7 +7,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/node</string>
-        <string>/Users/MAC/Documents/projects/plugins/completeness-sentinel/dist/daemon.cjs</string>
+        <string>/Users/MAC/Documents/projects/caia/apps/completeness-sentinel/dist/daemon.cjs</string>
     </array>
     <key>EnvironmentVariables</key>
     <dict>

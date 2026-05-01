@@ -368,4 +368,5 @@ export interface AuthResult {
 export interface SessionData {
   userId: string | null
   email: string | null
+  error: string | null
 }

@@ -15,6 +15,8 @@ import { BlockersManager } from '../blockers/manager';
 import type { BlockerState, CreateBlockerParams } from '../blockers/types';
 import { QuestionsManager } from '../questions/manager';
 import type { CreateQuestionParams, QuestionAnswer, QuestionState } from '../questions/types';
+import { RecommendationsManager } from '../recommendations/manager';
+import type { CreateRecommendationParams } from '../recommendations/types';
 import { seedData } from './seed';
 import { getDb, getSqliteRaw } from '../db/connection';
 import { adrs, businessFeatures, proactiveSuggestions, timelineEvents, auditLog, projects, tasks as dbTasks, blockers as dbBlockers, requirements as dbRequirements, domains, entityDomains, taskRuns, taskSubtasks, taskRunEvents, behaviorTests, behaviorTestRuns, behaviorTestFailures, priorityAudit } from '../db/schema';
@@ -67,6 +69,8 @@ export async function startMcpServer(conductorDir?: string): Promise<void> {
 
   const questionsManager = new QuestionsManager(conductorDir);
   await questionsManager.init();
+
+  const recommendationsManager = new RecommendationsManager(getDb());
 
   // Seed historical data on first run (idempotent by title check)
   await seedData(blockersManager, questionsManager);
@@ -440,6 +444,60 @@ export async function startMcpServer(conductorDir?: string): Promise<void> {
         name: 'question_drain',
         description: 'Return and clear newly-answered questions since last drain. Call on each heartbeat.',
         inputSchema: { type: 'object', properties: {} },
+      },
+      // ─── Recommendation tools ───────────────────────────────────────────────
+      {
+        name: 'recommend_one',
+        description: 'Record a formal recommendation after completing a spike or research task. Use this to publish which option you chose and why, preserving the decision rationale.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'What decision is being made (e.g. "Caching library selection")' },
+            chosen: { type: 'string', description: 'The recommended option (e.g. "lru-cache")' },
+            rationale: { type: 'string', description: 'Why this option was chosen' },
+            alternatives: {
+              type: 'array',
+              description: 'Other options that were considered but not chosen',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  reason: { type: 'string', description: 'Why this option was NOT chosen' },
+                },
+                required: ['name', 'reason'],
+              },
+            },
+            context: { type: 'string', description: 'Background and constraints that shaped the decision' },
+            taskId: { type: 'string' },
+            requirementId: { type: 'string' },
+            projectId: { type: 'string' },
+            scope: { type: 'string', description: 'global|site' },
+          },
+          required: ['title', 'chosen', 'rationale'],
+        },
+      },
+      {
+        name: 'recommendation_list',
+        description: 'List recorded recommendations with optional filters',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string' },
+            requirementId: { type: 'string' },
+            projectId: { type: 'string' },
+            scope: { type: 'string' },
+            limit: { type: 'number' },
+          },
+        },
+      },
+      {
+        name: 'recommendation_get',
+        description: 'Get a single recommendation by id',
+        inputSchema: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
       },
       // ─── ADR tools ─────────────────────────────────────────────────────────
       {
@@ -1225,6 +1283,40 @@ export async function startMcpServer(conductorDir?: string): Promise<void> {
         case 'question_drain': {
           const result = questionsManager.drain();
           return toolResult(result);
+        }
+
+        // ─── Recommendation tools ─────────────────────────────────────────────
+        case 'recommend_one': {
+          const params: CreateRecommendationParams = {
+            title: a['title'] as string,
+            chosen: a['chosen'] as string,
+            rationale: a['rationale'] as string,
+            alternatives: a['alternatives'] as CreateRecommendationParams['alternatives'],
+            context: a['context'] as string | undefined,
+            taskId: a['taskId'] as string | undefined,
+            requirementId: a['requirementId'] as string | undefined,
+            projectId: a['projectId'] as string | undefined,
+            scope: a['scope'] as string | undefined,
+          };
+          const rec = recommendationsManager.create(params);
+          return toolResult(rec);
+        }
+
+        case 'recommendation_list': {
+          const rec = recommendationsManager.list({
+            taskId: a['taskId'] as string | undefined,
+            requirementId: a['requirementId'] as string | undefined,
+            projectId: a['projectId'] as string | undefined,
+            scope: a['scope'] as string | undefined,
+            limit: a['limit'] as number | undefined,
+          });
+          return toolResult(rec);
+        }
+
+        case 'recommendation_get': {
+          const rec = recommendationsManager.get(a['id'] as string);
+          if (!rec) return toolError(`Recommendation not found: ${a['id'] as string}`);
+          return toolResult(rec);
         }
 
         // ─── ADR tools ───────────────────────────────────────────────────────

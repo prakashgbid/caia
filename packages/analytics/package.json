@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/analytics",
   "version": "0.1.1",
-  "description": "Shared GA4 analytics, consent management, and event taxonomy for Pokerzeno sites",
+  "description": "GA4 analytics integration with consent management and structured event taxonomy for Next.js applications",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "sideEffects": false,

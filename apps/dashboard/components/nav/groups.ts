@@ -67,6 +67,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/events', label: 'Events', icon: '⚡', tabKey: 'events' },
       { path: '/task-runs', label: 'Task runs', icon: '📡', tabKey: 'task_runs' },
       { path: '/dag', label: 'Dependency graph', icon: '🕸️', tabKey: 'dag' },
+      { path: '/orchestration', label: 'Orchestration', icon: '🤝', tabKey: 'orchestration' },
+      { path: '/chores', label: 'Chore tasks', icon: '⚙️', tabKey: 'chores' },
     ],
   },
   {
@@ -82,6 +84,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/features', label: 'Features', icon: '🎯', tabKey: 'features' },
       { path: '/agents', label: 'Agents', icon: '🤖', tabKey: 'agents' },
       { path: '/registry', label: 'Registry', icon: '🗂️', tabKey: 'registry' },
+      { path: '/oss-registry', label: 'OSS Registry', icon: '📦', tabKey: 'oss_registry' },
     ],
   },
   {
@@ -94,6 +97,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/gates', label: 'Gates', icon: '🚪', tabKey: 'gates' },
       { path: '/tests', label: 'Tests', icon: '🧪', tabKey: 'tests' },
       { path: '/completeness', label: 'Completeness', icon: '✅', tabKey: 'completeness' },
+      { path: '/validation-runs', label: 'Validation runs', icon: '🧬', tabKey: 'validation_runs' },
     ],
   },
   {
@@ -104,10 +108,19 @@ export const NAV_GROUPS: NavGroup[] = [
     leaves: [
       { path: '/platform-status', label: 'Platform status', icon: '📊', tabKey: 'platform_status' },
       { path: '/health/pulse', label: 'Pulse', icon: '💚', tabKey: 'pulse' },
-      { path: '/observability/health', label: 'Observability', icon: '👁', tabKey: 'obs_health' },
+      { path: '/observability/health', label: 'Events coverage', icon: '👁', tabKey: 'obs_health' },
+      { path: '/observability/conductor', label: 'Conductor', icon: '🔧', tabKey: 'obs_conductor' },
+      { path: '/recovery', label: 'Session recovery', icon: '🔄', tabKey: 'recovery' },
+      { path: '/observability/coding', label: 'Coding workers', icon: '👷', tabKey: 'obs_coding' },
+      { path: '/observability/spend', label: 'Cost & spend', icon: '💰', tabKey: 'obs_spend' },
+      { path: '/analytics/cart-abandonment', label: 'Cart abandonment', icon: '🛒', tabKey: 'cart_abandonment' },
       { path: '/metrics', label: 'Metrics', icon: '📊', tabKey: 'metrics' },
+      { path: '/cache', label: 'Cache', icon: '🗄️', tabKey: 'cache' },
+      { path: '/keyv', label: 'Key-value browser', icon: '🗂️', tabKey: 'keyv' },
       { path: '/builds', label: 'Builds', icon: '🔨', tabKey: 'builds' },
       { path: '/audit', label: 'Audit', icon: '🔍', tabKey: 'audit' },
+      { path: '/projections', label: 'Projections', icon: '📈', tabKey: 'projections' },
+      { path: '/migration', label: 'Migration', icon: '🚚', tabKey: 'migration' },
     ],
   },
   {
@@ -117,8 +130,12 @@ export const NAV_GROUPS: NavGroup[] = [
     defaultExpanded: false,
     leaves: [
       { path: '/settings', label: 'Settings', icon: '⚙️', tabKey: 'settings' },
+      { path: '/redis', label: 'Redis Cache', icon: '🔴', tabKey: 'redis' },
       { path: '/standards', label: 'Standards', icon: '📋', tabKey: 'standards' },
       { path: '/adrs', label: 'ADRs', icon: '📜', tabKey: 'adrs' },
+      { path: '/notifications', label: 'Notifications', icon: '🔔', tabKey: 'notifications' },
+      { path: '/subscriptions', label: 'Subscriptions', icon: '📬', tabKey: 'subscriptions' },
+      { path: '/pricing', label: 'Pricing', icon: '💳', tabKey: 'pricing' },
     ],
   },
 ];
@@ -151,11 +168,17 @@ export function kindToTab(kind: string): string {
   if (kind.startsWith('domain.') || kind.startsWith('entity.tagged') || kind.startsWith('entity.untagged')) return 'domains';
   if (kind.startsWith('story.')) return 'stories';
   if (kind.startsWith('completeness.')) return 'completeness';
+  if (kind.startsWith('validation.')) return 'validation_runs';
   if (kind.startsWith('lock_contract.')) return 'standards';
   if (kind.startsWith('prompt.')) return 'prompts';
   if (kind.startsWith('agent.')) return 'agents';
+  if (kind === 'SNAPSHOT_REBUILT') return 'recovery';
+  if (kind.startsWith('worker.')) return 'obs_coding';
   if (kind.startsWith('build.')) return 'builds';
   if (kind.startsWith('pipeline.')) return 'pipeline';
+  if (kind.startsWith('ba-agent.') || kind.startsWith('po-agent.') || kind.startsWith('coding-agent.')) return 'orchestration';
+  if (kind.startsWith('chore.')) return 'chores';
+  if (kind.startsWith('notification.')) return 'notifications';
   return 'timeline';
 }
 

@@ -245,6 +245,39 @@ program
     if (existsSync(backupPath)) console.log(`   (Previous DB saved to ${backupPath})`);
   });
 
+// ─── db:migrate-jsonl — migrate legacy conductor JSONL state to SQLite ──────
+program
+  .command('db:migrate-jsonl')
+  .description('Migrate legacy ~/.conductor JSONL snapshots into the SQLite DB (idempotent, skips already-present records)')
+  .option('--dir <dir>', 'Path to conductor state directory', path.join(os.homedir(), '.conductor'))
+  .option('--dry-run', 'Preview what would be migrated without writing')
+  .action(async (opts: { dir: string; dryRun?: boolean }) => {
+    const { getDb, runMigrations } = await import('../db/connection');
+    const { migrateFromJsonl } = await import('../db/migrate-from-jsonl');
+    const { existsSync } = await import('fs');
+
+    if (!existsSync(opts.dir)) {
+      console.error(`❌ Conductor state directory not found: ${opts.dir}`);
+      console.error('   Run: conductor install  (or pass --dir <path>)');
+      process.exit(1);
+    }
+
+    runMigrations();
+    const db = getDb();
+
+    if (opts.dryRun) {
+      const snapshots = ['requirements.snapshot.json', 'blockers.snapshot.json', 'questions.snapshot.json', 'state.snapshot.json'];
+      const found = snapshots.filter(s => existsSync(path.join(opts.dir, s)));
+      console.log(`[DRY RUN] Would migrate from: ${opts.dir}`);
+      console.log(`  Snapshot files present: ${found.length ? found.join(', ') : '(none)'}`);
+      console.log('  Re-run without --dry-run to apply.');
+      return;
+    }
+
+    const { migrated, skipped } = await migrateFromJsonl(db, opts.dir);
+    console.log(`✅ Migration complete: ${migrated} migrated, ${skipped} skipped (already present)`);
+  });
+
 // ─── memory:sync — sync .md files to lock_contracts + memory_anchors ───────
 program
   .command('memory:sync [memoryDir]')
@@ -476,6 +509,67 @@ program
     if (opts.canary === false) argv.push('--no-canary');
     const { runPulseCli } = await import('@caia-app/pipeline-pulse');
     await runPulseCli(argv);
+  });
+
+// ─── req — requirements management commands ───────────────────────────────
+const reqCmd = program.command('req').description('Requirements management commands');
+
+reqCmd
+  .command('migrate [backlogDir]')
+  .description('Seed requirements from backlog .md files (BL-*.md)')
+  .option('--dry-run', 'Preview what would be migrated without writing')
+  .option('--dir <dir>', 'Conductor data directory', DEFAULT_DIR)
+  .action(async (backlogDir?: string, opts: { dryRun?: boolean; dir?: string } = {}) => {
+    const { RequirementsManager } = await import('../requirements/manager');
+    const { migrateFromBacklog } = await import('../requirements/migrate');
+
+    const conductorDir = opts.dir ?? DEFAULT_DIR;
+    const resolvedBacklogDir = backlogDir
+      ? path.resolve(backlogDir)
+      : path.join(os.homedir(), '.auto-memory', 'backlog');
+
+    const mgr = new RequirementsManager(conductorDir);
+    await mgr.init();
+
+    const result = await migrateFromBacklog(resolvedBacklogDir, mgr, { dryRun: opts.dryRun });
+
+    if (opts.dryRun) {
+      console.log(`[DRY RUN] Would migrate: ${result.migrated.length}, skip: ${result.skipped.length}, errors: ${result.errors.length}`);
+    } else {
+      console.log(`✅ Migration complete: ${result.migrated.length} migrated, ${result.skipped.length} skipped, ${result.errors.length} errors`);
+    }
+    if (result.migrated.length > 0) console.log('\nMigrated:\n' + result.migrated.map(m => `  ${m}`).join('\n'));
+    if (result.skipped.length > 0) console.log('\nSkipped:\n' + result.skipped.map(s => `  ${s}`).join('\n'));
+    if (result.errors.length > 0) {
+      console.error('\nErrors:\n' + result.errors.map(e => `  ❌ ${e}`).join('\n'));
+      process.exit(1);
+    }
+  });
+
+reqCmd
+  .command('list')
+  .description('List requirements')
+  .option('--state <state>', 'Filter by state (captured|ready|specced|refining|executing|verifying|done|blocked|cancelled)')
+  .option('--dir <dir>', 'Conductor data directory', DEFAULT_DIR)
+  .action(async (opts: { state?: string; dir?: string }) => {
+    const { RequirementsManager } = await import('../requirements/manager');
+    const mgr = new RequirementsManager(opts.dir ?? DEFAULT_DIR);
+    await mgr.init();
+    const filter = opts.state ? { state: opts.state as import('../requirements/types').RequirementState } : undefined;
+    console.log(JSON.stringify(mgr.list(filter), null, 2));
+  });
+
+reqCmd
+  .command('show <id>')
+  .description('Show a requirement by id')
+  .option('--dir <dir>', 'Conductor data directory', DEFAULT_DIR)
+  .action(async (id: string, opts: { dir?: string }) => {
+    const { RequirementsManager } = await import('../requirements/manager');
+    const mgr = new RequirementsManager(opts.dir ?? DEFAULT_DIR);
+    await mgr.init();
+    const req = mgr.get(id);
+    if (!req) { console.error(`❌ Requirement not found: ${id}`); process.exit(1); }
+    console.log(JSON.stringify(req, null, 2));
   });
 
 program.parse(process.argv);

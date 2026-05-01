@@ -18,7 +18,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/usr/local/bin/node</string>
-    <string>CONDUCTOR_CLI_PATH</string>
+    <string>/Users/MAC/Documents/projects/caia/apps/orchestrator/dist/src/cli/index.js</string>
     <string>exec</string>
     <string>daemon</string>
   </array>
@@ -36,10 +36,10 @@
   <false/>
 
   <key>StandardOutPath</key>
-  <string>CONDUCTOR_LOG_DIR/executor.log</string>
+  <string>/Users/MAC/Documents/conductor-logs/executor.log</string>
 
   <key>StandardErrorPath</key>
-  <string>CONDUCTOR_LOG_DIR/executor.err.log</string>
+  <string>/Users/MAC/Documents/conductor-logs/executor.err.log</string>
 
   <key>ThrottleInterval</key>
   <integer>10</integer>

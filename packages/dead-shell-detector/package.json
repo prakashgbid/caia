@@ -2,6 +2,7 @@
   "name": "@chiefaia/dead-shell-detector",
   "version": "0.1.0",
   "private": true,
+  "description": "Detects and cleans up zombie shell processes spawned by AI agents, preventing resource leaks in long-running automated pipelines",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

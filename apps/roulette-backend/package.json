@@ -5,7 +5,12 @@
   "description": "DORMANT — Preserved Express/Mongoose backend ported from prakashgbid/roulette-advisor-ai (REM-001, 2026-04-28). Not actively running. See README.md.",
   "main": "src/server.js",
   "scripts": {
-    "test": "node tests/preservation-smoke.test.js"
+    "test": "node tests/preservation-smoke.test.js",
+    "test:characterisation": "jest tests/characterisation/ --no-coverage",
+    "test:all": "npm test && npm run test:characterisation"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   },
   "engines": {
     "node": ">=20"

@@ -148,12 +148,54 @@ const s = {
   },
   empty: { color: '#4a5568', fontSize: '13px', textAlign: 'center' as const, padding: '24px 0' },
   confetti: { display: 'inline-block', animation: 'confetti-pop 0.4s ease' },
+  // recommend-one styles
+  recOneBox: {
+    background: '#1a365d',
+    border: '1px solid #2b6cb0',
+    borderRadius: '6px',
+    padding: '10px 12px',
+    marginBottom: '10px',
+  },
+  recOneLabel: { fontSize: '13px', fontWeight: '700', color: '#bee3f8', marginBottom: '4px' },
+  recOneRationale: { fontSize: '11px', color: '#90cdf4', lineHeight: '1.5' },
+  recOneEyebrow: {
+    fontSize: '10px',
+    fontWeight: '600',
+    color: '#4299e1',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.08em',
+    marginBottom: '6px',
+  },
+  recOneActions: { display: 'flex', gap: '8px', marginTop: '4px' },
+  acceptBtn: {
+    flex: 1,
+    padding: '7px',
+    background: '#276749',
+    color: '#9ae6b4',
+    border: 'none',
+    borderRadius: '6px',
+    fontWeight: '600',
+    fontSize: '13px',
+    cursor: 'pointer',
+  },
+  overrideBtn: {
+    flex: 1,
+    padding: '7px',
+    background: '#2d3748',
+    color: '#a0aec0',
+    border: '1px solid #4a5568',
+    borderRadius: '6px',
+    fontWeight: '600',
+    fontSize: '13px',
+    cursor: 'pointer',
+  },
 } as const;
 
 function QuestionCard({ question, onAnswered }: { question: Question; onAnswered: () => void }) {
   const defaultRec = question.recommendations.find((r) => r.isDefault) ?? question.recommendations[0];
   const [selectedRecId, setSelectedRecId] = useState<string | null>(defaultRec?.id ?? null);
   const [customText, setCustomText] = useState('');
+  const [overriding, setOverriding] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [justAnswered, setJustAnswered] = useState(false);
 
@@ -161,11 +203,7 @@ function QuestionCard({ question, onAnswered }: { question: Question; onAnswered
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const handleSubmit = async () => {
-    const answer: QuestionAnswer = customText.trim()
-      ? { kind: 'custom', customText: customText.trim() }
-      : { kind: 'accepted-recommendation', recommendationId: selectedRecId ?? undefined };
-
+  const submitAnswer = async (answer: QuestionAnswer) => {
     setSubmitting(true);
     try {
       await fetch(`/api/questions/${question.id}/answer`, {
@@ -180,6 +218,17 @@ function QuestionCard({ question, onAnswered }: { question: Question; onAnswered
     }
   };
 
+  const handleSubmit = async () => {
+    const answer: QuestionAnswer = customText.trim()
+      ? { kind: 'custom', customText: customText.trim() }
+      : { kind: 'accepted-recommendation', recommendationId: selectedRecId ?? undefined };
+    await submitAnswer(answer);
+  };
+
+  const handleAcceptOne = async () => {
+    await submitAnswer({ kind: 'accepted-recommendation', recommendationId: defaultRec?.id });
+  };
+
   const answerSummary = (q: Question) => {
     if (!q.answer) return '';
     if (q.answer.kind === 'custom') return `Custom: ${q.answer.customText ?? ''}`;
@@ -191,6 +240,8 @@ function QuestionCard({ question, onAnswered }: { question: Question; onAnswered
     ...s.card,
     ...(justAnswered && !prefersReducedMotion ? s.cardAnswering : {}),
   };
+
+  const isRecommendOne = question.recommendations.length === 1;
 
   return (
     <div style={cardStyle}>
@@ -206,7 +257,60 @@ function QuestionCard({ question, onAnswered }: { question: Question; onAnswered
         </div>
       )}
 
-      {question.state === 'open' && (
+      {question.state === 'open' && isRecommendOne && defaultRec && (
+        <>
+          <div style={s.recOneBox}>
+            <div style={s.recOneEyebrow}>✦ AI Recommends</div>
+            <div style={s.recOneLabel}>{defaultRec.label}</div>
+            {defaultRec.rationale && (
+              <div style={s.recOneRationale}>{defaultRec.rationale}</div>
+            )}
+          </div>
+
+          {overriding ? (
+            <>
+              <textarea
+                autoFocus
+                style={s.textarea}
+                rows={2}
+                placeholder={question.customAnswerPlaceholder ?? 'Describe your override...'}
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+              />
+              <div style={s.recOneActions}>
+                <button
+                  style={{ ...s.overrideBtn, flex: 'none', padding: '6px 12px', fontSize: '12px' }}
+                  onClick={() => { setOverriding(false); setCustomText(''); }}
+                >
+                  Cancel
+                </button>
+                <button
+                  style={{ ...s.submitBtn, flex: 1 }}
+                  disabled={submitting || !customText.trim()}
+                  onClick={handleSubmit}
+                >
+                  {justAnswered
+                    ? <span style={prefersReducedMotion ? {} : s.confetti}>✓ Submitted</span>
+                    : 'Submit override'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={s.recOneActions}>
+              <button style={s.acceptBtn} disabled={submitting} onClick={handleAcceptOne}>
+                {justAnswered
+                  ? <span style={prefersReducedMotion ? {} : s.confetti}>✓ Accepted</span>
+                  : '✓ Accept'}
+              </button>
+              <button style={s.overrideBtn} disabled={submitting} onClick={() => setOverriding(true)}>
+                Override ▾
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {question.state === 'open' && !isRecommendOne && (
         <>
           <ul style={s.recList}>
             {question.recommendations.map((rec) => {

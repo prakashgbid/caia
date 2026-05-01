@@ -1,0 +1,39 @@
+{
+  "name": "@chiefaia/cache",
+  "version": "0.1.0",
+  "description": "Redis-backed key-value cache with TTL, key namespacing, and per-instance hit/miss stats.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "ioredis": "^5.3.2",
+    "node-cache": "^5.1.2"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

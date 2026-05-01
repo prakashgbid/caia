@@ -17,6 +17,7 @@ import { CapabilityBrokerError } from './broker.js';
 import type { CapabilityBroker } from './broker.js';
 import type { IrreversibleActionLedger } from './ledger.js';
 import type { IrreversibleDelay } from './irreversible-delay.js';
+import type { CapabilityBrokerMetrics } from './metrics.js';
 
 /**
  * A capability handler receives the validated payload + the per-execution
@@ -66,6 +67,8 @@ export interface ExecutorOptions {
       | { kind: 'handler-error'; tokenId: string; error: string }
       | { kind: 'cancelled-by-operator'; tokenId: string; name: CapabilityName },
   ) => void;
+  /** Optional metrics collector. When provided, execution outcomes and durations are recorded. */
+  metrics?: CapabilityBrokerMetrics;
 }
 
 export class CapabilityExecutor {
@@ -76,6 +79,7 @@ export class CapabilityExecutor {
   private readonly log?: ExecutorOptions['log'];
   private readonly irreversibleDelay: IrreversibleDelay | undefined;
   private readonly isIrreversible: ((name: CapabilityName) => boolean) | undefined;
+  private readonly metrics?: CapabilityBrokerMetrics;
 
   constructor(opts: ExecutorOptions) {
     this.broker = opts.broker;
@@ -85,6 +89,7 @@ export class CapabilityExecutor {
     if (opts.log) this.log = opts.log;
     if (opts.irreversibleDelay) this.irreversibleDelay = opts.irreversibleDelay;
     if (opts.isIrreversible) this.isIrreversible = opts.isIrreversible;
+    if (opts.metrics) this.metrics = opts.metrics;
   }
 
   /**
@@ -110,6 +115,7 @@ export class CapabilityExecutor {
           ? `${err.code}: ${err.message}`
           : String(err);
       this.log?.({ kind: 'rejected', tokenId: opts.token.tokenId, reason });
+      this.metrics?.executionsTotal.inc({ capability: payload.name, outcome: 'rejected' });
       throw err;
     }
     this.log?.({
@@ -136,6 +142,7 @@ export class CapabilityExecutor {
             ok: false,
             error: 'cancelled-by-operator',
           };
+          this.metrics?.executionsTotal.inc({ capability: payload.name, outcome: 'cancelled' });
           await this.recordToLedger(
             opts.token,
             payload,
@@ -152,6 +159,7 @@ export class CapabilityExecutor {
         ok: false,
         error: `no handler registered for capability '${payload.name}'`,
       };
+      this.metrics?.executionsTotal.inc({ capability: payload.name, outcome: 'no_handler' });
       await this.recordToLedger(opts.token, payload, opts.reason, result);
       return ActionResultSchema.parse(result);
     }
@@ -161,8 +169,12 @@ export class CapabilityExecutor {
       ts: this.clockMs(),
     };
     let result: ActionResult;
+    const handlerStart = this.clockMs();
     try {
       result = ActionResultSchema.parse(await handler(payload, ctx));
+      const durationMs = this.clockMs() - handlerStart;
+      this.metrics?.executionsTotal.inc({ capability: payload.name, outcome: 'ok' });
+      this.metrics?.executionDurationMs.observe(durationMs, { capability: payload.name, outcome: 'ok' });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.log?.({
@@ -171,6 +183,9 @@ export class CapabilityExecutor {
         error: msg,
       });
       result = { ok: false, error: msg };
+      const durationMs = this.clockMs() - handlerStart;
+      this.metrics?.executionsTotal.inc({ capability: payload.name, outcome: 'error' });
+      this.metrics?.executionDurationMs.observe(durationMs, { capability: payload.name, outcome: 'error' });
     }
     await this.recordToLedger(opts.token, payload, opts.reason, result);
     return result;

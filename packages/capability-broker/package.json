@@ -29,6 +29,9 @@
   "dependencies": {
     "zod": "^3.23.8"
   },
+  "optionalDependencies": {
+    "@chiefaia/metrics": "workspace:*"
+  },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
     "@chiefaia/tsconfig": "workspace:*",
