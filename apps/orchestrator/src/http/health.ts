@@ -65,6 +65,14 @@ export function createHealthServer(
     }
 
     try {
+      // ─── Prometheus scrape endpoint ────────────────────────────────────────
+      if (method === 'GET' && pathname === '/metrics/prometheus') {
+        const body = await conductor.metrics.render();
+        res.writeHead(200, { 'Content-Type': conductor.metrics.contentType() });
+        res.end(body);
+        return;
+      }
+
       // ─── Task endpoints ────────────────────────────────────────────────────
       if (method === 'GET' && pathname === '/health') {
         const state = conductor.status();
