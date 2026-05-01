@@ -285,6 +285,13 @@
     {
       "idx": 40,
       "version": "6",
+      "when": 1779300000000,
+      "tag": "0041_arch_communities",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
       "when": 1779700000000,
       "tag": "0052_smart_cicd_observations",
       "breakpoints": true
