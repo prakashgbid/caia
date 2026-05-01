@@ -33,8 +33,7 @@ let provider: BasicTracerProvider;
 
 beforeEach(() => {
   exporter = new InMemorySpanExporter();
-  provider = new BasicTracerProvider();
-  provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+  provider = new BasicTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
   // The router uses getTracer() which falls through to the global
   // tracer provider unless a test override is set. We push a real
   // provider into the global so the spans are exported.
