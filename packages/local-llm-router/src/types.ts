@@ -39,6 +39,20 @@ export interface RouterOptions {
   forceClaude?: boolean;
   /** If the primary provider fails, automatically retry with the other */
   fallbackOnError?: boolean;
+  /**
+   * Optional cache lookup. If supplied AND returns a non-null response,
+   * route() returns it without dispatching to a provider. The emitted
+   * span sets caia.cache_hit=true and gen_ai.system='cache'.
+   *
+   * This is the seam the LLM cache (and any DSPy-recompiled-cache
+   * variant) uses to short-circuit the route. Keeping it as an option
+   * rather than a hard dep keeps @chiefaia/local-llm-router free of
+   * the cache package as a runtime requirement.
+   */
+  cacheLookup?: (
+    taskType: string,
+    prompt: string,
+  ) => Promise<LLMResponse | null> | LLMResponse | null;
 }
 
 interface OllamaCommonOptions {
