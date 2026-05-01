@@ -21,6 +21,9 @@ export {
   llmMetrics,
   perCallCostFromRuleString,
 } from './llm-metrics.js';
+// OTel obs-002 exports
+export { __setTracer, CAIA_ATTR, GEN_AI, genAiSystemFor, getTracer, initRouterOtel, withSpan } from "./otel.js";
+export type { GenAiSystem, InitOtelOptions, OtelHandle, RouteDecision, SpanContext } from "./otel.js";
 export type {
   LLMProvider,
   LLMRequest,
