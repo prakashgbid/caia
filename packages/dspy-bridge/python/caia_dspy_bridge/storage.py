@@ -71,6 +71,9 @@ def save_program(program: str, version: str, payload: Any, root: Path | None = N
     d.mkdir(parents=True, exist_ok=True)
     p = pickle_path(program, version, root)
     with p.open("wb") as fh:
+        # nosemgrep: python.lang.security.deserialization.pickle.avoid-pickle
+        # Compiled DSPy artifacts are stored as pickles per upstream DSPy convention.
+        # Files are written to a process-local CAIA_DSPY_BRIDGE_STATE_DIR; not loaded from untrusted sources.
         pickle.dump(payload, fh)
     return p
 
@@ -80,6 +83,8 @@ def load_program(program: str, version: str, root: Path | None = None) -> Any:
     if not p.exists():
         raise FileNotFoundError(f"compiled program not found: {p}")
     with p.open("rb") as fh:
+        # nosemgrep: python.lang.security.deserialization.pickle.avoid-pickle
+        # Compiled DSPy artifacts are pickles produced by save_program() in this same process tree.
         return pickle.load(fh)
 
 

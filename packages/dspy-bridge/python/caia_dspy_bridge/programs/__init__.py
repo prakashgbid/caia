@@ -29,6 +29,8 @@ def get_program(name: str) -> Any:
         raise KeyError(
             f"unknown program: {name!r}. Registered: {sorted(_REGISTRY)}"
         )
+    # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
+    # _REGISTRY is a hardcoded module-local literal mapping (see above); not user-controlled.
     return import_module(_REGISTRY[name])
 
 
