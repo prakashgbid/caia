@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Daily DSPy compile cron — feeds the §7 feedback loop. Lands a fresh
+  ~/.caia/dspy/compiled/po-scope-detector-vN.pkl every UTC 03:30, gated
+  on a ≥0 delta against the 10 PHASE2E-002 prompts.
+
+  Install:
+      cp infra/cron/dspy-daily-compile.plist ~/Library/LaunchAgents/
+      launchctl bootstrap gui/$UID ~/Library/LaunchAgents/dspy-daily-compile.plist
+
+  Uninstall:
+      launchctl bootout gui/$UID/com.chiefaia.dspy-daily-compile
+
+  Logs land in ~/.caia/logs/dspy-daily-compile.{out,err}.log.
+
+  Reference: caia/docs/dspy-substrate.md §Cron + AI tech modernization
+  proposal §7.
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key><string>com.chiefaia.dspy-daily-compile</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-lc</string>
+      <string>cd "$HOME/Documents/projects/caia" &amp;&amp; pnpm --filter @chiefaia/dspy-bridge exec tsx scripts/daily-compile.ts</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+      <key>Hour</key><integer>3</integer>
+      <key>Minute</key><integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key><string>/Users/MAC/.caia/logs/dspy-daily-compile.out.log</string>
+    <key>StandardErrorPath</key><string>/Users/MAC/.caia/logs/dspy-daily-compile.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+      <key>OLLAMA_HOST</key><string>http://127.0.0.1:11434</string>
+    </dict>
+
+    <key>RunAtLoad</key><false/>
+    <key>KeepAlive</key><false/>
+  </dict>
+</plist>
