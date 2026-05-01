@@ -32,8 +32,7 @@ let provider: BasicTracerProvider;
 
 beforeEach(() => {
   exporter = new InMemorySpanExporter();
-  provider = new BasicTracerProvider();
-  provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+  provider = new BasicTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
   trace.setGlobalTracerProvider(provider);
   __setAgentTracer(provider.getTracer('caia-orchestrator-agents'));
 });
