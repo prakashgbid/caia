@@ -1,4 +1,7 @@
 export { UserService, userService } from './user-service.js'
+export { UserProfileService, userProfileService } from './user-profile-service.js'
+export { UserSettingsService, userSettingsService } from './user-settings-service.js'
+export { UserNotificationsService, userNotificationsService } from './user-notifications-service.js'
 
 // Backward-compatible named exports — delegate to singleton
 import { userService } from './user-service.js'

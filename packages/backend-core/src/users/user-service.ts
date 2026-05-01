@@ -1,4 +1,6 @@
-import { getSupabaseClient } from '../client.js'
+import { UserProfileService } from './user-profile-service.js'
+import { UserSettingsService } from './user-settings-service.js'
+import { UserNotificationsService } from './user-notifications-service.js'
 import type {
   Profile,
   UpdateProfileInput,
@@ -10,168 +12,70 @@ import type {
 } from '../types.js'
 
 export class UserService {
-  private get sb() {
-    return getSupabaseClient()
+  private readonly profiles = new UserProfileService()
+  private readonly settings = new UserSettingsService()
+  private readonly notifications = new UserNotificationsService()
+
+  // ---------------------------------------------------------------------------
+  // Profile domain — delegated to UserProfileService
+  // ---------------------------------------------------------------------------
+
+  getProfile(userId: string): Promise<Profile | null> {
+    return this.profiles.getProfile(userId)
+  }
+
+  getProfileByUsername(username: string): Promise<Profile | null> {
+    return this.profiles.getProfileByUsername(username)
+  }
+
+  updateProfile(userId: string, input: UpdateProfileInput): Promise<Profile | null> {
+    return this.profiles.updateProfile(userId, input)
+  }
+
+  listProfiles(params?: PaginationParams): Promise<PaginatedResult<Profile>> {
+    return this.profiles.listProfiles(params)
+  }
+
+  searchProfiles(query: string, limit?: number): Promise<Profile[]> {
+    return this.profiles.searchProfiles(query, limit)
   }
 
   // ---------------------------------------------------------------------------
-  // Profile domain
+  // Settings domain — delegated to UserSettingsService
   // ---------------------------------------------------------------------------
 
-  async getProfile(userId: string): Promise<Profile | null> {
-    const { data, error } = await this.sb
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (error ?? !data) return null
-    return data as Profile
+  getSettings(userId: string): Promise<NotificationPreferences | null> {
+    return this.settings.getSettings(userId)
   }
 
-  async getProfileByUsername(username: string): Promise<Profile | null> {
-    const { data, error } = await this.sb
-      .from('profiles')
-      .select('*')
-      .ilike('username', username)
-      .single()
-
-    if (error ?? !data) return null
-    return data as Profile
-  }
-
-  async updateProfile(userId: string, input: UpdateProfileInput): Promise<Profile | null> {
-    const { data, error } = await this.sb
-      .from('profiles')
-      .update(input)
-      .eq('id', userId)
-      .select()
-      .single()
-
-    if (error ?? !data) return null
-    return data as Profile
-  }
-
-  async listProfiles(params: PaginationParams = {}): Promise<PaginatedResult<Profile>> {
-    const limit = params.limit ?? 50
-    const offset = params.offset ?? 0
-
-    const { data, error, count } = await this.sb
-      .from('profiles')
-      .select('*', { count: 'exact' })
-      .range(offset, offset + limit - 1)
-      .order('created_at', { ascending: false })
-
-    if (error) return { data: [], total: 0, hasMore: false }
-
-    const total = count ?? 0
-    return {
-      data: (data ?? []) as Profile[],
-      total,
-      hasMore: offset + limit < total,
-    }
-  }
-
-  async searchProfiles(query: string, limit = 20): Promise<Profile[]> {
-    const pattern = `%${query}%`
-
-    const { data, error } = await this.sb
-      .from('profiles')
-      .select('*')
-      .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
-      .limit(limit)
-      .order('lifetime_points', { ascending: false })
-
-    if (error) return []
-    return (data ?? []) as Profile[]
-  }
-
-  // ---------------------------------------------------------------------------
-  // Settings domain
-  // ---------------------------------------------------------------------------
-
-  async getSettings(userId: string): Promise<NotificationPreferences | null> {
-    const { data, error } = await this.sb
-      .from('notification_preferences')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-
-    if (error ?? !data) return null
-    return data as NotificationPreferences
-  }
-
-  async updateSettings(
+  updateSettings(
     userId: string,
-    settings: UpdateNotificationPreferencesInput,
+    s: UpdateNotificationPreferencesInput,
   ): Promise<NotificationPreferences | null> {
-    const { data, error } = await this.sb
-      .from('notification_preferences')
-      .upsert({ user_id: userId, ...settings }, { onConflict: 'user_id' })
-      .select()
-      .single()
-
-    if (error ?? !data) return null
-    return data as NotificationPreferences
+    return this.settings.updateSettings(userId, s)
   }
 
   // ---------------------------------------------------------------------------
-  // Notifications domain
+  // Notifications domain — delegated to UserNotificationsService
   // ---------------------------------------------------------------------------
 
-  async getNotifications(
+  getNotifications(
     userId: string,
-    params: PaginationParams = {},
+    params?: PaginationParams,
   ): Promise<PaginatedResult<DeliveredNotification>> {
-    const limit = params.limit ?? 50
-    const offset = params.offset ?? 0
-
-    const { data, error, count } = await this.sb
-      .from('delivered_notifications')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .range(offset, offset + limit - 1)
-      .order('created_at', { ascending: false })
-
-    if (error) return { data: [], total: 0, hasMore: false }
-
-    const total = count ?? 0
-    return {
-      data: (data ?? []) as DeliveredNotification[],
-      total,
-      hasMore: offset + limit < total,
-    }
+    return this.notifications.getNotifications(userId, params)
   }
 
-  async markRead(notificationId: string, userId: string): Promise<boolean> {
-    const { error } = await this.sb
-      .from('delivered_notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('id', notificationId)
-      .eq('user_id', userId)
-
-    return !error
+  markRead(notificationId: string, userId: string): Promise<boolean> {
+    return this.notifications.markRead(notificationId, userId)
   }
 
-  async markAllRead(userId: string): Promise<boolean> {
-    const { error } = await this.sb
-      .from('delivered_notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .eq('is_read', false)
-
-    return !error
+  markAllRead(userId: string): Promise<boolean> {
+    return this.notifications.markAllRead(userId)
   }
 
-  async getUnreadCount(userId: string): Promise<number> {
-    const { count, error } = await this.sb
-      .from('delivered_notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('is_read', false)
-
-    if (error) return 0
-    return count ?? 0
+  getUnreadCount(userId: string): Promise<number> {
+    return this.notifications.getUnreadCount(userId)
   }
 }
 
