@@ -1,0 +1,26 @@
+{
+  "name": "@caia-app/smart-cicd-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Smart CI/CD Agent daemon (propose-only).",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/daemon.js"
+  },
+  "dependencies": {
+    "@chiefaia/local-llm-router": "workspace:*",
+    "@chiefaia/capability-broker": "workspace:*",
+    "better-sqlite3": "^12.6.2",
+    "nanoid": "^3.3.7",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
