@@ -284,6 +284,37 @@ importers:
 
   apps/roulette-backend: {}
 
+  apps/smart-cicd-agent:
+    dependencies:
+      '@chiefaia/capability-broker':
+        specifier: workspace:*
+        version: link:../../packages/capability-broker
+      '@chiefaia/local-llm-router':
+        specifier: workspace:*
+        version: link:../../packages/local-llm-router
+      better-sqlite3:
+        specifier: ^12.6.2
+        version: 12.9.0
+      nanoid:
+        specifier: ^3.3.7
+        version: 3.3.11
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   apps/stolution-mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
