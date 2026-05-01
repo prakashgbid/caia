@@ -7,11 +7,17 @@ import { eq, desc } from 'drizzle-orm';
 import type { Db } from '../db/connection';
 import { events } from '../db/schema';
 import { eventBus, type EventDb, type DbEventRow, type EventQueryOpts } from '@chiefaia/event-bus-internal';
+import { eventsPublishedTotal } from '../metrics/prometheus';
 
 // @no-events — infrastructure startup wiring, not a domain operation
 export function wireEventBus(db: Db): void {
   const adapter: EventDb = {
     insertEvent(row: DbEventRow): void {
+      eventsPublishedTotal.inc({
+        type: row.type,
+        actor: row.actor ?? 'unknown',
+        severity: row.severity ?? 'info',
+      });
       db.insert(events).values({
         id: row.id,
         type: row.type,

@@ -1,6 +1,7 @@
 import picomatch from 'picomatch';
 import { RequirementsManager } from '../requirements/manager';
 import { NotificationQueue } from '../notifications/index';
+import type { ConductorMetrics, PumpOutcome } from '../observability/conductor-metrics';
 import type { PumpTickResult, Requirement } from '../requirements/types';
 import { BUCKET_ORDER } from '../prioritization/bucketer';
 import type { PriorityBucket } from '../prioritization/types';
@@ -58,6 +59,7 @@ export class PumpEngine {
   constructor(
     private readonly reqManager: RequirementsManager,
     private readonly notifications: NotificationQueue,
+    private readonly metrics?: ConductorMetrics,
   ) {}
 
   async tick(): Promise<PumpTickResult> {
@@ -88,6 +90,8 @@ export class PumpEngine {
     });
 
     if (!eligible) {
+      const outcome: PumpOutcome = candidates.length === 0 ? 'no_candidates' : 'file_conflict';
+      this.metrics?.recordPumpOutcome(outcome);
       return { picked: null, prompt: null, cwd: null };
     }
 
@@ -105,6 +109,8 @@ export class PumpEngine {
       'both',
     );
 
+    this.metrics?.recordPumpOutcome('picked');
+    this.metrics?.recordTaskQueueAge('user', claimed.capturedAt);
     return { picked: claimed, prompt, cwd };
   }
 

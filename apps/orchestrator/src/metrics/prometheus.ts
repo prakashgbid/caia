@@ -115,3 +115,50 @@ export const llmEstimatedSavedUsd = new Counter({
   labelNames: ['provider'],
   registers: [promRegistry],
 });
+
+// ─── Pipeline stage counters (wired by pipeline-metrics.ts) ──────────────────
+
+export const pipelineStagesTotal = new Counter({
+  name: 'conductor_pipeline_stages_total',
+  help: 'Total pipeline stage transitions by stage name',
+  labelNames: ['stage'],
+  registers: [promRegistry],
+});
+
+// ─── Agent run counters (wired by pipeline-metrics.ts) ───────────────────────
+
+export const agentRunsTotal = new Counter({
+  name: 'conductor_agent_runs_total',
+  help: 'Total agent invocations by agent name and outcome',
+  labelNames: ['agent', 'outcome'],
+  registers: [promRegistry],
+});
+
+// ─── Story outcome counters (wired by pipeline-metrics.ts) ───────────────────
+
+export const storiesTotal = new Counter({
+  name: 'conductor_stories_total',
+  help: 'Total stories by outcome (completed, validation_passed, validation_failed)',
+  labelNames: ['outcome'],
+  registers: [promRegistry],
+});
+
+// ─── Worker crash counter (wired by pipeline-metrics.ts) ─────────────────────
+
+export const workerCrashesTotal = new Counter({
+  name: 'conductor_worker_crashes_total',
+  help: 'Total worker crash events received by the orchestrator',
+  registers: [promRegistry],
+});
+
+// ─── Capsule freeze counters (wired by pipeline-metrics.ts) ──────────────────
+// Tracks every ticket.capsule-frozen event emitted by the capsule-freezer.
+// `status` is 'frozen' (success) or 'skipped' (invalid ticket).
+// `reason` is non-empty only for 'skipped': 'empty-ticket', 'json-parse-error', 'schema-error'.
+
+export const capsuleFreezesTotal = new Counter({
+  name: 'conductor_capsule_freezes_total',
+  help: 'Total capsule freeze outcomes by status and skip reason',
+  labelNames: ['status', 'reason'],
+  registers: [promRegistry],
+});

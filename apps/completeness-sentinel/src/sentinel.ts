@@ -2,6 +2,12 @@ import type { EntityRef, RunResult, CheckResult } from './types';
 import { verifyFiles } from './verifiers/file-verifier';
 import { verifyUrls } from './verifiers/url-verifier';
 import { verifyTests } from './verifiers/test-verifier';
+import {
+  entitiesCheckedTotal,
+  checksTotal,
+  findingsTotal,
+  entityCheckDurationMs,
+} from './metrics';
 
 const CONDUCTOR_API = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 
@@ -172,6 +178,16 @@ export async function runSentinel(entities?: EntityRef[]): Promise<RunResult[]> 
       findings: allChecks,
       durationMs: Date.now() - start,
     };
+
+    // Record per-entity metrics
+    entitiesCheckedTotal.inc({ kind: entity.kind });
+    entityCheckDurationMs.observe({ kind: entity.kind }, result.durationMs);
+    for (const check of allChecks) {
+      checksTotal.inc({ check_kind: check.checkKind, result: check.passed ? 'pass' : 'fail' });
+      if (!check.passed) {
+        findingsTotal.inc({ severity: check.severity, check_kind: check.checkKind });
+      }
+    }
 
     await reportRun(result);
     results.push(result);

@@ -35,6 +35,7 @@ import { WorkerPoolRegistry } from './worker-pool-registry';
 import { BackpressureMonitor } from './backpressure-monitor';
 import { HealthMetricsEmitter } from './health-metrics-emitter';
 import { ReadyPoolConsumer } from './ready-pool-consumer';
+import { wireWorkerMetrics } from '../metrics/coding-metrics';
 
 export interface WirePhase2Options {
   /** Stale-worker detector tick interval. Default 30_000 ms. */
@@ -77,6 +78,7 @@ export function wirePhase2(db: Db, opts: WirePhase2Options = {}): Phase2Context 
     staleThresholdMs: opts.workerStaleThresholdMs,
     silent: opts.silent,
   });
+  const stopWorkerMetrics = wireWorkerMetrics(registry);
   const monitor = new BackpressureMonitor(db, {
     ceiling: opts.backpressureCeiling,
     hysteresis: opts.backpressureHysteresis,
@@ -144,6 +146,7 @@ export function wirePhase2(db: Db, opts: WirePhase2Options = {}): Phase2Context 
     }
     if (staleTimer) clearInterval(staleTimer);
     emitter.stop();
+    try { stopWorkerMetrics(); } catch { /* ignore */ }
   };
 
   return { registry, consumer, monitor, emitter, stopAll };

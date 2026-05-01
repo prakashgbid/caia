@@ -29,6 +29,7 @@
 import { randomBytes } from 'crypto';
 import type { Bundle } from './bundle-reader';
 import type { Worktree } from './worktree-manager';
+import * as codingMetrics from './coding-metrics';
 
 function nanoSessionId(): string {
   return `sess_${randomBytes(8).toString('hex')}`;
@@ -142,6 +143,7 @@ export class ImplementationEngine {
    */
   async implement(): Promise<ImplementResult> {
     if (!this.started) throw new Error('ImplementationEngine.implement() requires start() first');
+    const t0 = Date.now();
     let totalIn = 0;
     let totalOut = 0;
     let lastText = '';
@@ -152,31 +154,45 @@ export class ImplementationEngine {
       try {
         result = await this.adapter.send(userMsg);
       } catch (e) {
-        return {
+        const out: ImplementResult = {
           status: 'adapter-error',
           turns: i,
           totalTokens: { input: totalIn, output: totalOut },
           finalText: lastText,
         };
+        this.recordImplementMetrics(out, Date.now() - t0);
+        return out;
       }
       totalIn += result.tokens.input;
       totalOut += result.tokens.output;
       lastText = result.text;
       if (result.done) {
-        return {
+        const out: ImplementResult = {
           status: 'done',
           turns: i,
           totalTokens: { input: totalIn, output: totalOut },
           finalText: result.text,
         };
+        this.recordImplementMetrics(out, Date.now() - t0);
+        return out;
       }
     }
-    return {
+    const out: ImplementResult = {
       status: 'turn-limit',
       turns: this.maxImplementTurns,
       totalTokens: { input: totalIn, output: totalOut },
       finalText: lastText,
     };
+    this.recordImplementMetrics(out, Date.now() - t0);
+    return out;
+  }
+
+  private recordImplementMetrics(result: ImplementResult, durationMs: number): void {
+    codingMetrics.implementTotal.inc({ status: result.status });
+    codingMetrics.implementTurns.observe(result.turns);
+    codingMetrics.implementDurationMs.observe(durationMs);
+    codingMetrics.llmTokensTotal.inc({ kind: 'input' }, result.totalTokens.input);
+    codingMetrics.llmTokensTotal.inc({ kind: 'output' }, result.totalTokens.output);
   }
 
   /**
@@ -203,30 +219,43 @@ export class ImplementationEngine {
       try {
         result = await this.adapter.send(userMsg);
       } catch (e) {
-        return {
+        const out: FixResult = {
           status: 'adapter-error',
           turns: i,
           sha: null,
           totalTokens: { input: totalIn, output: totalOut },
         };
+        this.recordFixMetrics(out);
+        return out;
       }
       totalIn += result.tokens.input;
       totalOut += result.tokens.output;
       if (result.fixApplied) {
-        return {
+        const out: FixResult = {
           status: 'fix-applied',
           turns: i,
           sha: result.fixSha,
           totalTokens: { input: totalIn, output: totalOut },
         };
+        this.recordFixMetrics(out);
+        return out;
       }
     }
-    return {
+    const out: FixResult = {
       status: 'turn-limit',
       turns: this.maxFixTurns,
       sha: null,
       totalTokens: { input: totalIn, output: totalOut },
     };
+    this.recordFixMetrics(out);
+    return out;
+  }
+
+  private recordFixMetrics(result: FixResult): void {
+    codingMetrics.applyFixTotal.inc({ status: result.status });
+    codingMetrics.applyFixTurns.observe(result.turns);
+    codingMetrics.llmTokensTotal.inc({ kind: 'input' }, result.totalTokens.input);
+    codingMetrics.llmTokensTotal.inc({ kind: 'output' }, result.totalTokens.output);
   }
 
   // ─── Prompt builders (public for snapshot testing) ────────────────────────

@@ -21,6 +21,7 @@ import * as path from 'path';
 import { spawnSync, type SpawnSyncOptions } from 'child_process';
 import type { Worktree } from './worktree-manager';
 import type { Bundle } from './bundle-reader';
+import * as codingMetrics from './coding-metrics';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -108,17 +109,21 @@ export class LocalTestRunner {
         stderr,
         '',
       );
+      const phaseDurationMs = this.now() - phaseStart;
+      const passed = exitCode === 0;
       results.push({
         phase,
         command,
         exitCode,
-        durationMs: this.now() - phaseStart,
+        durationMs: phaseDurationMs,
         stdoutTail: this.tail(stdout),
         stderrTail: this.tail(stderr),
-        passed: exitCode === 0,
+        passed,
       });
+      codingMetrics.testRunsTotal.inc({ phase, outcome: passed ? 'passed' : 'failed' });
+      codingMetrics.testDurationMs.observe({ phase }, phaseDurationMs);
       // Bail out after a failure to save time — fix-loop will retry.
-      if (exitCode !== 0) break;
+      if (!passed) break;
     }
     this.writeLog(logPath, logBuf.join('\n'));
     return {

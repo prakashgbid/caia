@@ -22,12 +22,14 @@
 import { BundleReader } from './bundle-reader';
 import { startRuntime, type RuntimeHandle } from './runtime';
 import type { IpcHandlers, FixRequest, FixResultOut } from './ipc-server';
+import { startMetricsServer } from './metrics-server';
 
 export interface WorkerEnv {
   orchestratorUrl: string;
   workerKind: 'coding';
   pollIntervalMs: number;
   heartbeatIntervalMs: number;
+  metricsPort: number;
 }
 
 export function readEnv(env: NodeJS.ProcessEnv = process.env): WorkerEnv {
@@ -38,6 +40,7 @@ export function readEnv(env: NodeJS.ProcessEnv = process.env): WorkerEnv {
     workerKind: (env.WORKER_KIND as 'coding') ?? 'coding',
     pollIntervalMs: Number.parseInt(env.POLL_INTERVAL_MS ?? '5000', 10),
     heartbeatIntervalMs: Number.parseInt(env.HEARTBEAT_INTERVAL_MS ?? '15000', 10),
+    metricsPort: Number.parseInt(env.METRICS_PORT ?? '9091', 10),
   };
 }
 
@@ -69,6 +72,8 @@ export async function bootstrap(
     return { reader, runtime: null, shutdown: async () => {} };
   }
 
+  const metricsServer = startMetricsServer(env.metricsPort);
+
   const runtime = await startRuntime({
     orchestratorUrl: env.orchestratorUrl,
     heartbeatIntervalMs: env.heartbeatIntervalMs,
@@ -88,6 +93,7 @@ export async function bootstrap(
     runtime,
     shutdown: async () => {
       await runtime.shutdown('manual-shutdown');
+      metricsServer.close();
     },
   };
 }

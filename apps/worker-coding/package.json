@@ -15,7 +15,8 @@
   "dependencies": {
     "@chiefaia/ticket-template": "workspace:*",
     "zod": "^4.1.12",
-    "@chiefaia/capability-broker": "workspace:*"
+    "@chiefaia/capability-broker": "workspace:*",
+    "prom-client": "^15.1.3"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

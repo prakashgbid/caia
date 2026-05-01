@@ -26,6 +26,7 @@ import type { Bundle } from './bundle-reader';
 import type { Worktree } from './worktree-manager';
 import type { RunResult } from './local-test-runner';
 import type { OpenPrResult } from './diff-committer';
+import * as codingMetrics from './coding-metrics';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -92,7 +93,12 @@ export class DodSelfCheck {
       results.push(this.checkTypecheckClean(input));
     }
     const failureCount = results.filter((r) => !r.passed).length;
-    return { passed: failureCount === 0, results, failureCount };
+    for (const r of results) {
+      codingMetrics.dodChecksTotal.inc({ check_id: r.id, outcome: r.passed ? 'passed' : 'failed' });
+    }
+    const passed = failureCount === 0;
+    codingMetrics.dodTotal.inc({ outcome: passed ? 'passed' : 'failed' });
+    return { passed, results, failureCount };
   }
 
   // ─── Individual checks ────────────────────────────────────────────────────

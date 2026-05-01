@@ -7,6 +7,7 @@ import { StateManager } from './core/state';
 import { LockManager } from './core/locks';
 import { DepsManager } from './core/deps';
 import { AuditManager } from './core/audit';
+import { ConductorMetrics } from './observability/conductor-metrics';
 import type {
   AddParams,
   AddResult,
@@ -19,6 +20,7 @@ import type {
 } from './core/types';
 
 export type { AddParams, AddResult, AuditResult, CheckResult, ConductorState, Task, TaskStatus, SpawnedBy };
+export { ConductorMetrics };
 export * from './core/types';
 
 export class Conductor {
@@ -26,13 +28,15 @@ export class Conductor {
   private readonly lockManager: LockManager;
   private readonly depsManager: DepsManager;
   private readonly auditManager: AuditManager;
+  readonly metrics: ConductorMetrics;
 
-  constructor(conductorDir?: string) {
+  constructor(conductorDir?: string, metrics?: ConductorMetrics) {
     const dir = conductorDir ?? path.join(os.homedir(), '.conductor');
     this.stateManager = new StateManager(dir);
     this.lockManager = new LockManager(this.stateManager);
     this.depsManager = new DepsManager(this.stateManager);
     this.auditManager = new AuditManager(this.stateManager);
+    this.metrics = metrics ?? new ConductorMetrics();
   }
 
   async init(): Promise<void> {
@@ -78,6 +82,8 @@ export class Conductor {
       payload: { task },
     });
 
+    this.metrics.recordTaskAdded(params.spawnedBy ?? 'user');
+    this.metrics.recordLockConflict(conflicts.conflicts.length);
     return { id, status: initialStatus, conflicts: conflicts.conflicts, blockedBy };
   }
 
@@ -99,6 +105,7 @@ export class Conductor {
         taskId: id,
         payload: { blockedBy },
       });
+      this.metrics.recordTaskBlocked();
       const updated = this.stateManager.getTask(id)!;
       return updated;
     }
@@ -109,6 +116,7 @@ export class Conductor {
       taskId: id,
       payload: { startedAt },
     });
+    this.metrics.recordTaskStarted();
 
     return this.stateManager.getTask(id)!;
   }
@@ -130,6 +138,7 @@ export class Conductor {
     // Check if any blocked tasks can now unblock
     await this.unblockDependents(id);
 
+    this.metrics.recordTaskTerminated('completed', task.spawnedBy, task.startedAt);
     return this.stateManager.getTask(id)!;
   }
 
@@ -143,6 +152,7 @@ export class Conductor {
       payload: { reason },
     });
 
+    this.metrics.recordTaskTerminated('failed', task.spawnedBy, task.startedAt);
     return this.stateManager.getTask(id)!;
   }
 
@@ -152,6 +162,7 @@ export class Conductor {
 
     await this.stateManager.appendEvent({ type: 'TASK_CANCELLED', taskId: id });
 
+    this.metrics.recordTaskTerminated('cancelled', task.spawnedBy, task.startedAt);
     return this.stateManager.getTask(id)!;
   }
 
@@ -200,6 +211,7 @@ export class Conductor {
       }
     }
 
+    this.metrics.recordReconcileDrift(drifted.length);
     return { drifted };
   }
 
@@ -216,6 +228,7 @@ export class Conductor {
         payload: { startedAt: task.startedAt },
       });
     }
+    this.metrics.recordTtlExpired(expired.length);
     return expired;
   }
 
@@ -232,6 +245,7 @@ export class Conductor {
           type: 'TASK_UNBLOCKED',
           taskId: task.id,
         });
+        this.metrics.recordTaskUnblocked();
       }
     }
   }

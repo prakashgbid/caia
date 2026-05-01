@@ -14,6 +14,7 @@ import {
 import { bus } from '../../ws/bus';
 import { eventBus } from '../../events/bus-adapter';
 import { getTicketBundle } from '../ticket-bundle';
+import { sentinelFindingsTotal } from '../../metrics/prometheus';
 
 function sha256(s: string): string {
   return createHash('sha256').update(s).digest('hex');
@@ -326,19 +327,21 @@ export function registerCompletenessRoutes(app: Hono, db: Db): void {
     // so the consumer can filter (e.g. only critical findings light up
     // the badge).
     for (const f of findings) {
+      const fSeverity = (f['severity'] as string) ?? 'warning';
+      const fCheckKind = (f['check_kind'] as string) ?? 'manual';
+      sentinelFindingsTotal.inc({ severity: fSeverity, check_kind: fCheckKind });
       eventBus.publish({
         type: 'completeness.finding_filed',
         actor: 'completeness-sentinel',
         entity_type: (body['entity_kind'] as string) ?? 'unknown',
         entity_id: (body['entity_id'] as string) ?? 'unknown',
-        severity: ((f['severity'] as string) === 'critical' ? 'error'
-          : (f['severity'] as string) === 'warning' ? 'warning' : 'info'),
+        severity: (fSeverity === 'critical' ? 'error' : fSeverity === 'warning' ? 'warning' : 'info'),
         payload: {
           run_id: runId,
           entity_kind: (body['entity_kind'] as string) ?? 'unknown',
           entity_id: (body['entity_id'] as string) ?? 'unknown',
-          check_kind: (f['check_kind'] as string) ?? 'manual',
-          severity: (f['severity'] as string) ?? 'warning',
+          check_kind: fCheckKind,
+          severity: fSeverity,
           message: (f['message'] as string) ?? '',
         },
       });

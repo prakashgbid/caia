@@ -20,6 +20,7 @@ import type { Phase2Context } from '../agents/wire-phase2';
 // FREG-003: subscribe FeatureRegistryWriter to story.completed at boot.
 import { registerFeatureRegistryWriter } from '../agents/feature-registry-writer';
 import { subscribeToEvents as subscribePriorityEvents, scoreAll } from '../prioritization/reprioritizer';
+import { wirePipelineMetrics } from '../metrics/pipeline-metrics';
 import { tasks, executorRuns } from '../db/schema';
 
 const HTTP_PORT = parseInt(process.env['CONDUCTOR_HTTP_PORT'] ?? '7776', 10);
@@ -95,6 +96,8 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
 
   // Wire event bus to DB before any seeds or route handlers
   wireEventBus(db);
+  // G8: wire event-bus → Prometheus metrics (stage durations, agent runs, story outcomes)
+  wirePipelineMetrics();
 
   await seedProjects(db);
   await seedAdr011(db);

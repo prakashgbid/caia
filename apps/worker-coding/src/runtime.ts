@@ -26,6 +26,7 @@ import { OrchestratorClient } from './orchestrator-client';
 import type { AssignmentResponse, RegisterRequest } from './orchestrator-client';
 import { IpcServer, defaultSocketPath } from './ipc-server';
 import type { IpcHandlers } from './ipc-server';
+import * as codingMetrics from './coding-metrics';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -101,6 +102,7 @@ export async function startRuntime(opts: RuntimeOptions): Promise<RuntimeHandle>
   if (opts.preferredWorkerId) (reg as RegisterRequest & { id?: string }).id = opts.preferredWorkerId;
   const regOut = await client.register(reg);
   const workerId = regOut.workerId;
+  codingMetrics.workerRegistrationsTotal.inc();
   log(`[worker-coding] registered as ${workerId}`);
 
   // If the user didn't override the socket path, derive it from the
@@ -133,7 +135,9 @@ export async function startRuntime(opts: RuntimeOptions): Promise<RuntimeHandle>
     if (stopped) return;
     try {
       await client.heartbeat(workerId);
+      codingMetrics.workerHeartbeatsTotal.inc({ outcome: 'ok' });
     } catch (e) {
+      codingMetrics.workerHeartbeatsTotal.inc({ outcome: 'error' });
       log(`[worker-coding] heartbeat failed: ${(e as Error).message}`);
     }
   };
@@ -147,11 +151,16 @@ export async function startRuntime(opts: RuntimeOptions): Promise<RuntimeHandle>
     try {
       res = await client.getAssignment(workerId);
     } catch (e) {
+      codingMetrics.workerPollsTotal.inc({ outcome: 'error' });
       log(`[worker-coding] assignment poll failed: ${(e as Error).message}`);
       return;
     }
-    if (!res.assignment) return;
-    if (res.assignment.storyId === lastDispatchedStoryId) return;
+    if (!res.assignment || res.assignment.storyId === lastDispatchedStoryId) {
+      codingMetrics.workerPollsTotal.inc({ outcome: 'no-assignment' });
+      return;
+    }
+    codingMetrics.workerPollsTotal.inc({ outcome: 'ok' });
+    codingMetrics.workerAssignmentsTotal.inc();
     lastDispatchedStoryId = res.assignment.storyId;
     log(`[worker-coding] dispatching story ${res.assignment.storyId}`);
     try {
