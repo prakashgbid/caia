@@ -1,0 +1,10 @@
+# Anything that contains real credentials.
+.env
+.env.local
+.env.*.local
+
+# Local docker volumes / data dirs (volumes are named so they
+# normally live in /var/lib/docker, but cover the case where an
+# operator binds mounts into ./data/* for inspection).
+data/
+volumes/
