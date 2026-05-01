@@ -1,7 +1,17 @@
 // Main routing logic for @chiefaia/local-llm-router
 // Decides local vs Claude based on routing-config.ts, then dispatches.
+//
+// HARD CONSTRAINT (Prakash 2026-04-30): the Claude path uses the binary
+// adapter exclusively (subscription auth via the `claude` CLI). There is
+// NO API-key fallback. If the binary fails for any reason — missing,
+// rate-limited, malformed output — we fall back to Ollama (when
+// `fallbackOnError` is enabled) or rethrow.
 
-import { ClaudeAdapter } from './claude-adapter.js';
+import {
+  ClaudeAdapter,
+  ClaudeBinaryError,
+  ClaudeRateLimitedError,
+} from './claude-adapter.js';
 import { OllamaAdapter } from './ollama-adapter.js';
 import { getRoute } from './routing-config.js';
 import type { LLMProvider, LLMRequest, LLMResponse, RouterOptions } from './types.js';
@@ -73,7 +83,7 @@ export async function route(
       if (fallbackEnabled && rule.claudeModel) {
         console.warn(
           `[local-llm-router] Local model "${rule.localModel}" failed ` +
-            `for task "${taskType}"; falling back to Claude (${rule.claudeModel}). ` +
+            `for task "${taskType}"; falling back to Claude binary (${rule.claudeModel}). ` +
             `Error: ${String(localErr)}`,
         );
         return await dispatchClaude(rule.claudeModel, request);
@@ -85,11 +95,35 @@ export async function route(
     try {
       return await dispatchClaude(claudeModel, request);
     } catch (claudeErr) {
+      // Rate-limit is a SPECIAL case — the spend-guard pump handler
+      // owns the response (rotate account + maybe pause). We rethrow
+      // so the orchestrator can react, but we still allow Ollama
+      // fallback as a last resort if the caller opted in.
+      if (claudeErr instanceof ClaudeRateLimitedError) {
+        if (fallbackEnabled) {
+          console.warn(
+            `[local-llm-router] Claude binary rate-limited for task "${taskType}"; ` +
+              `falling back to Ollama (${rule.localModel}). Spend-guard should pause / rotate.`,
+          );
+          return await dispatchLocal(rule.localModel, request);
+        }
+        throw claudeErr;
+      }
+      if (claudeErr instanceof ClaudeBinaryError) {
+        if (fallbackEnabled) {
+          console.warn(
+            `[local-llm-router] Claude binary failed (${claudeErr.message}) for task "${taskType}"; ` +
+              `falling back to Ollama (${rule.localModel}). NO API-key fallback (rule).`,
+          );
+          return await dispatchLocal(rule.localModel, request);
+        }
+        throw claudeErr;
+      }
+      // Unknown error — preserve previous behaviour.
       if (fallbackEnabled) {
         console.warn(
-          `[local-llm-router] Claude model "${claudeModel}" failed ` +
-            `for task "${taskType}"; falling back to local (${rule.localModel}). ` +
-            `Error: ${String(claudeErr)}`,
+          `[local-llm-router] Claude path failed (${String(claudeErr)}) for task "${taskType}"; ` +
+            `falling back to Ollama (${rule.localModel}).`,
         );
         return await dispatchLocal(rule.localModel, request);
       }

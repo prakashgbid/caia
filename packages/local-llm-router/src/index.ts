@@ -2,7 +2,12 @@
 
 export { route, __setAdapters } from './router.js';
 export { OllamaAdapter } from './ollama-adapter.js';
-export { ClaudeAdapter } from './claude-adapter.js';
+export {
+  ClaudeAdapter,
+  ClaudeBinaryError,
+  ClaudeRateLimitedError,
+} from './claude-adapter.js';
+export type { ClaudeAdapterOptions } from './claude-adapter.js';
 export { getRoute, ROUTING_RULES, COST_ANALYSIS } from './routing-config.js';
 export {
   MODEL_CATALOG,

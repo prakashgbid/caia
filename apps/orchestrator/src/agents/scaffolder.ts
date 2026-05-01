@@ -153,26 +153,51 @@ export const ACTIVATION_MAP: Record<RequestType, string[]> = {
     'testing-agent',
     'release-agent',
   ],
+  // PO-DECOMP-WIDEN-VERBS (2026-04-30): bug-fix / refactor / performance /
+  // security previously had NO po-agent in the activation list, so the
+  // decomposer never ran for these request types and they stalled at
+  // test_designed with 0 stories. The rule-based decomposer now emits
+  // verb-specific story templates for these cases (see
+  // packages/decomposer/src/rule-based.ts) - adding po-agent + ba-agent
+  // here lets the pipeline reach ready_for_pickup for these prompts.
+  //
+  // SCAFFOLDER-TASK-SCHEDULER-FIX (2026-04-30): task-scheduler is what
+  // ultimately advances the prompt to `bucket_placed` -> `ready_for_pickup`.
+  // Without it the pipeline stops at `ea_decomposed`. Adding task-scheduler
+  // to all four request types so they reach the same terminal state as
+  // new-feature / new-project.
   'bug-fix': [
+    'po-agent',
+    'ba-agent',
+    'task-scheduler',
     'developer-agent',
     'testing-agent',
     'release-agent',
     'security-agent',
   ],
   'refactor': [
+    'po-agent',
     'ea-agent',
+    'ba-agent',
+    'task-scheduler',
     'developer-agent',
     'testing-agent',
     'release-agent',
   ],
   'performance': [
+    'po-agent',
+    'ba-agent',
+    'task-scheduler',
     'developer-agent',
     'observability-agent',
     'testing-agent',
     'release-agent',
   ],
   'security': [
+    'po-agent',
     'security-agent',
+    'ba-agent',
+    'task-scheduler',
     'developer-agent',
     'testing-agent',
     'release-agent',
