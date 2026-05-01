@@ -1,0 +1,38 @@
+{
+  "name": "@chiefaia/dspy-bridge",
+  "version": "0.1.0",
+  "description": "Node ↔ Python bridge for DSPy. Spawns a uv-pinned Python sub-process that hosts compiled DSPy programs and answers JSON-line RPC. Substrate pick #1 of the AI tech modernization proposal §6.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "python"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist",
+    "py:bootstrap": "bash python/bootstrap.sh",
+    "py:smoke": "uv run --directory python python -m caia_dspy_bridge.smoke"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
