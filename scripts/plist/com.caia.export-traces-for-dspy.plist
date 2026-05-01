@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.caia.export-traces-for-dspy</string>
+
+    <!-- Run via the local pnpm + tsx; arguments target the export script. -->
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/zsh</string>
+      <string>-c</string>
+      <string>cd /Users/MAC/Documents/projects/caia &amp;&amp; pnpm exec tsx scripts/export-traces-for-dspy.ts</string>
+    </array>
+
+    <!-- Daily at 03:05 UTC (= ~22:00-23:00 PT depending on DST). -->
+    <key>StartCalendarInterval</key>
+    <dict>
+      <key>Hour</key>
+      <integer>3</integer>
+      <key>Minute</key>
+      <integer>5</integer>
+    </dict>
+
+    <!-- Don't keep alive — once-per-day cron is the contract. -->
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Pull credentials from the user's launchctl env (set by
+         scripts/bootstrap-git-auth.sh or set manually via:
+           launchctl setenv LANGFUSE_PUBLIC_KEY pk-lf-...
+           launchctl setenv LANGFUSE_SECRET_KEY sk-lf-...
+           launchctl setenv LANGFUSE_HOST http://localhost:3001
+    -->
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/Users/MAC/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+      <key>LANGFUSE_HOST</key>
+      <string>http://localhost:3001</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/MAC/Library/Logs/caia/export-traces-for-dspy.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/MAC/Library/Logs/caia/export-traces-for-dspy.err</string>
+  </dict>
+</plist>
