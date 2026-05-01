@@ -230,7 +230,7 @@ export async function initRouterOtel(
   };
 
   const sdk = new NodeSDK({
-    resource: new resources.Resource(resourceAttrs),
+    resource: resources.resourceFromAttributes(resourceAttrs),
     traceExporter: new OTLPTraceExporter({
       url: endpoint,
       ...(Object.keys(headers).length > 0 ? { headers } : {}),
