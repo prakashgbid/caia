@@ -21,10 +21,6 @@ export type {
 } from './protocol.js';
 
 // ─── Typed program wrappers ─────────────────────────────────────────────
-//
-// One file per registered DSPy program. The orchestrator imports these
-// rather than calling `bridge.predict(...)` directly so the Node side
-// stays type-safe across the JSONL boundary.
 export {
   runPoScopeDetector,
   PoScopeDetectorError,
@@ -36,3 +32,15 @@ export type {
   PoScopeDetectorOutput,
   StoryScope,
 } from './programs/po-scope-detector.js';
+
+// ─── Trace pipeline (PR3) ───────────────────────────────────────────────
+export { recordTrace, readTraces, defaultTraceRoot } from './traces.js';
+export type { TraceRow, TraceWriterOptions } from './traces.js';
+export { buildTrainset, writeTrainsetJsonl } from './trainset.js';
+export type { BuildTrainsetOptions, TrainsetRow } from './trainset.js';
+export type { SpendRecord } from './spend-bridge.js';
+export {
+  PHASE2E_002_FIXTURES,
+  fixturesToEvalsetRows,
+} from './evalsets/po-scope-detector-phase2e002.js';
+export type { Phase2e002Fixture } from './evalsets/po-scope-detector-phase2e002.js';
