@@ -80,6 +80,11 @@ function buildDerivedEvent(
  *   - literal strings (no `$.` prefix)
  *   - jsonpath-style accessors prefixed with `$.` (e.g. "$.event.payload.pull_request.number")
  */
+// Guard against prototype-pollution path access (semgrep prototype-pollution-loop).
+// The path comes from trusted YAML, but defense-in-depth: refuse the standard
+// dunder paths regardless.
+const FORBIDDEN_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function resolvePayloadExpression(expr: string, ctx: Record<string, unknown>): unknown {
   if (!expr.startsWith('$.')) return expr;
   const path = expr.slice(2);
@@ -87,6 +92,8 @@ function resolvePayloadExpression(expr: string, ctx: Record<string, unknown>): u
   let cur: unknown = ctx;
   for (const p of parts) {
     if (cur == null || typeof cur !== 'object') return undefined;
+    if (FORBIDDEN_PATH_KEYS.has(p)) return undefined;
+    if (!Object.prototype.hasOwnProperty.call(cur, p)) return undefined;
     cur = (cur as Record<string, unknown>)[p];
   }
   return cur;

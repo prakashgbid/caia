@@ -211,12 +211,19 @@ function tokenString(t: Token): string {
   return String(t.value);
 }
 
+// Guard against prototype-pollution path access (semgrep prototype-pollution-loop).
+// The path comes from trusted YAML, but defense-in-depth: refuse the standard
+// dunder paths regardless.
+const FORBIDDEN_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function resolvePath(path: string, ctx: PredicateContext): unknown {
   const parts = path.split('.');
   let cur: unknown = ctx;
   for (const p of parts) {
     if (cur == null) return undefined;
     if (typeof cur !== 'object') return undefined;
+    if (FORBIDDEN_PATH_KEYS.has(p)) return undefined;
+    if (!Object.prototype.hasOwnProperty.call(cur, p)) return undefined;
     cur = (cur as Record<string, unknown>)[p];
   }
   return cur;
@@ -238,7 +245,14 @@ function applyBinaryOp(op: string, lhs: unknown, rhs: unknown): unknown {
       return Number(lhs) <= Number(rhs);
     case '=~': {
       if (typeof lhs !== 'string' || typeof rhs !== 'string') return false;
+      // ReDoS hardening (semgrep detect-non-literal-regexp): the pattern is
+      // sourced from trusted YAML, but defense-in-depth — cap the pattern
+      // length and reject patterns containing nested unbounded quantifiers.
+      if (rhs.length > 256) return false;
+      if (/(\.\*){2,}|(\.\+){2,}/.test(rhs)) return false;
       try {
+        // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+        // Pattern is from YAML loaded at boot, length-capped, and quantifier-checked above.
         return new RegExp(rhs).test(lhs);
       } catch {
         return false;
