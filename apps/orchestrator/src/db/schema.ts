@@ -1175,6 +1175,79 @@ export const archExtractRuns = sqliteTable('arch_extract_runs', {
 ]);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// arch_communities / arch_artifact_communities / arch_community_runs —
+// GRAPHRAG-001 (migration 0041).
+//
+// Microsoft GraphRAG-style community structure over the AKG edge graph.
+// A community detection algorithm (Louvain/Leiden — see
+// packages/architecture-registry/src/community-detection.ts) groups
+// arch_artifacts into hierarchical communities; each community gets an
+// LLM-generated summary (GRAPHRAG-002, migration 0042) the EA mesh's
+// specialists query for "global" architectural questions.
+// ─────────────────────────────────────────────────────────────────────────────
+export const archCommunities = sqliteTable('arch_communities', {
+  id: text('id').primaryKey(),
+  runId: text('run_id').notNull(),
+  level: integer('level').notNull(),
+  parentCommunityId: text('parent_community_id'),
+  memberCount: integer('member_count').notNull().default(0),
+  internalEdgeCount: integer('internal_edge_count').notNull().default(0),
+  externalEdgeCount: integer('external_edge_count').notNull().default(0),
+  modularityContribution: real('modularity_contribution').notNull().default(0),
+  algorithm: text('algorithm').notNull().default('leiden'),
+  seedArtifactId: text('seed_artifact_id'),
+  tagsJson: text('tags_json').notNull().default('[]'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  index('arch_communities_run_idx').on(t.runId),
+  index('arch_communities_level_idx').on(t.level),
+  index('arch_communities_run_level_idx').on(t.runId, t.level),
+  index('arch_communities_parent_idx').on(t.parentCommunityId),
+  index('arch_communities_updated_idx').on(t.updatedAt),
+]);
+
+export const archArtifactCommunities = sqliteTable('arch_artifact_communities', {
+  artifactId: text('artifact_id').notNull(),
+  communityId: text('community_id').notNull(),
+  runId: text('run_id').notNull(),
+  level: integer('level').notNull(),
+  isPrimary: integer('is_primary').notNull().default(1),
+  degreeInCommunity: integer('degree_in_community').notNull().default(0),
+  degreeTotal: integer('degree_total').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.artifactId, t.level, t.runId] }),
+  index('arch_artifact_communities_artifact_idx').on(t.artifactId),
+  index('arch_artifact_communities_community_idx').on(t.communityId),
+  index('arch_artifact_communities_run_idx').on(t.runId),
+  index('arch_artifact_communities_run_level_idx').on(t.runId, t.level),
+]);
+
+export const archCommunityRuns = sqliteTable('arch_community_runs', {
+  id: text('id').primaryKey(),
+  startedAt: integer('started_at').notNull(),
+  finishedAt: integer('finished_at'),
+  durationMs: integer('duration_ms'),
+  algorithm: text('algorithm').notNull().default('leiden'),
+  totalArtifacts: integer('total_artifacts').notNull().default(0),
+  totalEdges: integer('total_edges').notNull().default(0),
+  totalCommunities: integer('total_communities').notNull().default(0),
+  maxLevel: integer('max_level').notNull().default(0),
+  modularity: real('modularity').notNull().default(0),
+  iterations: integer('iterations').notNull().default(0),
+  seed: integer('seed'),
+  commitSha: text('commit_sha'),
+  isActive: integer('is_active').notNull().default(0),
+  error: text('error'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+}, (t) => [
+  index('arch_community_runs_started_idx').on(t.startedAt),
+  index('arch_community_runs_active_idx').on(t.isActive),
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // worker_pool — TASKMGR-001 (migration 0033)
 //
 // Durable registry of every Phase 2 worker process (Coding Agent + Fix-It

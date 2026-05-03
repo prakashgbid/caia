@@ -155,3 +155,20 @@ export {
   DEFAULT_MIN_SCORE,
 } from './search';
 export type { ArchSearchOpts, ArchSearchDeps } from './search';
+
+// GRAPHRAG-001: community detection over the AKG edge graph (Louvain in PR1,
+// Leiden swap planned in PR2). See community-detection.ts for the algorithm
+// rationale and CommunityDetectionResult for the shape.
+export {
+  detectCommunities,
+} from './community-detection.js';
+export type {
+  AlgorithmName,
+  ArtifactNode,
+  ArtifactEdge,
+  CommunityDetectionOptions,
+  DetectedCommunity,
+  DetectedMembership,
+  CommunityRunRow,
+  CommunityDetectionResult,
+} from './community-detection.js';
