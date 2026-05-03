@@ -13,6 +13,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@chiefaia/dspy-bridge": "workspace:*",
     "@chiefaia/local-llm-router": "workspace:*",
     "@chiefaia/ticket-template": "workspace:*",
     "nanoid": "^5.0.0",

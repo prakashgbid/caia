@@ -3,17 +3,24 @@
  *
  * Given a user prompt (and optional vision-doc summary), classify the
  * smallest scope at which the prompt can be expressed without further
- * decomposition. The decomposer engine (PR 2) starts recursion at this
- * scope rather than always-starting-at-initiative — so "add a logout
- * button" produces a single story, not a fake five-level tree.
+ * decomposition. The decomposer engine starts recursion at this scope
+ * rather than always-starting-at-initiative — so "add a logout button"
+ * produces a single story, not a fake five-level tree.
  *
- * The classifier itself is a small LLM call routed through the local
- * Ollama path (with Claude fallback) — it's a classification task,
- * not a generative one, so qwen2.5-coder:7b handles it well.
+ * Two backends:
+ *   - DSPy runtime (compiled program in ~/.caia/dspy/compiled/...)
+ *     when `CAIA_DSPY_RUNTIME=1` or the pointer file exists.
+ *   - Legacy: hand-written prompt routed through
+ *     @chiefaia/local-llm-router via callStructured().
+ *
+ * The DSPy path is strict opt-in with strict failure tolerance — any
+ * failure falls back to the legacy path with a structured-log line.
+ * See `dspy-runtime.ts` for the policy.
  */
 
 import { ScopeDetectionLlmOutputSchema } from './schemas.js';
 import { callStructured } from './structured-output.js';
+import { tryDspyScopeDetect } from './dspy-runtime.js';
 import type { ScopeDetection, CancellationSignal } from './types.js';
 
 export const SCOPE_DETECTION_TASK_TYPE = 'po-decomposer-scope-detection';
@@ -28,6 +35,12 @@ export interface DetectScopeOptions {
   visionDocSummary?: string;
   /** Optional cancellation signal. */
   signal?: CancellationSignal;
+  /**
+   * Force the legacy path even if the DSPy runtime is enabled. Used by
+   * the regression test suite that snapshots the legacy prompt's
+   * behaviour for compile-time delta validation.
+   */
+  forceLegacy?: boolean;
 }
 
 const SCOPE_DETECTION_SYSTEM_PROMPT = `You are a senior product manager classifying the natural scope of a user request.
@@ -58,15 +71,22 @@ Output schema:
 /**
  * Classify the natural scope of a prompt.
  *
- * Returns a `ScopeDetection` with `targetScope`, `confidence`, and a
- * one-sentence rationale. On parse failure or model error,
- * propagates `StructuredOutputParseError` / `StructuredOutputCancelled`
- * — the orchestrator (PR 2) catches and decides whether to file a
- * `decomposer-stuck` blocker or retry with a fresh model.
+ * Tries the DSPy substrate first when enabled; falls back to the
+ * legacy `callStructured()` path on miss / failure.
  */
 export async function detectScope(
   options: DetectScopeOptions,
 ): Promise<ScopeDetection> {
+  // ── DSPy path (PR5) ─────────────────────────────────────────────────
+  if (!options.forceLegacy) {
+    const dspy = await tryDspyScopeDetect(
+      options.promptText,
+      options.visionDocSummary,
+    );
+    if (dspy !== null) return dspy;
+  }
+
+  // ── Legacy path (unchanged behaviour) ──────────────────────────────
   const userPrompt =
     `Classify the natural scope of the following user prompt.\n\n` +
     `=== PROMPT ===\n${options.promptText}\n=== END PROMPT ===\n` +

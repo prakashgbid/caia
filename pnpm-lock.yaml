@@ -776,6 +776,9 @@ importers:
 
   packages/decomposer-recursive:
     dependencies:
+      '@chiefaia/dspy-bridge':
+        specifier: workspace:*
+        version: link:../dspy-bridge
       '@chiefaia/local-llm-router':
         specifier: workspace:*
         version: link:../local-llm-router
