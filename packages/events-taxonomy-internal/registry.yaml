@@ -341,6 +341,12 @@ events:
     actor: [user, api, mcp, executor]
     payload: [prompt_id, from_status, to_status, elapsed_ms]
 
+  # Boot-time in-flight resume sweep (T-010, 2026-05-04)
+  - type: prompt.resumed
+    severity: info
+    actor: [system]
+    payload: [prompt_id, reason, age_seconds, status_at_sweep, received_via, descendants_total, descendants_terminal, descendants_non_terminal]
+
   - type: prompt.ingested
     severity: info
     actor: [user, api, mcp, executor]

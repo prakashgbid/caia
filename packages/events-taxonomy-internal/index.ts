@@ -462,7 +462,7 @@ export type EventType =
   | 'lock.acquired' | 'lock.released' | 'lock.expired'
   | 'build.started' | 'build.step_started' | 'build.step_completed'
   | 'build.step_failed' | 'build.completed' | 'build.aborted'
-  | 'prompt.received' | 'prompt.status_changed'
+  | 'prompt.received' | 'prompt.status_changed' | 'prompt.resumed'
   | 'priority.scored' | 'priority.rebucketed' | 'priority.reordered' | 'priority.user_override'
   | 'system.decision_made'
   | 'secret.fetched' | 'secret.cache_hit' | 'secret.rotation_triggered'
@@ -573,7 +573,7 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'lock.acquired': 'debug', 'lock.released': 'debug', 'lock.expired': 'warning',
   'build.started': 'info', 'build.step_started': 'info', 'build.step_completed': 'info',
   'build.step_failed': 'error', 'build.completed': 'info', 'build.aborted': 'warning',
-  'prompt.received': 'info', 'prompt.status_changed': 'info',
+  'prompt.received': 'info', 'prompt.status_changed': 'info', 'prompt.resumed': 'info',
   'priority.scored': 'info', 'priority.rebucketed': 'info',
   'priority.reordered': 'info', 'priority.user_override': 'info',
   'system.decision_made': 'info',

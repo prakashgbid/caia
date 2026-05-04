@@ -17,6 +17,7 @@ import { createApp } from './app';
 import { wireEventBus, eventBus } from '../events/bus-adapter';
 import { wirePhase2 } from '../agents/wire-phase2';
 import type { Phase2Context } from '../agents/wire-phase2';
+import { resumeStalledPrompts } from '../prompts/resume';
 // FREG-003: subscribe FeatureRegistryWriter to story.completed at boot.
 import { registerFeatureRegistryWriter } from '../agents/feature-registry-writer';
 import { subscribeToEvents as subscribePriorityEvents, scoreAll } from '../prioritization/reprioritizer';
@@ -113,6 +114,26 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
   const { migrated } = await migrateFromJsonl(db, conductorDir);
   if (migrated > 0) {
     console.error(`[conductor] Migrated ${migrated} records from JSONL to SQLite`);
+  }
+
+  // T-010: sweep prompts left non-terminal by a previous orchestrator
+  // process (launchd kill, OOM, Ctrl-C). Conservative — emits
+  // `prompt.resumed` for warm/cold-restart cases and only mutates state
+  // when all descendants are already terminal (stalled-but-complete).
+  // Set CAIA_INFLIGHT_RESUME_DISABLED=1 to skip; default behaviour is on.
+  if (process.env['CAIA_INFLIGHT_RESUME_DISABLED'] !== '1') {
+    try {
+      const sweep = resumeStalledPrompts(db);
+      if (sweep.swept > 0) {
+        console.error(
+          `[conductor] in-flight resume: swept=${sweep.swept} cold=${sweep.coldRestart} warm=${sweep.warmRestart} answered=${sweep.markedAnswered}`,
+        );
+      }
+    } catch (err) {
+      // Boot must not fail because of a sweep error; the prompts will
+      // still be visible via the normal listing endpoints.
+      console.error('[conductor] in-flight resume sweep failed:', err);
+    }
   }
 
   // CODING-007: wire Phase 2 task-manager subsystem (registry, ready-pool
