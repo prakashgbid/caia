@@ -97,7 +97,7 @@ start  →  work  →  ready  →  ship  →  (release at end of day)
 1. **GitHub branch protection** on `main` + `develop`:
    - Require PR (no direct pushes).
    - Required status checks: `Build · Test · Lint · Typecheck`, `gitflow-conformance` (strict / up-to-date).
-   - Linear history (squash or rebase merge only).
+   - **Linear history is NOT required on `develop`** (disabled 2026-05-03). Required-linear-history blocks classic Git Flow back-merges from `main` → `develop` after a release, which previously caused recurring DIRTY release PRs. The `gitflow-conformance` check still rejects unwanted merge commits inside feature PRs (see Layer 2). `main` keeps linear history.
    - No force-push, no deletion.
    - `enforce_admins: true`.
    - 0 required reviewers (solo founder; PR + CI gates are the protection).
