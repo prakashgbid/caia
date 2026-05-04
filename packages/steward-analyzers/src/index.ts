@@ -54,3 +54,13 @@ export {
   type PreflightInput,
   type PreflightOptions,
 } from './local-state.js';
+
+export {
+  checkPrStaleness,
+  checkDependabotTriage,
+  groupDependabotByEcosystem,
+  type CheckPrStalenessOptions,
+  type CheckDependabotTriageOptions,
+  type PrRecord,
+  type DependabotPrRecord,
+} from './pr-state.js';
