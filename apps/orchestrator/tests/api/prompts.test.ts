@@ -312,6 +312,43 @@ describe('POST /prompts', () => {
     const p = getPrompt(db, id);
     expect(p!.receivedVia).toBe('cli');
   });
+
+  // API-VALIDATION-001 (2026-05-04) — reject known-bad input shapes that
+  // the 2026-05-01 stability audit surfaced:
+  //   - whitespace-only body (was accepted as 201; chased phantom decomp)
+  //   - over-cap body (was triggering descendant runaway)
+
+  it('returns 400 for whitespace-only body', async () => {
+    const db = createTestDb();
+    const app = createApp(db);
+    const { status, body } = await req(app, 'POST', '/prompts', { body: '   \t\n  ' });
+    expect(status).toBe(400);
+    expect((body as { error: string }).error).toMatch(/non-whitespace/i);
+  });
+
+  it('returns 400 for empty-string body', async () => {
+    const db = createTestDb();
+    const app = createApp(db);
+    const { status } = await req(app, 'POST', '/prompts', { body: '' });
+    expect(status).toBe(400);
+  });
+
+  it('returns 400 for body over PROMPT_BODY_MAX_CHARS (8000)', async () => {
+    const db = createTestDb();
+    const app = createApp(db);
+    const overCap = 'a'.repeat(8001);
+    const { status, body } = await req(app, 'POST', '/prompts', { body: overCap });
+    expect(status).toBe(400);
+    expect((body as { error: string }).error).toMatch(/at most 8000/);
+  });
+
+  it('accepts body at exactly PROMPT_BODY_MAX_CHARS (8000)', async () => {
+    const db = createTestDb();
+    const app = createApp(db);
+    const atCap = 'b'.repeat(8000);
+    const { status } = await req(app, 'POST', '/prompts', { body: atCap });
+    expect(status).toBe(201);
+  });
 });
 
 describe('GET /prompts', () => {
