@@ -83,12 +83,13 @@ jobs:
             --json number,title,headRefName,updatedAt,mergeStateStatus,labels \
             > /tmp/triage/raw.json
 
-          # Run analyzer on the raw set, group by ecosystem.
-          node <<'NODE_SCRIPT' > /tmp/triage/report.md
+          # Write the analyzer driver to a .mjs file (top-level await + ESM imports
+          # require module mode; node CLI heredoc rejected ESM by default).
+          cat > /tmp/triage/render.mjs <<'NODE_SCRIPT'
           import fs from 'node:fs';
           const raw = JSON.parse(fs.readFileSync('/tmp/triage/raw.json', 'utf8'));
-          const { checkDependabotTriage, groupDependabotByEcosystem } =
-            await import('./packages/steward-analyzers/dist/index.js');
+          const analyzersPath = process.argv[2];
+          const { checkDependabotTriage, groupDependabotByEcosystem } = await import(analyzersPath);
 
           function inferEcosystem(branch) {
             const m = branch.match(/dependabot\/([^/]+)\//);
@@ -142,6 +143,8 @@ jobs:
 
           process.stdout.write(lines.join('\n'));
           NODE_SCRIPT
+
+          node /tmp/triage/render.mjs "$(pwd)/packages/steward-analyzers/dist/index.js" > /tmp/triage/report.md
 
           cat /tmp/triage/report.md
 
