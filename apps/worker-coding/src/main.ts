@@ -16,10 +16,15 @@
  * `runtime.ts`; this file is the thin CLI shim that wires env → runtime
  * + the per-story dispatch handler. Each piece is unit-tested separately.
  *
+ * Logging: all observability lines route through `./logger` (pino-backed,
+ * HTTP bus to orchestrator). Do not introduce raw `console.*` here —
+ * matches the executor pattern (PR #86 seed).
+ *
  * @owner coding-agent (Phase 2C worker track)
  */
 
 import { BundleReader } from './bundle-reader';
+import { logger } from './logger';
 import { startRuntime, type RuntimeHandle } from './runtime';
 import type { IpcHandlers, FixRequest, FixResultOut } from './ipc-server';
 
@@ -78,8 +83,7 @@ export async function bootstrap(
       // Full per-story dispatch (worktree → engine → tests → PR → DoD →
       // hand-off to Fix-It) lives in CODING-009's E2E. For now, we log
       // and let CODING-009 wire it once we have a real-git harness.
-      // eslint-disable-next-line no-console
-      console.error(`[worker-coding] received assignment storyId=${assignment.storyId}`);
+      logger.info('received assignment', { storyId: assignment.storyId });
     },
   });
 
@@ -113,8 +117,7 @@ export function makeDefaultIpcHandlers(): IpcHandlers {
     shutdown: async () => {
       // Process exit is the responsibility of the CLI shim below; the
       // runtime stops loops on its own when shutdown() is called.
-      // eslint-disable-next-line no-console
-      console.error('[worker-coding] shutdown requested via IPC');
+      logger.info('shutdown requested via IPC');
     },
   };
 }
@@ -124,12 +127,10 @@ if (require.main === module) {
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   (async () => {
     const env = readEnv();
-    // eslint-disable-next-line no-console
-    console.error(`[worker-coding] booting against ${env.orchestratorUrl}`);
+    logger.info('booting', { orchestratorUrl: env.orchestratorUrl });
     const handle = await bootstrap(env, { withRuntime: true });
     const stop = async (signal: string) => {
-      // eslint-disable-next-line no-console
-      console.error(`[worker-coding] received ${signal}, shutting down`);
+      logger.info('shutting down', { signal });
       await handle.shutdown();
       process.exit(0);
     };
