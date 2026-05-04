@@ -1,0 +1,88 @@
+# Process: post-release back-merge
+#
+# After a release/* PR merges into main, a back-merge PR (main -> develop)
+# must be opened within 30 minutes and merged within 4 hours. Without this,
+# develop and main diverge on any file touched on both branches, which causes
+# hard merge conflicts on the next release PR (see incident 2026-04-30 to
+# 2026-05-03).
+#
+# Coverage gap reason: Evidence Gate is pre-merge only; gitflow-conformance
+# allows but does not require back-merge; memory rules are text-only and read
+# by humans but not by any runtime daemon.
+#
+# Reference: devops-steward-agent-design-2026-05-03.md §5.2.
+id: post-release-back-merge
+name: "Post-release back-merge into develop"
+version: 1
+description: |
+  Detects the missed back-merge after a release/* PR lands on main.
+  P0 propose-only: emits drift; does not auto-open the PR. P5 actor mode
+  will request the gh.pr.create token via Capability Broker.
+repos:
+  - caia
+enabled: true
+
+recovery_capability_tokens:
+  - gh.pr.create
+  - git.push.protected
+
+signals:
+  - github.pull_request.merged
+  - github.pull_request.opened
+
+invariants:
+  - id: detect_release_landed
+    when: |
+      event.type == "github.pull_request.merged" && event.payload.base_ref == "main" && event.payload.head_ref =~ "^release/"
+    emit: release_landed
+    payload:
+      release_pr_number: "$.event.payload.pr_number"
+      release_sha: "$.event.payload.merge_commit_sha"
+      release_head_branch: "$.event.payload.head_ref"
+
+  - id: detect_back_merge_opened
+    when: |
+      event.type == "github.pull_request.opened" && event.payload.base_ref == "develop" && event.payload.head_ref == "main"
+    emit: back_merge_opened
+    payload:
+      back_merge_pr_number: "$.event.payload.pr_number"
+
+  - id: detect_back_merge_merged
+    when: |
+      event.type == "github.pull_request.merged" && event.payload.base_ref == "develop" && event.payload.head_ref == "main"
+    emit: back_merge_merged
+    payload:
+      back_merge_pr_number: "$.event.payload.pr_number"
+
+transitions:
+  - from: release_landed
+    expected_next: back_merge_opened
+    deadline_min: 30
+    on_miss:
+      severity: medium
+      recovery_kind: open-back-merge-pr
+      recovery_payload:
+        head: main
+        base: develop
+        title_template: "chore: back-merge main into develop after release {release_pr_number}"
+        body_template: |
+          Auto-detected by Steward Agent because release PR merged into main
+          and 30 minutes elapsed without a corresponding back-merge PR.
+
+          Rule: post-release-back-merge.yaml v1
+          Severity: medium
+          Recovery: open-back-merge-pr (propose-only in P0; actor in P5+).
+
+  - from: back_merge_opened
+    expected_next: back_merge_merged
+    deadline_min: 240
+    on_miss:
+      severity: high
+      recovery_kind: alert-operator
+      recovery_payload:
+        diagnosis_kind: stuck-back-merge-pr
+        likely_cause: |
+          Back-merge PR opened but did not merge within 4 hours. Likely cause:
+          merge conflict needing manual resolution (see incident 2026-04-30 —
+          conflict pattern is _journal.json + schema.ts + pnpm-lock.yaml when
+          develop's superset includes new migrations or new packages).
