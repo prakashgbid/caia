@@ -28,3 +28,15 @@ export {
   checkGraphDivergence,
   type GraphDivergenceInput,
 } from './graph-divergence.js';
+
+export {
+  checkSnapshotAge,
+  checkTokenExpiry,
+  checkAuditLogRotation,
+  type CheckSnapshotAgeOptions,
+  type CheckTokenExpiryOptions,
+  type CheckAuditLogRotationOptions,
+  type SnapshotEntry,
+  type SecretRecord,
+  type AuditLogState,
+} from './vault-state.js';

@@ -7,7 +7,8 @@
  *   migration-linter       — Drizzle multi-statement breakpoint linter (failure mode #1)
  *   migration-numbering    — duplicate-prefix + gap detection (failure mode #3)
  *   graph-divergence       — develop ↔ main merge-base age check (failure mode #2)
- *   all                    — run every analyzer; OR exit code across all
+ *   vault-checks           — Mac-local snapshot-age check (failure mode #7)
+ *   all                    — run every pre-merge analyzer; OR exit code across all
  *
  * Flags:
  *   --repo-root <path>       repo root (default: ../../../ relative to bin)
@@ -23,12 +24,15 @@
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
 import {
   lintMigrations,
   discoverMigrationRoots,
   checkMigrationNumbering,
   checkGraphDivergence,
   exitCodeFor,
+  checkSnapshotAge,
 } from '../dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -168,6 +172,48 @@ function runGraphDivergence(repoRoot, opts) {
   return findings;
 }
 
+
+function newestMtimeEpoch(dir, glob) {
+  try {
+    const entries = fs.readdirSync(dir).filter((name) => name.match(glob));
+    if (entries.length === 0) return null;
+    let newest = 0;
+    for (const name of entries) {
+      try {
+        const st = fs.statSync(`${dir}/${name}`);
+        const t = Math.floor(st.mtimeMs / 1000);
+        if (t > newest) newest = t;
+      } catch { /* ignore */ }
+    }
+    return newest > 0 ? newest : null;
+  } catch {
+    return null;
+  }
+}
+
+function runVaultChecks(opts) {
+  const macSnapDir = (opts['mac-snapshot-dir'] || `${os.homedir()}/Library/Application Support/Stolution/vault-snapshots`);
+  const macMtime = newestMtimeEpoch(macSnapDir, /^vault-snapshot-.*\.snap$/);
+  const macPath = macMtime !== null ? macSnapDir : macSnapDir;
+
+  console.log(`vault-checks: scanning Mac snapshot dir ${macSnapDir}`);
+  const findings = checkSnapshotAge({
+    snapshots: [
+      { side: 'mac', path: macPath, mtimeEpoch: macMtime },
+    ],
+    maxAgeHours: opts['max-snapshot-age-hours'] ? parseInt(opts['max-snapshot-age-hours'], 10) : 26,
+  });
+
+  // Stolution-side snapshot check + Vault token-expiry inventory require
+  // SSH / Vault CLI auth and are intentionally out-of-scope for the
+  // analyzer CLI today. They will be added when the Mac-side
+  // launchd job is installed (follow-up PR with the operator-environment
+  // setup script). For now, the analyzer functions exist and tests cover
+  // them; only the data-collection adapter needs wiring.
+
+  return findings;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args.positional[0];
@@ -175,7 +221,8 @@ async function main() {
 
   if (!command || command === '--help' || command === '-h') {
     console.error('usage: steward-gatekeeper <command> [--repo-root <path>] [--max-age-days <N>] [--pr-head-ref <ref>]');
-    console.error('  commands: migration-linter | migration-numbering | graph-divergence | all');
+    console.error('  pre-merge   : migration-linter | migration-numbering | graph-divergence | all');
+    console.error('  scheduled   : vault-checks');
     process.exit(2);
   }
 
@@ -187,6 +234,8 @@ async function main() {
       findings = await runMigrationNumbering(repoRoot);
     } else if (command === 'graph-divergence') {
       findings = runGraphDivergence(repoRoot, args.flags);
+    } else if (command === 'vault-checks') {
+      findings = runVaultChecks(args.flags);
     } else if (command === 'all') {
       const a = await runMigrationLinter(repoRoot);
       const b = await runMigrationNumbering(repoRoot);
