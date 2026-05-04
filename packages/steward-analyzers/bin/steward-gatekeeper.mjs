@@ -1,27 +1,33 @@
 #!/usr/bin/env node
 /**
- * Steward Gatekeeper CLI — entry invoked by the `steward-gatekeeper.yml`
+ * Steward Gatekeeper CLI — entry invoked by the steward-gatekeeper.yml
  * GitHub Actions workflow.
  *
- * Usage:
- *   steward-gatekeeper migration-linter [--repo-root <path>]
- *   steward-gatekeeper all  [--repo-root <path>]
+ * Subcommands:
+ *   migration-linter       — Drizzle multi-statement breakpoint linter (failure mode #1)
+ *   migration-numbering    — duplicate-prefix + gap detection (failure mode #3)
+ *   graph-divergence       — develop ↔ main merge-base age check (failure mode #2)
+ *   all                    — run every analyzer; OR exit code across all
  *
- * Exit codes:
- *   0 — no `block`-severity findings (warn-level findings still printed)
- *   1 — at least one `block`-severity finding
- *   2 — usage error / unexpected internal error
+ * Flags:
+ *   --repo-root <path>       repo root (default: ../../../ relative to bin)
+ *   --max-age-days <N>       graph-divergence threshold (default 7)
+ *   --pr-head-ref <ref>      PR head branch (default $GITHUB_HEAD_REF)
  *
- * Output format: human-readable to stdout + GitHub Actions annotations
- * (`::error file=...,line=...::message`) so failures land directly in the
- * PR's "Files changed" view.
+ * Exit codes: 0 (no block findings), 1 (block findings), 2 (usage error).
+ *
+ * GitHub Actions annotations are emitted via `::error file=...,line=...`
+ * for block/high findings; `::warning ...` for medium/low.
  */
 
 import * as path from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   lintMigrations,
   discoverMigrationRoots,
+  checkMigrationNumbering,
+  checkGraphDivergence,
   exitCodeFor,
 } from '../dist/index.js';
 
@@ -49,11 +55,9 @@ function parseArgs(argv) {
 }
 
 function gha(level, finding) {
-  // GitHub Actions workflow command for inline annotation.
-  // See https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions
-  const file = finding.path.replace(/[\r\n]/g, '');
+  const file = (finding.path || '').replace(/[\r\n]/g, '');
   const line = finding.line ?? 1;
-  const msg = finding.message.replace(/[\r\n]+/g, ' — ');
+  const msg = (finding.message || '').replace(/[\r\n]+/g, ' — ');
   return `::${level} file=${file},line=${line}::[${finding.analyzer}/${finding.ruleId}] ${msg}`;
 }
 
@@ -90,21 +94,104 @@ async function runMigrationLinter(repoRoot) {
   return all;
 }
 
+async function runMigrationNumbering(repoRoot) {
+  const roots = await discoverMigrationRoots(repoRoot);
+  if (roots.length === 0) {
+    console.log(`migration-numbering: no Drizzle migration roots found under ${repoRoot}.`);
+    return [];
+  }
+  const all = [];
+  for (const dir of roots) {
+    console.log(`migration-numbering: scanning ${path.relative(repoRoot, dir)}/`);
+    const findings = await checkMigrationNumbering({ migrationsDir: dir });
+    all.push(...findings);
+  }
+  return all;
+}
+
+function runGraphDivergence(repoRoot, opts) {
+  // Resolve develop ↔ main merge-base + its commit timestamp via git.
+  // Requires actions/checkout@v4 with fetch-depth: 0 + a `git fetch origin develop main`.
+  let sha;
+  try {
+    sha = execSync('git merge-base origin/develop origin/main', {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    }).trim();
+  } catch (err) {
+    console.log(`graph-divergence: cannot compute merge-base — origin/develop or origin/main not present locally. Run \`git fetch origin develop main\` before invocation. (${err.message})`);
+    // Don't fail CI — graph-divergence is observational, not a hard
+    // requirement for fork-style PRs that may not have both refs.
+    return [];
+  }
+  const ts = parseInt(
+    execSync(`git log -1 --format=%ct ${sha}`, {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    }).trim(),
+    10,
+  );
+  const now = Math.floor(Date.now() / 1000);
+  const headRef = opts['pr-head-ref'] || process.env.GITHUB_HEAD_REF || '';
+
+  // Cheap check: is a back-merge PR open? Avoid `gh` invocation in CLI
+  // (no auth in some contexts); look for a local ref instead. The
+  // cron run path will pass this in via opts when needed.
+  let backMergePrPresent = false;
+  try {
+    const out = execSync('git for-each-ref refs/remotes/origin/chore/back-merge-main-into-develop-* --format="%(refname:short)|%(committerdate:unix)"', {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    }).trim();
+    if (out) {
+      // Treat "back-merge ref pushed within last 24h" as evidence one is in flight.
+      const lines = out.split('\n');
+      const recent = lines.find((l) => {
+        const parts = l.split('|');
+        const t = parseInt(parts[1] ?? '0', 10);
+        return now - t < 86400;
+      });
+      backMergePrPresent = !!recent;
+    }
+  } catch {
+    // ignore — refs may not exist
+  }
+
+  const findings = checkGraphDivergence({
+    mergeBaseTimestamp: ts,
+    nowTimestamp: now,
+    maxAgeDays: opts['max-age-days'] ? parseInt(opts['max-age-days'], 10) : 7,
+    prHeadRef: headRef,
+    backMergePrPresent,
+  });
+  console.log(`graph-divergence: merge-base ${sha.substring(0, 8)} ts=${ts} ageDays=${((now - ts) / 86400).toFixed(1)} headRef=${headRef || '(none)'} backMergePrPresent=${backMergePrPresent}`);
+  return findings;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args.positional[0];
   const repoRoot = path.resolve(args.flags['repo-root'] ?? path.resolve(__dirname, '../../..'));
 
   if (!command || command === '--help' || command === '-h') {
-    console.error('usage: steward-gatekeeper <command> [--repo-root <path>]');
-    console.error('  commands: migration-linter | all');
+    console.error('usage: steward-gatekeeper <command> [--repo-root <path>] [--max-age-days <N>] [--pr-head-ref <ref>]');
+    console.error('  commands: migration-linter | migration-numbering | graph-divergence | all');
     process.exit(2);
   }
 
-  let findings;
+  let findings = [];
   try {
-    if (command === 'migration-linter' || command === 'all') {
+    if (command === 'migration-linter') {
       findings = await runMigrationLinter(repoRoot);
+    } else if (command === 'migration-numbering') {
+      findings = await runMigrationNumbering(repoRoot);
+    } else if (command === 'graph-divergence') {
+      findings = runGraphDivergence(repoRoot, args.flags);
+    } else if (command === 'all') {
+      const a = await runMigrationLinter(repoRoot);
+      const b = await runMigrationNumbering(repoRoot);
+      const c = runGraphDivergence(repoRoot, args.flags);
+      findings = [...a, ...b, ...c];
     } else {
       console.error(`unknown command: ${command}`);
       process.exit(2);

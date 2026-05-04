@@ -18,3 +18,13 @@ export {
   type JournalEntry,
   type JournalFile,
 } from './migration-linter.js';
+export {
+  checkMigrationNumbering,
+  nextFreePrefix,
+  type CheckMigrationNumberingOptions,
+} from './migration-numbering.js';
+
+export {
+  checkGraphDivergence,
+  type GraphDivergenceInput,
+} from './graph-divergence.js';

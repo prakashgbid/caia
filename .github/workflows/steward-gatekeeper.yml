@@ -5,18 +5,10 @@ name: Steward Gatekeeper
 # from the 2026-04-26 → 2026-05-04 chaos / hygiene / release-blocker
 # sweep.
 #
-# This PR ships the first analyzer (Drizzle migration breakpoint linter,
-# failure mode #1 in the architecture doc). Subsequent PRs add:
-#   - graph-divergence (failure mode #2) [PR Phase 2b]
-#   - migration-numbering (failure mode #3) [PR Phase 2b]
-#
 # Each analyzer is its own job so failures are localised in the Checks
 # tab and branch protection lists them individually. Day-1 jobs run
 # `continue-on-error: true` (warn-only) for one cycle so existing
-# in-flight PRs don't break; promotion to blocking is a follow-up PR
-# that flips `continue-on-error: false` AND updates
-# scripts/setup-branch-protection.sh REQUIRED_CONTEXTS_JSON to include
-# the steward-gatekeeper-* contexts.
+# in-flight PRs don't break; promotion to blocking is a follow-up PR.
 #
 # Reference:
 #   - architecture: ~/Documents/projects/reports/steward-gatekeeper-architecture-2026-05-04.md
@@ -44,11 +36,7 @@ jobs:
   steward-gatekeeper-migration-linter:
     name: steward-gatekeeper-migration-linter
     runs-on: ubuntu-latest
-    # Day-1 warn-only — we know there are pre-existing offenders
-    # (0037_irreversible_actions.sql, 0039_executor_hook_controlled.sql,
-    # both stmts > 1, breakpoints = 0). Promotion to blocking is a
-    # follow-up PR after those are fixed.
-    continue-on-error: true
+    continue-on-error: true   # warn-only first cycle
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -62,3 +50,49 @@ jobs:
         run: pnpm --filter @chiefaia/steward-analyzers build
       - name: Migration linter — scan all Drizzle migration roots
         run: node packages/steward-analyzers/bin/steward-gatekeeper.mjs migration-linter
+
+  # ─── Failure mode #3: Migration numbering (duplicate prefix + gap) ─
+  steward-gatekeeper-migration-numbering:
+    name: steward-gatekeeper-migration-numbering
+    runs-on: ubuntu-latest
+    continue-on-error: true   # warn-only first cycle
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build @chiefaia/steward-analyzers
+        run: pnpm --filter @chiefaia/steward-analyzers build
+      - name: Migration numbering — duplicate-prefix + gap scan
+        run: node packages/steward-analyzers/bin/steward-gatekeeper.mjs migration-numbering
+
+  # ─── Failure mode #2: Graph divergence (develop ↔ main merge-base) ─
+  steward-gatekeeper-graph-divergence:
+    name: steward-gatekeeper-graph-divergence
+    runs-on: ubuntu-latest
+    continue-on-error: true   # warn-only first cycle
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need full history + both develop and main refs reachable.
+          fetch-depth: 0
+      - name: Fetch develop + main
+        run: |
+          git fetch origin develop main --no-tags
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build @chiefaia/steward-analyzers
+        run: pnpm --filter @chiefaia/steward-analyzers build
+      - name: Graph divergence — develop ↔ main merge-base age
+        env:
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+        run: node packages/steward-analyzers/bin/steward-gatekeeper.mjs graph-divergence
