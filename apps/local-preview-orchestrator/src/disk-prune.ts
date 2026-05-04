@@ -2,10 +2,16 @@
  * Disk pruning for local preview builds.
  * Keeps the last N successful builds per site; removes older ones.
  * Never prunes the targets of `current` or `previous` symlinks.
+ *
+ * Path-traversal note: `sitePath` arguments are produced exclusively from the
+ * compile-time SITES registry in sites-config.ts (no user-controllable input
+ * reaches this module). The `nosemgrep` annotations on path joins below
+ * acknowledge semgrep's static-pattern flag while documenting the trust
+ * boundary explicitly.
  */
 
-import { existsSync, lstatSync, readlinkSync, readdirSync, rmSync } from 'fs';
-import { extname, join, resolve } from 'path';
+import { existsSync, lstatSync, readlinkSync, readdirSync, rmSync, statSync, type Dirent } from 'fs';
+import { join, resolve } from 'path';
 
 export interface PruneResult {
   success: boolean;
@@ -24,8 +30,11 @@ export interface PruneResult {
  */
 export function pruneBuilds(sitePath: string, keepCount: number = 10): PruneResult {
   try {
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath from compile-time SITES registry
     const buildsDir = join(sitePath, 'builds');
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath from compile-time SITES registry
     const currentLink = join(sitePath, 'current');
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath from compile-time SITES registry
     const previousLink = join(sitePath, 'previous');
 
     if (!existsSync(buildsDir)) {
@@ -43,6 +52,7 @@ export function pruneBuilds(sitePath: string, keepCount: number = 10): PruneResu
       if (existsSync(currentLink)) {
         const target = readlinkSync(currentLink);
         // Symlink target is relative to sitePath (where the symlink is)
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath from compile-time SITES registry; target is read from symlink under sitePath
         const absoluteTarget = resolve(sitePath, target);
         protectedTargets.add(absoluteTarget);
       }
@@ -54,6 +64,7 @@ export function pruneBuilds(sitePath: string, keepCount: number = 10): PruneResu
       if (existsSync(previousLink)) {
         const target = readlinkSync(previousLink);
         // Symlink target is relative to sitePath
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath from compile-time SITES registry; target is read from symlink under sitePath
         const absoluteTarget = resolve(sitePath, target);
         protectedTargets.add(absoluteTarget);
       }
@@ -66,6 +77,7 @@ export function pruneBuilds(sitePath: string, keepCount: number = 10): PruneResu
       .filter((entry) => entry.isDirectory())
       .map((entry) => ({
         name: entry.name,
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- buildsDir derived from compile-time SITES registry; entry.name from filesystem under buildsDir
         path: join(buildsDir, entry.name)
       }))
       .sort((a, b) => a.name.localeCompare(b.name)); // Sort lexicographically
@@ -117,26 +129,56 @@ export function pruneBuilds(sitePath: string, keepCount: number = 10): PruneResu
 
 /**
  * Get the total disk usage of all builds for a site.
+ * Uses native fs traversal (no subprocess) so it is shell-injection-safe.
  *
  * @param sitePath - Base path for the site
  * @returns Total size in bytes, or undefined on error
  */
 export function getBuildsSize(sitePath: string): number | undefined {
   try {
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath from compile-time SITES registry
     const buildsDir = join(sitePath, 'builds');
     if (!existsSync(buildsDir)) {
       return 0;
     }
 
-    // Use du -sb for accurate size
-    const { execSync } = require('child_process');
-    const output = execSync(`du -sb "${buildsDir}"`, { encoding: 'utf-8' }).trim();
-    const size = parseInt(output.split('\t')[0], 10);
-
-    return isNaN(size) ? undefined : size;
+    return computeDirSize(buildsDir);
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Recursively compute the size of a directory tree in bytes.
+ * Pure-fs implementation (no subprocess) — semgrep-clean.
+ * Skips symlinks (does not follow them) to avoid double-counting and cycles.
+ */
+function computeDirSize(dirPath: string): number {
+  let total = 0;
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dirPath, { withFileTypes: true }) as Dirent[];
+  } catch {
+    return 0;
+  }
+  for (const entry of entries) {
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- dirPath rooted at sitePath/builds; entry.name from readdir
+    const childPath = join(dirPath, entry.name);
+    try {
+      if (entry.isSymbolicLink()) {
+        // Skip — do not follow symlinks (cycle/double-count protection)
+        continue;
+      }
+      if (entry.isDirectory()) {
+        total += computeDirSize(childPath);
+      } else if (entry.isFile()) {
+        total += statSync(childPath).size;
+      }
+    } catch {
+      // Skip unreadable entries
+    }
+  }
+  return total;
 }
 
 /**

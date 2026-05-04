@@ -2,9 +2,14 @@
  * Atomic symlink swap for deployment.
  * Swaps the `current` symlink from old build to new build atomically.
  * Also manages the `previous` symlink for instant rollback.
+ *
+ * Path-traversal note: `sitePath` arguments are produced exclusively from the
+ * compile-time SITES registry in sites-config.ts (no user-controllable input
+ * reaches this module). The `nosemgrep` annotations on path joins below
+ * acknowledge semgrep's static-pattern flag while documenting the trust
+ * boundary explicitly.
  */
 
-import { execSync } from 'child_process';
 import { existsSync, readlinkSync, symlinkSync, unlinkSync, renameSync } from 'fs';
 
 export interface SwapResult {
@@ -24,7 +29,9 @@ export interface SwapResult {
  */
 export function atomicSwap(sitePath: string, newBuildDir: string): SwapResult {
   try {
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath comes from compile-time SITES registry
     const currentLink = `${sitePath}/current`;
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath comes from compile-time SITES registry
     const previousLink = `${sitePath}/previous`;
     const tmpLink = `${currentLink}.tmp`;
 
@@ -89,7 +96,9 @@ export function atomicSwap(sitePath: string, newBuildDir: string): SwapResult {
  */
 export function rollbackToPrevious(sitePath: string): SwapResult {
   try {
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath comes from compile-time SITES registry
     const currentLink = `${sitePath}/current`;
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath comes from compile-time SITES registry
     const previousLink = `${sitePath}/previous`;
 
     if (!existsSync(previousLink)) {
@@ -134,6 +143,7 @@ export function rollbackToPrevious(sitePath: string): SwapResult {
  * @returns SHA if symlink exists and points to valid build, or undefined
  */
 export function getCurrentTarget(sitePath: string): string | undefined {
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath comes from compile-time SITES registry
   const currentLink = `${sitePath}/current`;
   try {
     if (existsSync(currentLink)) {
@@ -152,6 +162,7 @@ export function getCurrentTarget(sitePath: string): string | undefined {
  * @returns SHA if symlink exists and points to valid build, or undefined
  */
 export function getPreviousTarget(sitePath: string): string | undefined {
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal -- sitePath comes from compile-time SITES registry
   const previousLink = `${sitePath}/previous`;
   try {
     if (existsSync(previousLink)) {
