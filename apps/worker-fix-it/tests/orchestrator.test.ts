@@ -1,5 +1,5 @@
 /**
- * `FixItOrchestrator` — FIX-001 contract tests.
+ * `FixItOrchestrator` — orchestrator-level contract tests.
  *
  * Drives the orchestrator with hand-rolled stub ports so we can assert
  * the four interesting branches without booting a real worker:
@@ -11,8 +11,10 @@
  *      `fix-failed`
  *   4. attempts exhausted — escalation with finalStatus `exhausted`
  *
- * Subsequent FIX-### PRs add tests for real generator/runner/diagnoser
- * behaviour; this file pins the orchestrator's state-machine contract.
+ * The per-case loop (and its same-sha guard, blocker writing, and
+ * persistence) is now owned by RetestLoopController; see
+ * `tests/retest-loop-controller.test.ts` for that file's tests. This
+ * file pins the orchestrator's run-level state machine.
  */
 
 import {
@@ -80,7 +82,7 @@ class RecordingEmitter implements ResultEmitter {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe('FixItOrchestrator (FIX-001 stubs)', () => {
+describe('FixItOrchestrator', () => {
   it('emits tested_and_done when every case passes on attempt 1', async () => {
     const emitter = new RecordingEmitter();
     const orchestrator = new FixItOrchestrator({
@@ -235,19 +237,21 @@ describe('FixItOrchestrator (FIX-001 stubs)', () => {
         errorMessage: 'still broken',
       }),
     };
+    let attemptCount = 0;
     const ipc: CodingIpcInvoker = {
-      applyFix: async (): Promise<FixOutcome> => ({
-        ok: true,
-        sha: 'attempt-fix',
-        summary: 'tried',
-      }),
+      // Each retry produces a unique sha so the FIX-006 same-sha guard
+      // doesn't fire — we want to exercise the attempts-exhausted path.
+      applyFix: async (): Promise<FixOutcome> => {
+        attemptCount += 1;
+        return { ok: true, sha: `attempt${attemptCount}fix`, summary: 'tried' };
+      },
       shutdown: async () => undefined,
     };
-    let shutdownCalls = 0;
+    let exitCalls = 0;
     const ipcCounted: CodingIpcInvoker = {
       applyFix: ipc.applyFix.bind(ipc),
       shutdown: async () => {
-        shutdownCalls += 1;
+        exitCalls += 1;
       },
     };
 
@@ -269,9 +273,9 @@ describe('FixItOrchestrator (FIX-001 stubs)', () => {
     expect(result.payload.lastFailures[0]?.attempt).toBe(3);
     expect(result.payload.lastFailures[0]?.errorMessage).toBe('still broken');
 
-    // Escalation path should NOT call ipc.shutdown — the worker stays
+    // Escalation path should NOT close the IPC — the worker stays
     // alive so the blocker can be inspected.
-    expect(shutdownCalls).toBe(0);
+    expect(exitCalls).toBe(0);
   });
 
   it('exposes MAX_ATTEMPTS_PER_CASE = 6 as the directive contract', () => {

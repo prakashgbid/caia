@@ -90,7 +90,7 @@ change needed.
 - [x] FIX-003: Real test runner (`SubprocessTestRunner` over an injectable `CommandExecutor`).
 - [x] FIX-004: Real failure diagnoser (`StructuredFailureDiagnoser` with heuristic cause inference).
 - [x] FIX-005: Real Coding Agent IPC client (`UnixSocketCodingIpcClient` + `MemoryCodingIpcInvoker` fallback; coordinates with CODING-007).
-- [ ] FIX-006: Re-test loop persistence + fix-stuck blocker writer.
+- [x] FIX-006: Re-test loop persistence + fix-stuck blocker writer (`RetestLoopController` + same-sha guard).
 - [ ] Real-browser test with seeded failure — FIX-007 .. FIX-013.
 
 ## See also

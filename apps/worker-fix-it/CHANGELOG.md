@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+### FIX-006 — retest loop controller (this PR)
+
+- New `src/retest-loop-controller.ts`:
+  - `RetestLoopController` extracted from the orchestrator's per-case
+    loop. Owns three responsibilities the orchestrator delegates:
+    1. The retest loop itself (generate → run → diagnose → IPC →
+       loop, capped at `DEFAULT_MAX_ATTEMPTS = 6`).
+    2. Persistence: every (testCase, attempt) pair is recorded via
+       the injected `RunHistoryRecorder` so the dashboard timeline
+       and the `task.test_case.result` event stream both have a
+       faithful audit trail.
+    3. Blocker writing: terminal failures file a structured
+       `fix-stuck` / `coding-stuck` / `same-sha-twice` blocker via
+       the injected `BlockerWriter`.
+  - **Same-sha guard** — if the Coding Agent applies the same sha
+    twice in a row for the same test case, bail immediately rather
+    than burning the remaining attempts. That is the strongest signal
+    that the agent isn't actually changing the code, so continuing
+    the loop would only waste tokens.
+- `FixItOrchestrator` refactored to delegate per-case work to
+  `RetestLoopController`. Its run-level state machine (fan out cases,
+  roll up outcomes, emit terminal `tested_and_done` /
+  `fix_loop_escalated`) is unchanged.
+- 8 new vitest cases in `tests/retest-loop-controller.test.ts`:
+  pass-on-attempt-1 / one-retry-then-pass / attempts-exhausted /
+  IPC-ok-false / same-sha-twice / maxAttempts override / DEFAULT
+  pinned / history timing fields.
+- 1 new microbenchmark: controller dispatch < 2 ms / attempt.
+- Updates the existing orchestrator test that previously assumed a
+  same-sha-tolerant loop to use distinct shas per attempt (so the
+  exhausted path is exercised, not the same-sha guard).
+
 ### FIX-005 — Coding Agent IPC client (this PR)
 
 - New `src/coding-ipc-client.ts`: `MemoryCodingIpcInvoker` (default
