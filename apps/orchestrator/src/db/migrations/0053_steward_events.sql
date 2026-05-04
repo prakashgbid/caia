@@ -21,11 +21,13 @@ CREATE TABLE IF NOT EXISTS steward_events (
   correlation_id TEXT,
   created_at INTEGER NOT NULL
 );
-
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS steward_events_observed ON steward_events(observed_at);
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS steward_events_type ON steward_events(type);
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS steward_events_corr ON steward_events(correlation_id);
-
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS steward_process_state (
   process_id TEXT NOT NULL,
   lifecycle_key TEXT NOT NULL,
