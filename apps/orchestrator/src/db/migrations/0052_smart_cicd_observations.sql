@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS smart_cicd_observations (
   feedback_label TEXT,
   created_at INTEGER NOT NULL
 );
-
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS smart_cicd_obs_date ON smart_cicd_observations(observation_date);
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS smart_cicd_obs_action_kind ON smart_cicd_observations(proposed_action_kind);
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS smart_cicd_obs_feedback ON smart_cicd_observations(feedback_label);
