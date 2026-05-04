@@ -1,0 +1,77 @@
+name: stale-pr-cleanup
+
+# Weekly stale-PR auto-close — fires Tuesdays at 14:00 UTC (one day after
+# `dependabot-triage.yml` so the triage issue is fresh when we close eligible
+# PRs). Closes PRs idle >=30d that aren't labelled `keep-open` and aren't
+# authored by `app/dependabot` (those are handled by `dependabot-triage.yml`).
+#
+# Per failure mode #10 in the Steward Gatekeeper (architecture doc §3.10).
+# The `pr-state` analyzer ships in PR #299; this workflow is the action-side
+# hookup — the analyzer detects, this workflow executes the close + comment.
+#
+# The closing comment ("stale; reopen if needed") matches the analyzer's
+# `pr-stale-auto-close` remediation. Repo collaborators can re-open any
+# PR with one click; the comment tells them how.
+#
+# Reference: agent/memory/steward_gatekeeper_directive.md (mode 10),
+# agent/memory/feedback_git_flow_enforced.md.
+
+on:
+  schedule:
+    # Tuesdays 14:00 UTC ≈ 07:00 PT (summer) / 06:00 PT (winter).
+    - cron: '0 14 * * 2'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List eligible PRs without closing them'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: stale-pr-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Close stale PRs (>=30d, not keep-open, not dependabot)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies (steward-analyzers + deps only)
+        run: |
+          pnpm install --filter @chiefaia/steward-analyzers... --frozen-lockfile
+
+      - name: Build steward-analyzers
+        run: pnpm --filter @chiefaia/steward-analyzers build
+
+      - name: Run pr-stale (auto-close eligible)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [[ "${DRY_RUN:-false}" == "true" ]]; then
+            echo "→ dry-run: listing eligible PRs only (no close)"
+            node packages/steward-analyzers/bin/steward-gatekeeper.mjs pr-stale
+          else
+            echo "→ live run: auto-closing eligible PRs"
+            node packages/steward-analyzers/bin/steward-gatekeeper.mjs pr-stale --auto-close
+          fi
