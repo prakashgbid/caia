@@ -28,4 +28,13 @@ export interface DecomposerConfig {
   aiProvider?: 'claude' | 'rule-based';  // rule-based for testing/cost savings
   claudeApiKey?: string;
   claudeModel?: string;       // default: claude-sonnet-4-6
+  /**
+   * Cap on the number of logical sections the rule-based decomposer
+   * will produce per prompt. Each section becomes one Epic; uncapped
+   * very-long prompts (>4 KB) produced 2000+ descendants in the
+   * 2026-04-30 audit. Defaults to 20. Also overridable via
+   * DECOMPOSER_MAX_SECTIONS env var. Excess sections are coalesced
+   * into the final retained section so no prompt content is lost.
+   */
+  maxSections?: number;
 }

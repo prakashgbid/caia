@@ -15,7 +15,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/rule-based-verbs.test.ts'],
+    include: ['src/rule-based-verbs.test.ts', 'src/section-cap.test.ts'],
     exclude: ['dist/**', 'node_modules/**', 'src/decomposer.test.ts'],
   },
 });

@@ -46,6 +46,35 @@ function estimateEffort(description: string): 'trivial' | 'small' | 'medium' | '
   return 'xl';
 }
 
+/**
+ * Maximum number of logical sections the rule-based decomposer will
+ * produce per prompt. Each section becomes one Epic with up to 4 Stories
+ * (each with 2 Tasks), so cap=20 produces at most 20 epics × 9 nodes/epic
+ * + 1 initiative = 181 descendants. Generous for any legitimate prompt.
+ *
+ * Failure mode (Phase-2 stability audit, 2026-04-30): an 11859-byte
+ * "very-long" prompt produced 2070+ descendants when no cap was applied,
+ * saturating the SQLite write path and intermittently timing out
+ * /health. PR #296 added an 8000-char body cap at the API gateway;
+ * this cap is the defense-in-depth fallback when very-long bodies
+ * somehow get past the gateway (e.g. via direct DB insert / future
+ * webhook ingest path / migration of legacy long prompts).
+ *
+ * Override via DecomposerConfig.maxSections or DECOMPOSER_MAX_SECTIONS env.
+ */
+export const DEFAULT_MAX_SECTIONS = 20;
+
+function applyMaxSections(sections: string[], cap: number): string[] {
+  if (sections.length <= cap) return sections;
+  // Coalesce overflow into the last retained section so no content is lost.
+  const head = sections.slice(0, cap - 1);
+  const tail = sections.slice(cap - 1).join(' ');
+  console.warn(
+    `[decomposer] prompt produced ${String(sections.length)} sections; capped at ${String(cap)} (overflow merged into final section). Increase via DecomposerConfig.maxSections if intentional.`,
+  );
+  return [...head, tail];
+}
+
 // Extract logical sections from a prompt using heuristics
 function extractSections(prompt: string): string[] {
   // Split on common separators: newlines, "and", semicolons, commas in lists
@@ -258,7 +287,13 @@ function templatesFor(verb: VerbIntent, sectionLabel: string): Array<{
 }
 
 export function decomposeRuleBased(prompt: string, _config: DecomposerConfig = {}): DecompositionResult {
-  const sections = extractSections(prompt);
+  const rawSections = extractSections(prompt);
+  // Resolve cap: per-call config > env override > built-in default.
+  const envCap = process.env['DECOMPOSER_MAX_SECTIONS'];
+  const cap =
+    _config.maxSections ??
+    (envCap !== undefined && /^\d+$/.test(envCap) ? parseInt(envCap, 10) : DEFAULT_MAX_SECTIONS);
+  const sections = applyMaxSections(rawSections, cap);
   const verb = detectVerbIntent(prompt);
 
   // Create one Initiative for the whole prompt
