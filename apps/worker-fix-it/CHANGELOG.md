@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### FIX-004 — failure diagnoser (this PR)
+
+- New `src/failure-diagnoser.ts`:
+  - `StructuredFailureDiagnoser` (real impl of `FailureDiagnoser`;
+    replaces `StubFailureDiagnoser`).
+  - Lifts every artifact the runner attached: `tracePath`,
+    `screenshotUrl`, `consoleLog` (merged with stdout/stderr tail),
+    `networkLog`, `domSnapshot`, `seedFixtures`.
+  - Heuristic `inferCause` over 14 patterns —
+    missing-import / missing-file / service-not-running / timeout /
+    selector-not-found / assertion-mismatch / a11y-violation /
+    visual-regression / auth-failure / server-error / not-found /
+    syntax-error / type-error / unknown.
+  - `liftFailingAssertion` extracts the first `expect(...).toX(...)`
+    call from the message + stack so the Coding Agent's IPC fix
+    request gets a one-line "what to make pass."
+  - `tailLines` / `tailFile` helpers (default 80 lines) preserve only
+    the relevant tail of long log streams; `logTailLines` is
+    configurable per instance.
+- `src/main.ts` plumbs the real `StructuredFailureDiagnoser` into the
+  orchestrator's `diagnoser` port.
+- 23 new vitest cases in `tests/failure-diagnoser.test.ts`:
+  - 15 inferCause patterns
+  - 3 liftFailingAssertion paths
+  - 4 tailLines / tailFile paths
+  - 5 diagnoser end-to-end tests asserting Zod-valid output, browser
+    artifact passthrough, no-artifact fallback, configurable tail,
+    status fallback for empty errorMessage.
+- 1 new microbenchmark: < 1 ms / report.
+
 ### FIX-003 — subprocess test runner (this PR)
 
 - New `src/test-runner.ts`:

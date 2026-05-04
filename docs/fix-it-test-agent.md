@@ -88,7 +88,7 @@ change needed.
 - [x] FIX-002: Real test code generator (`TemplateTestCodeGenerator`)
       with layer dispatch and idempotency, plumbed into `bootstrap()`.
 - [x] FIX-003: Real test runner (`SubprocessTestRunner` over an injectable `CommandExecutor`).
-- [ ] FIX-004: Real failure diagnoser (replaces `StubFailureDiagnoser`).
+- [x] FIX-004: Real failure diagnoser (`StructuredFailureDiagnoser` with heuristic cause inference).
 - [ ] FIX-005: Real Coding Agent IPC client (replaces
       `StubCodingIpcInvoker`; coordinates with CODING-007).
 - [ ] FIX-006: Re-test loop persistence + fix-stuck blocker writer.
