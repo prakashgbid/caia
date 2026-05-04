@@ -1,0 +1,108 @@
+# =============================================================================
+# Browserless on stolution — remote browser farm for Fix-It Agent E2E tests.
+#
+# Phase B (FIX-007). Owner: caia/orchestrator + Fix-It Test Agent.
+# Spec: reports/testing-framework-architecture-2026-04-28.md  (Browserless
+#       self-hosted, 30 concurrent sessions, ≈3 GB/session, 90 GB working
+#       set on a 256 GB box).
+#
+# This file is the canonical source — it is mirrored to
+#   /home/s903/stolution/docker-compose.browserless.yml
+# on the stolution remote and brought up with:
+#
+#   ssh stolution
+#   cd ~/stolution
+#   docker compose --env-file .env.browserless \
+#                  -f docker-compose.browserless.yml up -d
+#
+# Image pinning:
+#   ghcr.io/browserless/chromium:v2.40.0
+#   (sha256:6891566b8f3e6e512e493ecdf95d44e5a4efbfb1b5eb7da04135e5a48170bc72)
+#   See infra/browserless/README.md for the upgrade procedure + image SHA
+#   pin policy — never use :latest in production.
+#
+# Browserless v2 env names — note the differences from v1!
+#   CONCURRENT     (was MAX_CONCURRENT_SESSIONS)
+#   QUEUED         (queue depth before 429 backpressure)
+#   TIMEOUT        (per-session wallclock cap, ms)
+#   TOKEN          (required for any non-loopback route)
+#   ALLOW_GET      (was ENABLE_API_GET; allows GET on the JSON API)
+# Removed in v2: KEEP_ALIVE, DEFAULT_LAUNCH_ARGS, CONNECTION_TIMEOUT.
+#
+# Connection URL for Playwright (FIX-011):
+#   ws://browserless.stolution.local:13080/playwright/chromium?token=$TOKEN
+#   The v2 endpoint is /playwright/chromium — NOT the bare host. Older docs
+#   show ws://host:port?token=... which only works on v1.
+#
+# Port: host listener is 127.0.0.1:13000 (NOT 3001 — that is held by
+# stolution-grafana). Reverse-proxied via nginx as
+# browserless.stolution.local:13080 on internal-only listener; never
+# exposed to the public internet.
+#
+# Resource limits: 30 concurrent × ~3 GB = ~90 GB ceiling. CPU bound
+# hits first; 32-core box has comfortable headroom.
+# =============================================================================
+
+services:
+  browserless:
+    image: ghcr.io/browserless/chromium:v2.40.0
+    container_name: stolution-browserless
+    hostname: browserless.stolution.local
+    restart: unless-stopped
+    networks:
+      - stolution-network
+    ports:
+      # Host-bound to loopback only. Production traffic enters via nginx
+      # at /etc/nginx/sites-available/browserless.conf.
+      - "127.0.0.1:13000:3000"
+    environment:
+      # ---- Concurrency budget ----------------------------------------------
+      CONCURRENT: '30'
+      QUEUED: '20'
+      TIMEOUT: '120000'
+
+      # ---- Auth ------------------------------------------------------------
+      # Read at deploy time from Vault path secret/stolution/prod/browserless
+      # by scripts/deploy-browserless.sh — never commit the literal value.
+      TOKEN: '${BROWSERLESS_TOKEN}'
+      ALLOW_GET: 'false'
+
+      # ---- Hygiene / observability ----------------------------------------
+      EXPOSE_GUI: 'false'
+      DEBUG: 'browserless:*,-browserless:protocol*'
+
+    # Each Chromium pod gets its own /dev/shm slice; oversize avoids the
+    # well-known --disable-dev-shm-usage symptom of "Page crashed".
+    shm_size: '2gb'
+
+    deploy:
+      resources:
+        limits:
+          memory: 96G
+          cpus: '24'
+        reservations:
+          memory: 8G
+          cpus: '4'
+
+    # Healthcheck must pass the token because /pressure is auth-gated. The
+    # `$$TOKEN` escapes the compose interpolation so the runtime shell sees
+    # `$TOKEN` (the env var inside the container).
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider \"http://localhost:3000/pressure?token=$$TOKEN\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+networks:
+  # Reuse the existing stolution network so other services (orchestrator
+  # webhooks, observability scrapers) can reach Browserless by container
+  # name without exposing a host port.
+  stolution-network:
+    external: true
