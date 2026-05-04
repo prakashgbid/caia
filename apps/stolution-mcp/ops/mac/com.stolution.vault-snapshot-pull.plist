@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.stolution.vault-snapshot-pull
+  Daily Mac-side pull of Vault Raft snapshots from the stolution server.
+
+  Schedule: 03:30 local — runs after the server-side 02:00 snapshot and
+  02:05 audit-log rotation cron jobs, with margin for clock skew.
+
+  Install:
+    cp com.stolution.vault-snapshot-pull.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.stolution.vault-snapshot-pull.plist
+
+  Test (on demand):
+    launchctl start com.stolution.vault-snapshot-pull
+
+  Note: paths use $HOME via the parent process — launchd resolves $HOME for
+  the loading user. If installing for a non-default home, edit the absolute
+  paths below.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.stolution.vault-snapshot-pull</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__HOME__/bin/pull-stolution-vault-snapshots.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <!-- Don't run at load (avoid surprise pulls when re-loading the agent) -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- One-shot per scheduled trigger; don't keep alive on exit -->
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Restart on crash for the next scheduled run rather than immediately -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- Capture launchd-level stdout/err separately from the script's own log -->
+    <key>StandardOutPath</key>
+    <string>__HOME__/Library/Logs/stolution-vault-snapshot-pull.launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/Library/Logs/stolution-vault-snapshot-pull.launchd.log</string>
+
+    <!-- Inherit user's PATH so rsync, ssh, find resolve normally -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>
