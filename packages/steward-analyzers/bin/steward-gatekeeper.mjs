@@ -11,6 +11,7 @@
  *   vault-checks           — Mac-local snapshot-age check (failure mode #7)
  *   preflight              — fast pre-spawn hook (modes #4 #6 + dirty-tree)
  *   hygiene-daily          — repo-state daily snapshot (modes #4 #5 #6)
+ *   pr-stale               — list/auto-close stale PRs (mode #10); --auto-close to act
  *   all                    — run every pre-merge analyzer; OR exit code across all
  *
  * Flags:
@@ -42,6 +43,7 @@ import {
   checkWorktreeCount,
   checkOrphanBranches,
   preflightChecks,
+  checkPrStaleness,
 } from '../dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -308,6 +310,72 @@ function runHygieneDaily(repoRoot) {
   ];
 }
 
+// ─── PR-stale (failure mode #10) ───────────────────────────────────────────
+
+/**
+ * Fetch open PRs via `gh pr list` and run the staleness analyzer.
+ * If `--auto-close` is provided, eligible (>=30d, not keep-open, not
+ * dependabot) PRs are closed via `gh pr close` with the standard comment.
+ *
+ * The "stale; reopen if needed" comment matches the analyzer's
+ * `pr-stale-auto-close` ruleId remediation. Reference:
+ * `agent/memory/steward_gatekeeper_directive.md` (mode 10),
+ * `agent/memory/feedback_git_flow_enforced.md`.
+ */
+function runPrStale(repoRoot, opts) {
+  const autoClose = !!opts['auto-close'];
+  let raw;
+  try {
+    raw = execSync(
+      'gh pr list --state open --limit 200 --json number,title,headRefName,updatedAt,labels,isDraft,author',
+      { cwd: repoRoot, encoding: 'utf8' },
+    );
+  } catch (err) {
+    console.log(`pr-stale: cannot list PRs via gh — ${err instanceof Error ? err.message : String(err)}`);
+    return [];
+  }
+  let prs;
+  try {
+    const parsed = JSON.parse(raw);
+    prs = parsed.map((p) => ({
+      number: p.number,
+      title: p.title,
+      branch: p.headRefName,
+      updatedAt: p.updatedAt,
+      labels: (p.labels || []).map((l) => (typeof l === 'string' ? l : l.name)),
+      isDraft: !!p.isDraft,
+      author: p.author?.login || p.author?.name || '',
+    }));
+  } catch (err) {
+    console.log(`pr-stale: cannot parse gh output — ${err instanceof Error ? err.message : String(err)}`);
+    return [];
+  }
+  console.log(`pr-stale: scanning ${prs.length} open PR(s) (auto-close=${autoClose})`);
+  const findings = checkPrStaleness({ prs });
+  if (autoClose) {
+    const eligible = findings.filter((f) => f.ruleId === 'pr-stale-auto-close');
+    if (eligible.length === 0) {
+      console.log('pr-stale: 0 PR(s) eligible for auto-close.');
+    } else {
+      console.log(`pr-stale: closing ${eligible.length} eligible PR(s)...`);
+    }
+    for (const f of eligible) {
+      const num = f.context?.prNumber;
+      if (typeof num !== 'number') continue;
+      try {
+        execSync(
+          `gh pr close ${num} --comment ${JSON.stringify('stale; reopen if needed')}`,
+          { cwd: repoRoot, encoding: 'utf8', stdio: 'pipe' },
+        );
+        console.log(`pr-stale: closed #${num} (${f.context?.ageDays}d idle)`);
+      } catch (err) {
+        console.log(`pr-stale: failed to close #${num}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+  }
+  return findings;
+}
+
 // ─── Main entry ────────────────────────────────────────────────────────────
 
 async function main() {
@@ -319,7 +387,7 @@ async function main() {
     console.error('usage: steward-gatekeeper <command> [--repo-root <path>] [--max-age-days <N>] [--pr-head-ref <ref>] [--mac-snapshot-dir <path>]');
     console.error('  pre-merge   : migration-linter | migration-numbering | graph-divergence | all');
     console.error('  pre-spawn   : preflight');
-    console.error('  scheduled   : hygiene-daily | vault-checks');
+    console.error('  scheduled   : hygiene-daily | vault-checks | pr-stale');
     process.exit(2);
   }
 
@@ -337,6 +405,8 @@ async function main() {
       findings = runPreflight(repoRoot);
     } else if (command === 'hygiene-daily') {
       findings = runHygieneDaily(repoRoot);
+    } else if (command === 'pr-stale') {
+      findings = runPrStale(repoRoot, args.flags);
     } else if (command === 'all') {
       const a = await runMigrationLinter(repoRoot);
       const b = await runMigrationNumbering(repoRoot);
