@@ -16,6 +16,25 @@ import { runScaffolder } from '../../agents/scaffolder';
 import { isRunMode, RUN_MODES, estimateRunCost, type RunMode } from '../../run-modes';
 
 // @no-events — route registration wrapper; business events are emitted by manager functions
+//
+// API-VALIDATION-001 (2026-05-04): per the 2026-05-01 production stability
+// audit (`~/Documents/projects/reports/pipeline-production-stability-validation-2026-04-30.md`
+// §"Fix PRs opened during this campaign" #1 + #2), the POST /prompts
+// route accepted two known-bad input shapes:
+//
+//   1. Whitespace-only body (e.g. "   ") → returned 201 instead of 400.
+//      Caused the daemon to chase a phantom decomposition path.
+//   2. Very-long body (>~8 KB, observed at 11859 bytes) → rule-based
+//      decomposer treated each filler sentence as a separate feature
+//      and spawned 2000+ descendants, saturating SQLite write path
+//      and intermittently timing out /health.
+//
+// Both are now rejected at the API boundary. The body-length cap is
+// generous (PROMPT_BODY_MAX_CHARS = 8000) — covers the audit's
+// observed legitimate "vision-doc" 4-paragraph case (~1-2 KB) with
+// 4-5x headroom while blocking the runaway shape.
+export const PROMPT_BODY_MAX_CHARS = 8000;
+
 export function registerPromptsRoutes(app: Hono, db: Db): void {
   // Create a new prompt (idempotent by hash in 10s window)
   app.post('/prompts', async (c) => {
@@ -31,6 +50,25 @@ export function registerPromptsRoutes(app: Hono, db: Db): void {
 
     if (!body.body || typeof body.body !== 'string') {
       return c.json({ error: 'body is required' }, 400);
+    }
+
+    // API-VALIDATION-001: reject whitespace-only bodies. Per the
+    // 2026-05-01 stability audit, "   " was accepted as 201 and
+    // chased a phantom decomposition. Trim before hash-idempotency
+    // would mask other bugs; better to 400 at the boundary.
+    if (body.body.trim().length === 0) {
+      return c.json({
+        error: 'body must contain non-whitespace characters',
+      }, 400);
+    }
+
+    // API-VALIDATION-001: reject very-long bodies. Per the same audit,
+    // 11859-byte bodies caused descendant explosion (2000+). Cap at
+    // PROMPT_BODY_MAX_CHARS to keep decomposer output bounded.
+    if (body.body.length > PROMPT_BODY_MAX_CHARS) {
+      return c.json({
+        error: `body must be at most ${PROMPT_BODY_MAX_CHARS} characters (got ${body.body.length})`,
+      }, 400);
     }
 
     // RUN-MODES (migration 0038): validate `run_mode` at the API
