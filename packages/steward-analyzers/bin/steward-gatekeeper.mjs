@@ -18,7 +18,9 @@
  *   --repo-root <path>            repo root (default: ../../../ relative to bin)
  *   --max-age-days <N>            graph-divergence threshold (default 7)
  *   --pr-head-ref <ref>           PR head branch (default $GITHUB_HEAD_REF)
- *   --mac-snapshot-dir <path>     Mac vault snapshot dir for vault-checks
+ *   --mac-snapshot-dir <path>     Mac vault snapshot dir for vault-checks (alias of --snapshot-dir, kept for back-compat)
+ *   --snapshot-dir <path>         Override snapshot dir (works with --side)
+ *   --side <name>                 'mac' (default) or 'stolution'; sets default snapshot dir + finding label
  *   --max-snapshot-age-hours <N>  vault-checks threshold (default 26)
  *
  * Exit codes: 0 (no block findings), 1 (block findings), 2 (usage error).
@@ -198,13 +200,26 @@ function newestMtimeEpoch(dir, glob) {
 }
 
 function runVaultChecks(opts) {
-  const macSnapDir = (opts['mac-snapshot-dir'] || `${os.homedir()}/Library/Application Support/Stolution/vault-snapshots`);
-  const macMtime = newestMtimeEpoch(macSnapDir, /^vault-snapshot-.*\.snap$/);
+  // Two invocation modes:
+  //   • Mac (default): scans the LaunchAgent-pulled snapshot dir.
+  //   • Stolution: scans the stolution-side native snapshot dir
+  //     (`/home/s903/backups/vault`). Side identifier comes from --side.
+  //
+  // Override either via --snapshot-dir <abs path>; --mac-snapshot-dir
+  // is preserved as an alias for backward compat with the Mac-only
+  // invocation shipped in PR #298.
+  const side = opts['side'] || 'mac';
+  const defaultDir =
+    side === 'stolution'
+      ? '/home/s903/backups/vault'
+      : `${os.homedir()}/Library/Application Support/Stolution/vault-snapshots`;
+  const snapDir = opts['snapshot-dir'] || opts['mac-snapshot-dir'] || defaultDir;
+  const mtime = newestMtimeEpoch(snapDir, /^vault-snapshot-.*\.snap$/);
 
-  console.log(`vault-checks: scanning Mac snapshot dir ${macSnapDir}`);
+  console.log(`vault-checks: side=${side} scanning snapshot dir ${snapDir}`);
   return checkSnapshotAge({
     snapshots: [
-      { side: 'mac', path: macSnapDir, mtimeEpoch: macMtime },
+      { side, path: snapDir, mtimeEpoch: mtime },
     ],
     maxAgeHours: opts['max-snapshot-age-hours'] ? parseInt(opts['max-snapshot-age-hours'], 10) : 26,
   });

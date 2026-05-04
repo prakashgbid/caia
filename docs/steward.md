@@ -137,6 +137,46 @@ promotion path.
 2. Ship the analyzer per §4.3.
 3. Update the failure-mode table (§2) and `agent/memory/steward_gatekeeper_directive.md`.
 
+### 4.5 — Deploying the vault-checks CLI on the stolution server
+
+Failure mode #7 (backup pipeline silent failure) needs to be checked on
+both sides — the Mac that pulls the snapshot, AND the stolution server
+that writes it. The Mac side runs via the `vault-checks` LaunchAgent
+(installed by `~/Library/LaunchAgents/com.caia.steward.daily.plist`).
+The stolution side runs via cron, invoking the same CLI bundle.
+
+To deploy / refresh the bundle on stolution:
+
+```bash
+# From caia repo on Mac.
+bash scripts/deploy-steward-stolution.sh
+```
+
+This builds `@chiefaia/steward-analyzers` and rsyncs `dist/` + the
+`bin/steward-gatekeeper.mjs` driver to `stolution:/home/s903/stolution/tools/steward/`.
+The deploy script is idempotent — re-runs just refresh the bundle.
+
+To install the daily cron entry (one-time):
+
+```bash
+bash scripts/install-stolution-cron.sh
+```
+
+Installs `30 17 * * * cd /home/s903/stolution/tools/steward && /usr/bin/node bin/steward-gatekeeper.mjs vault-checks --side stolution >> /home/s903/logs/steward-vault-checks.log 2>&1`
+and snapshots the prior crontab to `/tmp/cron.bak.steward-deploy.<unix-ts>`.
+Idempotent — detects an existing entry and skips if present.
+
+To verify on stolution:
+
+```bash
+ssh stolution "cd /home/s903/stolution/tools/steward && /usr/bin/node bin/steward-gatekeeper.mjs vault-checks --side stolution"
+ssh stolution "tail -20 /home/s903/logs/steward-vault-checks.log"
+```
+
+The `--side stolution` flag changes the default snapshot dir to
+`/home/s903/backups/vault` and labels findings with `side: 'stolution'`
+(vs `'mac'`). Override the dir explicitly with `--snapshot-dir <abs>`.
+
 ## 5. Local pre-flight (before pushing)
 
 Run any analyzer locally to preview before pushing:
