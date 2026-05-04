@@ -123,3 +123,63 @@ the same mode toggle.
 - FIX-008/009 — per-test SQLite + ports (parallel-safety primitives)
 - FIX-011 — Fix-It picks Browserless vs local based on `mode`
 - FIX-012 — sharded CI on self-hosted runner
+
+## Browserless pool (FIX-011)
+
+For workloads that hammer Browserless with hundreds of jobs back-to-
+back (the Fix-It Test Agent's batch mode), use the pool to keep warm
+browsers alive across jobs:
+
+```ts
+import { createBrowserlessPool } from '@chiefaia/playwright-config/pool';
+
+const pool = createBrowserlessPool({
+  wsEndpoint: process.env.BROWSERLESS_WS_ENDPOINT!,
+  token: process.env.BROWSERLESS_TOKEN!,
+  maxBrowsers: 4,
+  retries: 1,
+});
+
+const result = await pool.run(async (browser) => {
+  const page = await (await browser.newContext()).newPage();
+  await page.goto(...);
+  return doStuff(page);
+});
+
+await pool.dispose();   // tear down at end of run
+```
+
+Why a pool:
+
+- Each Playwright `chromium.connect()` to remote Browserless costs
+  80–150 ms of CDP-handshake latency. At 1 000 jobs that's minutes.
+- Reusing browsers across jobs amortizes the cost.
+
+What the pool retries:
+
+- WebSocket connect failures (`ECONNRESET`, `socket hang up`,
+  `WebSocket error`)
+- Mid-run remote-Chromium crashes (`Target page, context or browser
+  has been closed`)
+
+What it does NOT retry: assertion failures, selector timeouts, any
+non-transient error. Those propagate on the first try.
+
+`isTransientBrowserError(err)` is the classifier — exported so the
+Fix-It runner can use the same rules to decide whether to mark a
+test "flaky" vs "failed".
+
+### Version pin coupling
+
+Browserless v2.40.0 ships `playwright-core@1.58.2` as its default. We
+pin our local Playwright to the matching minor version so connect
+succeeds. Mismatch produces:
+
+```
+browserType.connect: WebSocket error: ws://… 428 Precondition Required
+Playwright version mismatch
+```
+
+Upgrading is a coordinated change: bump the Browserless image SHA
+(see `infra/browserless/README.md`), then bump this package's
+`playwright` + `@playwright/test` deps in lockstep.

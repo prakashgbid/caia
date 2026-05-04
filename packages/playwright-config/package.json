@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/playwright-config",
-  "version": "0.1.0",
-  "description": "Shared Playwright config factory for the Fix-It Test Agent — local workers + remote Browserless mode",
+  "version": "0.2.0",
+  "description": "Shared Playwright config factory for the Fix-It Test Agent \u2014 local workers + remote Browserless mode",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -10,6 +10,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./pool": {
+      "import": "./dist/pool.js",
+      "types": "./dist/pool.d.ts"
     }
   },
   "files": [
@@ -25,8 +29,8 @@
     "postinstall": "node scripts/install-chromium.mjs"
   },
   "dependencies": {
-    "@playwright/test": "1.59.1",
-    "playwright": "1.59.1"
+    "@playwright/test": "1.58.2",
+    "playwright": "1.58.2"
   },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
