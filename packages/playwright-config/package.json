@@ -1,0 +1,47 @@
+{
+  "name": "@chiefaia/playwright-config",
+  "version": "0.2.0",
+  "description": "Shared Playwright config factory for the Fix-It Test Agent \u2014 local workers + remote Browserless mode",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./pool": {
+      "import": "./dist/pool.js",
+      "types": "./dist/pool.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist",
+    "postinstall": "node scripts/install-chromium.mjs"
+  },
+  "dependencies": {
+    "@playwright/test": "1.58.2",
+    "playwright": "1.58.2"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

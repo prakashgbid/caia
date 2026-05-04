@@ -37,6 +37,10 @@ export const BucketName = z.enum([
   'stale_branch_warnings',
   'gitflow_conformance_violations',
   'pipeline_regression_failures',
+  // Steward-emitted buckets (process-graph drifts; see @chiefaia/steward-core).
+  // Reference: ~/Documents/projects/reports/devops-steward-agent-design-2026-05-03.md §3.1.
+  'steward_post_release_back_merge_drift',
+  'steward_back_merge_stuck_drift',
 ]);
 export type BucketName = z.infer<typeof BucketName>;
 

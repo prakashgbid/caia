@@ -1,0 +1,10 @@
+# Operator runbook documents the Browserless endpoint pattern (FIX-010).
+# Internal-LAN-only deployment; see .semgrep/SUPPRESSIONS.md.
+packages/playwright-config/README.md
+
+# Operator runbooks and infrastructure config for the internal-only
+# Browserless deployment (see .semgrep/SUPPRESSIONS.md, FIX-007).
+# Internal LAN, never traverses public internet.
+infra/browserless/README.md
+infra/browserless/docker-compose.yml
+infra/browserless/scripts/smoke-test.sh

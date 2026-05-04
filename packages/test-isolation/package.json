@@ -1,0 +1,50 @@
+{
+  "name": "@chiefaia/test-isolation",
+  "version": "0.2.0",
+  "description": "Per-test ephemeral SQLite + isolated localhost ports for parallel test runs",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./sqlite": {
+      "import": "./dist/sqlite.js",
+      "types": "./dist/sqlite.d.ts"
+    },
+    "./ports": {
+      "import": "./dist/ports.js",
+      "types": "./dist/ports.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

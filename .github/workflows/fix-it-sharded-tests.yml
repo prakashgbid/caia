@@ -1,0 +1,209 @@
+name: fix-it sharded tests
+
+# Sharded Playwright runs for the Fix-It Test Agent (FIX-012).
+#
+# Pattern:
+#   - matrix-spreads N shards across the self-hosted runner pool on
+#     stolution (FIX-007's box; the Browserless farm + the runner share
+#     the host so there's zero network hop from the runner to
+#     Browserless).
+#   - each shard talks to Browserless via the WS endpoint set up in
+#     FIX-007. Token is read from the BROWSERLESS_TOKEN repo secret
+#     (synced from Vault by the operator runbook).
+#   - blob reports from each shard are uploaded as artifacts; a final
+#     `merge` job assembles them into a single HTML report.
+#
+# Failure handling:
+#   - fail-fast: false  — a flake in shard 3 must not kill shards 1, 2,
+#     4, 5. Each shard reports independently.
+#   - retries: 2 (CI mode) — the playwright-config factory already
+#     hard-codes this in CI.
+#   - the merge job runs `if: always()` so we get a unified report
+#     even when some shards fail; the workflow as a whole fails
+#     because the shard jobs failed.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/worker-fix-it/**'
+      - 'packages/playwright-config/**'
+      - 'packages/test-isolation/**'
+      - 'apps/orchestrator/tests/e2e/**'
+      - 'tests/fix-it/**'
+      - '.github/workflows/fix-it-sharded-tests.yml'
+  workflow_dispatch:
+    inputs:
+      shard_count:
+        description: 'Number of shards (1..30; default 5)'
+        required: true
+        default: '5'
+
+concurrency:
+  # Cancel duplicate runs on the same PR ref. Keep the merge queue.
+  group: fix-it-sharded-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------
+  # 1. prepare — emit the shard matrix as JSON so the `shard` job's
+  #    `strategy.matrix` can fan out. This is the standard pattern
+  #    Playwright recommends (see docs/test-sharding).
+  # -------------------------------------------------------------------
+  prepare:
+    name: prepare shard matrix
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.gen.outputs.shards }}
+      shard_total: ${{ steps.gen.outputs.shard_total }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: gen
+        name: compute shards
+        env:
+          # Pass workflow_dispatch input via env to avoid shell-injection
+          # via templated `${{ }}` interpolation directly into the script.
+          GH_EVENT_NAME: ${{ github.event_name }}
+          INPUT_SHARD_COUNT: ${{ github.event.inputs.shard_count }}
+        run: |
+          # Default 5 shards on PRs; honour workflow_dispatch input.
+          if [ "$GH_EVENT_NAME" = "workflow_dispatch" ]; then
+            N="$INPUT_SHARD_COUNT"
+          else
+            N=5
+          fi
+          if ! [[ "$N" =~ ^[0-9]+$ ]] || [ "$N" -lt 1 ] || [ "$N" -gt 30 ]; then
+            echo "::error::invalid shard count: $N (must be 1..30)"
+            exit 1
+          fi
+          # JSON array of integers [1, 2, ..., N]
+          shards=$(seq 1 "$N" | python3 -c 'import sys,json; print(json.dumps([int(x) for x in sys.stdin.read().split()]))')
+          echo "shards=$shards" >> "$GITHUB_OUTPUT"
+          echo "shard_total=$N" >> "$GITHUB_OUTPUT"
+          echo "Sharding into $N shards: $shards"
+
+  # -------------------------------------------------------------------
+  # 2. shard — run a fraction of the test corpus on the self-hosted
+  #    stolution runner. Connects to the local Browserless container
+  #    via the FIX-007 WS endpoint (zero-hop over docker0).
+  # -------------------------------------------------------------------
+  shard:
+    name: shard ${{ matrix.shard }}/${{ needs.prepare.outputs.shard_total }}
+    needs: prepare
+    runs-on: [self-hosted, stolution]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJson(needs.prepare.outputs.shards) }}
+    env:
+      # Set BEFORE pnpm install so the postinstall hook in
+      # @chiefaia/playwright-config doesn't try to download Chromium —
+      # we're pointing at remote Browserless.
+      CHIEFAIA_SKIP_PLAYWRIGHT_INSTALL: '1'
+      # Flips @chiefaia/playwright-config to browserless mode (FIX-010
+      # auto-detects via this env). Token comes from the repo secret.
+      BROWSERLESS_WS_ENDPOINT: ws://127.0.0.1:13000/playwright/chromium
+      BROWSERLESS_TOKEN: ${{ secrets.BROWSERLESS_TOKEN }}
+      # Helps the merge job match shards to their reports.
+      SHARD_INDEX: ${{ matrix.shard }}
+      SHARD_TOTAL: ${{ needs.prepare.outputs.shard_total }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (only what the test target needs)
+        run: pnpm --filter @chiefaia/playwright-config --filter @chiefaia/test-isolation build
+
+      - name: Sanity-check Browserless reachability
+        run: |
+          # 5s budget. If the farm is down we fail fast before paying
+          # the install cost on every shard.
+          curl --silent --show-error --max-time 5 \
+            "http://127.0.0.1:13000/pressure?token=${BROWSERLESS_TOKEN}" \
+            | head -c 400
+          echo
+
+      - name: Run Playwright shard
+        run: |
+          # The consumer's playwright.config.ts is expected to use
+          # @chiefaia/playwright-config so the env-driven mode flip
+          # works. `--shard X/Y` is Playwright's built-in sharding.
+          pnpm exec playwright test \
+            --shard="${SHARD_INDEX}/${SHARD_TOTAL}" \
+            --reporter=blob
+
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-shard-${{ matrix.shard }}
+          path: blob-report
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # -------------------------------------------------------------------
+  # 3. merge — assemble a single HTML report from all shard blobs.
+  #    Runs `if: always()` so failed shards still contribute their
+  #    partial blobs to the unified view.
+  # -------------------------------------------------------------------
+  merge:
+    name: merge shard reports
+    needs: shard
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        env:
+          CHIEFAIA_SKIP_PLAYWRIGHT_INSTALL: '1'
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-shard-*
+          path: blob-reports
+          merge-multiple: true
+
+      - name: Merge into HTML report
+        run: |
+          pnpm exec playwright merge-reports \
+            --reporter=html \
+            blob-reports \
+            || echo "::warning::merge-reports failed; shard reports may be incomplete"
+
+      - name: Aggregate JSON summary for FIX-013 dashboard
+        run: node scripts/fix-it/aggregate-shard-results.mjs blob-reports
+
+      - name: Upload merged HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-report
+          path: playwright-report
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload aggregate JSON (consumed by dashboard)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-summary
+          path: shard-summary.json
+          retention-days: 30
+          if-no-files-found: ignore

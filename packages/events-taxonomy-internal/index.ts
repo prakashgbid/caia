@@ -361,6 +361,82 @@ export interface TestCaseAddedPayload {
   layer: 'unit' | 'integration' | 'e2e' | 'visual' | 'accessibility';
 }
 
+// ─── Phase 2C/2D — Coding ↔ Fix-It hand-off (CODING-007 + FIX-001) ──────────
+
+export interface TaskCodingCompletePayload {
+  storyId: string;
+  workerId: string;
+  prUrl: string;
+  prNumber: number;
+  sha: string;
+  localTestsPassed: boolean;
+  worktreePath: string;
+  codingSessionId: string;
+  completedAt: number;
+  correlationId: string;
+}
+
+export interface TaskTestingStartedPayload {
+  storyId: string;
+  workerId: string;
+  fixItSessionId: string;
+  startedAt: number;
+  correlationId: string;
+}
+
+export interface TaskTestCaseResultPayload {
+  storyId: string;
+  testCaseId: string;
+  status: 'running' | 'passed' | 'failed' | 'skipped' | 'flaky';
+  attempt: number;
+  durationMs: number | null;
+  traceUrl?: string | null;
+  error?: string | null;
+  correlationId: string;
+}
+
+export interface TaskFixRequestedPayload {
+  storyId: string;
+  testCaseId: string;
+  attempt: number;
+  contextRef: string;
+  fixRequestSummary: string;
+  correlationId: string;
+}
+
+export interface TaskFixAppliedPayload {
+  storyId: string;
+  testCaseId: string;
+  attempt: number;
+  sha: string;
+  summary: string;
+  correlationId: string;
+}
+
+export interface TaskTestedAndDonePayload {
+  storyId: string;
+  workerId: string;
+  allPassedAt: number;
+  totalAttempts: number;
+  finalSha: string;
+  correlationId: string;
+}
+
+export interface TaskFixLoopEscalatedLastFailure {
+  testCaseId: string;
+  attempt: number;
+  errorMessage: string;
+}
+
+export interface TaskFixLoopEscalatedPayload {
+  storyId: string;
+  workerId: string;
+  exhaustedTestCaseIds: string[];
+  lastFailures: TaskFixLoopEscalatedLastFailure[];
+  escalatedAt: number;
+  correlationId: string;
+}
+
 // ─── Union type of all valid event types ─────────────────────────────────────
 
 export type EventType =
@@ -458,6 +534,14 @@ export type EventType =
   | 'task-scheduler.backpressure.released'
   // ─── Phase 2 bucket health metrics (TASKMGR-005) ──────────────────────────
   | 'task-scheduler.bucket.health'
+  // ─── Phase 2C/2D — Coding ↔ Fix-It hand-off (CODING-007 + FIX-001) ────────
+  | 'task.coding_complete'
+  | 'task.testing_started'
+  | 'task.test_case.result'
+  | 'task.fix_requested'
+  | 'task.fix_applied'
+  | 'task.tested_and_done'
+  | 'task.fix_loop_escalated'
   // ─── Blocker / question / requirement writers (DASH-205/206/207) ──────────
   | 'blocker.created' | 'blocker.resolved'
   | 'question.created' | 'question.answered'
@@ -579,6 +663,14 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'task-scheduler.backpressure.released': 'info',
   // ─── Phase 2 bucket health metrics (TASKMGR-005) ──────────────────────────
   'task-scheduler.bucket.health': 'debug',
+  // ─── Phase 2C/2D — Coding ↔ Fix-It hand-off (CODING-007 + FIX-001) ────────
+  'task.coding_complete': 'info',
+  'task.testing_started': 'info',
+  'task.test_case.result': 'info',
+  'task.fix_requested': 'warning',
+  'task.fix_applied': 'info',
+  'task.tested_and_done': 'info',
+  'task.fix_loop_escalated': 'error',
 };
 
 /** All valid event type strings from the registry */

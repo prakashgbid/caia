@@ -102,8 +102,14 @@ jobs:
         run: |
           set -euo pipefail
           # back-merge from main into develop legitimately contains merges.
-          if [[ "${HEAD_REF}" == "main" && "${BASE_REF}" == "develop" ]]; then
-            echo "main → develop back-merge: skipping merge-commit check."
+          # In practice you cannot push to `main` directly (branch protection
+          # plus husky guards), so the back-merge always travels via a
+          # `chore/back-merge-main-into-develop-*` topic branch. Both forms
+          # are recognised.
+          if [[ "${BASE_REF}" == "develop" ]] && \
+             { [[ "${HEAD_REF}" == "main" ]] || \
+               [[ "${HEAD_REF}" == chore/back-merge-main-into-develop-* ]]; }; then
+            echo "main → develop back-merge (head=${HEAD_REF}): skipping merge-commit check."
             exit 0
           fi
           # release/* PRs may legitimately contain merges to main.

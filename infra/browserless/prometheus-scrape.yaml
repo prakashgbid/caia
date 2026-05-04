@@ -1,0 +1,26 @@
+# =============================================================================
+# Prometheus scrape config for stolution-browserless.
+#
+# Append-merge into the existing stolution-prometheus configmap at
+#   ~/stolution/config/prometheus/prometheus.yml
+# under the `scrape_configs:` list. Reload with:
+#
+#   docker exec stolution-prometheus kill -HUP 1
+#
+# Browserless metrics surface concurrency, queue depth, sessions per
+# minute, errors. We alert on:
+#   - browserless_sessions_active > 28 sustained 5m  (capacity nearly full)
+#   - rate(browserless_sessions_failed_total[5m]) > 0.1  (>10% failure rate)
+#   - up{job="browserless"} == 0 for 1m            (container down)
+# =============================================================================
+
+- job_name: 'browserless'
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  static_configs:
+    - targets: ['127.0.0.1:13000']
+      labels:
+        service: browserless
+        environment: stolution
+        team: caia-fix-it

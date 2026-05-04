@@ -139,3 +139,17 @@ export {
 export type {
   UseRecursiveDecomposerOptions,
 } from './feature-flag.js';
+
+// ─── DSPy runtime routing (dspy-005) ────────────────────────────────────
+//
+// `detectScope()` already consults the DSPy substrate transparently. The
+// helpers below are exported for tests, CLI tooling, and dashboards that
+// need to inspect or override the routing decision.
+
+export {
+  isDspyRuntimeEnabled,
+  tryDspyScopeDetect,
+  __resetDspyRuntimeForTests,
+} from './dspy-runtime.js';
+
+export type { DspyRuntimeOptions } from './dspy-runtime.js';
