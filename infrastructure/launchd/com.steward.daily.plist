@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.steward.daily
+
+  Mac-side daily Steward Gatekeeper checks. Runs the filesystem-local
+  hygiene + vault-checks aggregates; the GHA-side hygiene-report.yml
+  cron is the network-visible counterpart (it runs against origin,
+  not the local working tree). Mac-launchd is required because
+  failure modes 4 (stash count), 5 (orphan branches), 6 (worktree
+  count) only have meaningful signal *on the Mac*, where the operator
+  actually creates worktrees and stashes.
+
+  Schedule: 09:00 local — picks up state from the previous day's work
+  before the operator starts the next day.
+
+  Install (via the canonical installer script):
+    bash scripts/install-steward-launchd.sh
+
+  Or manually:
+    cp infrastructure/launchd/com.steward.daily.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.steward.daily.plist
+
+  Test (on demand):
+    launchctl kickstart -k gui/$UID/com.steward.daily
+
+  Verify:
+    launchctl list | grep com.steward.daily
+    tail -50 ~/Library/Logs/steward-daily.launchd.log
+
+  Reference: agent/memory/steward_gatekeeper_directive.md (modes 4-7),
+             docs/steward.md §4.6.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.steward.daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/MAC/bin/steward-run.sh</string>
+        <string>daily</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- Don't run at load (avoid noisy first-fire on launchctl load) -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- One-shot per scheduled trigger; don't keep alive on exit -->
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Throttle restart on crash so we don't burn CPU spinning on a bad run -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- Capture launchd-level stdout/err (the wrapper writes its own structured log too) -->
+    <key>StandardOutPath</key>
+    <string>/Users/MAC/Library/Logs/steward-daily.launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/MAC/Library/Logs/steward-daily.launchd.log</string>
+
+    <!-- Inherit user's PATH so node, gh, git resolve normally -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>

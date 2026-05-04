@@ -176,6 +176,50 @@ ssh stolution "tail -20 /home/s903/logs/steward-vault-checks.log"
 The `--side stolution` flag changes the default snapshot dir to
 `/home/s903/backups/vault` and labels findings with `side: 'stolution'`
 (vs `'mac'`). Override the dir explicitly with `--snapshot-dir <abs>`.
+### 4.6 — Mac launchd: daily + weekly Steward runs
+
+Failure modes 4 (stash count), 5 (orphan branches), 6 (worktree count),
+and the Mac side of mode 7 (snapshot age) only have meaningful signal
+*on the Mac itself* — the CI cron sees `origin/`, not the local working
+tree. These are wired up via two launchd LaunchAgents:
+
+| Agent | Cadence | Wraps |
+|---|---|---|
+| `com.steward.daily` | every day 09:00 local | `hygiene-daily` + `vault-checks` |
+| `com.steward.weekly` | Mondays 09:15 local | daily + `pr-stale` (list-only) |
+
+Sources live in `infrastructure/launchd/com.steward.{daily,weekly}.plist`
+and the wrapper at `scripts/steward-run.sh`. The wrapper is mirrored to
+`~/bin/steward-run.sh` at install time because launchd-spawned binaries
+cannot exec targets under `~/Documents/` on modern macOS (TCC privacy
+controls).
+
+Install / re-install:
+
+```bash
+bash scripts/install-steward-launchd.sh
+```
+
+Idempotent — unloads any prior version before re-loading. Operator-level,
+not root.
+
+Verify after install:
+
+```bash
+launchctl list | grep com.steward          # both agents listed, last-exit 0
+launchctl kickstart -k gui/$UID/com.steward.daily   # fire on demand
+tail -50 ~/Library/Logs/steward-daily.launchd.log
+```
+
+When `pr-stale` is added to the CLI (PR #306), the weekly wrapper picks
+it up automatically — no plist edit required. The wrapper records the
+worst exit code across all checks per run; non-zero implies findings,
+zero is clean.
+
+Note the action-side close for stale PRs (mode #10) lives in the GHA
+workflow `.github/workflows/stale-pr-cleanup.yml` (Tuesdays 14:00 UTC),
+not in the Mac weekly launchd run — Mac-side is list-only to avoid
+double-close races.
 
 ## 5. Local pre-flight (before pushing)
 

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.steward.weekly
+
+  Mac-side weekly Steward Gatekeeper checks. Superset of daily —
+  re-runs the daily hygiene + vault aggregates plus pr-stale (mode #10
+  list-only; the action-side close lives in
+  .github/workflows/stale-pr-cleanup.yml on a separate server cron, so
+  this never double-closes).
+
+  Schedule: Mondays 09:15 local — fires 15 minutes after Monday's
+  daily run so the two don't compete for the working tree.
+
+  Install (via the canonical installer script):
+    bash scripts/install-steward-launchd.sh
+
+  Or manually:
+    cp infrastructure/launchd/com.steward.weekly.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.steward.weekly.plist
+
+  Test (on demand):
+    launchctl kickstart -k gui/$UID/com.steward.weekly
+
+  Verify:
+    launchctl list | grep com.steward.weekly
+    tail -50 ~/Library/Logs/steward-weekly.launchd.log
+
+  Reference: agent/memory/steward_gatekeeper_directive.md (modes 4-10),
+             docs/steward.md §4.6.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.steward.weekly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/MAC/bin/steward-run.sh</string>
+        <string>weekly</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer> <!-- Monday -->
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>15</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/MAC/Library/Logs/steward-weekly.launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/MAC/Library/Logs/steward-weekly.launchd.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>
