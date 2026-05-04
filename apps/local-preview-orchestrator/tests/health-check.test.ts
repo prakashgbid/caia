@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { healthCheck, pollHealthCheck } from '../src/health-check';
 
 describe('health-check', () => {
@@ -12,7 +12,7 @@ describe('health-check', () => {
       text: async () => '<html><title>Dashboard</title></html>'
     });
 
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown;
 
     const result = await healthCheck('http://localhost:5173/', '<title', 5000);
 
@@ -27,7 +27,7 @@ describe('health-check', () => {
       text: async () => 'Service Unavailable'
     });
 
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown;
 
     const result = await healthCheck('http://localhost:5173/', '<title', 5000);
 
@@ -41,7 +41,7 @@ describe('health-check', () => {
       text: async () => '<html>No title here</html>'
     });
 
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown;
 
     const result = await healthCheck('http://localhost:5173/', '<title', 5000);
 
@@ -52,7 +52,7 @@ describe('health-check', () => {
   it('should fail health check on fetch error', async () => {
     const mockFetch = vi.fn().mockRejectedValue(new Error('Connection refused'));
 
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown;
 
     const result = await healthCheck('http://localhost:5173/', '<title', 5000);
 
@@ -72,7 +72,7 @@ describe('health-check', () => {
         text: async () => '<html><title>Ready</title></html>'
       });
 
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown;
 
     const result = await pollHealthCheck('http://localhost:5173/', '<title', 10, 10);
 
@@ -86,7 +86,7 @@ describe('health-check', () => {
       text: async () => 'unavailable'
     });
 
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown;
 
     const result = await pollHealthCheck('http://localhost:5173/', '<title', 3, 10);
 

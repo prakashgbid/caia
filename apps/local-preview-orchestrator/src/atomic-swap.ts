@@ -40,7 +40,7 @@ export function atomicSwap(sitePath: string, newBuildDir: string): SwapResult {
     if (existsSync(currentLink)) {
       try {
         previousTarget = readlinkSync(currentLink);
-      } catch (e) {
+      } catch (_e) {
         // If readlink fails (e.g., broken symlink), try to recover from previous
         if (existsSync(previousLink)) {
           previousTarget = readlinkSync(previousLink);

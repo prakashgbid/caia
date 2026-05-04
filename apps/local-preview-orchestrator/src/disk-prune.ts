@@ -10,7 +10,7 @@
  * boundary explicitly.
  */
 
-import { existsSync, lstatSync, readlinkSync, readdirSync, rmSync, statSync, type Dirent } from 'fs';
+import { existsSync, readlinkSync, readdirSync, rmSync, statSync, type Dirent } from 'fs';
 import { join, resolve } from 'path';
 
 export interface PruneResult {
