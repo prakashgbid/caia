@@ -1,19 +1,24 @@
 #!/usr/bin/env node
 /**
  * Steward Gatekeeper CLI — entry invoked by the steward-gatekeeper.yml
- * GitHub Actions workflow.
+ * GitHub Actions workflow + the hygiene-report.yml + dependabot-triage.yml
+ * cron jobs.
  *
  * Subcommands:
  *   migration-linter       — Drizzle multi-statement breakpoint linter (failure mode #1)
  *   migration-numbering    — duplicate-prefix + gap detection (failure mode #3)
  *   graph-divergence       — develop ↔ main merge-base age check (failure mode #2)
  *   vault-checks           — Mac-local snapshot-age check (failure mode #7)
+ *   preflight              — fast pre-spawn hook (modes #4 #6 + dirty-tree)
+ *   hygiene-daily          — repo-state daily snapshot (modes #4 #5 #6)
  *   all                    — run every pre-merge analyzer; OR exit code across all
  *
  * Flags:
- *   --repo-root <path>       repo root (default: ../../../ relative to bin)
- *   --max-age-days <N>       graph-divergence threshold (default 7)
- *   --pr-head-ref <ref>      PR head branch (default $GITHUB_HEAD_REF)
+ *   --repo-root <path>            repo root (default: ../../../ relative to bin)
+ *   --max-age-days <N>            graph-divergence threshold (default 7)
+ *   --pr-head-ref <ref>           PR head branch (default $GITHUB_HEAD_REF)
+ *   --mac-snapshot-dir <path>     Mac vault snapshot dir for vault-checks
+ *   --max-snapshot-age-hours <N>  vault-checks threshold (default 26)
  *
  * Exit codes: 0 (no block findings), 1 (block findings), 2 (usage error).
  *
@@ -22,10 +27,10 @@
  */
 
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   lintMigrations,
   discoverMigrationRoots,
@@ -33,6 +38,10 @@ import {
   checkGraphDivergence,
   exitCodeFor,
   checkSnapshotAge,
+  checkStashCount,
+  checkWorktreeCount,
+  checkOrphanBranches,
+  preflightChecks,
 } from '../dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -83,6 +92,8 @@ function printFindings(findings) {
   }
 }
 
+// ─── Pre-merge analyzers ───────────────────────────────────────────────────
+
 async function runMigrationLinter(repoRoot) {
   const roots = await discoverMigrationRoots(repoRoot);
   if (roots.length === 0) {
@@ -114,8 +125,6 @@ async function runMigrationNumbering(repoRoot) {
 }
 
 function runGraphDivergence(repoRoot, opts) {
-  // Resolve develop ↔ main merge-base + its commit timestamp via git.
-  // Requires actions/checkout@v4 with fetch-depth: 0 + a `git fetch origin develop main`.
   let sha;
   try {
     sha = execSync('git merge-base origin/develop origin/main', {
@@ -124,8 +133,6 @@ function runGraphDivergence(repoRoot, opts) {
     }).trim();
   } catch (err) {
     console.log(`graph-divergence: cannot compute merge-base — origin/develop or origin/main not present locally. Run \`git fetch origin develop main\` before invocation. (${err.message})`);
-    // Don't fail CI — graph-divergence is observational, not a hard
-    // requirement for fork-style PRs that may not have both refs.
     return [];
   }
   const ts = parseInt(
@@ -138,9 +145,6 @@ function runGraphDivergence(repoRoot, opts) {
   const now = Math.floor(Date.now() / 1000);
   const headRef = opts['pr-head-ref'] || process.env.GITHUB_HEAD_REF || '';
 
-  // Cheap check: is a back-merge PR open? Avoid `gh` invocation in CLI
-  // (no auth in some contexts); look for a local ref instead. The
-  // cron run path will pass this in via opts when needed.
   let backMergePrPresent = false;
   try {
     const out = execSync('git for-each-ref refs/remotes/origin/chore/back-merge-main-into-develop-* --format="%(refname:short)|%(committerdate:unix)"', {
@@ -148,7 +152,6 @@ function runGraphDivergence(repoRoot, opts) {
       encoding: 'utf8',
     }).trim();
     if (out) {
-      // Treat "back-merge ref pushed within last 24h" as evidence one is in flight.
       const lines = out.split('\n');
       const recent = lines.find((l) => {
         const parts = l.split('|');
@@ -158,7 +161,7 @@ function runGraphDivergence(repoRoot, opts) {
       backMergePrPresent = !!recent;
     }
   } catch {
-    // ignore — refs may not exist
+    // ignore
   }
 
   const findings = checkGraphDivergence({
@@ -172,6 +175,7 @@ function runGraphDivergence(repoRoot, opts) {
   return findings;
 }
 
+// ─── Vault-state (failure mode #7) ─────────────────────────────────────────
 
 function newestMtimeEpoch(dir, glob) {
   try {
@@ -194,25 +198,117 @@ function newestMtimeEpoch(dir, glob) {
 function runVaultChecks(opts) {
   const macSnapDir = (opts['mac-snapshot-dir'] || `${os.homedir()}/Library/Application Support/Stolution/vault-snapshots`);
   const macMtime = newestMtimeEpoch(macSnapDir, /^vault-snapshot-.*\.snap$/);
-  const macPath = macMtime !== null ? macSnapDir : macSnapDir;
 
   console.log(`vault-checks: scanning Mac snapshot dir ${macSnapDir}`);
-  const findings = checkSnapshotAge({
+  return checkSnapshotAge({
     snapshots: [
-      { side: 'mac', path: macPath, mtimeEpoch: macMtime },
+      { side: 'mac', path: macSnapDir, mtimeEpoch: macMtime },
     ],
     maxAgeHours: opts['max-snapshot-age-hours'] ? parseInt(opts['max-snapshot-age-hours'], 10) : 26,
   });
-
-  // Stolution-side snapshot check + Vault token-expiry inventory require
-  // SSH / Vault CLI auth and are intentionally out-of-scope for the
-  // analyzer CLI today. They will be added when the Mac-side
-  // launchd job is installed (follow-up PR with the operator-environment
-  // setup script). For now, the analyzer functions exist and tests cover
-  // them; only the data-collection adapter needs wiring.
-
-  return findings;
 }
+
+// ─── Local-state (failure modes #4 #5 #6) ──────────────────────────────────
+
+function collectStashEntries(repoRoot) {
+  try {
+    const out = execSync('git stash list', { cwd: repoRoot, encoding: 'utf8' }).trim();
+    return out ? out.split('\n') : [];
+  } catch {
+    return [];
+  }
+}
+
+function collectWorktrees(repoRoot) {
+  try {
+    const out = execSync('git worktree list --porcelain', {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    const blocks = out.split(/\n\n+/).filter(Boolean);
+    return blocks.map((block) => {
+      const lines = block.split('\n');
+      let pathStr = null;
+      let branch = null;
+      for (const line of lines) {
+        if (line.startsWith('worktree ')) pathStr = line.slice('worktree '.length).trim();
+        else if (line.startsWith('branch refs/heads/')) branch = line.slice('branch refs/heads/'.length).trim();
+        else if (line === 'detached') branch = null;
+      }
+      return { path: pathStr ?? '', branch };
+    });
+  } catch {
+    return [];
+  }
+}
+
+function collectDirtyTreeCount(repoRoot) {
+  try {
+    const out = execSync('git status --porcelain', { cwd: repoRoot, encoding: 'utf8' }).trim();
+    return out ? out.split('\n').length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function collectBranchInfo(repoRoot) {
+  let openPrHeads = new Set();
+  try {
+    const prsJson = execSync('gh pr list --state open --limit 200 --json headRefName', {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    const prs = JSON.parse(prsJson);
+    openPrHeads = new Set(prs.map((p) => p.headRefName));
+  } catch {
+    // gh unavailable / unauthenticated; proceed with empty set.
+  }
+  let branches = [];
+  try {
+    const out = execSync(
+      `git for-each-ref refs/remotes/origin --format='%(refname:short)|%(committerdate:unix)'`,
+      { cwd: repoRoot, encoding: 'utf8' },
+    ).trim();
+    branches = out.split('\n').map((line) => {
+      const [refnameRaw, tsRaw] = line.split('|');
+      const branch = (refnameRaw ?? '').replace(/^origin\//, '');
+      return {
+        branch,
+        committerTimeUnix: parseInt(tsRaw ?? '0', 10),
+        hasOpenPr: openPrHeads.has(branch),
+      };
+    }).filter((b) => b.branch && b.branch !== 'HEAD');
+  } catch {
+    // ignore
+  }
+  return branches;
+}
+
+function runPreflight(repoRoot) {
+  const stashEntries = collectStashEntries(repoRoot);
+  const worktrees = collectWorktrees(repoRoot);
+  const dirtyTreeEntries = collectDirtyTreeCount(repoRoot);
+  console.log(
+    `preflight: stash=${stashEntries.length} worktrees=${Math.max(0, worktrees.length - 1)} dirty=${dirtyTreeEntries}`,
+  );
+  return preflightChecks({ stashEntries, worktrees, dirtyTreeEntries });
+}
+
+function runHygieneDaily(repoRoot) {
+  const stashEntries = collectStashEntries(repoRoot);
+  const worktrees = collectWorktrees(repoRoot);
+  const branches = collectBranchInfo(repoRoot);
+  console.log(
+    `hygiene-daily: stash=${stashEntries.length} worktrees=${Math.max(0, worktrees.length - 1)} branches=${branches.length}`,
+  );
+  return [
+    ...checkStashCount({ stashEntries }),
+    ...checkWorktreeCount({ worktrees }),
+    ...checkOrphanBranches({ branches }),
+  ];
+}
+
+// ─── Main entry ────────────────────────────────────────────────────────────
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -220,9 +316,10 @@ async function main() {
   const repoRoot = path.resolve(args.flags['repo-root'] ?? path.resolve(__dirname, '../../..'));
 
   if (!command || command === '--help' || command === '-h') {
-    console.error('usage: steward-gatekeeper <command> [--repo-root <path>] [--max-age-days <N>] [--pr-head-ref <ref>]');
+    console.error('usage: steward-gatekeeper <command> [--repo-root <path>] [--max-age-days <N>] [--pr-head-ref <ref>] [--mac-snapshot-dir <path>]');
     console.error('  pre-merge   : migration-linter | migration-numbering | graph-divergence | all');
-    console.error('  scheduled   : vault-checks');
+    console.error('  pre-spawn   : preflight');
+    console.error('  scheduled   : hygiene-daily | vault-checks');
     process.exit(2);
   }
 
@@ -236,6 +333,10 @@ async function main() {
       findings = runGraphDivergence(repoRoot, args.flags);
     } else if (command === 'vault-checks') {
       findings = runVaultChecks(args.flags);
+    } else if (command === 'preflight') {
+      findings = runPreflight(repoRoot);
+    } else if (command === 'hygiene-daily') {
+      findings = runHygieneDaily(repoRoot);
     } else if (command === 'all') {
       const a = await runMigrationLinter(repoRoot);
       const b = await runMigrationNumbering(repoRoot);

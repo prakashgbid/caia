@@ -40,3 +40,17 @@ export {
   type SecretRecord,
   type AuditLogState,
 } from './vault-state.js';
+
+export {
+  checkStashCount,
+  checkWorktreeCount,
+  checkOrphanBranches,
+  preflightChecks,
+  type CheckStashCountOptions,
+  type CheckWorktreeCountOptions,
+  type CheckOrphanBranchesOptions,
+  type WorktreeEntry,
+  type OrphanBranchInput,
+  type PreflightInput,
+  type PreflightOptions,
+} from './local-state.js';

@@ -64,3 +64,47 @@ pnpm --filter @chiefaia/steward-analyzers test
 - `caia/docs/steward.md` (operator runbook, ships with the campaign)
 - `caia/packages/steward-core/` (the predicate-evaluable engine this
   package complements)
+
+## v0.2.0 — Steward Phase-2c additions (failure modes 4, 5, 6)
+
+Extends the analyzer surface to repo-state checks that don't fit the
+pre-merge model — these run via cron (`hygiene-report.yml`) and via the
+`steward preflight` pre-spawn hook (`feedback_operational_discipline.md`).
+
+- `local-state.ts` exports four pure functions:
+  - `checkStashCount(stashEntries[])` — flags any stash count > 0; high
+    severity at > 5 (stashes block worktree cleanup; standing rule is 0).
+  - `checkWorktreeCount(worktrees[])` — warn at > 8 secondary, high at > 12
+    (per `feedback_operational_discipline.md` cap).
+  - `checkOrphanBranches(branches[])` — flags branches > 7 days old with
+    no open PR, ignoring `backup/*`, `release/*`, `dependabot/*`,
+    `archive/*`, `main`, `develop`. High severity above cumulative 50
+    (per architecture doc §3.5).
+  - `preflightChecks({stashEntries, worktrees, dirtyTreeEntries})` —
+    composite for the `steward preflight` pre-spawn hook; sub-second
+    output covering stash + worktree + dirty-tree caps.
+
+- CLI extensions on `bin/steward-gatekeeper.mjs`:
+  - `preflight` — runs preflightChecks on the local repo. Exit 0 = OK to
+    spawn substantial work; exit 1 = blocked. Sub-second.
+  - `hygiene-daily` — runs the full daily set (stash + worktree +
+    orphan branches). Used by `hygiene-report.yml` cron.
+
+- `hygiene-report.yml` extended with a Section 4 that captures
+  `hygiene-daily` output into the daily `Git Hygiene` issue.
+
+Examples:
+
+```sh
+# Local pre-spawn: should run from your CAIA worktree before any substantial spawn
+node packages/steward-analyzers/bin/steward-gatekeeper.mjs preflight
+echo "exit code: $?"   # 0 = clean; 1 = stash/worktree/dirty-tree predicate fired
+
+# What the daily cron will produce
+node packages/steward-analyzers/bin/steward-gatekeeper.mjs hygiene-daily
+```
+
+The `preflight` check is intended to be wired into orchestrator spawn
+paths in a follow-up PR (`@caia-app/orchestrator` task spawn → preflight
+gate). Today it's a manual command; once the orchestrator-side hook
+lands, no substantial-work spawn proceeds with non-zero preflight exit.
