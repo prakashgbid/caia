@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### FIX-003 — subprocess test runner (this PR)
+
+- New `src/test-runner.ts`:
+  - `SubprocessTestRunner` (real impl of `TestRunner`; replaces
+    `StubTestRunner`).
+  - `CommandExecutor` port + `SpawnCommandExecutor` default; tests
+    inject a mock so CI never spawns a real test process.
+  - Spec-kind heuristic: scans imports → vitest vs Playwright.
+  - `parseVitestJson` + `parsePlaywrightJson` parsers tolerate
+    JSON-in-stdout chatter and walk nested Playwright suites for the
+    first failing test.
+  - Status mapping: passed / failed (with errorMessage + errorStack +
+    tracePath when available) / skipped / timeout / runner-crash.
+  - Per-spec timeout default 60 s.
+- `src/main.ts` plumbs the real `SubprocessTestRunner` into the
+  orchestrator's `runner` port.
+- 18 new vitest cases in `tests/test-runner.test.ts` covering parser
+  shapes (passed / failed / skipped / unparseable / embedded), spec
+  kind detection, command building, and runner end-to-end flow with
+  a `MockExecutor`.
+- 1 new microbenchmark: per-spec runner+parser overhead < 2 ms.
+
 ### FIX-002 — test code generator (this PR)
 
 - New `src/test-code-generator.ts`:
