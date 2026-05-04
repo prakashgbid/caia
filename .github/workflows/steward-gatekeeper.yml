@@ -6,9 +6,10 @@ name: Steward Gatekeeper
 # sweep.
 #
 # Each analyzer is its own job so failures are localised in the Checks
-# tab and branch protection lists them individually. Day-1 jobs run
-# `continue-on-error: true` (warn-only) for one cycle so existing
-# in-flight PRs don't break; promotion to blocking is a follow-up PR.
+# tab and branch protection lists them individually. As of 2026-05-04
+# (PR #TBD), all three analyzers are promoted to required-on-develop+main
+# after one full clean cycle on develop (PR #295 cleanup of the live
+# 0037 collision proved them green).
 #
 # Reference:
 #   - architecture: ~/Documents/projects/reports/steward-gatekeeper-architecture-2026-05-04.md
@@ -36,7 +37,7 @@ jobs:
   steward-gatekeeper-migration-linter:
     name: steward-gatekeeper-migration-linter
     runs-on: ubuntu-latest
-    continue-on-error: true   # warn-only first cycle
+    # promoted to required-on-develop+main 2026-05-04 (PR #TBD)
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -55,7 +56,7 @@ jobs:
   steward-gatekeeper-migration-numbering:
     name: steward-gatekeeper-migration-numbering
     runs-on: ubuntu-latest
-    continue-on-error: true   # warn-only first cycle
+    # promoted to required-on-develop+main 2026-05-04 (PR #TBD)
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -74,7 +75,7 @@ jobs:
   steward-gatekeeper-graph-divergence:
     name: steward-gatekeeper-graph-divergence
     runs-on: ubuntu-latest
-    continue-on-error: true   # warn-only first cycle
+    # promoted to required-on-develop+main 2026-05-04 (PR #TBD)
     steps:
       - uses: actions/checkout@v4
         with:

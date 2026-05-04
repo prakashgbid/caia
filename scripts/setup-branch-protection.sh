@@ -13,8 +13,13 @@
 #       * "semgrep"                          (.github/workflows/evidence-gate.yml)
 #       * "gitleaks"                         (.github/workflows/evidence-gate.yml)
 #       * "bundle-size"                      (.github/workflows/evidence-gate.yml)
+#       * "steward-gatekeeper-migration-linter"     (.github/workflows/steward-gatekeeper.yml)
+#       * "steward-gatekeeper-migration-numbering"  (.github/workflows/steward-gatekeeper.yml)
+#       * "steward-gatekeeper-graph-divergence"     (.github/workflows/steward-gatekeeper.yml)
 #   - Require strict status checks (branch up-to-date with target before merge).
-#   - Require linear history (squash or rebase merge only).
+#   - Require linear history on main (squash or rebase merge only).
+#     Develop has linear-history DISABLED to allow back-merges from main
+#     (per agent/memory/feedback_git_flow_enforced.md 2026-05-03 update).
 #   - No force-push, no deletion.
 #   - Apply rules to admins (enforce_admins=true).
 #   - Require conversation resolution before merge.
@@ -55,10 +60,22 @@ REQUIRED_CONTEXTS_JSON='[
   "typecheck",
   "semgrep",
   "gitleaks",
-  "bundle-size"
+  "bundle-size",
+  "steward-gatekeeper-migration-linter",
+  "steward-gatekeeper-migration-numbering",
+  "steward-gatekeeper-graph-divergence"
 ]'
 
 protection_body() {
+  local branch="$1"
+  # Per agent/memory/feedback_git_flow_enforced.md (2026-05-03):
+  # required_linear_history must be DISABLED on develop so back-merges
+  # from main can land as merge commits (preserving "main is ancestor").
+  # main keeps it ENABLED — main is squash-merge from develop only.
+  local linear_history='true'
+  if [[ "${branch}" == 'develop' ]]; then
+    linear_history='false'
+  fi
   cat <<EOF
 {
   "required_status_checks": {
@@ -73,7 +90,7 @@ protection_body() {
     "required_approving_review_count": 0
   },
   "restrictions": null,
-  "required_linear_history": true,
+  "required_linear_history": ${linear_history},
   "allow_force_pushes": false,
   "allow_deletions": false,
   "block_creations": false,
