@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1700000000000,
+      "tag": "0000_single_statement",
+      "breakpoints": false
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1700000001000,
+      "tag": "0001_multi_with_breakpoints",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1700000002000,
+      "tag": "0002_strings_and_comments",
+      "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1700000003000,
+      "tag": "0003_inline_breakpoints",
+      "breakpoints": true
+    }
+  ]
+}

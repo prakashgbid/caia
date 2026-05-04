@@ -1,0 +1,46 @@
+{
+  "name": "@chiefaia/steward-analyzers",
+  "version": "0.1.0",
+  "description": "Static analyzers for the Steward Gatekeeper. Pre-merge checks that are not predicate-evaluable on the steward-core engine: Drizzle migration breakpoint linter, migration-numbering collision/gap scanner, develop↔main graph-divergence checker. Wired into the steward-gatekeeper.yml CI workflow as a required pre-merge context once branch protection is updated.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "steward-gatekeeper": "./bin/steward-gatekeeper.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./migration-linter": {
+      "types": "./dist/migration-linter.d.ts",
+      "default": "./dist/migration-linter.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
