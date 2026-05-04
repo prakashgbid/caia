@@ -2,6 +2,53 @@
 
 ## Unreleased
 
+### FIX-005 — Coding Agent IPC client (this PR)
+
+- New `src/coding-ipc-client.ts`: `MemoryCodingIpcInvoker` (default
+  used until CODING-007 ships) + `UnixSocketCodingIpcClient` (real
+  newline-delimited JSON client over `~/.caia/sockets/<workerId>.sock`).
+- `src/main.ts` plumbs `UnixSocketCodingIpcClient.fromEnv()` with
+  `MemoryCodingIpcInvoker` fallback; swap is environmental, no code
+  change needed when the server lands.
+- 19 new vitest cases (memory invoker, socket round-trip, multiplex,
+  timeouts, malformed-line tolerance, fromEnv).
+- 1 new microbenchmark: in-memory invoker < 0.5 ms / call.
+
+### FIX-005 — Coding Agent IPC client (this PR)
+
+- New `src/coding-ipc-client.ts`:
+  - `MemoryCodingIpcInvoker` — in-process mock conforming to
+    `CodingIpcInvoker`. The default the orchestrator uses today (until
+    CODING-007 ships its server). Tests can drive responses through
+    a `respond(req)` hook, or set `alwaysFix: false` to simulate a
+    failed fix. Records every call.
+  - `UnixSocketCodingIpcClient` — real client speaking newline-delimited
+    JSON over a Unix-domain socket at the conventional
+    `~/.caia/sockets/<workerId>.sock`. Single persistent connection,
+    multiplexed by per-request UUIDs, malformed-line tolerant, with
+    connect + per-request timeouts.
+  - Wire format: documented in the file header (apply_fix / health /
+    flush_logs / close_session methods).
+  - `socketPathForWorker(workerId, base?)` for path conventions.
+  - `UnixSocketCodingIpcClient.fromEnv(env)` factory: prefers
+    `CODING_IPC_SOCKET`, falls back to `CODING_WORKER_ID`, returns
+    null when no live socket is available.
+- `src/main.ts` plumbs the IPC client into the orchestrator: prefers
+  the real Unix socket via `fromEnv()`, falls back to
+  `MemoryCodingIpcInvoker`. Swap to the real server is purely
+  environmental — no code change needed once CODING-007 lands.
+- 19 new vitest cases in `tests/coding-ipc-client.test.ts`:
+  - `socketPathForWorker` (2)
+  - `MemoryCodingIpcInvoker` (4 — default ok / alwaysFix=false /
+    custom respond hook / close-session counter)
+  - `UnixSocketCodingIpcClient` end-to-end against a tiny test server
+    (9 — round-trip / server-error / concurrent multiplex / request
+    timeout / connect error / malformed-line tolerance / health /
+    DEFAULT_REQUEST_TIMEOUT_MS pinned / close-session idempotence)
+  - `UnixSocketCodingIpcClient.fromEnv` (3 — null when no env / null
+    on missing path / non-null on live socket)
+- 1 new microbenchmark: in-memory invoker < 0.5 ms / call.
+
 ### FIX-004 — failure diagnoser (this PR)
 
 - New `src/failure-diagnoser.ts`:

@@ -24,6 +24,10 @@ import { FixItOrchestrator } from './orchestrator';
 import { TemplateTestCodeGenerator } from './test-code-generator';
 import { SubprocessTestRunner } from './test-runner';
 import { StructuredFailureDiagnoser } from './failure-diagnoser';
+import {
+  MemoryCodingIpcInvoker,
+  UnixSocketCodingIpcClient,
+} from './coding-ipc-client';
 
 export interface WorkerEnv {
   orchestratorUrl: string;
@@ -88,14 +92,19 @@ export async function bootstrap(env: WorkerEnv): Promise<{
 }> {
   // FIX-002 plumbs the real test code generator. FIX-003 plumbs the
   // real subprocess-based runner. FIX-004 plumbs the real failure
-  // diagnoser. IPC stays stubbed pending FIX-005..006.
+  // diagnoser. FIX-005 plumbs the IPC client: prefer the real Unix
+  // socket if the environment points at one, otherwise fall back to
+  // the in-memory invoker (used until CODING-007 ships its server).
+  const ipc =
+    UnixSocketCodingIpcClient.fromEnv() ?? new MemoryCodingIpcInvoker();
   const orchestrator = new FixItOrchestrator({
     generator: new TemplateTestCodeGenerator(),
     runner: new SubprocessTestRunner(),
     diagnoser: new StructuredFailureDiagnoser(),
+    ipc,
   });
   // Subsequent PRs:
-  //   - FIX-005 .. FIX-006: real IPC plumbed in
+  //   - FIX-006: retest loop persistence + fix-stuck blocker writer
   //   - FIX-007 .. FIX-013: heartbeat, register(), assignment IPC, dashboard
   return {
     orchestrator,
