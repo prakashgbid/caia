@@ -9,9 +9,15 @@ name: hygiene-report
 #      backup/*, release/*).
 #   2. Open PRs with no commit activity in the last 48h.
 #   3. Branches >7 days old (any state).
+#   4. Steward hygiene-daily checks (failure modes 4, 5, 6 per
+#      `agent/memory/steward_gatekeeper_directive.md`):
+#      stash count, worktree count, orphan branches without PR.
 #
-# Stashes are out of scope here — they're client-side and covered by the
-# Husky hooks and the caia-flow start/ship lifecycle.
+# Sections 1-3 are the original hygiene scan. Section 4 is the Steward
+# Phase-2c extension (PR #297). Stashes are still out-of-scope at the CI
+# layer for sections 1-3 (they're client-side); the Steward analyzer
+# section *is* CI-visible and reports stash count = 0 on every clean
+# CI runner.
 #
 # Reference: feedback_git_flow_enforced.md, caia/docs/git-flow.md.
 
@@ -153,6 +159,53 @@ jobs:
           echo "Triage with: \`pnpm flow status\` (current branch), \`pnpm flow ship\` (close green PRs), \`pnpm flow archive <reason>\` (preserve to backup/)." >> /tmp/hygiene/report.md
 
           cat /tmp/hygiene/report.md
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies (steward-analyzers + deps only)
+        run: |
+          # Limit install scope to keep the daily run fast — only what
+          # the steward-analyzers package needs to build + run.
+          pnpm install --filter @chiefaia/steward-analyzers... --frozen-lockfile
+
+      - name: Build steward-analyzers
+        run: pnpm --filter @chiefaia/steward-analyzers build
+
+      - name: Append Steward hygiene-daily findings
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          OUT=$(node packages/steward-analyzers/bin/steward-gatekeeper.mjs hygiene-daily 2>&1)
+          STEWARD_EC=$?
+          set -e
+
+          {
+            echo
+            echo "## 4. Steward hygiene-daily checks"
+            echo
+            echo "_Failure modes 4 (stash), 5 (orphan branches), 6 (worktree count) per \`agent/memory/steward_gatekeeper_directive.md\`._"
+            echo
+            echo '```'
+            echo "${OUT}"
+            echo '```'
+            echo
+            if [ "${STEWARD_EC}" -eq 0 ]; then
+              echo "_Steward CLI exit code: 0 (no block findings)._"
+            else
+              echo "_Steward CLI exit code: ${STEWARD_EC} — high/block-severity findings present; review above._"
+            fi
+          } >> /tmp/hygiene/report.md
 
       - name: Open or update tracking issue
         env:
