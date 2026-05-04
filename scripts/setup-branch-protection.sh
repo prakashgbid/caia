@@ -104,7 +104,7 @@ EOF
 apply() {
   local branch="$1"
   echo "→ ${OWNER}/${REPO}: applying protection to '${branch}'"
-  protection_body | gh api --method PUT \
+  protection_body "${branch}" | gh api --method PUT \
     -H "Accept: application/vnd.github+json" \
     "repos/${OWNER}/${REPO}/branches/${branch}/protection" \
     --input - > /dev/null
