@@ -34,6 +34,24 @@
  *                           [--out-dir <path>] [--force] [--print]
  *     (Phase-2 PR-2) Same pipeline, write the `backlog-directive`
  *     actions under `<reportsDir>/curator/backlog-directives/`.
+ *
+ *   emit-industry-briefings [--repo <path>] [--memory <dir>] [--reports <dir>]
+ *                           [--out-dir <path>] [--watchlist <path>]
+ *                           [--force] [--print]
+ *     (Phase-2 PR-3) Load the operator-curated watchlist
+ *     (`<memoryDir>/curator-watchlist.json` by default) and emit one
+ *     industry-briefing markdown per entry under
+ *     `<reportsDir>/curator/industry-briefings/`.
+ *
+ *   act [--repo <path>] [--memory <dir>] [--reports <dir>]
+ *       [--alarms-dir <path>] [--pr-proposals-dir <path>]
+ *       [--backlog-directives-dir <path>]
+ *       [--industry-briefings-dir <path>] [--watchlist <path>]
+ *       [--force] [--print] [--skip-watchlist]
+ *     (Phase-2 PR-3) Unified runner: scans, classifies findings,
+ *     loads the watchlist, and emits all 4 output modes (alarms +
+ *     pr-proposals + backlog-directives + industry-briefings) in one
+ *     pass. This is what the daily LaunchAgent / cron will invoke.
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -41,13 +59,18 @@ import { dirname, join, resolve as pathResolve } from 'node:path';
 
 import {
   findingsToActions,
+  loadWatchlist,
+  runActDay,
   writeAlarms,
   writeBacklogDirectives,
+  writeIndustryBriefings,
   writePrProposals,
   type AlarmAction,
   type BacklogDirectiveAction,
   type EmitResult,
-  type PrProposalAction
+  type IndustryBriefingAction,
+  type PrProposalAction,
+  type RunActDayResult
 } from './actions/index.js';
 import { defaultScanContext, type DefaultContextOptions } from './context.js';
 import { renderDigest } from './digest.js';
@@ -253,6 +276,106 @@ async function emitBacklogDirectives(args: Argv): Promise<void> {
   );
 }
 
+async function emitIndustryBriefings(args: Argv): Promise<void> {
+  const ctx = buildCtx(args);
+  // Industry briefings come from the watchlist, NOT from scanner findings.
+  // We still synthesise the per-emitter JSON shape so consumers see the
+  // same contract as the other emit-* commands.
+  const watchlistPath = args.flags['watchlist'];
+  const briefings: IndustryBriefingAction[] = watchlistPath
+    ? loadWatchlist({ path: pathResolve(watchlistPath) })
+    : loadWatchlist({ memoryDir: ctx.memoryDir });
+
+  const outArg = args.flags['out-dir'];
+  const force = args.flags['force'] === '1';
+  const emitted = outArg
+    ? writeIndustryBriefings(briefings, { outDir: pathResolve(outArg), force })
+    : writeIndustryBriefings(briefings, { reportsDir: ctx.reportsDir, force });
+
+  if (args.flags['print'] === '1') {
+    for (const w of emitted.written) console.log(`written: ${w.slug} -> ${w.path}`);
+    for (const s of emitted.skipped) console.log(`skipped: ${s.slug} -> ${s.path}`);
+  }
+
+  console.log(
+    JSON.stringify({
+      ok: true,
+      kind: 'industry-briefing',
+      outputDir: emitted.outputDir,
+      writtenCount: emitted.writtenCount,
+      skippedCount: emitted.skippedCount,
+      written: emitted.written,
+      skipped: emitted.skipped,
+      matchingActions: briefings.length,
+      // No findings or classifier-driven actions in this mode.
+      totalActions: briefings.length,
+      totalFindings: 0
+    })
+  );
+}
+
+async function act(args: Argv): Promise<void> {
+  const ctx = buildCtx(args);
+  const force = args.flags['force'] === '1';
+  const opts: Parameters<typeof runActDay>[1] = { force };
+  if (args.flags['alarms-dir']) opts.alarmsDir = pathResolve(args.flags['alarms-dir']);
+  if (args.flags['pr-proposals-dir'])
+    opts.prProposalsDir = pathResolve(args.flags['pr-proposals-dir']);
+  if (args.flags['backlog-directives-dir'])
+    opts.backlogDirectivesDir = pathResolve(args.flags['backlog-directives-dir']);
+  if (args.flags['industry-briefings-dir'])
+    opts.industryBriefingsDir = pathResolve(args.flags['industry-briefings-dir']);
+  if (args.flags['watchlist']) opts.watchlistPath = pathResolve(args.flags['watchlist']);
+  if (args.flags['skip-watchlist'] === '1') opts.skipIndustryBriefings = true;
+
+  const r: RunActDayResult = await runActDay(ctx, opts);
+
+  if (args.flags['print'] === '1') {
+    for (const e of [
+      r.emit.alarms,
+      r.emit.prProposals,
+      r.emit.backlogDirectives,
+      r.emit.industryBriefings
+    ]) {
+      for (const w of e.written) console.log(`written: ${w.kind}/${w.slug} -> ${w.path}`);
+      for (const s of e.skipped) console.log(`skipped: ${s.kind}/${s.slug} -> ${s.path}`);
+    }
+  }
+
+  console.log(
+    JSON.stringify({
+      ok: true,
+      findingCount: r.findingCount,
+      classifiedCount: r.classifiedCount,
+      watchlistCount: r.watchlistCount,
+      startedAt: r.startedAt,
+      endedAt: r.endedAt,
+      emit: {
+        alarms: {
+          outputDir: r.emit.alarms.outputDir,
+          writtenCount: r.emit.alarms.writtenCount,
+          skippedCount: r.emit.alarms.skippedCount
+        },
+        prProposals: {
+          outputDir: r.emit.prProposals.outputDir,
+          writtenCount: r.emit.prProposals.writtenCount,
+          skippedCount: r.emit.prProposals.skippedCount
+        },
+        backlogDirectives: {
+          outputDir: r.emit.backlogDirectives.outputDir,
+          writtenCount: r.emit.backlogDirectives.writtenCount,
+          skippedCount: r.emit.backlogDirectives.skippedCount
+        },
+        industryBriefings: {
+          outputDir: r.emit.industryBriefings.outputDir,
+          writtenCount: r.emit.industryBriefings.writtenCount,
+          skippedCount: r.emit.industryBriefings.skippedCount
+        }
+      }
+    })
+  );
+}
+
 function usage(): never {
   console.error(
     [
@@ -265,6 +388,8 @@ function usage(): never {
       '  emit-alarms [--repo <path>] [--memory <dir>] [--reports <dir>] [--alarms-dir <path>] [--force] [--print]',
       '  emit-pr-proposals [--repo <path>] [--memory <dir>] [--reports <dir>] [--out-dir <path>] [--force] [--print]',
       '  emit-backlog-directives [--repo <path>] [--memory <dir>] [--reports <dir>] [--out-dir <path>] [--force] [--print]',
+      '  emit-industry-briefings [--repo <path>] [--memory <dir>] [--reports <dir>] [--out-dir <path>] [--watchlist <path>] [--force] [--print]',
+      '  act [--repo <path>] [--memory <dir>] [--reports <dir>] [--watchlist <path>] [--alarms-dir <path>] [--pr-proposals-dir <path>] [--backlog-directives-dir <path>] [--industry-briefings-dir <path>] [--force] [--print] [--skip-watchlist]',
       '',
       'Env vars:',
       '  CAIA_MEMORY_DIR     overrides default agent/memory path',
@@ -295,6 +420,12 @@ export async function main(argv: string[]): Promise<void> {
       return;
     case 'emit-backlog-directives':
       await emitBacklogDirectives(args);
+      return;
+    case 'emit-industry-briefings':
+      await emitIndustryBriefings(args);
+      return;
+    case 'act':
+      await act(args);
       return;
     case undefined:
     case '--help':
