@@ -2,14 +2,15 @@
   "name": "@chiefaia/mentor-fastpath",
   "version": "0.1.0",
   "private": true,
-  "description": "Mentor Phase-1 reactive fast-path + Phase-2 postmerge data layer + Phase-2 postmerge watcher daemon. Subscribes to OperatorCorrection events from the Mentor event bus, classifies the failure mode against the 18-category taxonomy, synthesizes a draft markdown lesson, and writes it to <CAIA_MEMORY_DIR>/proposals/ within 1 minute of the operator correction. The Phase-2 postmerge watcher (caia-postmerge-watcher) polls 'gh pr list --state merged' + 'gh run list --status failure' and emits PRMerged / RegressionDetected / EvidenceGateFailure events into the bus.",
+  "description": "Mentor Phase-1 reactive fast-path + Phase-2 postmerge data layer + Phase-2 postmerge watcher daemon + Phase-2 postmerge consumer. Phase 1 subscribes to OperatorCorrection events and writes proposals. Phase 2 polls 'gh pr list' / 'gh run list' for postmerge regressions, emits events into the bus, and a separate consumer translates those events into proposals via the same memory-writer.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
     "caia-mentor-fastpath": "./dist/cli.js",
-    "caia-postmerge-watcher": "./dist/postmerge/watcher/cli.js"
+    "caia-postmerge-watcher": "./dist/postmerge/watcher/cli.js",
+    "caia-postmerge-consumer": "./dist/postmerge/consumer-cli.js"
   },
   "exports": {
     ".": {
