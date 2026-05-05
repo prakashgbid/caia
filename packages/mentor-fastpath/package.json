@@ -1,0 +1,39 @@
+{
+  "name": "@chiefaia/mentor-fastpath",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mentor Phase-1 reactive fast-path. Subscribes to OperatorCorrection events from the Mentor event bus, classifies the failure mode against the 18-category taxonomy, and (in subsequent PRs) synthesizes durable lesson memory updates within 1 minute of the operator correction.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/mentor-event-bus": "workspace:*",
+    "better-sqlite3": "^12.6.2"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  }
+}
