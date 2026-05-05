@@ -14,6 +14,10 @@
   Substitute `__USER_HOME__` with $HOME and `__REPO__` with the absolute
   path to your caia checkout when installing. The install.sh script does
   this automatically.
+
+  Per-site branch overrides: __LOCAL_PREVIEW_<SITE>_BRANCH__ placeholders
+  are sed-substituted at install time from the operator's env (or the
+  bake-in defaults of develop/master/main respectively).
 -->
 <plist version="1.0">
 <dict>
@@ -40,6 +44,12 @@
         <string>__USER_HOME__/Library/Application Support/Stolution/local-preview</string>
         <key>LOCAL_PREVIEW_BUILD_WORKSPACE</key>
         <string>/private/tmp/local-preview-build</string>
+        <key>LOCAL_PREVIEW_DASHBOARD_BRANCH</key>
+        <string>__LOCAL_PREVIEW_DASHBOARD_BRANCH__</string>
+        <key>LOCAL_PREVIEW_POKER_ZENO_BRANCH</key>
+        <string>__LOCAL_PREVIEW_POKER_ZENO_BRANCH__</string>
+        <key>LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH</key>
+        <string>__LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH__</string>
     </dict>
 
     <key>RunAtLoad</key>
