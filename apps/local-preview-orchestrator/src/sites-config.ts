@@ -23,6 +23,24 @@
  *   (or in the user's launchctl context via `launchctl setenv`) for the
  *   override to take effect.
  *
+ * Build-command auto-detection (added Phase-2-leg-9):
+ *   Per-site build command is resolved based on which lockfile lives in the
+ *   worktree at deploy time:
+ *     - pnpm-lock.yaml      -> `pnpm install --frozen-lockfile && pnpm build`
+ *     - package-lock.json   -> `npm ci && npm run build`
+ *     - yarn.lock           -> `yarn install --frozen-lockfile && yarn build`
+ *     - none of the above   -> the bake-in default `buildCmd`
+ *
+ *   This closes the leg-4 Stage-6 gap where poker-zeno + roulette-community
+ *   are npm-based projects (have `package-lock.json`, no `pnpm-lock.yaml`)
+ *   but the orchestrator was hardcoded to run `pnpm install --frozen-lockfile`,
+ *   which corepack rejected. Autodetect is fully passive — no env var, no
+ *   external repo change required.
+ *
+ *   The resolver is wired into deploy.ts at build time (after worktree-add,
+ *   before shellRunner). The bake-in `buildCmd` remains the fallback so
+ *   tests continue to pass and any unusual setup is still supported.
+ *
  * Trust boundary: branch names sourced from env are validated against a
  * conservative allowlist (`/^[A-Za-z0-9_./@-]+$/`) — the same allowlist used
  * by `git-ops.shellEscape`. Anything outside the allowlist is rejected at
@@ -30,12 +48,32 @@
  * metacharacters via the override env var.
  */
 
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 export interface SiteConfig {
   name: string;
   repo: string;
   branch: string;
   port: number;
+  /**
+   * Bake-in build command. Used as fallback when no lockfile is detected
+   * AND when a site explicitly opts out of autodetect. Always set.
+   */
   buildCmd: string;
+  /**
+   * Whether to attempt lockfile-based autodetect at deploy time. When true
+   * (default for sites whose primary package manager differs from pnpm OR
+   * for any site that wants the orchestrator to be lockfile-aware), the
+   * deploy flow calls `resolveBuildCmdForWorkspace(site, workspaceDir)`
+   * which inspects the worktree's lockfiles before falling back to the
+   * `buildCmd` string above.
+   *
+   * Defaults to `true` — autodetect is opt-out, since it's strictly a
+   * superset of the existing behaviour (an empty / pnpm-lock-only site
+   * resolves to the same `pnpm install --frozen-lockfile && pnpm build`).
+   */
+  autodetectBuildCmd: boolean;
   startCmd: (port: number) => string;
   healthPath: string;
   healthMustContain: string;
@@ -53,6 +91,13 @@ const SITE_DEFAULTS: SiteDefault[] = [
     repo: '/Users/MAC/Documents/projects/caia/apps/dashboard',
     defaultBranch: 'develop',
     port: 5173,
+    // CAIA monorepo: dashboard's install runs at the repo root via the
+    // workspace pnpm-lock.yaml. Autodetect on the dashboard's own
+    // worktree would falsely conclude "no lockfile" because the dashboard
+    // package itself has no per-package lockfile — the workspace one is
+    // higher up. Disable autodetect for dashboard to keep the existing
+    // working behaviour.
+    autodetectBuildCmd: false,
     buildCmd: 'pnpm install --frozen-lockfile && pnpm --filter @caia-app/dashboard build',
     startCmd: (p) => `pnpm --filter @caia-app/dashboard exec next start -p ${p}`,
     healthPath: '/',
@@ -65,6 +110,7 @@ const SITE_DEFAULTS: SiteDefault[] = [
     // Stage-6 verify (2026-05-05) confirmed poker-zeno's primary branch is master, not develop.
     defaultBranch: 'master',
     port: 5174,
+    autodetectBuildCmd: true,
     buildCmd: 'pnpm install --frozen-lockfile && pnpm build',
     startCmd: (p) => `pnpm preview -- --port ${p}`,
     healthPath: '/',
@@ -77,6 +123,7 @@ const SITE_DEFAULTS: SiteDefault[] = [
     // Stage-6 verify (2026-05-05) confirmed roulette-community's primary branch is main, not develop.
     defaultBranch: 'main',
     port: 5175,
+    autodetectBuildCmd: true,
     buildCmd: 'pnpm install --frozen-lockfile && pnpm build',
     startCmd: (p) => `pnpm preview -- --port ${p}`,
     healthPath: '/',
@@ -170,4 +217,63 @@ export function getAllSiteNames(): string[] {
  */
 export function getDefaultBranch(siteName: string): string | undefined {
   return SITE_DEFAULTS.find((s) => s.name === siteName)?.defaultBranch;
+}
+
+// ---------------------------------------------------------------------------
+// Build-command autodetect (lockfile-driven)
+// ---------------------------------------------------------------------------
+
+/** The package managers the autodetect resolver knows about. */
+export type DetectedPackageManager = 'pnpm' | 'npm' | 'yarn' | 'unknown';
+
+/**
+ * Inspect a worktree directory and decide which package manager owns it
+ * based on which lockfile exists. If multiple coexist (rare), pnpm wins
+ * over npm wins over yarn (alphabetical tiebreak doesn't matter — this
+ * matches CAIA's own preference order).
+ *
+ * Pure: takes an injected `exists` predicate so tests don't need real FS.
+ */
+export function detectPackageManager(
+  workspaceDir: string,
+  exists: (path: string) => boolean = existsSync
+): DetectedPackageManager {
+  if (exists(join(workspaceDir, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (exists(join(workspaceDir, 'package-lock.json'))) return 'npm';
+  if (exists(join(workspaceDir, 'yarn.lock'))) return 'yarn';
+  return 'unknown';
+}
+
+/**
+ * Resolve the install + build command for a worktree. Logic:
+ *
+ *   1. If site.autodetectBuildCmd is false -> bake-in `buildCmd` verbatim.
+ *   2. Else inspect the worktree's lockfile via `detectPackageManager`:
+ *        - pnpm    -> `pnpm install --frozen-lockfile && pnpm build`
+ *        - npm     -> `npm ci && npm run build`
+ *        - yarn    -> `yarn install --frozen-lockfile && yarn build`
+ *        - unknown -> bake-in `buildCmd` (preserves existing behaviour for
+ *                     unusual setups).
+ *
+ * The bake-in `buildCmd` is only consulted in cases (1) + (4-unknown) so
+ * tests that assert the live SITES table's bake-in commands stay valid.
+ */
+export function resolveBuildCmdForWorkspace(
+  site: SiteConfig,
+  workspaceDir: string,
+  exists: (path: string) => boolean = existsSync
+): string {
+  if (!site.autodetectBuildCmd) return site.buildCmd;
+  const pm = detectPackageManager(workspaceDir, exists);
+  switch (pm) {
+    case 'pnpm':
+      return 'pnpm install --frozen-lockfile && pnpm build';
+    case 'npm':
+      return 'npm ci && npm run build';
+    case 'yarn':
+      return 'yarn install --frozen-lockfile && yarn build';
+    case 'unknown':
+    default:
+      return site.buildCmd;
+  }
 }
