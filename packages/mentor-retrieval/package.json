@@ -2,7 +2,7 @@
   "name": "@chiefaia/mentor-retrieval",
   "version": "0.1.0",
   "private": true,
-  "description": "Mentor Phase-3 + Phase-4 lesson retrieval — embed past feedback_*.md + proposals/*.md via Ollama nomic-embed-text, persist to a per-memoryDir SQLite index, retrieve top-N most similar prior lessons, prepend them to spawned-task prompts as 'Lessons from past similar work — do not repeat:', and cluster the proposal stream to detect systemic-vs-one-off failure patterns. PR-1 ships the index builder + storage; PR-2 adds the retrieval API + caia-mentor-retrieve CLI; PR-3 adds the orchestrator pre-spawn hook (caia-mentor-prepend + prependLessons() library); Phase-4 PR-1 adds caia-mentor-cluster + the cluster() library used by Phase-4 PR-2 (Steward rule proposer).",
+  "description": "Mentor Phase-3 + Phase-4 lesson retrieval — embed past feedback_*.md + proposals/*.md via Ollama nomic-embed-text, persist to a per-memoryDir SQLite index, retrieve top-N most similar prior lessons, prepend them to spawned-task prompts, cluster the proposal stream to detect systemic-vs-one-off failure patterns, and propose Steward gatekeeper rules for the systemic ones. Phase-3 PR-1/2/3 ship the index + retrieval + prepend hook; Phase-4 PR-1 ships clustering + caia-mentor-cluster; Phase-4 PR-2 ships Steward-rule proposals + caia-mentor-propose-steward-rule.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -11,7 +11,8 @@
     "caia-mentor-index": "./dist/cli.js",
     "caia-mentor-retrieve": "./dist/retrieve-cli.js",
     "caia-mentor-prepend": "./dist/prepend-cli.js",
-    "caia-mentor-cluster": "./dist/cluster-cli.js"
+    "caia-mentor-cluster": "./dist/cluster-cli.js",
+    "caia-mentor-propose-steward-rule": "./dist/propose-steward-rule-cli.js"
   },
   "exports": {
     ".": {
@@ -33,6 +34,10 @@
     "./cluster": {
       "import": "./dist/cluster.js",
       "types": "./dist/cluster.d.ts"
+    },
+    "./steward-rule-proposer": {
+      "import": "./dist/steward-rule-proposer.js",
+      "types": "./dist/steward-rule-proposer.d.ts"
     }
   },
   "files": [

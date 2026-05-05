@@ -10,11 +10,13 @@
  *           modes).
  *
  * Phase 4:
- *   - PR-1: incident clustering (this file's `cluster.js` exports) +
- *           `caia-mentor-cluster` CLI. Detects systemic-vs-one-off
- *           failure patterns over the proposal stream so PR-2 can
- *           propose Steward gatekeeper rules for genuinely recurring
- *           failures.
+ *   - PR-1: incident clustering (`./cluster.js`) +
+ *           `caia-mentor-cluster` CLI.
+ *   - PR-2: Steward rule proposal generator
+ *           (`./steward-rule-proposer.js`) +
+ *           `caia-mentor-propose-steward-rule` CLI. Promotes systemic
+ *           clusters into operator-reviewable Steward gatekeeper-rule
+ *           proposals.
  */
 
 export {
@@ -77,6 +79,15 @@ export {
   type ClusterOptions,
   type ProposalMetadata
 } from './cluster.js';
+
+export {
+  proposeStewardRule,
+  renderStewardRuleProposalMarkdown,
+  writeStewardRuleProposals,
+  type StewardRuleProposal,
+  type WriteStewardRuleProposalsOptions,
+  type WriteStewardRuleProposalsResult
+} from './steward-rule-proposer.js';
 
 export type {
   BuildIndexStats,
