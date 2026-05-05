@@ -2,7 +2,7 @@
   "name": "@chiefaia/mentor-fastpath",
   "version": "0.1.0",
   "private": true,
-  "description": "Mentor Phase-1 reactive fast-path. Subscribes to OperatorCorrection events from the Mentor event bus, classifies the failure mode against the 18-category taxonomy, synthesizes a draft markdown lesson, and writes it to <CAIA_MEMORY_DIR>/proposals/ within 1 minute of the operator correction.",
+  "description": "Mentor Phase-1 reactive fast-path + Phase-2 postmerge data layer. Subscribes to OperatorCorrection events from the Mentor event bus, classifies the failure mode against the 18-category taxonomy, synthesizes a draft markdown lesson, and writes it to <CAIA_MEMORY_DIR>/proposals/ within 1 minute of the operator correction. The Phase-2 postmerge module adds pure-function classifier + synthesizer for PRMerged / EvidenceGateFailure / RegressionDetected event payloads.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -18,6 +18,10 @@
     "./cli": {
       "import": "./dist/cli.js",
       "types": "./dist/cli.d.ts"
+    },
+    "./postmerge": {
+      "import": "./dist/postmerge/index.js",
+      "types": "./dist/postmerge/index.d.ts"
     }
   },
   "files": [
