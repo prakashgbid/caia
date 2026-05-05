@@ -18,6 +18,14 @@
 #   4. launchctl bootstrap each agent (gui/$UID domain)
 #   5. Verifies dashboard responds on http://127.0.0.1:5170/healthz within 30s
 #
+# Mentor event-bus integration (PR-H):
+#   The deploy daemon will lazily attempt to open the events.sqlite at
+#   `CAIA_EVENT_BUS_DB_PATH` on each successful deploy and emit a
+#   `PRMerged` event. Defaults to the same path the mentor-event-bus
+#   install.sh writes to (~/Library/Application Support/caia/events/events.sqlite).
+#   Set CAIA_EVENT_BUS_DISABLED=1 in your env (and re-export into the plist
+#   if needed) to opt out entirely.
+#
 # Per-site branch overrides:
 #   The deploy daemon resolves each site's branch from
 #   `LOCAL_PREVIEW_<SITE>_BRANCH` env vars at runtime. install.sh templates
@@ -67,6 +75,12 @@ _validate_branch() {
 _validate_branch LOCAL_PREVIEW_DASHBOARD_BRANCH "${LOCAL_PREVIEW_DASHBOARD_BRANCH}"
 _validate_branch LOCAL_PREVIEW_POKER_ZENO_BRANCH "${LOCAL_PREVIEW_POKER_ZENO_BRANCH}"
 _validate_branch LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH "${LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH}"
+
+# Mentor event-bus DB path (PR-H, leg-4 stage-6 finding). The orchestrator's
+# MentorClient lazily attempts to open this DB on each successful deploy and
+# silently no-ops if unavailable, so this var is safe to set even when
+# Mentor isn't installed yet.
+CAIA_EVENT_BUS_DB_PATH="${CAIA_EVENT_BUS_DB_PATH:-${HOME}/Library/Application Support/caia/events/events.sqlite}"
 
 # ─── Verify pre-conditions ──────────────────────────────────────────────────
 if [[ "$(uname)" != "Darwin" ]]; then
@@ -134,6 +148,7 @@ echo "  per-site branches:"
 echo "    dashboard           = ${LOCAL_PREVIEW_DASHBOARD_BRANCH}"
 echo "    poker-zeno          = ${LOCAL_PREVIEW_POKER_ZENO_BRANCH}"
 echo "    roulette-community  = ${LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH}"
+echo "  mentor event-bus DB = ${CAIA_EVENT_BUS_DB_PATH}"
 for label in "${PLIST_LABELS[@]}"; do
     src="${PLISTS_SRC}/${label}.plist"
     dst="${LA_DIR}/${label}.plist"
@@ -150,6 +165,7 @@ for label in "${PLIST_LABELS[@]}"; do
         -e "s|__LOCAL_PREVIEW_POKER_ZENO_BRANCH__|${LOCAL_PREVIEW_POKER_ZENO_BRANCH}|g" \
         -e "s|__LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH__|${LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH}|g" \
         -e "s|/usr/local/bin/node|${NODE_BIN}|g" \
+        -e "s|__CAIA_EVENT_BUS_DB_PATH__|${CAIA_EVENT_BUS_DB_PATH}|g" \
         "${src}" > "${dst}"
     echo "  installed ${label}.plist"
 done

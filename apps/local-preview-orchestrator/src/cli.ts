@@ -11,12 +11,15 @@
  * Wired into `package.json#bin.local-preview` → `dist/src/cli.js`. The PR-D
  * LaunchAgent plists invoke this binary with the appropriate subcommand.
  *
- * Mentor integration (PR-γ): if a Mentor event-bus DB path is reachable
- * (`CAIA_EVENT_BUS_DB_PATH` env var defaults to a Mac path), the CLI
- * constructs a Mentor `Client` and threads `mentorEmit` through deploy
- * options so successful deploys emit `PRMerged` events. The Client is
- * created lazily and silently no-ops if the DB can't be opened —
- * preserves the producer-non-blocking invariant.
+ * Mentor integration (PR-γ + PR-H):
+ *   The orchestrator constructs a Mentor `Client` lazily via `LazyMentor`
+ *   (see `mentor-emit.ts`). The lazy pattern fixes the leg-4 stage-6
+ *   finding: the deploy daemon was bootstrapped BEFORE the
+ *   mentor-event-bus install ran, so the eager open at startup failed and
+ *   no PRMerged event ever fired even after Mentor was eventually
+ *   installed. With LazyMentor, each successful deploy retries the open
+ *   on demand; once Mentor is installed (whenever that happens), the next
+ *   deploy picks it up automatically with no daemon restart.
  */
 
 import { homedir } from 'node:os';
@@ -27,11 +30,7 @@ import { startDashboard } from './status-dashboard.js';
 import { deploySite } from './deploy.js';
 import { SITES, getSiteConfig } from './sites-config.js';
 import { buildStatus } from './status-dashboard.js';
-import {
-  Client as MentorClient,
-  type EventType,
-  type PayloadOf
-} from '@chiefaia/mentor-event-bus';
+import { LazyMentor } from './mentor-emit.js';
 
 const DEFAULT_INSTALL_ROOT = join(
   homedir(),
@@ -51,6 +50,8 @@ const DEFAULT_MENTOR_DB_PATH = join(
   'events.sqlite'
 );
 
+const lazyMentor = new LazyMentor({ defaultDbPath: DEFAULT_MENTOR_DB_PATH });
+
 function deployOptions(): {
   installRoot: string;
   buildWorkspaceRoot: string;
@@ -63,34 +64,17 @@ function deployOptions(): {
     installRoot: process.env['LOCAL_PREVIEW_INSTALL_ROOT'] ?? DEFAULT_INSTALL_ROOT,
     buildWorkspaceRoot: process.env['LOCAL_PREVIEW_BUILD_WORKSPACE'] ?? DEFAULT_BUILD_WORKSPACE
   };
-  const mentor = tryOpenMentorClient();
-  if (!mentor) return base;
-  // Adapt Mentor's typed emit to deploy.ts's narrowly-typed callback.
-  const mentorEmit = <T extends EventType>(type: T, payload: PayloadOf<T>): void => {
-    mentor.emit(type, payload);
+  // The callback is invoked by deploy.ts only on success; we fetch the
+  // lazy mentor at that time so a delayed Mentor install eventually wires
+  // up without daemon restart. LazyMentor.emit returns a boolean for
+  // observability but we ignore it — fire-and-forget by design.
+  const mentorEmit = (
+    type: 'PRMerged',
+    payload: { prNumber: number; sha: string; branch: string; repo?: string; previousSha?: string }
+  ): void => {
+    lazyMentor.emit(type, payload);
   };
   return { ...base, mentorEmit };
-}
-
-/**
- * Try to open a Mentor client for the configured DB path. Returns undefined
- * (and logs nothing more than a single warning) if the path is unset or
- * the open fails — emit-points must NEVER block deploys on Mentor's
- * reliability.
- */
-function tryOpenMentorClient(): MentorClient | undefined {
-  const dbPath = process.env['CAIA_EVENT_BUS_DB_PATH'] ?? DEFAULT_MENTOR_DB_PATH;
-  // Setting CAIA_EVENT_BUS_DISABLED=1 turns mentor emit off entirely (tests + opt-out).
-  if (process.env['CAIA_EVENT_BUS_DISABLED'] === '1') return undefined;
-  try {
-    return new MentorClient({
-      dbPath,
-      processName: 'local-preview-orchestrator'
-    });
-  } catch (e) {
-    console.warn(`[local-preview] mentor client open failed (continuing without emit): ${String(e)}`);
-    return undefined;
-  }
 }
 
 async function main(): Promise<void> {

@@ -18,6 +18,14 @@
   Per-site branch overrides: __LOCAL_PREVIEW_<SITE>_BRANCH__ placeholders
   are sed-substituted at install time from the operator's env (or the
   bake-in defaults of develop/master/main respectively).
+
+  Mentor event-bus integration (PR-H, leg-4 stage-6 finding):
+  CAIA_EVENT_BUS_DB_PATH points the orchestrator's lazily-opened
+  MentorClient at the production events.sqlite managed by the
+  mentor-event-bus install. If Mentor is not installed yet, the client
+  open silently no-ops; the orchestrator retries opening on each
+  successful deploy so it picks up Mentor whenever it eventually arrives.
+  See apps/local-preview-orchestrator/src/cli.ts `tryOpenMentorClient`.
 -->
 <plist version="1.0">
 <dict>
@@ -50,6 +58,8 @@
         <string>__LOCAL_PREVIEW_POKER_ZENO_BRANCH__</string>
         <key>LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH</key>
         <string>__LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH__</string>
+        <key>CAIA_EVENT_BUS_DB_PATH</key>
+        <string>__CAIA_EVENT_BUS_DB_PATH__</string>
     </dict>
 
     <key>RunAtLoad</key>
