@@ -2,17 +2,21 @@
 
 Always-on local preview deployments for the three CAIA-affiliated sites:
 
-| Site | Local URL | Source repo |
-|---|---|---|
-| **CAIA dashboard** | http://localhost:5173 | `caia/apps/dashboard` |
-| **poker-zeno** | http://localhost:5174 | `~/Documents/projects/poker-zeno` |
-| **roulette-community** | http://localhost:5175 | `~/Documents/projects/roulette-community` |
-| **status dashboard** | http://localhost:5170 | this app |
+| Site | Local URL | Source repo | Default branch |
+|---|---|---|---|
+| **CAIA dashboard** | http://localhost:5173 | `caia/apps/dashboard` | `develop` |
+| **poker-zeno** | http://localhost:5174 | `~/Documents/projects/poker-zeno` | `master` |
+| **roulette-community** | http://localhost:5175 | `~/Documents/projects/roulette-community` | `main` |
+| **status dashboard** | http://localhost:5170 | this app | — |
 
-When installed, every merge to `develop` of any of the three site repos is
-auto-deployed to the corresponding local URL within 60 seconds, with atomic
-symlink-swap, instant rollback on health-check failure, and ten-build retention
-for manual rollback.
+When installed, every push to each site's tracked branch is auto-deployed to
+the corresponding local URL within 60 seconds, with atomic symlink-swap,
+instant rollback on health-check failure, and ten-build retention for manual
+rollback.
+
+The default branch per site is wired into the SITE_DEFAULTS table in
+`src/sites-config.ts`. Override per-site at install time with the env vars
+listed under [Per-site branch overrides](#per-site-branch-overrides).
 
 Subscription-only by design — no external services, no API keys, no paid
 tunnels. The deploy daemon polls `git fetch` every 30s.
@@ -50,7 +54,7 @@ com.stolution.local-preview.roulette-community  — site supervisor: localhost:5
 ```
 
 The deploy daemon polls each site's repo every 30s. When it sees a new
-`origin/develop` SHA, it:
+`origin/<branch>` SHA, it:
 
 1. `git worktree add` a fresh build copy
 2. runs the configured `buildCmd`
@@ -98,6 +102,33 @@ Env var overrides:
 | `LOCAL_PREVIEW_INSTALL_ROOT` | `~/Library/Application Support/Stolution/local-preview` | Per-site install root |
 | `LOCAL_PREVIEW_BUILD_WORKSPACE` | `/private/tmp/local-preview-build` | Ephemeral build worktrees |
 | `LOCAL_PREVIEW_DASHBOARD_PORT` | `5170` | Status dashboard port |
+
+### Per-site branch overrides
+
+The deploy daemon resolves each site's branch from `LOCAL_PREVIEW_<SITE>_BRANCH`
+env vars at runtime. Defaults match the SITE_DEFAULTS table in `src/sites-config.ts`.
+
+| Var | Default |
+|---|---|
+| `LOCAL_PREVIEW_DASHBOARD_BRANCH` | `develop` |
+| `LOCAL_PREVIEW_POKER_ZENO_BRANCH` | `master` |
+| `LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH` | `main` |
+
+To set them on a clean install, export before running `install.sh`:
+
+```bash
+LOCAL_PREVIEW_DASHBOARD_BRANCH=feature/abc \
+LOCAL_PREVIEW_POKER_ZENO_BRANCH=develop \
+    ./apps/local-preview-orchestrator/scripts/install.sh
+```
+
+`install.sh` writes the values into the deploy-daemon plist's
+`EnvironmentVariables` block. To change after install, re-run `install.sh`
+(it's idempotent — safe to re-run any time).
+
+The override value is validated against a strict allowlist
+(`/^[A-Za-z0-9_./@\-+]+$/`) at both install time and runtime; an attempt to
+inject shell metacharacters fails fast with a clear error.
 
 ## Status dashboard API
 

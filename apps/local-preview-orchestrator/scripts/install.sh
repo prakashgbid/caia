@@ -18,6 +18,16 @@
 #   4. launchctl bootstrap each agent (gui/$UID domain)
 #   5. Verifies dashboard responds on http://127.0.0.1:5170/healthz within 30s
 #
+# Per-site branch overrides:
+#   The deploy daemon resolves each site's branch from
+#   `LOCAL_PREVIEW_<SITE>_BRANCH` env vars at runtime. install.sh templates
+#   those values into the deploy-daemon plist's EnvironmentVariables block.
+#   Set them in your shell before running install.sh; otherwise they fall
+#   back to the bake-in defaults (develop/master/main):
+#
+#     LOCAL_PREVIEW_DASHBOARD_BRANCH=feature/foo \
+#         ./scripts/install.sh
+#
 # Idempotent: safe to re-run; will bootout any pre-existing copy of each agent first.
 
 set -euo pipefail
@@ -36,6 +46,27 @@ BACKUP_DIR="${HOME}/.caia-backups/launchagents-$(date +%Y%m%d-%H%M%S)"
 SITE_REPO_DASHBOARD="${SITE_REPO_DASHBOARD:-${REPO_ROOT}}"
 SITE_REPO_POKER_ZENO="${SITE_REPO_POKER_ZENO:-${HOME}/Documents/projects/poker-zeno}"
 SITE_REPO_ROULETTE_COMMUNITY="${SITE_REPO_ROULETTE_COMMUNITY:-${HOME}/Documents/projects/roulette-community}"
+
+# Per-site branch overrides (PR-E). Defaults match SITE_DEFAULTS in sites-config.ts.
+LOCAL_PREVIEW_DASHBOARD_BRANCH="${LOCAL_PREVIEW_DASHBOARD_BRANCH:-develop}"
+LOCAL_PREVIEW_POKER_ZENO_BRANCH="${LOCAL_PREVIEW_POKER_ZENO_BRANCH:-master}"
+LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH="${LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH:-main}"
+
+# Validate branch refs against the same allowlist used by sites-config.ts and
+# git-ops.shellEscape (alphanumerics, _, ., /, @, -, +). This is defence in
+# depth — the runtime resolver also validates — but failing fast at install
+# time is friendlier than a crash-loop after launchctl bootstrap.
+_validate_branch() {
+    local var_name="$1"
+    local value="$2"
+    if [[ ! "${value}" =~ ^[A-Za-z0-9_./@+\-]+$ ]]; then
+        echo "ERROR: ${var_name}=\"${value}\" contains characters outside the allowlist [A-Za-z0-9_./@+-]." >&2
+        exit 2
+    fi
+}
+_validate_branch LOCAL_PREVIEW_DASHBOARD_BRANCH "${LOCAL_PREVIEW_DASHBOARD_BRANCH}"
+_validate_branch LOCAL_PREVIEW_POKER_ZENO_BRANCH "${LOCAL_PREVIEW_POKER_ZENO_BRANCH}"
+_validate_branch LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH "${LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH}"
 
 # ─── Verify pre-conditions ──────────────────────────────────────────────────
 if [[ "$(uname)" != "Darwin" ]]; then
@@ -99,6 +130,10 @@ done
 # ─── Substitute templates + copy ────────────────────────────────────────────
 echo
 echo "Installing plists into ${LA_DIR}/"
+echo "  per-site branches:"
+echo "    dashboard           = ${LOCAL_PREVIEW_DASHBOARD_BRANCH}"
+echo "    poker-zeno          = ${LOCAL_PREVIEW_POKER_ZENO_BRANCH}"
+echo "    roulette-community  = ${LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH}"
 for label in "${PLIST_LABELS[@]}"; do
     src="${PLISTS_SRC}/${label}.plist"
     dst="${LA_DIR}/${label}.plist"
@@ -111,6 +146,9 @@ for label in "${PLIST_LABELS[@]}"; do
         -e "s|__REPO__|${REPO_ROOT}|g" \
         -e "s|__SITE_REPO_POKER_ZENO__|${SITE_REPO_POKER_ZENO}|g" \
         -e "s|__SITE_REPO_ROULETTE_COMMUNITY__|${SITE_REPO_ROULETTE_COMMUNITY}|g" \
+        -e "s|__LOCAL_PREVIEW_DASHBOARD_BRANCH__|${LOCAL_PREVIEW_DASHBOARD_BRANCH}|g" \
+        -e "s|__LOCAL_PREVIEW_POKER_ZENO_BRANCH__|${LOCAL_PREVIEW_POKER_ZENO_BRANCH}|g" \
+        -e "s|__LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH__|${LOCAL_PREVIEW_ROULETTE_COMMUNITY_BRANCH}|g" \
         -e "s|/usr/local/bin/node|${NODE_BIN}|g" \
         "${src}" > "${dst}"
     echo "  installed ${label}.plist"
