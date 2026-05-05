@@ -4,8 +4,13 @@
  */
 
 export { SITES, getSiteConfig, getAllSiteNames, type SiteConfig } from './sites-config.js';
-export { atomicSwap, rollbackToPrevious, getCurrentTarget, getPreviousTarget } from './atomic-swap.js';
-export { healthCheck, pollHealthCheck } from './health-check.js';
+export {
+  atomicSwap,
+  rollbackToPrevious,
+  getCurrentTarget,
+  getPreviousTarget
+} from './atomic-swap.js';
+export { healthCheck, pollHealthCheck, type HealthCheckResult } from './health-check.js';
 export { pruneBuilds, isDiskUsageOk, getBuildsSize } from './disk-prune.js';
 export {
   logIncident,
@@ -14,3 +19,37 @@ export {
   createRollbackRecord,
   type IncidentRecord
 } from './incident-log.js';
+
+// PR-B additions
+export {
+  defaultShellRunner,
+  runOrThrow,
+  type ShellRunner,
+  type ShellRunOptions,
+  type ShellResult
+} from './shell-runner.js';
+export { makeGitOps, shellEscape, type GitOps } from './git-ops.js';
+export {
+  deploySite,
+  resolveSitePath,
+  resolveBuildDir,
+  resolveBuildWorkspace,
+  extractShaFromBuildPath,
+  LockHeldError,
+  type DeployOptions,
+  type DeployResult
+} from './deploy.js';
+export {
+  runPollLoop,
+  pollIteration,
+  defaultSleep,
+  type PollLoopOptions,
+  type IterationResult
+} from './poll-loop.js';
+export {
+  defaultSiteState,
+  readSiteState,
+  writeSiteState,
+  updateSiteState,
+  type SiteState
+} from './site-state.js';
