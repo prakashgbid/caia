@@ -17,7 +17,27 @@ export interface GitOps {
   resolveBranchSha(repoPath: string, branch: string): Promise<string>;
   worktreeAdd(repoPath: string, targetPath: string, ref: string): Promise<void>;
   worktreeRemove(repoPath: string, targetPath: string): Promise<void>;
+  /**
+   * Reconcile the worktree registry with the on-disk state. Run after a
+   * manual rmSync to drop dangling entries.
+   */
+  pruneWorktrees(repoPath: string): Promise<void>;
 }
+
+/**
+ * `git worktree remove --force` timeout.
+ *
+ * Bumped to 120s in PR-G. Stage-6 verify on Mac saw the previous 30s
+ * timeout fire on a 1.7 GB worktree (Next.js build artifacts + node_modules)
+ * — fs walk over that volume on a busy disk regularly takes 45-60s; 120s
+ * leaves headroom and still keeps the deploy pipeline responsive.
+ */
+const WORKTREE_REMOVE_TIMEOUT_MS = 120_000;
+
+/**
+ * `git worktree prune` timeout. Cheap operation — touches just the registry.
+ */
+const WORKTREE_PRUNE_TIMEOUT_MS = 30_000;
 
 /**
  * Default GitOps — backed by a ShellRunner.
@@ -52,10 +72,17 @@ export function makeGitOps(shell: ShellRunner): GitOps {
       );
     },
     async worktreeRemove(repoPath, targetPath) {
-      // --force in case the worktree has uncommitted changes from the build
+      // --force in case the worktree has uncommitted changes from the build.
+      // 120s tolerates large worktrees on busy disks (PR-G).
       await runOrThrow(shell, `git worktree remove --force ${shellEscape(targetPath)}`, {
         cwd: repoPath,
-        timeoutMs: 30_000
+        timeoutMs: WORKTREE_REMOVE_TIMEOUT_MS
+      });
+    },
+    async pruneWorktrees(repoPath) {
+      await runOrThrow(shell, 'git worktree prune', {
+        cwd: repoPath,
+        timeoutMs: WORKTREE_PRUNE_TIMEOUT_MS
       });
     }
   };
@@ -79,3 +106,11 @@ export function shellEscape(s: string): string {
  * Re-exported for convenience.
  */
 export type { ShellRunOptions };
+
+/**
+ * Exposed for tests + observers.
+ */
+export const TIMEOUTS = {
+  worktreeRemoveMs: WORKTREE_REMOVE_TIMEOUT_MS,
+  worktreePruneMs: WORKTREE_PRUNE_TIMEOUT_MS
+} as const;
