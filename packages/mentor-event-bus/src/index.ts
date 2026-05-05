@@ -4,6 +4,10 @@
  * Producers: import Client + emit. Consumers (Mentor / Curator / Steward):
  * import Client + getRecent + queryEvents.
  *
+ * Cross-machine: import HttpClient + emit (PR-β). The HTTP path POSTs to
+ * a same-package server (`startServer`) running on the machine that owns
+ * the events.sqlite (Mac-side at deploy time per design).
+ *
  * See packages/mentor-event-bus/README.md for usage examples.
  */
 
@@ -69,3 +73,30 @@ export {
   type InsertEventArgs,
   type QueryEventsOptions
 } from './sqlite.js';
+
+// PR-β: HTTP server + client + auth helpers.
+export {
+  signRequest,
+  verifyRequest,
+  loadSecret,
+  TIMESTAMP_HEADER,
+  SIGNATURE_HEADER,
+  DEFAULT_REPLAY_WINDOW_MS,
+  type VerifyResult
+} from './auth.js';
+
+export {
+  startServer,
+  MAX_BODY_BYTES,
+  type ServerOptions,
+  type RunningServer
+} from './server.js';
+
+export {
+  HttpClient,
+  httpEmitOnce,
+  assertEverySchemaForHttp,
+  type HttpClientOptions,
+  type HttpEmitOptions,
+  type HttpEmitResult
+} from './http-client.js';
