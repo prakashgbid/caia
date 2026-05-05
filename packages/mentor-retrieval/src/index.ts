@@ -14,9 +14,11 @@
  *           `caia-mentor-cluster` CLI.
  *   - PR-2: Steward rule proposal generator
  *           (`./steward-rule-proposer.js`) +
- *           `caia-mentor-propose-steward-rule` CLI. Promotes systemic
- *           clusters into operator-reviewable Steward gatekeeper-rule
- *           proposals.
+ *           `caia-mentor-propose-steward-rule` CLI.
+ *   - PR-3: quarterly self-review (`./self-review.js`) +
+ *           `caia-mentor-self-review` CLI. Aggregate health,
+ *           classification breakdown, cluster shape, and
+ *           Steward-rule coverage — Mentor's own track record.
  */
 
 export {
@@ -88,6 +90,18 @@ export {
   type WriteStewardRuleProposalsOptions,
   type WriteStewardRuleProposalsResult
 } from './steward-rule-proposer.js';
+
+export {
+  generateSelfReview,
+  renderSelfReviewMarkdown,
+  DEFAULT_WINDOW_DAYS,
+  DEFAULT_TOP_CLUSTERS,
+  type SelfReviewOptions,
+  type SelfReviewSnapshot,
+  type SelfReviewMetaInput,
+  type ClassificationBreakdownRow,
+  type TopClusterRow
+} from './self-review.js';
 
 export type {
   BuildIndexStats,
