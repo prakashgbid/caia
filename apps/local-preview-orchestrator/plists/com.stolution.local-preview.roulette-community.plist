@@ -4,6 +4,8 @@
   com.stolution.local-preview.roulette-community
   ==============================================
   Site supervisor for the roulette-community preview. Listens on http://localhost:5175.
+
+  Wait-for-current shim (PR-F): see dashboard.plist for rationale.
 -->
 <plist version="1.0">
 <dict>
@@ -14,7 +16,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-lc</string>
-        <string>cd "$LOCAL_PREVIEW_INSTALL_ROOT/roulette-community/current" || exit 1; echo $$ &gt; "$LOCAL_PREVIEW_INSTALL_ROOT/roulette-community/pid"; exec pnpm preview -- --port 5175</string>
+        <string>INSTALL_DIR="$LOCAL_PREVIEW_INSTALL_ROOT/roulette-community"; CURRENT="$INSTALL_DIR/current"; echo "[supervisor:roulette-community] waiting for $CURRENT" &gt;&amp;2; until [ -L "$CURRENT" ]; do sleep 5; done; echo "[supervisor:roulette-community] symlink found; starting" &gt;&amp;2; cd "$CURRENT" || exit 1; echo $$ &gt; "$INSTALL_DIR/pid"; exec pnpm preview -- --port 5175</string>
     </array>
 
     <key>WorkingDirectory</key>
