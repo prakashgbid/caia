@@ -2,14 +2,15 @@
   "name": "@chiefaia/mentor-retrieval",
   "version": "0.1.0",
   "private": true,
-  "description": "Mentor Phase-3 lesson retrieval \u2014 embed past feedback_*.md + proposals/*.md via Ollama nomic-embed-text, persist to a per-memoryDir SQLite index, retrieve top-N most similar prior lessons for a given prompt. PR-1 ships the index builder + storage; PR-2 adds the retrieval API + caia-mentor-retrieve CLI; PR-3 wires the orchestrator pre-spawn hook.",
+  "description": "Mentor Phase-3 lesson retrieval \u2014 embed past feedback_*.md + proposals/*.md via Ollama nomic-embed-text, persist to a per-memoryDir SQLite index, retrieve top-N most similar prior lessons, and prepend them to spawned-task prompts as 'Lessons from past similar work \u2014 do not repeat:'. PR-1 ships the index builder + storage; PR-2 adds the retrieval API + caia-mentor-retrieve CLI; PR-3 adds the orchestrator pre-spawn hook (caia-mentor-prepend + prependLessons() library).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
     "caia-mentor-index": "./dist/cli.js",
-    "caia-mentor-retrieve": "./dist/retrieve-cli.js"
+    "caia-mentor-retrieve": "./dist/retrieve-cli.js",
+    "caia-mentor-prepend": "./dist/prepend-cli.js"
   },
   "exports": {
     ".": {
@@ -23,6 +24,10 @@
     "./retrieve": {
       "import": "./dist/retrieve.js",
       "types": "./dist/retrieve.d.ts"
+    },
+    "./prepend": {
+      "import": "./dist/prepend.js",
+      "types": "./dist/prepend.d.ts"
     }
   },
   "files": [

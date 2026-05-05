@@ -1,9 +1,11 @@
 /**
  * Mentor Phase-3 retrieval — public surface.
  *
- * PR-1 ships the index builder + persistence + Ollama embedding wrapper.
- * PR-2 adds the retrieval API + `caia-mentor-retrieve` CLI on top of
- * the index. PR-3 wires the orchestrator pre-spawn injection hook.
+ * - PR-1: index builder + persistence + Ollama embedding wrapper.
+ * - PR-2: retrieval API + `caia-mentor-retrieve` CLI.
+ * - PR-3: orchestrator pre-spawn injection hook + `caia-mentor-prepend`
+ *         CLI (the killer feature — spawned agents now arrive at their
+ *         task with explicit warnings about prior failure modes).
  */
 
 export {
@@ -48,6 +50,12 @@ export {
   type RetrievedLesson,
   type RetrieveLessonsOptions
 } from './retrieve.js';
+
+export {
+  prependLessons,
+  type PrependLessonsOptions,
+  type PrependLessonsResult
+} from './prepend.js';
 
 export type {
   BuildIndexStats,
