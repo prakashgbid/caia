@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.caia.mentor.postmerge-consumer
+  ==================================
+  Mentor Phase-2 consumer. Subscribes to PRMerged / RegressionDetected
+  / EvidenceGateFailure events on the mentor-event-bus, classifies
+  each into a FailureMode using the Phase-2 PR-1 data layer, and
+  writes a proposal markdown under <CAIA_MEMORY_DIR>/proposals/.
+
+  Default poll interval is 30s.
+
+  This LaunchAgent depends on the mentor-event-bus server's
+  events.sqlite + the postmerge-watcher producing events.
+
+  Substitutions handled by install.sh:
+    __USER_HOME__       — $HOME
+    __REPO__            — absolute path to caia checkout
+    __EVENTS_DB_PATH__  — events.sqlite path
+    __MEMORY_DIR__      — agent/memory dir
+    __NODE_BIN__        — node binary path
+
+  Installed by:  packages/mentor-fastpath/scripts/install-postmerge.sh
+  Logs:          ~/Library/Logs/caia-mentor/postmerge-consumer.{out,err}.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.mentor.postmerge-consumer</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__NODE_BIN__</string>
+        <string>__REPO__/packages/mentor-fastpath/dist/postmerge/consumer-cli.js</string>
+        <string>watch</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__REPO__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__USER_HOME__</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>CAIA_EVENT_BUS_DB_PATH</key>
+        <string>__EVENTS_DB_PATH__</string>
+        <key>CAIA_MEMORY_DIR</key>
+        <string>__MEMORY_DIR__</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>__USER_HOME__/Library/Logs/caia-mentor/postmerge-consumer.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__USER_HOME__/Library/Logs/caia-mentor/postmerge-consumer.err.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

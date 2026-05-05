@@ -9,36 +9,27 @@
  *   - RegressionDetected — CI red on a SHA that includes a merge commit
  *   - PostMergeBugReport — operator filed a bug after merge
  *
- * This PR ships the *data layer*: a pure-function classifier + pure-
- * function synthesizer that take structured event payloads and produce
- * the same `SynthesizedLesson` shape the Phase-1 memory-writer
- * already understands. Producer (event-bus emitter from `gh` polling)
- * + consumer (subscriber that wires this classifier into the existing
- * fastpath consumer's onClassified callback) ship in subsequent PRs.
+ * The Phase-2 module ships in three logical layers:
  *
- * Usage today (Phase-2 PR-1, data-layer only):
+ *   PR-1 (data layer)         — classifyPostMerge() + synthesizePostMerge()
+ *                                 (pure functions, no I/O)
+ *   PR-2 (producer)           — caia-postmerge-watcher polls gh CLI and
+ *                                 emits events into the bus
+ *   PR-3 (consumer + glue)    — caia-postmerge-consumer subscribes to
+ *                                 the bus and writes proposals via the
+ *                                 Phase-1 memory-writer
  *
- *     import {
- *       classifyPostMerge,
- *       synthesizePostMerge,
- *       type PostMergeInput,
- *       type PostMergeEventRow
- *     } from '@chiefaia/mentor-fastpath/postmerge';
+ * Typical end-to-end production flow (Phase-2 PR-3+):
  *
- *     const input: PostMergeInput = {
- *       prNumber: 325,
- *       sha: 'e6b8811',
- *       branch: 'develop',
- *       failedJobs: ['integration-tests'],
- *       postMergeAgeSec: 480,
- *       signal: 'regression-after-merge'
- *     };
- *     const cls = classifyPostMerge(input);
- *     const lesson = synthesizePostMerge(eventRow, input, cls);
- *     // lesson.markdown is ready for memory-writer.writeProposal()
+ *     // Producer (own LaunchAgent):
+ *     caia-postmerge-watcher watch
  *
- * Future PRs (Phase-2 PR-2, PR-3) wire this into a long-running
- * subscriber and a producer that polls `gh pr list` / `gh run list`.
+ *     // Consumer (own LaunchAgent):
+ *     caia-postmerge-consumer watch --memory $CAIA_MEMORY_DIR
+ *
+ * They communicate via the events.sqlite owned by the existing
+ * mentor-event-bus server. Both can run in parallel with the Phase-1
+ * fastpath (different offset DBs).
  */
 
 export {
@@ -47,6 +38,19 @@ export {
 } from './classifier.js';
 
 export { synthesizePostMerge } from './synthesizer.js';
+
+// ─── Phase-2 PR-3 — consumer ──────────────────────────────────────────────
+
+export {
+  runPostMergeConsumer,
+  processPostMergeOnce,
+  processPostMergeBatch,
+  POSTMERGE_EVENT_TYPES,
+  DEFAULT_POSTMERGE_POLL_INTERVAL_MS,
+  DEFAULT_POSTMERGE_BATCH_SIZE,
+  type PostMergeConsumerOptions,
+  type PostMergeEventType
+} from './consumer.js';
 
 export type {
   PostMergeInput,
