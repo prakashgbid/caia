@@ -1,0 +1,46 @@
+{
+  "name": "@chiefaia/mentor-retrieval",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mentor Phase-3 lesson retrieval — embed past feedback_*.md + proposals/*.md via Ollama nomic-embed-text, persist to a per-memoryDir SQLite index, retrieve top-N most similar prior lessons for a given prompt. PR-1 ships the index builder + storage; PR-2 ships the retrieval API + CLI; PR-3 wires the orchestrator pre-spawn hook.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-mentor-index": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.6.2"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  }
+}
