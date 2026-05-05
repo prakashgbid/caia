@@ -16,31 +16,14 @@
  *
  * Phase-2 (leg-9, this layer) adds the **action layer** on top — per
  * the directive's output modes 5..8 (PR proposals, backlog directives,
- * alarms, industry briefings). Phase-2 PR-1 ships:
- *   - The `Action` type system + `findingsToActions` classifier.
- *   - The `writeAlarms` emitter (output mode 7) — urgent CVE / ToS /
- *     spend / capacity findings escalate immediately rather than
- *     waiting for the daily digest.
- *
- * Subsequent PRs add the PR-proposal + backlog-directive emitters
- * (PR-2) and the industry-briefing scanner + a unified `caia-curator
- * act` runner (PR-3).
- *
- * Typical use (from a cron / LaunchAgent):
- *
- *   import { runScan, renderDigest, phase1Scanners } from '@chiefaia/curator';
- *   import { defaultScanContext } from '@chiefaia/curator';
- *   import { findingsToActions, writeAlarms } from '@chiefaia/curator';
- *
- *   const ctx = defaultScanContext();
- *   const result = await runScan(phase1Scanners, ctx);
- *   const md = renderDigest(result);
- *   // ... write md to a file ...
- *
- *   // Phase-2 — escalate urgent findings to alarms.
- *   const actions = findingsToActions(result.findings);
- *   const alarms = actions.filter((a) => a.kind === 'alarm');
- *   const emitted = writeAlarms(alarms, { reportsDir: ctx.reportsDir });
+ * alarms, industry briefings). Phase-2 ships incrementally:
+ *   - PR-1: action types + `findingsToActions` classifier + alarm
+ *     emitter (mode 7) + `caia-curator emit-alarms` CLI.
+ *   - PR-2 (THIS): PR-proposal emitter (mode 5) + backlog-directive
+ *     emitter (mode 6) + `caia-curator emit-pr-proposals` and
+ *     `caia-curator emit-backlog-directives` CLIs.
+ *   - PR-3: industry-briefing scanner (mode 8) + unified
+ *     `caia-curator act` runner.
  */
 
 export { runScan, rankFindings } from './orchestrator.js';
@@ -59,10 +42,16 @@ export {
   actionSlugForFinding,
   classifyKind,
   defaultAlarmsDir,
+  defaultBacklogDirectivesDir,
+  defaultPrProposalsDir,
   findingsToActions,
   renderAlarmMarkdown,
+  renderBacklogDirectiveMarkdown,
+  renderPrProposalMarkdown,
   slugify,
-  writeAlarms
+  writeAlarms,
+  writeBacklogDirectives,
+  writePrProposals
 } from './actions/index.js';
 
 export type {
@@ -85,5 +74,7 @@ export type {
   EmittedActionRef,
   IndustryBriefingAction,
   PrProposalAction,
-  WriteAlarmsOptions
+  WriteAlarmsOptions,
+  WriteBacklogDirectivesOptions,
+  WritePrProposalsOptions
 } from './actions/index.js';

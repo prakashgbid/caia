@@ -59,18 +59,20 @@ describe('cli main() emit-alarms', () => {
     const out = logSpy.mock.calls.map((c) => c[0]).join('\n');
     const json = JSON.parse(out.split('\n').filter((l) => l.startsWith('{')).pop()!) as {
       ok: boolean;
-      alarmsDir: string;
+      kind: string;
+      outputDir: string;
       writtenCount: number;
       skippedCount: number;
-      totalAlarms: number;
+      matchingActions: number;
       totalActions: number;
       totalFindings: number;
     };
     expect(json.ok).toBe(true);
-    expect(json.alarmsDir).toBe(alarmsDir);
+    expect(json.kind).toBe('alarm');
+    expect(json.outputDir).toBe(alarmsDir);
     expect(typeof json.writtenCount).toBe('number');
     expect(typeof json.skippedCount).toBe('number');
-    expect(typeof json.totalAlarms).toBe('number');
+    expect(typeof json.matchingActions).toBe('number');
     expect(typeof json.totalActions).toBe('number');
     expect(typeof json.totalFindings).toBe('number');
   });
@@ -93,9 +95,9 @@ describe('cli main() emit-alarms', () => {
 
     const out = logSpy.mock.calls.map((c) => c[0]).join('\n');
     const json = JSON.parse(out.split('\n').filter((l) => l.startsWith('{')).pop()!) as {
-      alarmsDir: string;
+      outputDir: string;
     };
-    expect(json.alarmsDir).toBe(join(reportsDir, 'curator', 'alarms'));
+    expect(json.outputDir).toBe(join(reportsDir, 'curator', 'alarms'));
   });
 
   it('is idempotent — second run of the same input skips files', async () => {
@@ -171,19 +173,21 @@ describe('cli main() emit-alarms', () => {
     const out = logSpy.mock.calls.map((c) => c[0]).join('\n');
     const json = JSON.parse(out.split('\n').filter((l) => l.startsWith('{')).pop()!) as {
       ok: boolean;
+      kind: string;
       writtenCount: number;
       skippedCount: number;
-      totalAlarms: number;
+      matchingActions: number;
       totalActions: number;
       totalFindings: number;
       written: unknown[];
       skipped: unknown[];
     };
     expect(json.ok).toBe(true);
-    expect(json.writtenCount + json.skippedCount).toBe(json.totalAlarms);
+    expect(json.kind).toBe('alarm');
+    expect(json.writtenCount + json.skippedCount).toBe(json.matchingActions);
     expect(Array.isArray(json.written)).toBe(true);
     expect(Array.isArray(json.skipped)).toBe(true);
-    expect(json.totalAlarms).toBeLessThanOrEqual(json.totalActions);
+    expect(json.matchingActions).toBeLessThanOrEqual(json.totalActions);
     expect(json.totalActions).toBeLessThanOrEqual(json.totalFindings);
     expect(existsSync(alarmsDir)).toBe(true);
   });
