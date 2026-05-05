@@ -53,3 +53,16 @@ export {
   updateSiteState,
   type SiteState
 } from './site-state.js';
+
+// PR-C additions
+export {
+  createDashboardServer,
+  startDashboard,
+  buildStatus,
+  readLogTail,
+  manualRollback,
+  handleRequest,
+  type StatusDashboardOptions,
+  type StatusResponse
+} from './status-dashboard.js';
+export { DASHBOARD_HTML } from './dashboard-html.js';
