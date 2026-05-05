@@ -8,10 +8,16 @@
  * within 1 minute of the operator correction.
  *
  * PR-1 delivered the consumer + classifier + offset-store skeleton.
- * PR-2 (this PR) adds the synthesizer + memory-writer + proposal-callback
+ * PR-2 added the synthesizer + memory-writer + proposal-callback
  * factory that wires them into the consumer's onClassified hook.
  *
- * Typical use (long-running daemon):
+ * Phase 2 PR-1 (this PR) adds the postmerge data layer — pure-function
+ * classifier + synthesizer for PRMerged / EvidenceGateFailure /
+ * RegressionDetected / PostMergeBugReport event payloads. The producer
+ * (gh-CLI poller) and consumer (long-running subscriber) wire these in
+ * subsequent PRs.
+ *
+ * Typical Phase-1 use (long-running daemon):
  *
  *   import {
  *     runConsumer,
@@ -25,15 +31,15 @@
  *     })
  *   });
  *
- * One-shot (CLI / tests):
+ * Phase-2 postmerge data-layer use (PR-1 only):
  *
- *   import { processOnce, makeProposalCallback } from '@chiefaia/mentor-fastpath';
+ *   import {
+ *     classifyPostMerge,
+ *     synthesizePostMerge
+ *   } from '@chiefaia/mentor-fastpath/postmerge';
  *
- *   const n = await processOnce({
- *     eventsDbPath: '...',
- *     onClassified: makeProposalCallback({ memoryDir: '...' })
- *   });
- *   console.log(`processed ${n} new events`);
+ *   const cls = classifyPostMerge(input);
+ *   const lesson = synthesizePostMerge(eventRow, input, cls);
  */
 
 export {
@@ -87,3 +93,13 @@ export type {
   ProcessedRecord,
   Severity
 } from './types.js';
+
+// ─── Phase-2 postmerge data layer ─────────────────────────────────────────
+
+export {
+  classifyPostMerge,
+  synthesizePostMerge,
+  _postmergeJobTagCount,
+  type PostMergeInput,
+  type PostMergeEventRow
+} from './postmerge/index.js';
