@@ -46,6 +46,7 @@ import {
   checkOrphanBranches,
   preflightChecks,
   checkPrStaleness,
+  checkLocalPreviewHealth,
 } from '../dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -391,6 +392,35 @@ function runPrStale(repoRoot, opts) {
   return findings;
 }
 
+
+// ─── Local-preview-health (Phase 2c — Mac-side daily) ─────────────────────
+
+async function runLocalPreviewHealth(opts) {
+  const url = opts['dashboard-url'] ?? 'http://127.0.0.1:5170';
+  const stalenessMin = Number.parseInt(opts['health-staleness-minutes'] ?? '10', 10);
+
+  let dashboardReachable = false;
+  let sites = [];
+  try {
+    const res = await fetch(url + '/api/status', {
+      // Local-only — minimal timeout via AbortController
+    });
+    if (res.ok) {
+      const body = await res.json();
+      dashboardReachable = true;
+      sites = Array.isArray(body?.sites) ? body.sites : [];
+    }
+  } catch {
+    // dashboardReachable stays false
+  }
+
+  return checkLocalPreviewHealth({
+    sites,
+    dashboardReachable,
+    healthStalenessMinutes: stalenessMin,
+  });
+}
+
 // ─── Main entry ────────────────────────────────────────────────────────────
 
 async function main() {
@@ -402,7 +432,7 @@ async function main() {
     console.error('usage: steward-gatekeeper <command> [--repo-root <path>] [--max-age-days <N>] [--pr-head-ref <ref>] [--mac-snapshot-dir <path>]');
     console.error('  pre-merge   : migration-linter | migration-numbering | graph-divergence | all');
     console.error('  pre-spawn   : preflight');
-    console.error('  scheduled   : hygiene-daily | vault-checks | pr-stale');
+    console.error('  scheduled   : hygiene-daily | vault-checks | pr-stale | local-preview-health');
     process.exit(2);
   }
 
@@ -422,6 +452,8 @@ async function main() {
       findings = runHygieneDaily(repoRoot);
     } else if (command === 'pr-stale') {
       findings = runPrStale(repoRoot, args.flags);
+    } else if (command === 'local-preview-health') {
+      findings = await runLocalPreviewHealth(args.flags);
     } else if (command === 'all') {
       const a = await runMigrationLinter(repoRoot);
       const b = await runMigrationNumbering(repoRoot);
