@@ -39,7 +39,7 @@ import {
 import { defaultShellRunner, type ShellRunner } from './shell-runner.js';
 import { makeGitOps, type GitOps } from './git-ops.js';
 import { updateSiteState, type SiteState } from './site-state.js';
-import type { SiteConfig } from './sites-config.js';
+import { resolveBuildCmdForWorkspace, type SiteConfig } from './sites-config.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -285,9 +285,18 @@ export async function deploySite(site: SiteConfig, opts: DeployOptions): Promise
       return { status: 'aborted', error: msg };
     }
 
-    // 6. Run build command.
+    // 6. Run build command (with lockfile-driven autodetect for
+    // sites whose primary package manager differs from pnpm — e.g.
+    // poker-zeno + roulette-community on npm, where the bake-in
+    // `pnpm install --frozen-lockfile` would be rejected by corepack).
+    const resolvedBuildCmd = resolveBuildCmdForWorkspace(site, workspaceDir);
+    if (resolvedBuildCmd !== site.buildCmd) {
+      logger.info(
+        `[${site.name}] autodetect: using buildCmd "${resolvedBuildCmd}" (bake-in default was "${site.buildCmd}")`
+      );
+    }
     logger.info(`[${site.name}] building ${targetSha} in ${workspaceDir}`);
-    const buildResult = await shellRunner(site.buildCmd, {
+    const buildResult = await shellRunner(resolvedBuildCmd, {
       cwd: workspaceDir,
       timeoutMs: 15 * 60_000 // 15-min build timeout
     });

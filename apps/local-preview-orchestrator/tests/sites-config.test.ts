@@ -6,7 +6,9 @@ import {
   getDefaultBranch,
   resolveBranch,
   envVarNameForSiteBranch,
-  buildSitesForEnv
+  buildSitesForEnv,
+  detectPackageManager,
+  resolveBuildCmdForWorkspace
 } from '../src/sites-config';
 
 describe('sites-config', () => {
@@ -216,5 +218,104 @@ describe('buildSitesForEnv', () => {
     buildSitesForEnv({ LOCAL_PREVIEW_DASHBOARD_BRANCH: 'feature/foo' });
     expect(SITES.length).toBe(len);
     expect(SITES.find((s) => s.name === 'dashboard')!.branch).toBe('develop');
+  });
+});
+
+
+describe('detectPackageManager', () => {
+  it('returns pnpm when pnpm-lock.yaml exists', () => {
+    const exists = (p: string): boolean => p.endsWith('pnpm-lock.yaml');
+    expect(detectPackageManager('/some/dir', exists)).toBe('pnpm');
+  });
+
+  it('returns npm when package-lock.json exists and pnpm-lock.yaml does not', () => {
+    const exists = (p: string): boolean => p.endsWith('package-lock.json');
+    expect(detectPackageManager('/some/dir', exists)).toBe('npm');
+  });
+
+  it('returns yarn when only yarn.lock exists', () => {
+    const exists = (p: string): boolean => p.endsWith('yarn.lock');
+    expect(detectPackageManager('/some/dir', exists)).toBe('yarn');
+  });
+
+  it('returns unknown when no recognised lockfile exists', () => {
+    const exists = (_p: string): boolean => false;
+    expect(detectPackageManager('/some/dir', exists)).toBe('unknown');
+  });
+
+  it('prefers pnpm over npm + yarn when multiple lockfiles coexist', () => {
+    const exists = (_p: string): boolean => true; // every lockfile present
+    expect(detectPackageManager('/some/dir', exists)).toBe('pnpm');
+  });
+
+  it('prefers npm over yarn when both coexist (no pnpm)', () => {
+    const exists = (p: string): boolean =>
+      p.endsWith('package-lock.json') || p.endsWith('yarn.lock');
+    expect(detectPackageManager('/some/dir', exists)).toBe('npm');
+  });
+});
+
+describe('resolveBuildCmdForWorkspace', () => {
+  const site = {
+    name: 'test',
+    repo: '/repo',
+    branch: 'main',
+    port: 9999,
+    autodetectBuildCmd: true,
+    buildCmd: 'echo BAKEIN',
+    startCmd: (p: number): string => `start ${p}`,
+    healthPath: '/',
+    healthMustContain: '<html',
+    buildArtifacts: ['dist']
+  };
+
+  it('returns bake-in when autodetectBuildCmd is false', () => {
+    const exists = (_p: string): boolean => true; // would otherwise detect pnpm
+    const cmd = resolveBuildCmdForWorkspace(
+      { ...site, autodetectBuildCmd: false },
+      '/wd',
+      exists
+    );
+    expect(cmd).toBe('echo BAKEIN');
+  });
+
+  it('returns pnpm install + build when pnpm-lock.yaml is present', () => {
+    const exists = (p: string): boolean => p.endsWith('pnpm-lock.yaml');
+    expect(resolveBuildCmdForWorkspace(site, '/wd', exists)).toBe(
+      'pnpm install --frozen-lockfile && pnpm build'
+    );
+  });
+
+  it('returns npm ci + npm run build when only package-lock.json is present', () => {
+    const exists = (p: string): boolean => p.endsWith('package-lock.json');
+    expect(resolveBuildCmdForWorkspace(site, '/wd', exists)).toBe(
+      'npm ci && npm run build'
+    );
+  });
+
+  it('returns yarn install + yarn build when only yarn.lock is present', () => {
+    const exists = (p: string): boolean => p.endsWith('yarn.lock');
+    expect(resolveBuildCmdForWorkspace(site, '/wd', exists)).toBe(
+      'yarn install --frozen-lockfile && yarn build'
+    );
+  });
+
+  it('falls back to bake-in when no recognised lockfile is present', () => {
+    const exists = (_p: string): boolean => false;
+    expect(resolveBuildCmdForWorkspace(site, '/wd', exists)).toBe('echo BAKEIN');
+  });
+});
+
+describe('SITE_DEFAULTS autodetectBuildCmd flags', () => {
+  it('dashboard opts out of autodetect (CAIA monorepo workspace)', () => {
+    expect(getSiteConfig('dashboard').autodetectBuildCmd).toBe(false);
+  });
+
+  it('poker-zeno opts in to autodetect', () => {
+    expect(getSiteConfig('poker-zeno').autodetectBuildCmd).toBe(true);
+  });
+
+  it('roulette-community opts in to autodetect', () => {
+    expect(getSiteConfig('roulette-community').autodetectBuildCmd).toBe(true);
   });
 });
