@@ -4,25 +4,35 @@
  * Phase 1 of the Mentor agent (per `mentor_agent_directive.md`):
  * reactive fast-path. Subscribes to OperatorCorrection events from the
  * mentor-event-bus, classifies the failure mode against the 18-category
- * taxonomy, and (in subsequent PRs) synthesizes a durable lesson +
- * proposes a memory update within 1 minute of the operator correction.
+ * taxonomy, and synthesizes a durable lesson + proposes a memory update
+ * within 1 minute of the operator correction.
  *
- * This skeleton PR delivers the consumer + classifier + offset-store. A
- * follow-up PR adds the synthesizer + memory-writer + LaunchAgent plist.
+ * PR-1 delivered the consumer + classifier + offset-store skeleton.
+ * PR-2 (this PR) adds the synthesizer + memory-writer + proposal-callback
+ * factory that wires them into the consumer's onClassified hook.
  *
- * Typical use:
+ * Typical use (long-running daemon):
  *
- *   import { runConsumer } from '@chiefaia/mentor-fastpath';
+ *   import {
+ *     runConsumer,
+ *     makeProposalCallback
+ *   } from '@chiefaia/mentor-fastpath';
  *
  *   await runConsumer({
- *     eventsDbPath: '~/Library/Application Support/caia/events/events.sqlite'
+ *     eventsDbPath: process.env.CAIA_EVENT_BUS_DB_PATH!,
+ *     onClassified: makeProposalCallback({
+ *       memoryDir: process.env.CAIA_MEMORY_DIR!
+ *     })
  *   });
  *
- * One-shot:
+ * One-shot (CLI / tests):
  *
- *   import { processOnce } from '@chiefaia/mentor-fastpath';
+ *   import { processOnce, makeProposalCallback } from '@chiefaia/mentor-fastpath';
  *
- *   const n = await processOnce({ eventsDbPath: '...' });
+ *   const n = await processOnce({
+ *     eventsDbPath: '...',
+ *     onClassified: makeProposalCallback({ memoryDir: '...' })
+ *   });
  *   console.log(`processed ${n} new events`);
  */
 
@@ -46,6 +56,27 @@ export {
   isProcessed,
   countProcessed
 } from './offset-store.js';
+
+export {
+  synthesize,
+  slugify,
+  type SynthesizedLesson
+} from './synthesizer.js';
+
+export {
+  writeProposal,
+  listProposals,
+  buildFilename,
+  formatTimestampPrefix,
+  PROPOSALS_SUBDIR,
+  type WrittenProposal,
+  type WriteProposalOptions
+} from './memory-writer.js';
+
+export {
+  makeProposalCallback,
+  type ProposalCallbackOptions
+} from './proposal-callback.js';
 
 export type {
   ClassificationResult,
