@@ -127,6 +127,9 @@ importers:
       '@chiefaia/logger':
         specifier: workspace:*
         version: link:../../packages/logger
+      '@chiefaia/mentor-event-bus':
+        specifier: workspace:*
+        version: link:../../packages/mentor-event-bus
       nanoid:
         specifier: ^3.3.7
         version: 3.3.11

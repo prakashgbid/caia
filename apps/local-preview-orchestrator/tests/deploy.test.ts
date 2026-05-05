@@ -166,6 +166,111 @@ describe('deploySite — happy path', () => {
     if (result.status !== 'noop') return;
     expect(result.sha).toBe(SHA);
   });
+
+  it('calls mentorEmit on successful deploy with PRMerged + sha + branch + repo', async () => {
+    const { gitOps } = makeStubGitOps(SHA);
+    const shellRunner: ShellRunner = vi.fn(async () => okShell()) as unknown as ShellRunner;
+    const restartProcess = vi.fn(async () => undefined);
+    const healthChecker = vi.fn(async () => ({ ok: true, statusCode: 200, responseTime: 5 }));
+    const mentorEmit = vi.fn();
+
+    const result = await deploySite(
+      { ...baseSite, repo: repoPath },
+      {
+        installRoot,
+        buildWorkspaceRoot,
+        gitOps,
+        shellRunner,
+        restartProcess,
+        healthChecker,
+        healthCheckMaxAttempts: 1,
+        healthCheckInitialDelayMs: 1,
+        mentorEmit
+      }
+    );
+
+    expect(result.status).toBe('success');
+    expect(mentorEmit).toHaveBeenCalledTimes(1);
+    const [eventType, payload] = mentorEmit.mock.calls[0]!;
+    expect(eventType).toBe('PRMerged');
+    expect(payload.sha).toBe(SHA);
+    expect(payload.branch).toBe('develop');
+    expect(payload.repo).toBe(repoPath);
+    expect(payload.prNumber).toBe(0); // unknown at deploy time
+  });
+
+  it('does NOT call mentorEmit on noop deploys', async () => {
+    // Pre-populate sitePath with current symlink at SHA so noop fires.
+    const sitePath = resolveSitePath(installRoot, baseSite.name);
+    mkdirSync(sitePath, { recursive: true });
+    mkdirSync(join(sitePath, 'builds', SHA), { recursive: true });
+    const { symlinkSync } = await import('node:fs');
+    symlinkSync(`builds/${SHA}`, join(sitePath, 'current'), 'dir');
+
+    const { gitOps } = makeStubGitOps(SHA);
+    const shellRunner: ShellRunner = vi.fn(async () => okShell()) as unknown as ShellRunner;
+    const mentorEmit = vi.fn();
+    const result = await deploySite(
+      { ...baseSite, repo: repoPath },
+      {
+        installRoot,
+        buildWorkspaceRoot,
+        gitOps,
+        shellRunner,
+        mentorEmit
+      }
+    );
+
+    expect(result.status).toBe('noop');
+    expect(mentorEmit).not.toHaveBeenCalled();
+  });
+
+  it('does NOT call mentorEmit on build failure', async () => {
+    const { gitOps } = makeStubGitOps(SHA);
+    const shellRunner: ShellRunner = vi.fn(async () => failShell(1)) as unknown as ShellRunner;
+    const mentorEmit = vi.fn();
+    const result = await deploySite(
+      { ...baseSite, repo: repoPath },
+      {
+        installRoot,
+        buildWorkspaceRoot,
+        gitOps,
+        shellRunner,
+        mentorEmit
+      }
+    );
+
+    expect(result.status).toBe('build-failed');
+    expect(mentorEmit).not.toHaveBeenCalled();
+  });
+
+  it('swallows errors thrown by mentorEmit (logs and continues)', async () => {
+    const { gitOps } = makeStubGitOps(SHA);
+    const shellRunner: ShellRunner = vi.fn(async () => okShell()) as unknown as ShellRunner;
+    const mentorEmit = vi.fn(() => {
+      throw new Error('boom');
+    });
+    const errorLogger = { info: vi.fn(), error: vi.fn() };
+
+    const result = await deploySite(
+      { ...baseSite, repo: repoPath },
+      {
+        installRoot,
+        buildWorkspaceRoot,
+        gitOps,
+        shellRunner,
+        restartProcess: async () => undefined,
+        healthChecker: async () => ({ ok: true, statusCode: 200, responseTime: 1 }),
+        healthCheckMaxAttempts: 1,
+        healthCheckInitialDelayMs: 1,
+        logger: errorLogger,
+        mentorEmit
+      }
+    );
+    // Deploy still succeeds despite mentorEmit throwing.
+    expect(result.status).toBe('success');
+    expect(errorLogger.error).toHaveBeenCalledWith(expect.stringContaining('mentorEmit threw'));
+  });
 });
 
 describe('deploySite — failure paths', () => {

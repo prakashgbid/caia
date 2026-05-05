@@ -84,6 +84,17 @@ export interface DeployOptions {
 
   /** Force a deploy even when SHAs match. */
   force?: boolean;
+
+  /**
+   * Optional emit callback for the Mentor event bus. When provided and a
+   * deploy succeeds, the deploy pipeline calls
+   * `mentorEmit('PRMerged', {prNumber: 0, sha, branch, repo})`. Must never
+   * throw — the pipeline expects fire-and-forget semantics.
+   *
+   * Defaults to undefined (no-op). PR-γ wires this in cli.ts via a Mentor
+   * `Client` instance.
+   */
+  mentorEmit?: (event: 'PRMerged', payload: { prNumber: number; sha: string; branch: string; repo?: string; previousSha?: string }) => void;
 }
 
 export type DeployResult =
@@ -180,7 +191,8 @@ export async function deploySite(site: SiteConfig, opts: DeployOptions): Promise
     restartProcess = defaultRestartProcess,
     acquireSiteLock = defaultAcquireSiteLock,
     logger = consoleLogger,
-    force = false
+    force = false,
+    mentorEmit
   } = opts;
 
   const sitePath = resolveSitePath(installRoot, site.name);
@@ -475,6 +487,23 @@ export async function deploySite(site: SiteConfig, opts: DeployOptions): Promise
     logger.info(
       `[${site.name}] deployed ${targetSha} in ${Date.now() - startedAt}ms (health ${healthCheckMs}ms)`
     );
+
+    // Mentor emit (PR-γ): fire-and-forget. The PRMerged event is the
+    // best Phase-0 proxy for "a new SHA on origin/<branch> was deployed"
+    // since the orchestrator doesn't yet have direct webhook access.
+    if (mentorEmit) {
+      try {
+        mentorEmit('PRMerged', {
+          prNumber: 0, // unknown at deploy time; orchestrator may enrich later
+          sha: targetSha,
+          branch: site.branch,
+          repo: site.repo,
+          ...(previousSha !== undefined ? { previousSha } : {})
+        });
+      } catch (e) {
+        logger.error(`[${site.name}] mentorEmit threw (ignored): ${e}`);
+      }
+    }
 
     const successResult: DeployResult = {
       status: 'success',

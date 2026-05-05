@@ -10,6 +10,13 @@
  *
  * Wired into `package.json#bin.local-preview` → `dist/src/cli.js`. The PR-D
  * LaunchAgent plists invoke this binary with the appropriate subcommand.
+ *
+ * Mentor integration (PR-γ): if a Mentor event-bus DB path is reachable
+ * (`CAIA_EVENT_BUS_DB_PATH` env var defaults to a Mac path), the CLI
+ * constructs a Mentor `Client` and threads `mentorEmit` through deploy
+ * options so successful deploys emit `PRMerged` events. The Client is
+ * created lazily and silently no-ops if the DB can't be opened —
+ * preserves the producer-non-blocking invariant.
  */
 
 import { homedir } from 'node:os';
@@ -20,6 +27,11 @@ import { startDashboard } from './status-dashboard.js';
 import { deploySite } from './deploy.js';
 import { SITES, getSiteConfig } from './sites-config.js';
 import { buildStatus } from './status-dashboard.js';
+import {
+  Client as MentorClient,
+  type EventType,
+  type PayloadOf
+} from '@chiefaia/mentor-event-bus';
 
 const DEFAULT_INSTALL_ROOT = join(
   homedir(),
@@ -30,11 +42,55 @@ const DEFAULT_INSTALL_ROOT = join(
 );
 const DEFAULT_BUILD_WORKSPACE = '/private/tmp/local-preview-build';
 
-function deployOptions(): { installRoot: string; buildWorkspaceRoot: string } {
-  return {
+const DEFAULT_MENTOR_DB_PATH = join(
+  homedir(),
+  'Library',
+  'Application Support',
+  'caia',
+  'events',
+  'events.sqlite'
+);
+
+function deployOptions(): {
+  installRoot: string;
+  buildWorkspaceRoot: string;
+  mentorEmit?: (
+    event: 'PRMerged',
+    payload: { prNumber: number; sha: string; branch: string; repo?: string; previousSha?: string }
+  ) => void;
+} {
+  const base = {
     installRoot: process.env['LOCAL_PREVIEW_INSTALL_ROOT'] ?? DEFAULT_INSTALL_ROOT,
     buildWorkspaceRoot: process.env['LOCAL_PREVIEW_BUILD_WORKSPACE'] ?? DEFAULT_BUILD_WORKSPACE
   };
+  const mentor = tryOpenMentorClient();
+  if (!mentor) return base;
+  // Adapt Mentor's typed emit to deploy.ts's narrowly-typed callback.
+  const mentorEmit = <T extends EventType>(type: T, payload: PayloadOf<T>): void => {
+    mentor.emit(type, payload);
+  };
+  return { ...base, mentorEmit };
+}
+
+/**
+ * Try to open a Mentor client for the configured DB path. Returns undefined
+ * (and logs nothing more than a single warning) if the path is unset or
+ * the open fails — emit-points must NEVER block deploys on Mentor's
+ * reliability.
+ */
+function tryOpenMentorClient(): MentorClient | undefined {
+  const dbPath = process.env['CAIA_EVENT_BUS_DB_PATH'] ?? DEFAULT_MENTOR_DB_PATH;
+  // Setting CAIA_EVENT_BUS_DISABLED=1 turns mentor emit off entirely (tests + opt-out).
+  if (process.env['CAIA_EVENT_BUS_DISABLED'] === '1') return undefined;
+  try {
+    return new MentorClient({
+      dbPath,
+      processName: 'local-preview-orchestrator'
+    });
+  } catch (e) {
+    console.warn(`[local-preview] mentor client open failed (continuing without emit): ${String(e)}`);
+    return undefined;
+  }
 }
 
 async function main(): Promise<void> {
@@ -97,7 +153,9 @@ async function main(): Promise<void> {
           '  Defaults can be overridden via env:\n' +
           '    LOCAL_PREVIEW_INSTALL_ROOT      — per-site install root\n' +
           '    LOCAL_PREVIEW_BUILD_WORKSPACE   — ephemeral build worktrees\n' +
-          '    LOCAL_PREVIEW_DASHBOARD_PORT    — status dashboard port (default 5170)'
+          '    LOCAL_PREVIEW_DASHBOARD_PORT    — status dashboard port (default 5170)\n' +
+          '    CAIA_EVENT_BUS_DB_PATH          — mentor events.sqlite path\n' +
+          '    CAIA_EVENT_BUS_DISABLED=1       — disable mentor emit'
       );
       process.exit(2);
   }
