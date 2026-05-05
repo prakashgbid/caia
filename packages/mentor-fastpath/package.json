@@ -2,19 +2,28 @@
   "name": "@chiefaia/mentor-fastpath",
   "version": "0.1.0",
   "private": true,
-  "description": "Mentor Phase-1 reactive fast-path. Subscribes to OperatorCorrection events from the Mentor event bus, classifies the failure mode against the 18-category taxonomy, and (in subsequent PRs) synthesizes durable lesson memory updates within 1 minute of the operator correction.",
+  "description": "Mentor Phase-1 reactive fast-path. Subscribes to OperatorCorrection events from the Mentor event bus, classifies the failure mode against the 18-category taxonomy, synthesizes a draft markdown lesson, and writes it to <CAIA_MEMORY_DIR>/proposals/ within 1 minute of the operator correction.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-mentor-fastpath": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "plists",
+    "scripts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.caia.mentor.fastpath
+  ========================
+  Mentor Phase-1 reactive fast-path daemon. Polls the mentor-event-bus
+  events.sqlite for new OperatorCorrection events; classifies each
+  against the 18-category taxonomy; synthesizes a draft markdown lesson
+  and writes it under <CAIA_MEMORY_DIR>/proposals/.
+
+  Loop interval is 10s by default — well inside the directive's
+  ≤1-minute correction-to-proposal SLO.
+
+  This LaunchAgent depends on com.caia.mentor.server's events.sqlite
+  being present (read-only access in WAL mode). The fastpath consumer
+  does NOT block if the DB is missing — it logs a warning and retries
+  on the next poll, so install ordering is forgiving.
+
+  Installed by: packages/mentor-fastpath/scripts/install.sh
+  Logs:         ~/Library/Logs/caia-mentor/fastpath.{out,err}.log
+
+  Substitutions handled by install.sh:
+    __USER_HOME__       — $HOME
+    __REPO__            — absolute path to caia checkout
+    __EVENTS_DB_PATH__  — events.sqlite path (must match server's path)
+    __MEMORY_DIR__      — agent/memory dir (proposals dir is created on first run)
+    __NODE_BIN__        — node binary path
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.mentor.fastpath</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__NODE_BIN__</string>
+        <string>__REPO__/packages/mentor-fastpath/dist/cli.js</string>
+        <string>watch</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__REPO__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__USER_HOME__</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>CAIA_EVENT_BUS_DB_PATH</key>
+        <string>__EVENTS_DB_PATH__</string>
+        <key>CAIA_MEMORY_DIR</key>
+        <string>__MEMORY_DIR__</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>__USER_HOME__/Library/Logs/caia-mentor/fastpath.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__USER_HOME__/Library/Logs/caia-mentor/fastpath.err.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
