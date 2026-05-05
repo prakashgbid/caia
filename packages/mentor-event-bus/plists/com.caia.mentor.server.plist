@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.caia.mentor.server
+  ======================
+  HTTP server for cross-machine event ingestion. Binds 127.0.0.1:5180 by
+  default. Cross-machine producers (e.g. stolution) reach the bus via the
+  Tailscale IP after the operator updates `CAIA_EVENT_BUS_BIND` here.
+
+  Installed by: packages/mentor-event-bus/scripts/install.sh
+  Logs:         ~/Library/Logs/caia-mentor/server.{out,err}.log
+
+  Substitutions handled by install.sh:
+    __USER_HOME__       — $HOME
+    __REPO__            — absolute path to caia checkout
+    __SECRET_PATH__     — file holding the HMAC shared secret (≥32 chars)
+    __EVENTS_DB_PATH__  — events.sqlite path
+    __NODE_BIN__        — node binary path
+
+  Auth: server reads CAIA_EVENT_BUS_SECRET_PATH at start; refuses to bind
+  if the file is missing or shorter than 32 chars. Operator MUST run
+  `openssl rand -hex 32 > __SECRET_PATH__` before install.sh.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.mentor.server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__NODE_BIN__</string>
+        <string>__REPO__/packages/mentor-event-bus/dist/cli.js</string>
+        <string>serve</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__REPO__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__USER_HOME__</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>CAIA_EVENT_BUS_DB_PATH</key>
+        <string>__EVENTS_DB_PATH__</string>
+        <key>CAIA_EVENT_BUS_SECRET_PATH</key>
+        <string>__SECRET_PATH__</string>
+        <key>CAIA_EVENT_BUS_BIND</key>
+        <string>127.0.0.1</string>
+        <key>CAIA_EVENT_BUS_PORT</key>
+        <string>5180</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>__USER_HOME__/Library/Logs/caia-mentor/server.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__USER_HOME__/Library/Logs/caia-mentor/server.err.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
