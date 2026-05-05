@@ -1,0 +1,8 @@
+# build outputs (tsc emits to dist/, but defensive):
+src/*.js
+src/*.d.ts
+src/*.d.ts.map
+src/*.js.map
+dist/
+node_modules/
+*.tsbuildinfo
