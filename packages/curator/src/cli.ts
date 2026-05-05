@@ -17,11 +17,24 @@
  *   run-one <scannerId> [--repo <path>] [--memory <dir>] [--reports <dir>]
  *     Run a single scanner and print findings as JSON. Useful for
  *     debugging or for piping into other tools.
+ *
+ *   emit-alarms [--repo <path>] [--memory <dir>] [--reports <dir>]
+ *               [--alarms-dir <path>] [--force] [--print]
+ *     (Phase-2) Run all phase-1 scanners, classify findings into
+ *     actions, and write the urgent (`alarm`) ones as one .md per
+ *     alarm under `<reportsDir>/curator/alarms/`. Idempotent — existing
+ *     files are preserved unless `--force`. With `--print` the slugs of
+ *     written + skipped alarms are echoed to stdout.
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve as pathResolve } from 'node:path';
 
+import {
+  findingsToActions,
+  writeAlarms,
+  type AlarmAction
+} from './actions/index.js';
 import { defaultScanContext, type DefaultContextOptions } from './context.js';
 import { renderDigest } from './digest.js';
 import { runScan } from './orchestrator.js';
@@ -123,6 +136,38 @@ async function runOne(args: Argv): Promise<void> {
   console.log(JSON.stringify({ ok: true, scannerId: sc.id, findings }, null, 2));
 }
 
+async function emitAlarms(args: Argv): Promise<void> {
+  const ctx = buildCtx(args);
+  const result = await runScan(phase1Scanners, ctx);
+  const actions = findingsToActions(result.findings);
+  const alarms = actions.filter((a): a is AlarmAction => a.kind === 'alarm');
+
+  const alarmsDirArg = args.flags['alarms-dir'];
+  const force = args.flags['force'] === '1';
+  const emitted = alarmsDirArg
+    ? writeAlarms(alarms, { alarmsDir: pathResolve(alarmsDirArg), force })
+    : writeAlarms(alarms, { reportsDir: ctx.reportsDir, force });
+
+  if (args.flags['print']) {
+    for (const w of emitted.written) console.log(`written: ${w.slug} -> ${w.path}`);
+    for (const s of emitted.skipped) console.log(`skipped: ${s.slug} -> ${s.path}`);
+  }
+
+  console.log(
+    JSON.stringify({
+      ok: true,
+      alarmsDir: emitted.outputDir,
+      writtenCount: emitted.writtenCount,
+      skippedCount: emitted.skippedCount,
+      written: emitted.written,
+      skipped: emitted.skipped,
+      totalAlarms: alarms.length,
+      totalActions: actions.length,
+      totalFindings: result.findings.length
+    })
+  );
+}
+
 function usage(): never {
   console.error(
     [
@@ -132,6 +177,7 @@ function usage(): never {
       '  daily [--repo <path>] [--memory <dir>] [--reports <dir>] [--out <path>] [--print]',
       '  list-scanners',
       '  run-one <scannerId> [--repo <path>] [--memory <dir>] [--reports <dir>]',
+      '  emit-alarms [--repo <path>] [--memory <dir>] [--reports <dir>] [--alarms-dir <path>] [--force] [--print]',
       '',
       'Env vars:',
       '  CAIA_MEMORY_DIR     overrides default agent/memory path',
@@ -153,6 +199,9 @@ export async function main(argv: string[]): Promise<void> {
       return;
     case 'run-one':
       await runOne(args);
+      return;
+    case 'emit-alarms':
+      await emitAlarms(args);
       return;
     case undefined:
     case '--help':

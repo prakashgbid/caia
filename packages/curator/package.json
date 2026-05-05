@@ -2,7 +2,7 @@
   "name": "@chiefaia/curator",
   "version": "0.1.0",
   "private": true,
-  "description": "Curator Phase-1 — daily-running CAIA agent that scans the platform across measurable quality dimensions and emits a daily digest of findings ranked by impact / effort. Phase-1 ships the scan-loop infrastructure plus 5 representative scanners (memory drift, stale TODOs, open-PR age, worktree count, dependabot CVEs). Subsequent PRs add more scanners across the 80-dimension taxonomy.",
+  "description": "Curator Phase-2 — daily-running CAIA agent that scans the platform across measurable quality dimensions and emits both a daily digest of findings AND an action layer (PR proposals, backlog directives, alarms, industry briefings) per the curator_agent_directive output modes 5-8. Phase-2 PR-1 ships the action types + findings-to-actions classifier + alarm emitter; PR-2 adds PR-proposal + backlog-directive emitters; PR-3 adds the industry-briefing scanner + a unified caia-curator act runner.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
