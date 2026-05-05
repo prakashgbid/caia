@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { makeGitOps, shellEscape } from '../src/git-ops';
+import { makeGitOps, shellEscape, TIMEOUTS } from '../src/git-ops';
 import type { ShellRunner, ShellResult } from '../src/shell-runner';
 
 const okResult = (stdout: string): ShellResult => ({ code: 0, stdout, stderr: '', durationMs: 0 });
@@ -60,6 +60,33 @@ describe('makeGitOps', () => {
     await gitOps.worktreeRemove('/repo', '/tmp/wt-x');
     const [cmd] = (fakeShell as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(cmd).toContain('git worktree remove --force');
+  });
+
+  it('worktreeRemove uses 120s timeout (PR-G)', async () => {
+    const fakeShell: ShellRunner = vi.fn(async () => okResult(''));
+    const gitOps = makeGitOps(fakeShell);
+    await gitOps.worktreeRemove('/repo', '/tmp/wt-x');
+    const [, opts] = (fakeShell as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(opts.timeoutMs).toBe(120_000);
+    expect(TIMEOUTS.worktreeRemoveMs).toBe(120_000);
+  });
+
+  it('pruneWorktrees issues git worktree prune', async () => {
+    const fakeShell: ShellRunner = vi.fn(async () => okResult(''));
+    const gitOps = makeGitOps(fakeShell);
+    await gitOps.pruneWorktrees('/repo');
+    expect(fakeShell).toHaveBeenCalledOnce();
+    const [cmd, opts] = (fakeShell as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(cmd).toBe('git worktree prune');
+    expect(opts.cwd).toBe('/repo');
+    expect(opts.timeoutMs).toBe(30_000);
+    expect(TIMEOUTS.worktreePruneMs).toBe(30_000);
+  });
+
+  it('pruneWorktrees throws when shell command fails', async () => {
+    const fakeShell: ShellRunner = vi.fn(async () => failResult(1, 'fatal'));
+    const gitOps = makeGitOps(fakeShell);
+    await expect(gitOps.pruneWorktrees('/not-a-repo')).rejects.toThrow();
   });
 
   it('throws when shell command fails', async () => {

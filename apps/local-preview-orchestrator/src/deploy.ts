@@ -529,23 +529,57 @@ function getPreviousTargetSha(sitePath: string): string | undefined {
   return target ? extractShaFromBuildPath(target) : undefined;
 }
 
-async function safeRemoveWorktree(
+/**
+ * Best-effort worktree teardown. Always succeeds (logs and continues on
+ * partial failure) — the deploy pipeline must not get stuck on cleanup.
+ *
+ * Three-step strategy (PR-G):
+ *
+ *   1. `git worktree remove --force` (120s timeout — bumped from 30s after
+ *      Stage-6 verify saw the previous timeout fire on a 1.7 GB worktree).
+ *   2. **Always-on** `rmSync` if the dir still exists. Even when git
+ *      reports success, partial cleanups have been observed; this is a
+ *      belt-and-braces safety net.
+ *   3. `git worktree prune` to reconcile the worktree registry — necessary
+ *      whenever step 2 ran, since `rmSync` leaves the registry entry
+ *      dangling and a future `git worktree add` to the same path will
+ *      complain.
+ *
+ * All three steps swallow their own errors. The function returns void
+ * unconditionally because every caller uses it for cleanup, never for a
+ * decision point. This is intentionally lenient — the next deploy iteration
+ * will re-attempt worktree creation with `--force`, which handles a stale
+ * dir or registry entry on its own.
+ */
+export async function safeRemoveWorktree(
   gitOps: GitOps,
   repoPath: string,
   workspaceDir: string,
   logger: { error: (msg: string, ctx?: unknown) => void }
 ): Promise<void> {
   if (!existsSync(workspaceDir)) return;
+
+  // Step 1: try the canonical `git worktree remove`.
   try {
     await gitOps.worktreeRemove(repoPath, workspaceDir);
   } catch (e) {
-    // Fall back to plain rmSync.
-    logger.error(`worktree remove failed; falling back to rmSync: ${e}`);
+    logger.error(`worktree remove failed (will fall back to rmSync): ${e}`);
+  }
+
+  // Step 2: always-on safety net. If the dir still exists, blow it away.
+  if (existsSync(workspaceDir)) {
     try {
       rmSync(workspaceDir, { recursive: true, force: true });
-    } catch (e2) {
-      logger.error(`rmSync fallback also failed: ${e2}`);
+    } catch (e) {
+      logger.error(`rmSync fallback failed: ${e}`);
     }
+  }
+
+  // Step 3: reconcile the worktree registry. Cheap; safe to always run.
+  try {
+    await gitOps.pruneWorktrees(repoPath);
+  } catch (e) {
+    logger.error(`worktree prune failed (non-fatal): ${e}`);
   }
 }
 
