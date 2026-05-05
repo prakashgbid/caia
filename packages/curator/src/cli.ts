@@ -20,11 +20,20 @@
  *
  *   emit-alarms [--repo <path>] [--memory <dir>] [--reports <dir>]
  *               [--alarms-dir <path>] [--force] [--print]
- *     (Phase-2) Run all phase-1 scanners, classify findings into
+ *     (Phase-2 PR-1) Run all phase-1 scanners, classify findings into
  *     actions, and write the urgent (`alarm`) ones as one .md per
  *     alarm under `<reportsDir>/curator/alarms/`. Idempotent — existing
- *     files are preserved unless `--force`. With `--print` the slugs of
- *     written + skipped alarms are echoed to stdout.
+ *     files are preserved unless `--force`.
+ *
+ *   emit-pr-proposals [--repo <path>] [--memory <dir>] [--reports <dir>]
+ *                     [--out-dir <path>] [--force] [--print]
+ *     (Phase-2 PR-2) Same pipeline, write the `pr-proposal` actions
+ *     under `<reportsDir>/curator/pr-proposals/`.
+ *
+ *   emit-backlog-directives [--repo <path>] [--memory <dir>] [--reports <dir>]
+ *                           [--out-dir <path>] [--force] [--print]
+ *     (Phase-2 PR-2) Same pipeline, write the `backlog-directive`
+ *     actions under `<reportsDir>/curator/backlog-directives/`.
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -33,7 +42,12 @@ import { dirname, join, resolve as pathResolve } from 'node:path';
 import {
   findingsToActions,
   writeAlarms,
-  type AlarmAction
+  writeBacklogDirectives,
+  writePrProposals,
+  type AlarmAction,
+  type BacklogDirectiveAction,
+  type EmitResult,
+  type PrProposalAction
 } from './actions/index.js';
 import { defaultScanContext, type DefaultContextOptions } from './context.js';
 import { renderDigest } from './digest.js';
@@ -136,35 +150,106 @@ async function runOne(args: Argv): Promise<void> {
   console.log(JSON.stringify({ ok: true, scannerId: sc.id, findings }, null, 2));
 }
 
-async function emitAlarms(args: Argv): Promise<void> {
-  const ctx = buildCtx(args);
-  const result = await runScan(phase1Scanners, ctx);
-  const actions = findingsToActions(result.findings);
-  const alarms = actions.filter((a): a is AlarmAction => a.kind === 'alarm');
-
-  const alarmsDirArg = args.flags['alarms-dir'];
-  const force = args.flags['force'] === '1';
-  const emitted = alarmsDirArg
-    ? writeAlarms(alarms, { alarmsDir: pathResolve(alarmsDirArg), force })
-    : writeAlarms(alarms, { reportsDir: ctx.reportsDir, force });
-
-  if (args.flags['print']) {
+/**
+ * Print the JSON summary returned by an emit-* subcommand. Centralised
+ * so all three (alarm / pr-proposal / backlog-directive) use the same
+ * shape.
+ */
+function printEmitSummary(
+  kind: 'alarm' | 'pr-proposal' | 'backlog-directive',
+  emitted: EmitResult,
+  matching: number,
+  totalActions: number,
+  totalFindings: number,
+  print: boolean
+): void {
+  if (print) {
     for (const w of emitted.written) console.log(`written: ${w.slug} -> ${w.path}`);
     for (const s of emitted.skipped) console.log(`skipped: ${s.slug} -> ${s.path}`);
   }
-
   console.log(
     JSON.stringify({
       ok: true,
-      alarmsDir: emitted.outputDir,
+      kind,
+      outputDir: emitted.outputDir,
       writtenCount: emitted.writtenCount,
       skippedCount: emitted.skippedCount,
       written: emitted.written,
       skipped: emitted.skipped,
-      totalAlarms: alarms.length,
-      totalActions: actions.length,
-      totalFindings: result.findings.length
+      matchingActions: matching,
+      totalActions,
+      totalFindings
     })
+  );
+}
+
+async function emitAlarms(args: Argv): Promise<void> {
+  const ctx = buildCtx(args);
+  const result = await runScan(phase1Scanners, ctx);
+  const actions = findingsToActions(result.findings);
+  const matching = actions.filter((a): a is AlarmAction => a.kind === 'alarm');
+
+  const outArg = args.flags['alarms-dir'];
+  const force = args.flags['force'] === '1';
+  const emitted = outArg
+    ? writeAlarms(matching, { alarmsDir: pathResolve(outArg), force })
+    : writeAlarms(matching, { reportsDir: ctx.reportsDir, force });
+
+  printEmitSummary(
+    'alarm',
+    emitted,
+    matching.length,
+    actions.length,
+    result.findings.length,
+    args.flags['print'] === '1'
+  );
+}
+
+async function emitPrProposals(args: Argv): Promise<void> {
+  const ctx = buildCtx(args);
+  const result = await runScan(phase1Scanners, ctx);
+  const actions = findingsToActions(result.findings);
+  const matching = actions.filter(
+    (a): a is PrProposalAction => a.kind === 'pr-proposal'
+  );
+
+  const outArg = args.flags['out-dir'];
+  const force = args.flags['force'] === '1';
+  const emitted = outArg
+    ? writePrProposals(matching, { outDir: pathResolve(outArg), force })
+    : writePrProposals(matching, { reportsDir: ctx.reportsDir, force });
+
+  printEmitSummary(
+    'pr-proposal',
+    emitted,
+    matching.length,
+    actions.length,
+    result.findings.length,
+    args.flags['print'] === '1'
+  );
+}
+
+async function emitBacklogDirectives(args: Argv): Promise<void> {
+  const ctx = buildCtx(args);
+  const result = await runScan(phase1Scanners, ctx);
+  const actions = findingsToActions(result.findings);
+  const matching = actions.filter(
+    (a): a is BacklogDirectiveAction => a.kind === 'backlog-directive'
+  );
+
+  const outArg = args.flags['out-dir'];
+  const force = args.flags['force'] === '1';
+  const emitted = outArg
+    ? writeBacklogDirectives(matching, { outDir: pathResolve(outArg), force })
+    : writeBacklogDirectives(matching, { reportsDir: ctx.reportsDir, force });
+
+  printEmitSummary(
+    'backlog-directive',
+    emitted,
+    matching.length,
+    actions.length,
+    result.findings.length,
+    args.flags['print'] === '1'
   );
 }
 
@@ -178,6 +263,8 @@ function usage(): never {
       '  list-scanners',
       '  run-one <scannerId> [--repo <path>] [--memory <dir>] [--reports <dir>]',
       '  emit-alarms [--repo <path>] [--memory <dir>] [--reports <dir>] [--alarms-dir <path>] [--force] [--print]',
+      '  emit-pr-proposals [--repo <path>] [--memory <dir>] [--reports <dir>] [--out-dir <path>] [--force] [--print]',
+      '  emit-backlog-directives [--repo <path>] [--memory <dir>] [--reports <dir>] [--out-dir <path>] [--force] [--print]',
       '',
       'Env vars:',
       '  CAIA_MEMORY_DIR     overrides default agent/memory path',
@@ -202,6 +289,12 @@ export async function main(argv: string[]): Promise<void> {
       return;
     case 'emit-alarms':
       await emitAlarms(args);
+      return;
+    case 'emit-pr-proposals':
+      await emitPrProposals(args);
+      return;
+    case 'emit-backlog-directives':
+      await emitBacklogDirectives(args);
       return;
     case undefined:
     case '--help':
