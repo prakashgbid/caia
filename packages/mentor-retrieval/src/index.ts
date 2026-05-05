@@ -2,8 +2,8 @@
  * Mentor Phase-3 retrieval — public surface.
  *
  * PR-1 ships the index builder + persistence + Ollama embedding wrapper.
- * PR-2 will extend this surface with the retrieval API + CLI; PR-3
- * wires the pre-spawn injection hook.
+ * PR-2 adds the retrieval API + `caia-mentor-retrieve` CLI on top of
+ * the index. PR-3 wires the orchestrator pre-spawn injection hook.
  */
 
 export {
@@ -38,6 +38,16 @@ export {
   snippet,
   type BuildIndexOptions
 } from './index-builder.js';
+
+export {
+  retrieveLessons,
+  cosineSimilarity,
+  formatLessonsPreamble,
+  DEFAULT_TOP_N,
+  DEFAULT_MIN_SIMILARITY,
+  type RetrievedLesson,
+  type RetrieveLessonsOptions
+} from './retrieve.js';
 
 export type {
   BuildIndexStats,
