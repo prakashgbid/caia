@@ -12,6 +12,14 @@
 
   KeepAlive=true so the process is restarted by launchd whenever the deploy
   daemon SIGTERMs it after a symlink swap.
+
+  Wait-for-current shim (PR-F): on first boot, the `current` symlink does
+  not exist until the deploy daemon has run a successful build. Rather than
+  exiting non-zero (which crash-loops via KeepAlive=Crashed=true on a 10s
+  ThrottleInterval), we busy-poll for the symlink with `until ... do sleep 5`
+  and only `cd` into it once it exists. The wait is bounded only by the
+  agent eventually being booted out, which is the right shape for a
+  long-lived supervisor.
 -->
 <plist version="1.0">
 <dict>
@@ -22,7 +30,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-lc</string>
-        <string>cd "$LOCAL_PREVIEW_INSTALL_ROOT/dashboard/current" || exit 1; echo $$ &gt; "$LOCAL_PREVIEW_INSTALL_ROOT/dashboard/pid"; exec pnpm --filter @caia-app/dashboard exec next start -p 5173</string>
+        <string>INSTALL_DIR="$LOCAL_PREVIEW_INSTALL_ROOT/dashboard"; CURRENT="$INSTALL_DIR/current"; echo "[supervisor:dashboard] waiting for $CURRENT" &gt;&amp;2; until [ -L "$CURRENT" ]; do sleep 5; done; echo "[supervisor:dashboard] symlink found; starting" &gt;&amp;2; cd "$CURRENT" || exit 1; echo $$ &gt; "$INSTALL_DIR/pid"; exec pnpm --filter @caia-app/dashboard exec next start -p 5173</string>
     </array>
 
     <key>WorkingDirectory</key>
