@@ -2,7 +2,7 @@
   "name": "@chiefaia/mentor-retrieval",
   "version": "0.1.0",
   "private": true,
-  "description": "Mentor Phase-3 + Phase-4 lesson retrieval — embed past feedback_*.md + proposals/*.md via Ollama nomic-embed-text, persist to a per-memoryDir SQLite index, retrieve top-N most similar prior lessons, prepend them to spawned-task prompts, cluster the proposal stream to detect systemic-vs-one-off failure patterns, and propose Steward gatekeeper rules for the systemic ones. Phase-3 PR-1/2/3 ship the index + retrieval + prepend hook; Phase-4 PR-1 ships clustering + caia-mentor-cluster; Phase-4 PR-2 ships Steward-rule proposals + caia-mentor-propose-steward-rule.",
+  "description": "Mentor Phase-3 + Phase-4 lesson retrieval — embed past feedback_*.md + proposals/*.md via Ollama nomic-embed-text, persist to a per-memoryDir SQLite index, retrieve top-N most similar prior lessons, prepend them to spawned-task prompts, cluster the proposal stream to detect systemic-vs-one-off failure patterns, propose Steward gatekeeper rules for the systemic ones, and run a quarterly self-review of Mentor's own track record. Phase-3 PR-1/2/3 ship the index + retrieval + prepend hook; Phase-4 PR-1 ships clustering; Phase-4 PR-2 ships Steward-rule proposals; Phase-4 PR-3 ships the self-review (caia-mentor-self-review).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -12,7 +12,8 @@
     "caia-mentor-retrieve": "./dist/retrieve-cli.js",
     "caia-mentor-prepend": "./dist/prepend-cli.js",
     "caia-mentor-cluster": "./dist/cluster-cli.js",
-    "caia-mentor-propose-steward-rule": "./dist/propose-steward-rule-cli.js"
+    "caia-mentor-propose-steward-rule": "./dist/propose-steward-rule-cli.js",
+    "caia-mentor-self-review": "./dist/self-review-cli.js"
   },
   "exports": {
     ".": {
@@ -38,6 +39,10 @@
     "./steward-rule-proposer": {
       "import": "./dist/steward-rule-proposer.js",
       "types": "./dist/steward-rule-proposer.d.ts"
+    },
+    "./self-review": {
+      "import": "./dist/self-review.js",
+      "types": "./dist/self-review.d.ts"
     }
   },
   "files": [
