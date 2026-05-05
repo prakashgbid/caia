@@ -4,10 +4,10 @@
   "private": true,
   "description": "Always-on local preview deployments for CAIA dashboard + poker-zeno + roulette-community",
   "type": "module",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
-    "local-preview": "dist/src/index.js"
+    "local-preview": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
