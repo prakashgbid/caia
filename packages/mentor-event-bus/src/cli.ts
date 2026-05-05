@@ -31,6 +31,7 @@ import { Client } from './client.js';
 import { startServer } from './server.js';
 import { loadSecret } from './auth.js';
 import { openDatabase, queryEvents } from './sqlite.js';
+import { startMemoryWatcher } from './memory-watcher.js';
 import type { EmittedEvent } from './types.js';
 import type { OperatorCorrectionPayload } from './types.js';
 
@@ -169,6 +170,33 @@ async function recordCorrection(args: Argv): Promise<void> {
   console.log(JSON.stringify({ ok: true, id, mode: detectionMode }));
 }
 
+async function watchMemory(args: Argv): Promise<void> {
+  const dbPath = args.flags['db'] ?? defaultDbPath();
+  const memoryDir =
+    args.flags['path'] ??
+    process.env['CAIA_MEMORY_DIR'] ??
+    join(homedir(), 'Documents', 'projects', 'caia', 'agent', 'memory');
+  const debounceMs = Number(args.flags['debounce'] ?? 500);
+
+  const client = new Client({
+    dbPath,
+    processName: 'caia-mentor-memory-watcher'
+  });
+  const watcher = startMemoryWatcher({
+    client,
+    rootDir: memoryDir,
+    debounceMs
+  });
+  const stop = (): void => {
+    watcher.close();
+    client.close();
+    process.exit(0);
+  };
+  process.on('SIGTERM', stop);
+  process.on('SIGINT', stop);
+  await new Promise<void>(() => undefined);
+}
+
 async function serve(args: Argv): Promise<void> {
   const dbPath = args.flags['db'] ?? defaultDbPath();
   const host = args.flags['host'] ?? process.env['CAIA_EVENT_BUS_BIND'] ?? '127.0.0.1';
@@ -250,17 +278,21 @@ async function main(): Promise<void> {
     case 'serve':
       await serve(args);
       return;
+    case 'watch-memory':
+      await watchMemory(args);
+      return;
     case 'count':
       count(args);
       return;
     default:
       console.error(
-        'usage: caia-mentor {tail|record-correction|serve|count}\n' +
+        'usage: caia-mentor {tail|record-correction|serve|count|watch-memory}\n' +
           '  Defaults can be overridden via env:\n' +
           '    CAIA_EVENT_BUS_DB_PATH        — events.sqlite path\n' +
           '    CAIA_EVENT_BUS_BIND           — server host (default 127.0.0.1)\n' +
           '    CAIA_EVENT_BUS_PORT           — server port (default 5180)\n' +
-          '    CAIA_EVENT_BUS_SECRET[_PATH]  — HMAC shared secret (≥32 chars)'
+          '    CAIA_EVENT_BUS_SECRET[_PATH]  — HMAC shared secret (≥32 chars)\n' +
+          '    CAIA_MEMORY_DIR               — agent/memory dir to watch'
       );
       process.exit(2);
   }

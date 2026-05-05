@@ -100,3 +100,11 @@ export {
   type HttpEmitOptions,
   type HttpEmitResult
 } from './http-client.js';
+
+// PR-δ: MemoryWritten emit-point (chokidar-style fs.watch daemon).
+export {
+  startMemoryWatcher,
+  defaultFilter,
+  type WatchMemoryOptions,
+  type MemoryWatcher
+} from './memory-watcher.js';
