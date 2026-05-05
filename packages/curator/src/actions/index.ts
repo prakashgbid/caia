@@ -1,26 +1,15 @@
 /**
  * Curator Phase-2 — action layer public surface.
  *
- * Exports:
+ * Phase-2 closes the directive's output modes 5..8:
  *
- *   - The `Action` type system (4 output modes from the directive).
- *   - `findingsToActions` — pure classifier that maps Findings to
- *     Actions per the routing rules in `classifier.ts`.
- *   - `slugify`, `actionSlugForFinding`, `classifyKind` — small
- *     helpers used by the classifier; exported so emitters and the
- *     industry-briefing scanner (PR-3) can reuse them without
- *     re-defining the rules.
- *   - `writeAlarms`, `renderAlarmMarkdown`, `defaultAlarmsDir` — the
- *     alarm emitter (output mode 7).
- *   - `writePrProposals`, `renderPrProposalMarkdown`,
- *     `defaultPrProposalsDir` — the PR-proposal emitter (output mode 5).
- *   - `writeBacklogDirectives`, `renderBacklogDirectiveMarkdown`,
- *     `defaultBacklogDirectivesDir` — the backlog-directive emitter
- *     (output mode 6).
- *
- * Phase-2 PR-3 will add the industry-briefing scanner (output mode 8)
- * + a unified `caia-curator act` runner that calls all four emitters
- * in one pass.
+ *   - PR-1: action types + `findingsToActions` classifier + `writeAlarms`
+ *           (mode 7).
+ *   - PR-2: `writePrProposals` (mode 5) + `writeBacklogDirectives`
+ *           (mode 6).
+ *   - PR-3 (THIS): `loadWatchlist` + `writeIndustryBriefings` (mode 8)
+ *                  + `runActDay` unified runner that does all 4 in one
+ *                  call.
  */
 
 export {
@@ -53,6 +42,28 @@ export {
 } from './backlog-directive-emitter.js';
 
 export type { WriteBacklogDirectivesOptions } from './backlog-directive-emitter.js';
+
+export {
+  defaultIndustryBriefingsDir,
+  renderIndustryBriefingMarkdown,
+  writeIndustryBriefings
+} from './industry-briefing-emitter.js';
+
+export type { WriteIndustryBriefingsOptions } from './industry-briefing-emitter.js';
+
+export {
+  defaultWatchlistPath,
+  loadWatchlist
+} from './watchlist.js';
+
+export type {
+  LoadWatchlistOptions,
+  WatchlistEntry,
+  WatchlistFile
+} from './watchlist.js';
+
+export { runActDay } from './runner.js';
+export type { RunActDayOptions, RunActDayResult } from './runner.js';
 
 export type {
   Action,

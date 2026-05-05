@@ -5,25 +5,18 @@
  * agent that scans the platform across measurable quality dimensions
  * and emits a daily digest of findings ranked by impact / effort.
  *
- * Phase-1 (legs 4-5) shipped:
- *   - The scan-loop infrastructure (Scanner interface + orchestrator
- *     + digest renderer).
- *   - 5 representative scanners covering 4 of the 10 directive
- *     categories (worktree count, open-PR age, memory drift, stale
- *     TODOs, Dependabot CVEs).
- *   - `caia-curator daily` CLI that runs the scanners + writes the
- *     digest to `~/Documents/projects/reports/curator/<date>-digest.md`.
+ * Phase-1 (legs 4-5):
+ *   - Scan-loop infrastructure + 5 representative scanners + daily
+ *     digest renderer + `caia-curator daily` CLI.
  *
- * Phase-2 (leg-9, this layer) adds the **action layer** on top — per
- * the directive's output modes 5..8 (PR proposals, backlog directives,
- * alarms, industry briefings). Phase-2 ships incrementally:
- *   - PR-1: action types + `findingsToActions` classifier + alarm
- *     emitter (mode 7) + `caia-curator emit-alarms` CLI.
- *   - PR-2 (THIS): PR-proposal emitter (mode 5) + backlog-directive
- *     emitter (mode 6) + `caia-curator emit-pr-proposals` and
- *     `caia-curator emit-backlog-directives` CLIs.
- *   - PR-3: industry-briefing scanner (mode 8) + unified
- *     `caia-curator act` runner.
+ * Phase-2 (leg-9, action layer covering directive output modes 5..8):
+ *   - PR-1 (#338): action types + `findingsToActions` classifier +
+ *     `writeAlarms` (mode 7) + `caia-curator emit-alarms`.
+ *   - PR-2 (#339): `writePrProposals` (mode 5) + `writeBacklogDirectives`
+ *     (mode 6) + `caia-curator emit-pr-proposals` and
+ *     `caia-curator emit-backlog-directives`.
+ *   - PR-3 (THIS): `loadWatchlist` + `writeIndustryBriefings` (mode 8)
+ *     + `runActDay` unified runner + `caia-curator act` CLI.
  */
 
 export { runScan, rankFindings } from './orchestrator.js';
@@ -43,14 +36,20 @@ export {
   classifyKind,
   defaultAlarmsDir,
   defaultBacklogDirectivesDir,
+  defaultIndustryBriefingsDir,
   defaultPrProposalsDir,
+  defaultWatchlistPath,
   findingsToActions,
+  loadWatchlist,
   renderAlarmMarkdown,
   renderBacklogDirectiveMarkdown,
+  renderIndustryBriefingMarkdown,
   renderPrProposalMarkdown,
+  runActDay,
   slugify,
   writeAlarms,
   writeBacklogDirectives,
+  writeIndustryBriefings,
   writePrProposals
 } from './actions/index.js';
 
@@ -73,8 +72,14 @@ export type {
   EmitResult,
   EmittedActionRef,
   IndustryBriefingAction,
+  LoadWatchlistOptions,
   PrProposalAction,
+  RunActDayOptions,
+  RunActDayResult,
+  WatchlistEntry,
+  WatchlistFile,
   WriteAlarmsOptions,
   WriteBacklogDirectivesOptions,
+  WriteIndustryBriefingsOptions,
   WritePrProposalsOptions
 } from './actions/index.js';
