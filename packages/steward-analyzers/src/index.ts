@@ -64,3 +64,9 @@ export {
   type PrRecord,
   type DependabotPrRecord,
 } from './pr-state.js';
+
+export {
+  checkLocalPreviewHealth,
+  type CheckLocalPreviewHealthOptions,
+  type SiteStateInput,
+} from './local-preview-health.js';

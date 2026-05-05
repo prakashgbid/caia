@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.stolution.local-preview.poker-zeno
+  ======================================
+  Site supervisor for the poker-zeno preview. Listens on http://localhost:5174.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.stolution.local-preview.poker-zeno</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>cd "$LOCAL_PREVIEW_INSTALL_ROOT/poker-zeno/current" || exit 1; echo $$ &gt; "$LOCAL_PREVIEW_INSTALL_ROOT/poker-zeno/pid"; exec pnpm preview -- --port 5174</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__SITE_REPO_POKER_ZENO__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__USER_HOME__</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>LOCAL_PREVIEW_INSTALL_ROOT</key>
+        <string>__USER_HOME__/Library/Application Support/Stolution/local-preview</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>__USER_HOME__/Library/Logs/local-preview/poker-zeno.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__USER_HOME__/Library/Logs/local-preview/poker-zeno.err.log</string>
+
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>
