@@ -1,0 +1,48 @@
+{
+  "name": "@chiefaia/apprentice-training",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apprentice Phase 2 — LoRA training pipeline. Reads `@chiefaia/apprentice-corpus` manifest + samples.jsonl, splits into train/valid/test (honouring the corpus manifest's deterministic holdout when present), writes MLX-LM-formatted JSONL to a working dir, spawns `python -m mlx_lm.lora` as a subprocess to run QLoRA training of a 4-bit-quantised 7B base on Mac M-series, and emits a date-stamped adapter directory containing `adapters.safetensors` + `adapter_config.json` + a training-log + a wrapper metadata file. Mac MLX is the primary path; cloud-GPU rental is allowed at minimal level (per `feedback_minimal_cloud_gpu_allowed.md`) when Mac can't fit the workload, with a $50/run cap that escalates to operator above. Subscription-only LLM cost: no API-key billing anywhere; MLX uses local quantised weights, no remote LLM calls. Ships in Option E shape — private workspace package, fully parameterised constructor with CAIA defaults, fixture-corpora-tested with a mocked subprocess, never published.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-apprentice-training": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "plists",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/apprentice-corpus": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
