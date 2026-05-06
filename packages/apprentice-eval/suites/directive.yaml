@@ -1,0 +1,80 @@
+description: 'apprentice-eval suite — directive summarisation. Tests whether the model can extract the standing rule from a CAIA directive document and articulate the action / non-action clearly.'
+
+defaultTest:
+  vars:
+    agent: apprentice
+  assert:
+    - type: javascript
+      value: 'output.length > 80 && output.length < 4000'
+
+tests:
+  - description: 'directive — squash secret-introducing commits standing rule'
+    id: directive-secret-scanner-squash
+    vars:
+      prompt: |
+        Summarise the standing rule or directive in this document in 3-5 sentences.
+        ---
+        Standing rule (filed 2026-05-06): If gitleaks / semgrep / any secret-scanner gate
+        fails because a commit introduced a literal credential-shape string (real OR test
+        fixture), do NOT push a follow-up "fix the fixture" commit and assume the gate
+        clears. The original commit's diff is still in branch history; gitleaks scans
+        incrementally over new commits and re-flags it. Default playbook: identify the
+        secret-introducing commit; on the feature branch with that commit + a follow-up
+        fix, run git reset --soft to the merge-base with develop (keeps changes staged,
+        drops history), re-commit as ONE commit with the fix already baked in, then
+        republish the branch via git push origin --delete <branch> + git push -u origin
+        <branch>. Force-push is hook-blocked.
+    assert:
+      - type: contains
+        value: squash
+      - type: regex
+        value: 'reset --soft|fresh commit|single commit'
+      - type: not-contains
+        value: force-push
+      - type: not-contains
+        value: --force
+
+  - description: 'directive — pnpm regression gate ergonomics standing rule'
+    id: directive-regression-gate-ergonomics
+    vars:
+      prompt: |
+        Summarise the standing rule in this directive in 3-5 sentences. What should be
+        used as the regression gate, and what should NOT be used?
+        ---
+        Standing rule (2026-05-06): The monorepo regression gate is `pnpm -r typecheck`
+        plus `pnpm -r lint`, NOT `pnpm -r build`. The latter triggers apps/dashboard's
+        Next.js static-page regeneration which can stall past 15 minutes; the former
+        completes in ~70s with workspace deps already built. When workspace-linked deps
+        need dist/ to exist, run `pnpm --filter "@chiefaia/*" -r build` first to build
+        only the package-internal deps. Use `pnpm -r build` only when shipping or
+        releasing.
+    assert:
+      - type: contains
+        value: typecheck
+      - type: contains
+        value: lint
+      - type: regex
+        value: 'NOT |not.*-r build|do not.*-r build'
+
+  - description: 'directive — Option E architecture shape'
+    id: directive-option-e-shape
+    vars:
+      prompt: |
+        Summarise the standing rule "Option E" for new CAIA agents in 4-6 sentences.
+        ---
+        Every new CAIA agent's package follows this shape: lives at packages/<agent>/
+        in the caia monorepo (not under apps/); package.json has "private": true and
+        scope @chiefaia/<agent> (never published); public API is parameterised via a
+        constructor — every CAIA-specific path / topic / registry / integration is a
+        constructor parameter with a CAIA default; tests inject fixture corpora and
+        production injects CAIA defaults; pre-spawn injection via Mentor + Librarian
+        prepend pipelines is used wherever the agent reads task prompts.
+    assert:
+      - type: contains
+        value: private
+      - type: regex
+        value: 'parameterised|parameterized|constructor parameter'
+      - type: not-contains
+        value: open-source
+      - type: not-contains
+        value: publish to npm

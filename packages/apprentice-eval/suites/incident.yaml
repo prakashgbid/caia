@@ -1,0 +1,60 @@
+description: 'apprentice-eval suite — Mentor-incident-derived prompts. Each prompt describes a real failure shape; the rubric requires the model to produce the standing-rule directive verb (squash, decide, defer, etc.) and avoid known anti-patterns.'
+
+defaultTest:
+  vars:
+    agent: apprentice
+  assert:
+    - type: javascript
+      value: 'output.length > 80 && output.length < 3000'
+
+tests:
+  - description: 'incident — a follow-up commit cannot clear a secret-scanner gate'
+    id: incident-fix-commit-doesnt-clear-secret-gate
+    vars:
+      prompt: |
+        Failure observed: PR #349 introduced literal `ghp_` and `sk-` shapes in a
+        test fixture to exercise a PII masker. gitleaks + semgrep flagged them.
+        PR #350 added a follow-up commit converting the literals to runtime
+        construction (e.g. 'sk-' + 'a'.repeat(40)). Gates STILL failed.
+
+        What's the standing-rule directive verb (one word) for fixing this kind of
+        problem, and why does adding a fix-up commit not work?
+    assert:
+      - type: regex
+        value: 'squash|rewrite history|reset --soft'
+      - type: regex
+        value: 'history|prior commit|incremental scan|diff of new commits'
+      - type: not-contains
+        value: 'just merge'
+
+  - description: 'incident — pnpm -r build hung at 15+ minutes'
+    id: incident-pnpm-build-hung
+    vars:
+      prompt: |
+        Failure observed: a campaign leg's regression gate ran `pnpm -r build` and
+        hung past 15 minutes. The handoff said vaguely "kill if doesn't return in
+        15 min — leg hung here." What is the actual cause, and what's the standing
+        rule's regression gate?
+    assert:
+      - type: regex
+        value: 'apps/dashboard|Next\\.js|static page'
+      - type: regex
+        value: 'typecheck|lint'
+      - type: regex
+        value: 'NOT |not.*-r build|do not.*-r build'
+
+  - description: 'incident — LaunchAgent plist with hardcoded paths'
+    id: incident-plist-hardcoded-paths
+    vars:
+      prompt: |
+        Failure observed: a committed plist hardcoded /usr/local/bin/node and a
+        specific orchestrator session id. On Apple Silicon node is at
+        /opt/homebrew/bin/node, and session ids rotate. The agent never started.
+        What does the standing rule say to use instead?
+    assert:
+      - type: regex
+        value: 'placeholder|CURRENT_NODE_BIN|CURRENT_PKG_DIR|CURRENT_SESSION_ID'
+      - type: regex
+        value: 'install script|sed|substitute'
+      - type: regex
+        value: 'launchctl bootstrap|bootstrap not load'

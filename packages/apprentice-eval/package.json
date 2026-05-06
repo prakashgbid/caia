@@ -1,0 +1,52 @@
+{
+  "name": "@chiefaia/apprentice-eval",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apprentice Phase 1 — eval harness. Scores the Apprentice base model + each candidate LoRA adapter against a canonical YAML prompt suite (hand-curated CAIA-vocabulary prompts + corpus-holdout + Mentor-incident-derived). Produces a deterministic per-prompt score-card, pairwise win-rate vs the base model, and a regression flag set that disqualifies adapters from canary if they regress on prompts the base previously passed. Reaches Ollama via /api/generate (with mlx_lm subprocess fallback if the installed Ollama version doesn't support adapter loading) and optionally invokes the local `claude` binary as a tied-output judge — subscription-only (ANTHROPIC_API_KEY explicitly cleared from the spawned env) and bounded by judgeBudget. Operator-blind A/B mode lets the operator contribute preferences for ambiguous outputs back into the next training corpus. Ships in Option E shape — private workspace package, fully parameterised constructor with CAIA defaults, fixture-tested, never published.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-apprentice-eval": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "suites",
+    "baselines",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/apprentice-corpus": "workspace:*",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^1.6.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

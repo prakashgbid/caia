@@ -1,0 +1,50 @@
+description: 'apprentice-eval suite — report summarisation. Tests whether the model condenses a longer document into the operator-readable shape (one screen, scannable, decision-relevant).'
+
+defaultTest:
+  vars:
+    agent: apprentice
+  assert:
+    - type: javascript
+      value: 'output.length > 100 && output.length < 2500'
+
+tests:
+  - description: 'report — condense a leg handoff'
+    id: report-summarise-handoff
+    vars:
+      prompt: |
+        Summarise this handoff doc into 5 bullets: (1) what shipped, (2) what state
+        the branch is in, (3) what risk remains, (4) what the next leg picks up,
+        (5) anything operator must do. Document:
+
+        Phase 0 leg 2 GREEN. Built corpus aggregator + PII mask + dedupe + quality
+        scorer + distiller. Single commit on feat/apprentice-corpus-002. PR #351
+        merged at 2b60343. Risk R6: corpus manifest needs a holdout: string[] field
+        before Phase 1 leg 2 ships its E2E. Next leg picks up Phase 0 leg 3 — install
+        script with placeholders + verified launchctl bootstrap. Operator: nothing
+        to do; auto-perpetuation continues.
+    assert:
+      - type: regex
+        value: '- |\d\.|•'
+      - type: contains
+        value: holdout
+      - type: regex
+        value: 'leg 3|next leg|launchctl'
+
+  - description: 'report — gate report decision'
+    id: report-gate-decision
+    vars:
+      prompt: |
+        Given this gate-report excerpt, what's the recommended decision?
+
+        gate: Build · Test · Lint · Typecheck — PASS in 3m12s
+        gate: gitleaks — PASS in 6s
+        gate: semgrep — PASS in 33s
+        gate: agent-eval — PASS (winRate=0.71, regressions=0)
+        recent: rebased onto develop 4 commits ago; no merge conflicts.
+
+        Reply with one of: MERGE / HOLD / ABORT and one sentence rationale.
+    assert:
+      - type: regex
+        value: '^MERGE|MERGE\b'
+      - type: not-contains
+        value: ABORT
