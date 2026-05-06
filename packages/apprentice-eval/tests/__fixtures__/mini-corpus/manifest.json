@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-06T12:00:00.000Z",
+  "outputDir": "/tmp/fake-corpus/2026-05-06",
+  "elapsedMs": 1234,
+  "totals": {
+    "rawArtifacts": 100,
+    "afterDedup": 90,
+    "afterPII": 90,
+    "afterQuality": 80,
+    "distilled": 5,
+    "dropped": 20,
+    "final": 80
+  },
+  "perSource": {},
+  "redactedSpansHistogram": {},
+  "qualityHistogram": {},
+  "configSha256": "abc123def456",
+  "warnings": [],
+  "holdout": ["sample-001", "sample-002", "sample-003"]
+}
