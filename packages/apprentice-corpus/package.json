@@ -1,0 +1,48 @@
+{
+  "name": "@chiefaia/apprentice-corpus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apprentice Phase 0 — corpus aggregator. Walks CAIA's accumulated artifacts (Mentor events, agent/memory directives + feedback, reports, GitHub PR history, Langfuse traces) and normalises them into a unified instruction-output JSONL corpus suitable for QLoRA fine-tuning of a 7B base on Mac M-series via MLX-LM. Deduplicates by content hash, masks credential-shaped PII (gitleaks-style), scores quality, and routes low-quality candidates through a bounded `claude` binary distillation step (subscription-only — never API-key billing). Output is a date-stamped corpus directory `<outputRoot>/<YYYY-MM-DD>/` containing `samples.jsonl` (OpenAI chat-completions `messages[]` format) plus `manifest.json` for downstream Phase 1 (eval) and Phase 2 (training) consumers. Ships in Option E shape — private workspace package, fully parameterised constructor with CAIA defaults, fixture-corpora-tested, never published.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-apprentice-corpus": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "plists",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/mentor-event-bus": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

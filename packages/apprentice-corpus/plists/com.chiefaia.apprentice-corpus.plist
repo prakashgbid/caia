@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  com.chiefaia.apprentice-corpus.plist
+
+  LaunchAgent that runs the Apprentice corpus aggregator daily at
+  02:00 local time. Outputs go to ~/Documents/projects/apprentice/corpora/<YYYY-MM-DD>/.
+
+  Install:
+    cp plists/com.chiefaia.apprentice-corpus.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.chiefaia.apprentice-corpus.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.chiefaia.apprentice-corpus.plist
+    rm ~/Library/LaunchAgents/com.chiefaia.apprentice-corpus.plist
+
+  Caller MUST set CAIA_MEMORY_DIR + CAIA_REPORTS_DIR + CAIA_EVENTS_DB
+  via the EnvironmentVariables block below before installing — the
+  defaults assume a specific orchestrator session id that rotates.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.chiefaia.apprentice-corpus</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/MAC/Documents/projects/caia/packages/apprentice-corpus/dist/cli.js</string>
+    <string>aggregate</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- Update CAIA_MEMORY_DIR to the current orchestrator session's agent/memory path -->
+    <key>CAIA_MEMORY_DIR</key>
+    <string>/Users/MAC/Library/Application Support/Claude/local-agent-mode-sessions/CURRENT_SESSION_ID/agent/memory</string>
+
+    <key>CAIA_REPORTS_DIR</key>
+    <string>/Users/MAC/Documents/projects/reports</string>
+
+    <key>CAIA_EVENTS_DB</key>
+    <string>/Users/MAC/.caia/mentor/events.sqlite</string>
+
+    <key>CAIA_GITHUB_REPO</key>
+    <string>chiefaia/caia</string>
+
+    <key>APPRENTICE_CORPUS_ROOT</key>
+    <string>/Users/MAC/Documents/projects/apprentice/corpora</string>
+
+    <key>CLAUDE_BINARY_PATH</key>
+    <string>/usr/local/bin/claude</string>
+
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>2</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/MAC/Library/Logs/chiefaia/apprentice-corpus.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/MAC/Library/Logs/chiefaia/apprentice-corpus.err.log</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/MAC/Documents/projects/caia</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>Nice</key>
+  <integer>5</integer>
+</dict>
+</plist>
