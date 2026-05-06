@@ -1,0 +1,41 @@
+{
+  "name": "@chiefaia/system-prompt-block",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Option E codification — generates a stable, deterministic, ≤1K-token CAIA primer block to prepend to every spawned agent's system prompt. Reads the standing-instructions section of agent/memory/MEMORY.md, the table-of-contents of caia_architecture.md, and the 10-stage Definition-of-Done out of master_backlog_sequencing_2026-05-05.md, codegens a stable markdown digest, asserts the token budget, and exposes both a CLI (caia-system-prompt-block) and a parameterised generateCaiaPrimer() function that follows Option E shape (every CAIA-specific path is a constructor parameter with a CAIA default).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-system-prompt-block": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ./scripts/codegen-primer.mjs",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  }
+}

@@ -150,3 +150,134 @@ rules:
     pattern-either:
       - pattern-regex: 'fs\.(write|writeFile|writeFileSync|append|appendFile|appendFileSync)[^,]*[,\s]*["''`][^"''`]*\.?mcp\.json'
       - pattern-regex: 'writeFileSync\(\s*[^,]*\.cursor/mcp\.json'
+
+  # ─── Option E shape — packages must be private ─────────────────────────
+  # Standing rule 2026-05-06 (agent_architecture_shape_2026-05-06.md):
+  # every @chiefaia/* workspace package MUST have "private": true and MUST
+  # NOT be published to public npm. Detects @chiefaia/-scoped package.json
+  # files lacking the "private": true field.
+  - id: caia-option-e-package-must-be-private
+    message: |
+      Option E (CAIA-Bonded Skeleton, standing rule 2026-05-06): every
+      `@chiefaia/*` workspace package MUST declare `"private": true`.
+      This package's package.json declares the @chiefaia scope but is
+      missing or has a falsy `private` field, which would make it
+      publishable to public npm — explicitly forbidden until a
+      productisation re-eval trigger fires.
+
+      Fix: add `"private": true` to package.json (top level).
+
+      Reference: agent/memory/agent_architecture_shape_2026-05-06.md
+      and AGENTS.md "Architectural conventions" section.
+    severity: ERROR
+    languages: [json]
+    paths:
+      include:
+        - "packages/**/package.json"
+      exclude:
+        - "**/node_modules/**"
+        - "**/dist/**"
+    patterns:
+      - pattern: |
+          {
+            ...,
+            "name": "@chiefaia/$NAME",
+            ...
+          }
+      - pattern-not: |
+          {
+            ...,
+            "private": true,
+            ...
+          }
+
+  # ─── Option E shape — no env-var-based CAIA path construction ──────────
+  # Constructing a CAIA path from process.env.HOME / os.homedir() bypasses
+  # the parameterised constructor and hard-codes the runtime to the
+  # operator's machine layout. The agent must accept a corpusRoot (or
+  # equivalent) as a constructor parameter with a CAIA default; runtime
+  # path-derivation is the orchestrator's job, not the agent's.
+  - id: caia-option-e-no-env-home-caia-path
+    message: |
+      Option E (CAIA-Bonded Skeleton, standing rule 2026-05-06):
+      constructing a CAIA path from `process.env.HOME` / `os.homedir()`
+      hard-codes the runtime to the operator's machine layout and bypasses
+      the parameterised-constructor contract.
+
+      Fix: accept the path as a constructor parameter with a CAIA default,
+      e.g.:
+          constructor(opts: { corpusRoot?: string } = {}) {
+            this.corpusRoot = opts.corpusRoot
+              ?? '~/Documents/projects/caia/agent/memory';
+          }
+      The runtime resolution to absolute path lives in the orchestrator
+      that constructs the agent, not in the agent itself.
+
+      Reference: agent/memory/agent_architecture_shape_2026-05-06.md gate 2
+      and AGENTS.md "Architectural conventions" section.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      include:
+        - "packages/*/src/**/*.ts"
+        - "packages/*/src/**/*.tsx"
+      exclude:
+        - "**/*.test.ts"
+        - "**/*.spec.ts"
+        - "**/__fixtures__/**"
+        - "**/__tests__/**"
+        - "**/node_modules/**"
+        - "**/dist/**"
+    pattern-either:
+      - pattern-regex: 'process\.env\.HOME\s*\+\s*["''`]/Documents/projects/caia'
+      - pattern-regex: 'os\.homedir\(\)\s*\+\s*["''`]/Documents/projects/caia'
+      - pattern-regex: 'homedir\(\)\s*\+\s*["''`]/Documents/projects/caia'
+      - pattern-regex: 'join\([^)]*(?:process\.env\.HOME|homedir\(\))[^)]*["''`]Documents["''`]\s*,\s*["''`]projects["''`]\s*,\s*["''`]caia'
+
+  # ─── Option E shape — no hardcoded CAIA path literals in agent code ────
+  # CAIA-specific path literals (~/Documents/projects/caia/..., absolute
+  # /Users/.../caia/agent/memory, .caia/, agent/memory/, etc.) embedded in
+  # agent source files outside of constructor-parameter defaults bypass
+  # the parameterised contract. Constructor defaults are allowed; usage
+  # inside function bodies is not.
+  - id: caia-option-e-no-hardcoded-caia-path-literal
+    message: |
+      Option E (CAIA-Bonded Skeleton, standing rule 2026-05-06):
+      hard-coded CAIA path literal in package source. The standing rule
+      requires every CAIA-specific path/topic/registry to be a constructor
+      parameter with a CAIA default — NOT a literal sprinkled through
+      function bodies.
+
+      Allowed: literal as a constructor-parameter default value, e.g.
+          constructor(public corpusRoot: string =
+            '~/Documents/projects/caia/agent/memory') {}
+      Forbidden: literal anywhere else (function body, top-level constant
+      consumed implicitly, helper module, etc.).
+
+      Fix: hoist the literal up to a constructor parameter default and
+      thread it through. Tests inject a fixture corpus; production injects
+      the CAIA default.
+
+      Reference: agent/memory/agent_architecture_shape_2026-05-06.md gate 2-3
+      and AGENTS.md "Architectural conventions" section.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      include:
+        - "packages/*/src/**/*.ts"
+        - "packages/*/src/**/*.tsx"
+      exclude:
+        - "**/*.test.ts"
+        - "**/*.spec.ts"
+        - "**/__fixtures__/**"
+        - "**/__tests__/**"
+        - "**/node_modules/**"
+        - "**/dist/**"
+        # Constructor-parameter defaults are allowed, but semgrep generic
+        # mode can't structurally distinguish; we exclude obvious infra
+        # packages where these literals legitimately live as resolved
+        # absolute paths in CLI / orchestrator entry-points.
+        - "packages/system-prompt-block/**"
+    pattern-either:
+      - pattern-regex: '["''`]~?/Documents/projects/caia/[^"''`]+["''`]'
+      - pattern-regex: '["''`]/Users/[^/"''`]+/Documents/projects/caia/[^"''`]+["''`]'
