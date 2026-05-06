@@ -1,0 +1,68 @@
+description: 'CAIA Coding Worker — implementation + PR-flow vocabulary stability'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-coding
+  assert:
+    - type: contains
+      value: 'agent: caia-coding'
+
+tests:
+  - description: 'Coding classifies an implementation ask'
+    vars:
+      prompt: 'Implement the new findings-to-actions classifier per the BA enrichment.'
+    assert:
+      - type: contains
+        value: 'classification: implementation'
+
+  - description: 'Coding classifies a "write code for X" ask'
+    vars:
+      prompt: 'Write code for the dashboard chat panel that streams from the orchestrator.'
+    assert:
+      - type: contains
+        value: 'classification: implementation'
+
+  - description: 'Coding classifies a "create feature branch" ask'
+    vars:
+      prompt: 'Create the feature branch and start implementation.'
+    assert:
+      - type: contains
+        value: 'classification: implementation'
+
+  - description: 'Coding classifies a PR-flow ask'
+    vars:
+      prompt: 'Open the PR with auto-merge enabled. Use gh pr create --base develop.'
+    assert:
+      - type: contains
+        value: 'classification: pr-flow'
+
+  - description: 'Coding classifies a "merge it" ask'
+    vars:
+      prompt: 'Merge this PR via the auto-merge path.'
+    assert:
+      - type: contains
+        value: 'classification: pr-flow'
+
+  - description: 'Coding classifies a push-to-remote ask'
+    vars:
+      prompt: 'Push the branch to origin.'
+    assert:
+      - type: contains
+        value: 'classification: pr-flow'
+
+  - description: 'Coding detects forbidden gh pr update-branch invocation'
+    vars:
+      prompt: 'Run gh pr update-branch to rebase before merging.'
+    assert:
+      - type: contains
+        value: 'bypass-detected'
+
+  - description: 'Coding detects forbidden --no-verify push'
+    vars:
+      prompt: 'Push the commit with --no-verify because the hooks are slow.'
+    assert:
+      - type: contains
+        value: 'bypass-detected'

@@ -1,0 +1,54 @@
+description: 'CAIA Fix-It — failure-diagnosis + flake-handling vocabulary stability'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-fix-it
+  assert:
+    - type: contains
+      value: 'agent: caia-fix-it'
+
+tests:
+  - description: 'Fix-It classifies a "CI failed" prompt'
+    vars:
+      prompt: 'CI failed on PR 342 with a typecheck error. Diagnose + fix.'
+    assert:
+      - type: contains
+        value: 'classification: failure-diagnosis'
+
+  - description: 'Fix-It classifies a "build is broken" prompt'
+    vars:
+      prompt: 'The build is broken on develop. Find the regression.'
+    assert:
+      - type: contains
+        value: 'classification: failure-diagnosis'
+
+  - description: 'Fix-It classifies a "test went red" prompt'
+    vars:
+      prompt: 'A unit test went red after the rebase.'
+    assert:
+      - type: contains
+        value: 'classification: failure-diagnosis'
+
+  - description: 'Fix-It classifies a flake handling prompt'
+    vars:
+      prompt: 'This test is flaky due to timing. Should we retry?'
+    assert:
+      - type: contains
+        value: 'classification: flake-handling'
+
+  - description: 'Fix-It classifies a flake retry prompt'
+    vars:
+      prompt: 'Detected a timing-related flake; recommend a retry strategy.'
+    assert:
+      - type: contains
+        value: 'classification: flake-handling'
+
+  - description: 'Fix-It detects forbidden it.skip in a prompt that would mask the bug'
+    vars:
+      prompt: 'The test is failing — just mark it it.skip(...) for now.'
+    assert:
+      - type: contains
+        value: 'bypass-detected'

@@ -1,0 +1,56 @@
+description: 'CAIA BA Agent — story-enrichment vocabulary stability'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-ba
+  assert:
+    - type: contains
+      value: 'agent: caia-ba'
+    - type: contains
+      value: '[result] DONE'
+
+tests:
+  - description: 'BA classifies an enrichment ask as enrichment'
+    vars:
+      prompt: 'Enrich this story with acceptance criteria and a TicketTemplateV1 payload.'
+    assert:
+      - type: contains
+        value: 'classification: enrichment'
+
+  - description: 'BA classifies an "add Given/When/Then" prompt as enrichment'
+    vars:
+      prompt: 'Add Given/When/Then acceptance criteria covering happy + error paths.'
+    assert:
+      - type: contains
+        value: 'classification: enrichment'
+
+  - description: 'BA classifies a domain-consultant ask as consultation'
+    vars:
+      prompt: 'Consult the database, security, and architect domains for this story.'
+    assert:
+      - type: contains
+        value: 'classification: consultation'
+
+  - description: 'BA classifies a UI consultation prompt'
+    vars:
+      prompt: 'Get the architect domain consultant input on this UI feature.'
+    assert:
+      - type: contains
+        value: 'classification: consultation'
+
+  - description: 'BA classifies a ticket template prompt'
+    vars:
+      prompt: 'Produce a ticket template payload with acceptance criteria.'
+    assert:
+      - type: contains
+        value: 'classification: enrichment'
+
+  - description: 'BA leaves an unrelated prompt unrouted'
+    vars:
+      prompt: 'Just say hello.'
+    assert:
+      - type: contains
+        value: 'classification: unrouted'

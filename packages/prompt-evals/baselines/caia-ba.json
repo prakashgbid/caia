@@ -1,0 +1,7 @@
+{
+  "agent": "caia-ba",
+  "passRate": 1,
+  "totalTests": 6,
+  "recordedAt": "2026-05-06T00:36:29.791Z",
+  "regressionTolerance": 0.05
+}

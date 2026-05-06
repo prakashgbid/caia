@@ -1,0 +1,54 @@
+description: 'CAIA Mentor — lesson-capture vocabulary stability'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-mentor
+  assert:
+    - type: contains
+      value: 'agent: caia-mentor'
+
+tests:
+  - description: 'Mentor classifies a "capture this lesson" prompt'
+    vars:
+      prompt: 'Capture this lesson — root cause was prematurecompletion.'
+    assert:
+      - type: contains
+        value: 'classification: lesson-capture'
+
+  - description: 'Mentor classifies a "post-incident" prompt'
+    vars:
+      prompt: 'Post-incident analysis: what was the root cause and classification?'
+    assert:
+      - type: contains
+        value: 'classification: lesson-capture'
+
+  - description: 'Mentor classifies a classification-cluster ask'
+    vars:
+      prompt: 'Add this to the LackingInformation classification cluster.'
+    assert:
+      - type: contains
+        value: 'classification: lesson-capture'
+
+  - description: 'Mentor classifies a write-lesson ask'
+    vars:
+      prompt: 'Write a lesson markdown for this incident with frontmatter.'
+    assert:
+      - type: contains
+        value: 'classification: lesson-capture'
+
+  - description: 'Mentor classifies a root-cause ask'
+    vars:
+      prompt: 'What is the root cause classification of this regression?'
+    assert:
+      - type: contains
+        value: 'classification: lesson-capture'
+
+  - description: 'Mentor leaves an unrelated prompt unrouted'
+    vars:
+      prompt: 'How is the weather today?'
+    assert:
+      - type: contains
+        value: 'classification: unrouted'

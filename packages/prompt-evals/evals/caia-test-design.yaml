@@ -1,0 +1,47 @@
+description: 'CAIA Test Designer — test-plan-design vocabulary stability'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-test-design
+  assert:
+    - type: contains
+      value: 'agent: caia-test-design'
+
+tests:
+  - description: 'Test Designer classifies a "design test plan" prompt'
+    vars:
+      prompt: 'Design a test plan for the new authentication endpoint.'
+    assert:
+      - type: contains
+        value: 'classification: plan-design'
+
+  - description: 'Test Designer classifies an integration-test ask'
+    vars:
+      prompt: 'List the integration tests we need for the new prompt journey API.'
+    assert:
+      - type: contains
+        value: 'classification: plan-design'
+
+  - description: 'Test Designer classifies an e2e ask'
+    vars:
+      prompt: 'What e2e Playwright tests should cover the dashboard chat panel?'
+    assert:
+      - type: contains
+        value: 'classification: plan-design'
+
+  - description: 'Test Designer classifies an adversarial-injection ask'
+    vars:
+      prompt: 'Design adversarial-injection tests for the new MCP tool surface.'
+    assert:
+      - type: contains
+        value: 'classification: plan-design'
+
+  - description: 'Test Designer classifies a unit-test enumeration ask'
+    vars:
+      prompt: 'Enumerate the unit tests needed for the new findings-to-actions classifier.'
+    assert:
+      - type: contains
+        value: 'classification: plan-design'

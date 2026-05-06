@@ -1,0 +1,80 @@
+# Promptfoo eval suite for the CAIA Product Owner subagent.
+#
+# Tests the prompt-routing logic — given a canonical operator prompt,
+# the local provider should classify it into one of the PO-specific
+# categories ("decomposition", "classification") and surface that in
+# the synthesised output. Failures here indicate the prompt vocabulary
+# the PO Agent expects has drifted, which is worth a CI signal.
+
+description: 'CAIA PO Agent — prompt routing + decomposition vocabulary stability'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-po
+  assert:
+    - type: contains
+      value: 'agent: caia-po'
+    - type: contains
+      value: '[result] DONE'
+    - type: javascript
+      value: 'output.length > 50 && output.length < 2000'
+
+tests:
+  - description: 'PO classifies a "build a new dashboard" prompt as decomposition'
+    vars:
+      prompt: 'Decompose into stories: build a new operator dashboard with chat panel, real-time event feed, and prompt journey visualizer.'
+    assert:
+      - type: contains
+        value: 'classification: decomposition'
+
+  - description: 'PO classifies a "decompose feature X into stories" prompt'
+    vars:
+      prompt: 'Decompose this feature into Initiative -> Epic -> Story -> Task hierarchy: SSO support for Google Workspace.'
+    assert:
+      - type: contains
+        value: 'classification: decomposition'
+
+  - description: 'PO classifies a "split this epic" prompt'
+    vars:
+      prompt: 'Split this epic into stories and tasks for the upcoming sprint.'
+    assert:
+      - type: contains
+        value: 'classification: decomposition'
+
+  - description: 'PO classifies a "classify this prompt domain" request'
+    vars:
+      prompt: 'Classify this prompt domain into our 9-axis taxonomy.'
+    assert:
+      - type: contains
+        value: 'classification: classification'
+
+  - description: 'PO classifies a "what taxonomy bucket" request'
+    vars:
+      prompt: 'What taxonomy bucket should this prompt land in?'
+    assert:
+      - type: contains
+        value: 'classification: classification'
+
+  - description: 'PO leaves a generic question unrouted'
+    vars:
+      prompt: 'Tell me about the CAIA architecture.'
+    assert:
+      - type: contains
+        value: 'classification: unrouted'
+
+  - description: 'PO output reports a positive promptLength'
+    vars:
+      prompt: 'Decompose: add login.'
+    assert:
+      - type: javascript
+        value: 'output.includes("promptLength: ") && /promptLength: \d+/.test(output)'
+
+  - description: 'PO synth output starts with `agent: caia-po`'
+    vars:
+      prompt: 'Decompose anything.'
+    assert:
+      - type: starts-with
+        value: 'agent: caia-po'
