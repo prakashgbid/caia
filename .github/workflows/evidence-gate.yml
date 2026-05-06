@@ -24,6 +24,12 @@ name: Evidence Gate
 # rule.
 #
 # Required-check propagation: see scripts/setup-branch-protection.sh.
+#
+# Doc-only PR fast-path: a `detect-changes` gate at the top short-circuits
+# all 7 downstream jobs when the PR touches only markdown/docs/memory/
+# changesets. Reference: velocity-acceleration-strategy-2026-05-06.md §1.2
+# (Tier 1.3), §A.4. Estimated savings: ~4-5 min per doc-only PR; further
+# 30-40% reduction in average per-PR Evidence Gate wall-time.
 
 on:
   pull_request:
@@ -45,9 +51,36 @@ env:
 
 jobs:
 
+  # ─── 0. detect-changes ────────────────────────────────────────────────
+  # Skip the 7 heavy gate jobs when the PR is doc-only. GitHub treats
+  # `if:`-skipped jobs as successful for required-status-check purposes,
+  # so branch protection still passes.
+  detect-changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!**/*.mdx'
+              - '!docs/**'
+              - '!agent/memory/**'
+              - '!AGENTS.md'
+              - '!CHANGELOG.md'
+              - '!.changeset/**'
+
   # ─── 1. typecheck ─────────────────────────────────────────────────────
   typecheck:
     name: typecheck
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +97,8 @@ jobs:
   # ─── 2. semgrep ───────────────────────────────────────────────────────
   semgrep:
     name: semgrep
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     container:
       image: returntocorp/semgrep:latest
@@ -82,6 +117,8 @@ jobs:
   # ─── 3. gitleaks ──────────────────────────────────────────────────────
   gitleaks:
     name: gitleaks
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +138,8 @@ jobs:
   # ─── 4. bundle-size ───────────────────────────────────────────────────
   bundle-size:
     name: bundle-size
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -119,6 +158,8 @@ jobs:
   # ─── 5. lighthouse (warn-only day-1) ─────────────────────────────────
   lighthouse:
     name: lighthouse
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true   # day-1 warn-only; promote to blocking next cycle
     steps:
@@ -142,6 +183,8 @@ jobs:
   # ─── 6. axe a11y (warn-only day-1) ───────────────────────────────────
   axe:
     name: axe
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true   # day-1 warn-only; promote to blocking next cycle
     steps:
@@ -170,6 +213,8 @@ jobs:
   # ─── 7. visual regression (warn-only day-1) ──────────────────────────
   visual:
     name: visual
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true   # day-1 warn-only; promote to blocking next cycle
     steps:
