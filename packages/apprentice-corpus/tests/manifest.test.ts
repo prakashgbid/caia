@@ -59,7 +59,8 @@ const baseInputs = (outputDir: string) => ({
   warnings: ['langfuse disabled'],
   configHash: hashConfig('{"memoryRoot":"/x"}'),
   generatedAt: '2026-05-06T00:00:00Z',
-  elapsedMs: 1234
+  elapsedMs: 1234,
+  holdoutIds: []
 });
 
 describe('buildManifest', () => {

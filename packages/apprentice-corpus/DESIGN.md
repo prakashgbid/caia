@@ -226,9 +226,12 @@ Final layout per run:
   "redactedSpansHistogram": {"email": 12, "secret": 0, "path": 240},
   "qualityHistogram": {"0.0-0.2": 0, "0.2-0.4": 0, "0.4-0.6": 800, "0.6-0.8": 760, "0.8-1.0": 260},
   "configSha256": "<hex>",
-  "warnings": []
+  "warnings": [],
+  "holdout": ["<sha256-id>", "<sha256-id>", "..."]
 }
 ```
+
+The `holdout` array contains the stable ids of curated pairs that were excluded from `samples.jsonl` and reserved as a deterministic test set for Phase 1's `apprentice-eval` harness. Sampling is seeded by `holdoutSeed` (config; default 42) and the fraction by `holdoutFraction` (default 0.05 — 5%); reruns of the same config produce identical holdouts. Pair ordering inside the input is irrelevant — we sort by the pair's own stable id (sha256) before sampling.
 
 The manifest is the canonical artifact for Phase 1 eval harness + Phase 4 retrainer cron's "is there enough new data to retrain?" check.
 

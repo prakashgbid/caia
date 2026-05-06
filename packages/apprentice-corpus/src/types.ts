@@ -203,6 +203,8 @@ export interface CorpusManifest {
   qualityHistogram: Record<string, number>;
   configSha256: string;
   warnings: string[];
+  /** Stable ids of pairs held out from training (excluded from samples.jsonl). */
+  holdout: string[];
 }
 
 /** Reason a candidate was dropped from the final corpus. */
