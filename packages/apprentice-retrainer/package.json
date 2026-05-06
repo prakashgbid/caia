@@ -1,0 +1,48 @@
+{
+  "name": "@chiefaia/apprentice-retrainer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apprentice Phase 4 — continuous retraining cron. Weekly Saturday 02:00 + threshold-trigger (≥500 new pairs OR ≥7 days). Orchestrates corpus → train → eval → serving end-to-end; auto-promotes-to-canary on winRate > 0.6; operator-prompted full promotion if canary holds 3 days. Mac LaunchAgent driver. Single-instance flock locking; persisted state file; markdown operator digest. Subscription-only LLM cost; zero remote API calls. Ships in Option E shape — private workspace package, parameterised constructor with CAIA defaults, fixture-tested with mocked pipelines, never published.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-apprentice-retrainer": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "plists",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/apprentice-serving": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

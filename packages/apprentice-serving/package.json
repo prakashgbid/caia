@@ -1,0 +1,46 @@
+{
+  "name": "@chiefaia/apprentice-serving",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apprentice Phase 3 — adapter swapping + serving. Loads Phase 2 adapter directories into Ollama via subprocess `ollama create`, tracks each adapter's lifecycle state (registered → shadow → canary → production with archived/rejected terminals) in a persisted JSON registry, and writes a canary-routing config that downstream agents read at inference time. Idempotent state transitions; atomic registry persistence (write-and-rename); deterministic request-id-hashed canary routing. Phase 3 ships the registry + writer + reader; Phase 4 retrainer drives state transitions from above. Mac-local Ollama; zero remote LLM cost. Ships in Option E shape — private workspace package, parameterised constructor with CAIA defaults, fixture-tested with mocked Ollama, never published.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-apprentice-serving": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "plists",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

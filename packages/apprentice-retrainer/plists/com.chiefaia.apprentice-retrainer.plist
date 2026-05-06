@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Apprentice Phase 4 — continuous retraining cron LaunchAgent.
+
+  This plist is committed with PLACEHOLDER values per
+  `feedback_monorepo_regression_gate_ergonomics.md` rule 2 (LaunchAgent
+  plists committed to source MUST use install-time-substituted
+  placeholders). The install script `scripts/install-apprentice-retrainer.sh`
+  fills these in from the operator's environment.
+
+  Schedule: Saturday 02:00 local (off-hours per directive).
+  Phase 4 ships ENABLED — this is the activation point for the full
+  Apprentice loop. The install script verifies upstream packages are
+  built before activating.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.chiefaia.apprentice-retrainer</string>
+
+    <key>Disabled</key>
+    <false/>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>CURRENT_NODE_BIN</string>
+        <string>CURRENT_PKG_DIR/dist/cli.js</string>
+        <string>run</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>CURRENT_PKG_DIR</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>CURRENT_HOME</string>
+        <key>PATH</key>
+        <string>CURRENT_PATH</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>6</integer>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>CURRENT_HOME/Library/Logs/chiefaia/apprentice-retrainer.log</string>
+    <key>StandardErrorPath</key>
+    <string>CURRENT_HOME/Library/Logs/chiefaia/apprentice-retrainer.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>ThrottleInterval</key>
+    <integer>3600</integer>
+</dict>
+</plist>
