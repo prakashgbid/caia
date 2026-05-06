@@ -584,6 +584,22 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
+  packages/apprentice-retrainer:
+    dependencies:
+      '@chiefaia/apprentice-serving':
+        specifier: workspace:*
+        version: link:../apprentice-serving
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/apprentice-serving:
     devDependencies:
       '@types/node':
