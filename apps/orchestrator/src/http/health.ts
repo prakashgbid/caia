@@ -84,7 +84,10 @@ export function createHealthServer(
       }
 
       if (method === 'GET' && pathname === '/status') {
-        jsonResponse(res, 200, conductor.status());
+        const state = conductor.status();
+        // VAL-RESTART-1777591616: cap events to prevent large JSON serialization from
+        // blocking the event loop and timing out the dashboard under high event volume.
+        jsonResponse(res, 200, { ...state, events: state.events.slice(-100) });
         return;
       }
 
