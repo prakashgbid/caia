@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Apprentice Phase 3 — placeholder LaunchAgent.
+
+  Phase 3 itself doesn't need a scheduled task — `ApprenticeServing` is
+  driven on demand by Phase 4's retrainer cron. This plist is kept as a
+  forward-compat placeholder for an eventual canary-routing config
+  watchdog (e.g. periodic `ollama list` reconciliation against registry
+  state). Ships DISABLED. Phase 4's install script is the activation
+  point for the actual cron.
+
+  Placeholders use the leg-3 standing-rule pattern from
+  `feedback_monorepo_regression_gate_ergonomics.md`: install-time-
+  substituted CURRENT_NODE_BIN / CURRENT_PKG_DIR / CURRENT_HOME / CURRENT_PATH.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.chiefaia.apprentice-serving-canary-router</string>
+
+    <key>Disabled</key>
+    <true/>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>CURRENT_NODE_BIN</string>
+        <string>CURRENT_PKG_DIR/dist/cli.js</string>
+        <string>list</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>CURRENT_PKG_DIR</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>CURRENT_HOME</string>
+        <key>PATH</key>
+        <string>CURRENT_PATH</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>CURRENT_HOME/Library/Logs/chiefaia/apprentice-serving.log</string>
+    <key>StandardErrorPath</key>
+    <string>CURRENT_HOME/Library/Logs/chiefaia/apprentice-serving.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>ThrottleInterval</key>
+    <integer>3600</integer>
+</dict>
+</plist>
