@@ -44,6 +44,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: '📋',
     defaultExpanded: true,
     leaves: [
+      { path: '/chat', label: 'Chat', icon: '💭', tabKey: 'chat' },
       { path: '/prompts', label: 'Prompts', icon: '💬', tabKey: 'prompts' },
       { path: '/submit', label: 'Submit', icon: '➕', tabKey: 'submit' },
       { path: '/queue', label: 'Queue', icon: '🎯', tabKey: 'queue' },
