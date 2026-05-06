@@ -30,6 +30,7 @@ rules:
         - "**/*.spec.ts"
         - "**/__visual_baselines__/**"
         - ".semgrep/**"
+        - "AGENTS.md"
         - "docs/evidence-gate.md"
         - "docs/capability-broker.md"
         - "docs/mcp-security.md"
@@ -60,6 +61,7 @@ rules:
         - "**/*.spec.ts"
         - "scripts/caia-flow.sh"          # the wrapper itself enforces the rule
         - ".semgrep/**"
+        - "AGENTS.md"
         - "docs/evidence-gate.md"
         - "docs/git-flow.md"
         - "docs/capability-broker.md"
