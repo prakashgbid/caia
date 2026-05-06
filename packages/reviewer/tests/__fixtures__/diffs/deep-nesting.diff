@@ -1,0 +1,21 @@
+diff --git a/packages/example/src/nested.ts b/packages/example/src/nested.ts
+new file mode 100644
+index 0000000..7777777
+--- /dev/null
++++ b/packages/example/src/nested.ts
+@@ -0,0 +1,15 @@
++/** Deeply nested. */
++export function nested(x: number): number {
++  if (x > 0) {
++    if (x > 1) {
++      if (x > 2) {
++        if (x > 3) {
++          if (x > 4) {
++            return x * 2;
++          }
++        }
++      }
++    }
++  }
++  return 0;
++}

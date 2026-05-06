@@ -1,0 +1,15 @@
+diff --git a/packages/example/src/clean.ts b/packages/example/src/clean.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/packages/example/src/clean.ts
+@@ -0,0 +1,9 @@
++/**
++ * Documented helper for the example package.
++ */
++export function describeUser(name: string): string {
++  if (name.length === 0) {
++    return 'unnamed';
++  }
++  return `user:${name}`;
++}

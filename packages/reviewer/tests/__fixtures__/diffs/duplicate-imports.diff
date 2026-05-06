@@ -1,0 +1,11 @@
+diff --git a/packages/example/src/imports.ts b/packages/example/src/imports.ts
+new file mode 100644
+index 0000000..6666666
+--- /dev/null
++++ b/packages/example/src/imports.ts
+@@ -0,0 +1,5 @@
++import { foo } from 'node:fs';
++import { bar } from 'node:fs';
++
++/** Tester. */
++export function go(): void { foo(); bar(); }

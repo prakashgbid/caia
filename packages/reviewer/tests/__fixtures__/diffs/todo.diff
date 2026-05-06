@@ -1,0 +1,11 @@
+diff --git a/packages/example/src/todos.ts b/packages/example/src/todos.ts
+new file mode 100644
+index 0000000..8888888
+--- /dev/null
++++ b/packages/example/src/todos.ts
+@@ -0,0 +1,5 @@
++/** todos. */
++export function go(): void {
++  // TODO: handle the edge case
++  // FIXME(CAIA-1234): wired up
++}
