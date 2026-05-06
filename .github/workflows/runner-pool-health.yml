@@ -1,0 +1,61 @@
+name: runner-pool-health
+
+# Health check for the self-hosted GitHub Actions runner pool on stolution.
+#
+# Pings each runner every 15 minutes (and on workflow_dispatch) by claiming
+# a job slot from the pool. Three consecutive failures should be treated as
+# an alarm — the orchestrator's Steward Gatekeeper consumes this workflow's
+# status and proposes a fallback PR (re-pointing affected workflows to
+# `ubuntu-latest`) on persistent failure.
+#
+# Reference: velocity-acceleration-strategy-2026-05-06.md §A.2 (Story 1.1-4).
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runner-pool-health
+  cancel-in-progress: false
+
+jobs:
+  ping-stolution-runners:
+    name: ping-stolution-runners
+    runs-on: [self-hosted, stolution, caia, linux]
+    timeout-minutes: 2
+    steps:
+      - name: Identify runner
+        run: |
+          echo "runner alive on host: $(hostname)"
+          echo "runner pid: $$"
+          echo "runner uid: $(id -u)"
+
+      - name: Disk health
+        run: |
+          df -h /
+          USE_PCT=$(df --output=pcent / | tail -1 | tr -d ' %')
+          echo "disk use: ${USE_PCT}%"
+          if [ "$USE_PCT" -gt 90 ]; then
+            echo "::error::disk at ${USE_PCT}% (threshold 90%) — schedule cleanup"
+            exit 1
+          fi
+          if [ "$USE_PCT" -gt 85 ]; then
+            echo "::warning::disk at ${USE_PCT}% (warning threshold 85%)"
+          fi
+
+      - name: Memory + load
+        run: |
+          free -h
+          uptime
+
+      - name: Docker reachability
+        run: |
+          if command -v docker >/dev/null 2>&1; then
+            docker version --format '{{.Server.Version}}' || echo "docker unreachable"
+          else
+            echo "docker not installed"
+          fi

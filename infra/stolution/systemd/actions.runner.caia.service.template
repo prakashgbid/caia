@@ -1,0 +1,69 @@
+# systemd unit template for an ephemeral GitHub Actions runner.
+#
+# One copy of this file is installed per runner instance, with @N expanded
+# at install time (see scripts/stolution/install-runner-pool.sh). The
+# install script renders this template into:
+#
+#   /etc/systemd/system/actions.runner.caia-1.service
+#   /etc/systemd/system/actions.runner.caia-2.service
+#   ...
+#   /etc/systemd/system/actions.runner.caia-N.service
+#
+# Reference: velocity-acceleration-strategy-2026-05-06.md §A.2 (Story 1.1-2).
+#
+# Ephemeral semantics:
+#   - run.sh --once exits cleanly after a single job
+#   - Restart=always + RestartSec=5 has systemd respawn the runner with a
+#     freshly-cleaned working tree
+#   - Each runner has its own _work directory under
+#     /home/s903/actions-runner-N/, avoiding cross-runner collision
+#
+# Labels: self-hosted, stolution, caia, linux
+
+[Unit]
+Description=GitHub Actions Runner caia-__N__
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=s903
+WorkingDirectory=/home/s903/actions-runner-__N__
+
+# Each runner exits after one job (--once). systemd respawns with a clean
+# working tree. RestartSec gives the runner registration token time to
+# refresh between cycles.
+ExecStart=/home/s903/actions-runner-__N__/run.sh --once
+Restart=always
+RestartSec=5
+
+# Resource isolation. With 16 runners on 72 cores + 251 GB RAM, each
+# runner gets generous limits but cannot starve the host.
+CPUQuota=400%
+MemoryLimit=16G
+TasksMax=4096
+
+# Environment. RUNNER_NAME is set so the runner identifies itself in
+# the GitHub Actions UI; RUNNER_LABELS is read by run.sh on first
+# registration but is informational once the runner is registered.
+Environment="RUNNER_NAME=caia-stolution-__N__"
+Environment="RUNNER_LABELS=self-hosted,stolution,caia,linux"
+Environment="RUNNER_ALLOW_RUNASROOT=0"
+
+# Hardening
+ProtectSystem=full
+ProtectHome=false
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictRealtime=true
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=actions-runner-caia-__N__
+
+[Install]
+WantedBy=multi-user.target
