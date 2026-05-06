@@ -1,0 +1,36 @@
+{
+  "name": "@chiefaia/guardrails-validator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Layer-2 input/output validation for agent LLM calls. Pure-TS, all-local, no API keys, no Python bridge. Composable validator profiles (untrusted-user-input, inter-agent, pre-publish, tool-call-args). Catches PII / secrets / prompt injection / system-prompt leakage at the agent-prompt boundary BEFORE the LLM call and at the response boundary BEFORE downstream consumption. Layered behind capability-broker and ABOVE tool-output-sanitizer in the 4-layer safety stack.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "DESIGN.md", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT"
+}
