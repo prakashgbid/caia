@@ -1,0 +1,42 @@
+{
+  "name": "@chiefaia/claude-subagents",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CAIA-flavoured Claude Code subagent definitions + installer. Ships canonical .md system prompts for the BA / EA / Validator / Test-Design / Coding / Fix-It / Steward / Mentor / Curator / PO agent roles, and an installer CLI that copies them into ~/.claude/agents/ so any spawned `claude -p` worker (or interactive session) can delegate to them via the Task tool. Wave-1.1 of the Enterprise Wave 1 campaign.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-claude-subagents": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "agents"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-agents.mjs",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  }
+}
