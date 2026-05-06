@@ -102,7 +102,7 @@ export class CriticAgent {
           } catch (e) {
             // Defensive: detector errors must not crash the agent. Log to
             // stderr so the orchestrator can pick it up.
-            console.error(`detector ${detector.id} threw on ${hunk.file}:`, (e as Error).message);
+            console.error('detector %s threw on %s: %s', detector.id, hunk.file, (e as Error).message);
           }
         }
       }
