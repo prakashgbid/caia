@@ -1,0 +1,793 @@
+description: 'CAIA canonical AI/ML eval suite — 100 prompts spanning all task categories from routing-config.ts. Owned by @chiefaia/aiml-architect; audited by `caia-aiml-architect eval-audit`. Coverage gate: ≥3 prompts per task category. Stale-baseline gate: 90 days.'
+version: 1
+maintainer: 'aiml-architect'
+
+defaultTest:
+  vars:
+    agent: caia-canonical
+  assert:
+    - type: javascript
+      value: 'output.length > 20 && output.length < 8000'
+
+tests:
+  # ─── domain-classification (5 prompts) ─────────────────────────────
+  - description: 'domain-classification: classify auth-domain request'
+    vars:
+      taskCategory: domain-classification
+      prompt: 'Add OAuth2 PKCE login to the Hono service.'
+    assert:
+      - type: contains
+        value: 'auth'
+
+  - description: 'domain-classification: classify ui-domain request'
+    vars:
+      taskCategory: domain-classification
+      prompt: 'Build a button component using Tailwind utilities.'
+    assert:
+      - type: contains
+        value: 'ui'
+
+  - description: 'domain-classification: classify api-domain request'
+    vars:
+      taskCategory: domain-classification
+      prompt: 'Expose a GET /health endpoint that returns 200 OK.'
+    assert:
+      - type: contains
+        value: 'api'
+
+  - description: 'domain-classification: classify data-domain request'
+    vars:
+      taskCategory: domain-classification
+      prompt: 'Add a Drizzle migration for the user_settings table.'
+    assert:
+      - type: regex
+        value: 'data|database|migration'
+
+  - description: 'domain-classification: classify infra-domain request'
+    vars:
+      taskCategory: domain-classification
+      prompt: 'Configure GitHub Actions to run Evidence Gate on every PR.'
+    assert:
+      - type: regex
+        value: 'infra|devops|ci'
+
+  # ─── nature-classification (3 prompts) ─────────────────────────────
+  - description: 'nature-classification: feature'
+    vars:
+      taskCategory: nature-classification
+      prompt: 'Add a dashboard widget that shows agent throughput per hour.'
+    assert:
+      - type: contains
+        value: 'feature'
+
+  - description: 'nature-classification: bug'
+    vars:
+      taskCategory: nature-classification
+      prompt: 'The /llm/route endpoint 500s when taskType is unknown. Fix it.'
+    assert:
+      - type: regex
+        value: 'bug|fix'
+
+  - description: 'nature-classification: refactor'
+    vars:
+      taskCategory: nature-classification
+      prompt: 'Extract the OllamaAdapter and ClaudeAdapter into separate files.'
+    assert:
+      - type: contains
+        value: 'refactor'
+
+  # ─── embedding-generation (3 prompts) ──────────────────────────────
+  - description: 'embedding-generation: short text'
+    vars:
+      taskCategory: embedding-generation
+      prompt: 'Compute embedding for: hello world.'
+    assert:
+      - type: javascript
+        value: 'output !== null'
+
+  - description: 'embedding-generation: structured doc'
+    vars:
+      taskCategory: embedding-generation
+      prompt: 'Compute embedding for an Apprentice corpus manifest snippet.'
+    assert:
+      - type: javascript
+        value: 'output !== null'
+
+  - description: 'embedding-generation: multi-paragraph'
+    vars:
+      taskCategory: embedding-generation
+      prompt: 'Compute embedding for a 4-paragraph directive body.'
+    assert:
+      - type: javascript
+        value: 'output !== null'
+
+  # ─── dedup-check (3 prompts) ───────────────────────────────────────
+  - description: 'dedup-check: identical strings'
+    vars:
+      taskCategory: dedup-check
+      prompt: 'Are these duplicates? A: Build login. B: Build login.'
+    assert:
+      - type: regex
+        value: 'duplicate|same|yes'
+
+  - description: 'dedup-check: paraphrases'
+    vars:
+      taskCategory: dedup-check
+      prompt: 'Are these duplicates? A: Add OAuth login. B: Implement OAuth-based authentication.'
+    assert:
+      - type: regex
+        value: 'duplicate|similar'
+
+  - description: 'dedup-check: clearly different'
+    vars:
+      taskCategory: dedup-check
+      prompt: 'Are these duplicates? A: Add OAuth login. B: Optimise the dashboard query.'
+    assert:
+      - type: regex
+        value: 'different|not|no'
+
+  # ─── commit-message (4 prompts) ────────────────────────────────────
+  - description: 'commit-message: bug fix conventional commit'
+    vars:
+      taskCategory: commit-message
+      prompt: 'Diff: removes a stray semicolon in src/util.ts.'
+    assert:
+      - type: regex
+        value: '^fix(\(.*\))?:'
+
+  - description: 'commit-message: feature conventional commit'
+    vars:
+      taskCategory: commit-message
+      prompt: 'Diff: adds new endpoint /llm/route to apps/orchestrator.'
+    assert:
+      - type: regex
+        value: '^feat(\(.*\))?:'
+
+  - description: 'commit-message: docs change'
+    vars:
+      taskCategory: commit-message
+      prompt: 'Diff: updates README.md installation section.'
+    assert:
+      - type: regex
+        value: '^docs(\(.*\))?:'
+
+  - description: 'commit-message: refactor with scope'
+    vars:
+      taskCategory: commit-message
+      prompt: 'Diff: extracts UserService settings into settings.ts.'
+    assert:
+      - type: regex
+        value: '^refactor(\(.*\))?:'
+
+  # ─── pr-summary (3 prompts) ────────────────────────────────────────
+  - description: 'pr-summary: small bug fix'
+    vars:
+      taskCategory: pr-summary
+      prompt: 'PR #123 fixes a null-deref in the BFF; +3 -1.'
+    assert:
+      - type: regex
+        value: 'fix|null'
+
+  - description: 'pr-summary: large feature'
+    vars:
+      taskCategory: pr-summary
+      prompt: 'PR #200 adds Apprentice Phase 0 corpus aggregator; +3000 -50.'
+    assert:
+      - type: contains
+        value: 'corpus'
+
+  - description: 'pr-summary: refactor'
+    vars:
+      taskCategory: pr-summary
+      prompt: 'PR #305 extracts UserService into 4 modules; +400 -300.'
+    assert:
+      - type: regex
+        value: 'refactor|extract'
+
+  # ─── code-explanation (3 prompts) ──────────────────────────────────
+  - description: 'code-explanation: simple ts function'
+    vars:
+      taskCategory: code-explanation
+      prompt: 'function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }'
+    assert:
+      - type: regex
+        value: 'clamp|bound|range'
+
+  - description: 'code-explanation: react hook'
+    vars:
+      taskCategory: code-explanation
+      prompt: 'const [count, setCount] = useState(0);'
+    assert:
+      - type: regex
+        value: 'state|hook'
+
+  - description: 'code-explanation: regex'
+    vars:
+      taskCategory: code-explanation
+      prompt: 'const r = /^[a-z][a-z0-9-]*$/;'
+    assert:
+      - type: regex
+        value: 'regex|pattern|kebab'
+
+  # ─── story-enrichment (3 prompts) ──────────────────────────────────
+  - description: 'story-enrichment: add acceptance criteria'
+    vars:
+      taskCategory: story-enrichment
+      prompt: 'Story: Operator can view agent throughput per hour. Add ACs.'
+    assert:
+      - type: regex
+        value: 'acceptance|criteria|given|when'
+
+  - description: 'story-enrichment: add notes for OAuth story'
+    vars:
+      taskCategory: story-enrichment
+      prompt: 'Story: Add OAuth2 PKCE login. Add implementation notes.'
+    assert:
+      - type: contains
+        value: 'PKCE'
+
+  - description: 'story-enrichment: add notes for migration story'
+    vars:
+      taskCategory: story-enrichment
+      prompt: 'Story: Add user_settings table. Add migration notes.'
+    assert:
+      - type: regex
+        value: 'migration|drizzle|breakpoint'
+
+  # ─── test-generation-simple (3 prompts) ────────────────────────────
+  - description: 'test-generation-simple: unit test for clamp'
+    vars:
+      taskCategory: test-generation-simple
+      prompt: 'Generate vitest unit tests for clamp(n, min, max).'
+    assert:
+      - type: regex
+        value: 'describe|it|expect'
+
+  - description: 'test-generation-simple: unit test for parseDate'
+    vars:
+      taskCategory: test-generation-simple
+      prompt: 'Generate vitest tests for parseDate(input: string): Date | null.'
+    assert:
+      - type: regex
+        value: 'describe|toEqual|toBe'
+
+  - description: 'test-generation-simple: unit test for normalize'
+    vars:
+      taskCategory: test-generation-simple
+      prompt: 'Generate vitest tests for normalize(s: string): string.'
+    assert:
+      - type: regex
+        value: 'describe|it|expect'
+
+  # ─── code-implementation-simple (4 prompts) ────────────────────────
+  - description: 'code-implementation-simple: clamp function'
+    vars:
+      taskCategory: code-implementation-simple
+      prompt: 'Implement TS clamp(n, min, max) — ESM, no deps.'
+    assert:
+      - type: regex
+        value: 'export|function clamp'
+
+  - description: 'code-implementation-simple: kebab-case validator'
+    vars:
+      taskCategory: code-implementation-simple
+      prompt: 'Implement isKebabCase(s: string): boolean.'
+    assert:
+      - type: regex
+        value: '^export'
+
+  - description: 'code-implementation-simple: epoch helper'
+    vars:
+      taskCategory: code-implementation-simple
+      prompt: 'Implement epochSeconds(d: Date): number.'
+    assert:
+      - type: regex
+        value: 'getTime|epoch'
+
+  - description: 'code-implementation-simple: enum guard'
+    vars:
+      taskCategory: code-implementation-simple
+      prompt: 'Implement isProvider(x: unknown): x is "local" | "claude".'
+    assert:
+      - type: regex
+        value: 'is|typeof'
+
+  # ─── changelog-generation (3 prompts) ──────────────────────────────
+  - description: 'changelog-generation: from feat commits'
+    vars:
+      taskCategory: changelog-generation
+      prompt: 'Generate changelog from: feat(api): add /health, fix(bff): null-deref.'
+    assert:
+      - type: regex
+        value: 'add|fix'
+
+  - description: 'changelog-generation: empty release'
+    vars:
+      taskCategory: changelog-generation
+      prompt: 'Generate changelog from: docs(readme): typo fix.'
+    assert:
+      - type: regex
+        value: 'docs|typo'
+
+  - description: 'changelog-generation: multi-component'
+    vars:
+      taskCategory: changelog-generation
+      prompt: 'Generate changelog from: feat(orchestrator), feat(executor), feat(dashboard).'
+    assert:
+      - type: regex
+        value: 'orchestrator|executor|dashboard'
+
+  # ─── status-summarization (3 prompts) ──────────────────────────────
+  - description: 'status-summarization: weekly status'
+    vars:
+      taskCategory: status-summarization
+      prompt: 'Summarise: 25 PRs merged, 4 reports filed, 2 incidents resolved.'
+    assert:
+      - type: regex
+        value: 'PR|merged|reports|incident'
+
+  - description: 'status-summarization: project rollup'
+    vars:
+      taskCategory: status-summarization
+      prompt: 'Summarise: Apprentice Phase 0/1/2 done; Phase 3 in progress.'
+    assert:
+      - type: regex
+        value: 'apprentice|phase'
+
+  - description: 'status-summarization: incident summary'
+    vars:
+      taskCategory: status-summarization
+      prompt: 'Summarise: 2 incidents — both Drizzle multi-statement migrations, both resolved.'
+    assert:
+      - type: regex
+        value: 'drizzle|migration'
+
+  # ─── code-review-light (3 prompts) ─────────────────────────────────
+  - description: 'code-review-light: variable naming smell'
+    vars:
+      taskCategory: code-review-light
+      prompt: 'Review: const x = users.filter(y => y.a === b);'
+    assert:
+      - type: regex
+        value: 'naming|rename|x|y'
+
+  - description: 'code-review-light: missing type annotation'
+    vars:
+      taskCategory: code-review-light
+      prompt: 'Review: function foo(input) { return input + 1; }'
+    assert:
+      - type: regex
+        value: 'type|annotation|number'
+
+  - description: 'code-review-light: dead branch'
+    vars:
+      taskCategory: code-review-light
+      prompt: 'Review: if (false) { doSomething(); }'
+    assert:
+      - type: regex
+        value: 'dead|unreachable|never'
+
+  # ─── requirement-deduplication (3 prompts) ─────────────────────────
+  - description: 'requirement-deduplication: clear duplicates'
+    vars:
+      taskCategory: requirement-deduplication
+      prompt: 'Are these duplicates? A: User can log in. B: User can sign in.'
+    assert:
+      - type: regex
+        value: 'duplicate|similar'
+
+  - description: 'requirement-deduplication: distinct requirements'
+    vars:
+      taskCategory: requirement-deduplication
+      prompt: 'Are these duplicates? A: User can log in. B: User can update profile.'
+    assert:
+      - type: regex
+        value: 'different|distinct|not'
+
+  - description: 'requirement-deduplication: borderline'
+    vars:
+      taskCategory: requirement-deduplication
+      prompt: 'Are these duplicates? A: User can log in via OAuth. B: User can log in via email.'
+    assert:
+      - type: javascript
+        value: 'output.length > 0'
+
+  # ─── formal-reasoning (3 prompts) ──────────────────────────────────
+  - description: 'formal-reasoning: simple math'
+    vars:
+      taskCategory: formal-reasoning
+      prompt: 'If a*b = 12 and a+b = 7, what are a and b? Show steps.'
+    assert:
+      - type: regex
+        value: 'step|reason|3.*4|4.*3'
+
+  - description: 'formal-reasoning: logical syllogism'
+    vars:
+      taskCategory: formal-reasoning
+      prompt: 'All A are B. All B are C. Therefore? Show steps.'
+    assert:
+      - type: regex
+        value: 'A.*C|therefore'
+
+  - description: 'formal-reasoning: probability'
+    vars:
+      taskCategory: formal-reasoning
+      prompt: 'Coin flipped 3 times. Probability of all heads? Show steps.'
+    assert:
+      - type: regex
+        value: '1/8|0.125|12.5%'
+
+  # ─── hierarchy-decomposition-rough (3 prompts) ─────────────────────
+  - description: 'hierarchy-decomposition-rough: small initiative'
+    vars:
+      taskCategory: hierarchy-decomposition-rough
+      prompt: 'Decompose: Add user-facing settings page. To Initiative→Epic→Story.'
+    assert:
+      - type: regex
+        value: 'epic|story'
+
+  - description: 'hierarchy-decomposition-rough: medium initiative'
+    vars:
+      taskCategory: hierarchy-decomposition-rough
+      prompt: 'Decompose: Build the AI/ML Architect Agent. To Initiative→Epic→Story.'
+    assert:
+      - type: regex
+        value: 'epic|story|architect'
+
+  - description: 'hierarchy-decomposition-rough: technical refactor'
+    vars:
+      taskCategory: hierarchy-decomposition-rough
+      prompt: 'Decompose: Migrate from REST to gRPC. To Initiative→Epic→Story.'
+    assert:
+      - type: regex
+        value: 'epic|story|grpc'
+
+  # ─── po-decomposer-scope-detection (3 prompts) ─────────────────────
+  - description: 'po-decomposer-scope-detection: initiative scope'
+    vars:
+      taskCategory: po-decomposer-scope-detection
+      prompt: 'Classify scope: Build a self-perpetuating multi-agent campaign loop with operator oversight.'
+    assert:
+      - type: regex
+        value: 'initiative|epic'
+
+  - description: 'po-decomposer-scope-detection: story scope'
+    vars:
+      taskCategory: po-decomposer-scope-detection
+      prompt: 'Classify scope: Add /health endpoint to the orchestrator service.'
+    assert:
+      - type: regex
+        value: 'story|task'
+
+  - description: 'po-decomposer-scope-detection: subtask scope'
+    vars:
+      taskCategory: po-decomposer-scope-detection
+      prompt: 'Classify scope: Rename variable in src/util.ts.'
+    assert:
+      - type: regex
+        value: 'subtask|task'
+
+  # ─── po-decomposer-atomicity-classification (3 prompts) ────────────
+  - description: 'po-decomposer-atomicity-classification: atomic story'
+    vars:
+      taskCategory: po-decomposer-atomicity-classification
+      prompt: 'Is this atomic? Story: Add /health endpoint that returns 200 OK.'
+    assert:
+      - type: regex
+        value: 'atomic|yes|invest'
+
+  - description: 'po-decomposer-atomicity-classification: non-atomic story'
+    vars:
+      taskCategory: po-decomposer-atomicity-classification
+      prompt: 'Is this atomic? Story: Build entire authentication subsystem.'
+    assert:
+      - type: regex
+        value: 'not atomic|too large|decompose'
+
+  - description: 'po-decomposer-atomicity-classification: borderline'
+    vars:
+      taskCategory: po-decomposer-atomicity-classification
+      prompt: 'Is this atomic? Story: Add OAuth login + logout + session refresh.'
+    assert:
+      - type: regex
+        value: 'borderline|split'
+
+  # ─── po-decomposer-initiative (3 prompts) ──────────────────────────
+  - description: 'po-decomposer-initiative: simple multi-quarter'
+    vars:
+      taskCategory: po-decomposer-initiative
+      prompt: 'Decompose initiative: Build CAIA AI/ML platform. Into epics.'
+    assert:
+      - type: contains
+        value: 'epic'
+
+  - description: 'po-decomposer-initiative: technical platform'
+    vars:
+      taskCategory: po-decomposer-initiative
+      prompt: 'Decompose initiative: Build observability stack with Langfuse + Grafana. Into epics.'
+    assert:
+      - type: regex
+        value: 'epic|langfuse|grafana'
+
+  - description: 'po-decomposer-initiative: product launch'
+    vars:
+      taskCategory: po-decomposer-initiative
+      prompt: 'Decompose initiative: Productise CAIA as multi-tenant. Into epics.'
+    assert:
+      - type: regex
+        value: 'epic|tenant'
+
+  # ─── po-decomposer-epic (3 prompts) ────────────────────────────────
+  - description: 'po-decomposer-epic: feature epic'
+    vars:
+      taskCategory: po-decomposer-epic
+      prompt: 'Decompose epic: Apprentice loop coordination. Into modules.'
+    assert:
+      - type: regex
+        value: 'module|corpus|eval|train'
+
+  - description: 'po-decomposer-epic: tech epic'
+    vars:
+      taskCategory: po-decomposer-epic
+      prompt: 'Decompose epic: Frontend architect agent. Into modules.'
+    assert:
+      - type: regex
+        value: 'module|prompt|review'
+
+  - description: 'po-decomposer-epic: ops epic'
+    vars:
+      taskCategory: po-decomposer-epic
+      prompt: 'Decompose epic: Multi-account subscription rotation. Into modules.'
+    assert:
+      - type: regex
+        value: 'module|account|rotation'
+
+  # ─── po-decomposer-module (3 prompts) ──────────────────────────────
+  - description: 'po-decomposer-module: corpus module'
+    vars:
+      taskCategory: po-decomposer-module
+      prompt: 'Decompose module: Apprentice corpus aggregator. Into stories.'
+    assert:
+      - type: contains
+        value: 'story'
+
+  - description: 'po-decomposer-module: eval module'
+    vars:
+      taskCategory: po-decomposer-module
+      prompt: 'Decompose module: Apprentice eval harness. Into stories.'
+    assert:
+      - type: regex
+        value: 'story|suite|score'
+
+  - description: 'po-decomposer-module: training module'
+    vars:
+      taskCategory: po-decomposer-module
+      prompt: 'Decompose module: Apprentice training pipeline. Into stories.'
+    assert:
+      - type: regex
+        value: 'story|train|adapter'
+
+  # ─── po-decomposer-story (3 prompts) ───────────────────────────────
+  - description: 'po-decomposer-story: data model story'
+    vars:
+      taskCategory: po-decomposer-story
+      prompt: 'Decompose story: Add user_settings drizzle migration. Into tasks.'
+    assert:
+      - type: regex
+        value: 'task|migration'
+
+  - description: 'po-decomposer-story: api story'
+    vars:
+      taskCategory: po-decomposer-story
+      prompt: 'Decompose story: Expose POST /llm/route endpoint. Into tasks.'
+    assert:
+      - type: regex
+        value: 'task|endpoint'
+
+  - description: 'po-decomposer-story: ui story'
+    vars:
+      taskCategory: po-decomposer-story
+      prompt: 'Decompose story: Add throughput chart to dashboard. Into tasks.'
+    assert:
+      - type: regex
+        value: 'task|component|chart'
+
+  # ─── po-decomposer-task (3 prompts) ────────────────────────────────
+  - description: 'po-decomposer-task: implementation task'
+    vars:
+      taskCategory: po-decomposer-task
+      prompt: 'Decompose task: Implement OllamaAdapter class. Into subtasks.'
+    assert:
+      - type: regex
+        value: 'subtask|step'
+
+  - description: 'po-decomposer-task: test task'
+    vars:
+      taskCategory: po-decomposer-task
+      prompt: 'Decompose task: Add unit tests for SelectModel. Into subtasks.'
+    assert:
+      - type: regex
+        value: 'subtask|test'
+
+  - description: 'po-decomposer-task: integration task'
+    vars:
+      taskCategory: po-decomposer-task
+      prompt: 'Decompose task: Wire architect verdict into orchestrator trace. Into subtasks.'
+    assert:
+      - type: regex
+        value: 'subtask|trace'
+
+  # ─── po-decomposer-subtask (3 prompts) ─────────────────────────────
+  - description: 'po-decomposer-subtask: file edit'
+    vars:
+      taskCategory: po-decomposer-subtask
+      prompt: 'Decompose subtask: Update src/util.ts.'
+    assert:
+      - type: regex
+        value: 'edit|file|step'
+
+  - description: 'po-decomposer-subtask: type addition'
+    vars:
+      taskCategory: po-decomposer-subtask
+      prompt: 'Decompose subtask: Add TS type for ModelChoice.'
+    assert:
+      - type: regex
+        value: 'type|interface'
+
+  - description: 'po-decomposer-subtask: rename'
+    vars:
+      taskCategory: po-decomposer-subtask
+      prompt: 'Decompose subtask: Rename variable foo to bar across the package.'
+    assert:
+      - type: regex
+        value: 'rename|find'
+
+  # ─── po-decomposer-coverage-judge (3 prompts) ──────────────────────
+  - description: 'po-decomposer-coverage-judge: complete coverage'
+    vars:
+      taskCategory: po-decomposer-coverage-judge
+      prompt: 'Parent: Build OAuth subsystem. Children: login, logout, session-refresh, mfa, recovery. Coverage MECE?'
+    assert:
+      - type: regex
+        value: 'covered|complete|yes'
+
+  - description: 'po-decomposer-coverage-judge: missing coverage'
+    vars:
+      taskCategory: po-decomposer-coverage-judge
+      prompt: 'Parent: Build OAuth subsystem. Children: login. Coverage MECE?'
+    assert:
+      - type: regex
+        value: 'incomplete|missing|no'
+
+  - description: 'po-decomposer-coverage-judge: borderline'
+    vars:
+      taskCategory: po-decomposer-coverage-judge
+      prompt: 'Parent: Build dashboard. Children: layout, header. Coverage MECE?'
+    assert:
+      - type: regex
+        value: 'incomplete|partial|missing'
+
+  # ─── po-decomposer-disjointness-judge (3 prompts) ──────────────────
+  - description: 'po-decomposer-disjointness-judge: clean disjoint'
+    vars:
+      taskCategory: po-decomposer-disjointness-judge
+      prompt: 'Children: login, logout, session-refresh. Disjoint?'
+    assert:
+      - type: regex
+        value: 'disjoint|yes|no overlap'
+
+  - description: 'po-decomposer-disjointness-judge: overlap'
+    vars:
+      taskCategory: po-decomposer-disjointness-judge
+      prompt: 'Children: login, sign-in, authenticate. Disjoint?'
+    assert:
+      - type: regex
+        value: 'overlap|duplicate|same'
+
+  - description: 'po-decomposer-disjointness-judge: borderline'
+    vars:
+      taskCategory: po-decomposer-disjointness-judge
+      prompt: 'Children: validate input, sanitize input, parse input. Disjoint?'
+    assert:
+      - type: regex
+        value: 'borderline|partial|overlap'
+
+  # ─── hierarchy-decomposition (3 prompts) ───────────────────────────
+  - description: 'hierarchy-decomposition: build campaign'
+    vars:
+      taskCategory: hierarchy-decomposition
+      prompt: 'Decompose: Self-perpetuating CAIA campaign loop. Into Initiative→Epic→Story→Task.'
+    assert:
+      - type: regex
+        value: 'epic|story|task'
+
+  - description: 'hierarchy-decomposition: build platform'
+    vars:
+      taskCategory: hierarchy-decomposition
+      prompt: 'Decompose: Build observability stack. Into Initiative→Epic→Story→Task.'
+    assert:
+      - type: regex
+        value: 'epic|story|task'
+
+  - description: 'hierarchy-decomposition: build product'
+    vars:
+      taskCategory: hierarchy-decomposition
+      prompt: 'Decompose: Productise CAIA. Into Initiative→Epic→Story→Task.'
+    assert:
+      - type: regex
+        value: 'epic|story|task'
+
+  # ─── architecture-decision (3 prompts) ─────────────────────────────
+  - description: 'architecture-decision: ADR for queue choice'
+    vars:
+      taskCategory: architecture-decision
+      prompt: 'Produce ADR: Pick a queue technology for inter-agent messaging.'
+    assert:
+      - type: regex
+        value: 'adr|context|decision|consequences'
+
+  - description: 'architecture-decision: ADR for auth'
+    vars:
+      taskCategory: architecture-decision
+      prompt: 'Produce ADR: Pick an auth strategy — JWT vs session cookies.'
+    assert:
+      - type: regex
+        value: 'adr|context|decision'
+
+  - description: 'architecture-decision: ADR for storage'
+    vars:
+      taskCategory: architecture-decision
+      prompt: 'Produce ADR: Pick storage for vector embeddings — sqlite-vec vs LanceDB.'
+    assert:
+      - type: regex
+        value: 'adr|context|decision'
+
+  # ─── code-implementation-complex (3 prompts) ───────────────────────
+  - description: 'code-implementation-complex: multi-file feature'
+    vars:
+      taskCategory: code-implementation-complex
+      prompt: 'Implement: Add a Hono service that wraps the Apprentice serving API.'
+    assert:
+      - type: regex
+        value: 'hono|express|service'
+
+  - description: 'code-implementation-complex: novel algorithm'
+    vars:
+      taskCategory: code-implementation-complex
+      prompt: 'Implement: A topological-sort + cycle-detect for the agent dependency graph.'
+    assert:
+      - type: regex
+        value: 'sort|topological|cycle'
+
+  - description: 'code-implementation-complex: system design'
+    vars:
+      taskCategory: code-implementation-complex
+      prompt: 'Implement: A retry-with-backoff library with circuit-breaker.'
+    assert:
+      - type: regex
+        value: 'retry|backoff|breaker'
+
+  # ─── security-review (3 prompts) ───────────────────────────────────
+  - description: 'security-review: SQL injection check'
+    vars:
+      taskCategory: security-review
+      prompt: 'Audit: const sql = `SELECT * FROM users WHERE id = ${userId}`; — secure?'
+    assert:
+      - type: regex
+        value: 'injection|prepared|parameterised'
+
+  - description: 'security-review: XSS check'
+    vars:
+      taskCategory: security-review
+      prompt: 'Audit: `<div dangerouslySetInnerHTML={{__html: userInput}} />` — secure?'
+    assert:
+      - type: regex
+        value: 'xss|sanitise|escape'
+
+  - description: 'security-review: secrets in URL'
+    vars:
+      taskCategory: security-review
+      prompt: 'Audit: `fetch("https://api/?token=" + token)` — secure?'
+    assert:
+      - type: regex
+        value: 'url|leak|header|token'
