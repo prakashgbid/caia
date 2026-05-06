@@ -1,0 +1,10 @@
+diff --git a/proposals/api-key-billing.md b/proposals/api-key-billing.md
+new file mode 100644
+index 0000000..89abcde
+--- /dev/null
++++ b/proposals/api-key-billing.md
+@@ -0,0 +1,4 @@
++# Proposal: switch to API key billing
++
++We should consider per-token billing for the API
++because it gives finer-grained cost control.

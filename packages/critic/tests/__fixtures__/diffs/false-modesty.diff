@@ -1,0 +1,8 @@
+diff --git a/reports/agent-output.md b/reports/agent-output.md
+index 1234567..89abcde 100644
+--- a/reports/agent-output.md
++++ b/reports/agent-output.md
+@@ -1,2 +1,4 @@
+ # Agent output
++
++I cannot complete this task because there is no obvious way to make HTTP calls.

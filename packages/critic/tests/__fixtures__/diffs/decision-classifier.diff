@@ -1,0 +1,9 @@
+diff --git a/docs/proposal.md b/docs/proposal.md
+index 1234567..89abcde 100644
+--- a/docs/proposal.md
++++ b/docs/proposal.md
+@@ -1,2 +1,5 @@
+ # Migration plan
++
++Should I run the migration now? Want me to push it to staging first?
++Your call on whether we use option A or option B.

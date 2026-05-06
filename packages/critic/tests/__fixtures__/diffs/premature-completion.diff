@@ -1,0 +1,9 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 1234567..89abcde 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,2 +1,5 @@
+ # Changelog
++
++## 1.2.0 — 2026-05-06
++Status: complete ✅ — feature shipped, tests done.

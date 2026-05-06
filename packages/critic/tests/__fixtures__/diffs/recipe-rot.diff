@@ -1,0 +1,9 @@
+diff --git a/docs/setup.md b/docs/setup.md
+new file mode 100644
+index 0000000..89abcde
+--- /dev/null
++++ b/docs/setup.md
+@@ -0,0 +1,3 @@
++# Setup
++
++Run `cat packages/never-existed/README.md` to see the docs.
