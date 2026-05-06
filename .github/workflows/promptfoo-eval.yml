@@ -1,0 +1,78 @@
+name: Promptfoo eval
+
+# Wave 1.2 of the Enterprise Wave 1 campaign per
+# agent/memory/enterprise_ai_landscape_directive.md (W1-2 — Promptfoo
+# CI eval suite).
+#
+# Runs the @chiefaia/prompt-evals suite against every PR + every push
+# to develop/main. The suite tests prompt-routing vocabulary stability
+# for the 10 canonical CAIA subagents shipped in W1-1
+# (@chiefaia/claude-subagents). Currently uses a deterministic local
+# provider (no LLM API key required, no network calls, runs in seconds).
+#
+# Failure modes:
+#   - any agent's pass-rate drops below baseline.passRate - regressionTolerance
+#     (default 0.05 / 5pp)
+#   - the runner crashes (yaml parse error, missing baseline, etc.)
+#
+# Operator workflow on failure:
+#   1. Inspect the JSON summary written under artifacts/promptfoo-summary.json.
+#   2. If the change is intentional, run `pnpm --filter @chiefaia/prompt-evals
+#      run baseline -- --all` locally and commit the new baselines/.
+#   3. If the change is unintended, fix the prompt or the assertion.
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'packages/prompt-evals/**'
+      - 'packages/claude-subagents/**'
+      - '.github/workflows/promptfoo-eval.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'packages/prompt-evals/**'
+      - 'packages/claude-subagents/**'
+      - '.github/workflows/promptfoo-eval.yml'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: promptfoo-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  promptfoo-eval:
+    name: promptfoo-eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build @chiefaia/prompt-evals
+        run: pnpm --filter @chiefaia/prompt-evals build
+      - name: Run promptfoo eval suite (gates on baseline regression)
+        env:
+          PROMPTFOO_DISABLE_TELEMETRY: '1'
+          PROMPTFOO_DISABLE_UPDATE: '1'
+          PROMPTFOO_DISABLE_REDTEAM_REMOTE_GENERATION: '1'
+        run: |
+          mkdir -p artifacts
+          pnpm --filter @chiefaia/prompt-evals exec node dist/cli.js run \
+            --out artifacts/promptfoo-summary.json
+      - name: Upload eval summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptfoo-summary
+          path: |
+            packages/prompt-evals/artifacts/promptfoo-summary.json
+          retention-days: 14

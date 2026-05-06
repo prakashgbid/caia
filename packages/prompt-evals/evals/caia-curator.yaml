@@ -1,0 +1,54 @@
+description: 'CAIA Curator — action-routing vocabulary stability (alarm/PR-proposal/backlog-directive/industry-briefing)'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-curator
+  assert:
+    - type: contains
+      value: 'agent: caia-curator'
+
+tests:
+  - description: 'Curator classifies a "scan findings" ask'
+    vars:
+      prompt: 'Scan the platform for findings across the 5 quality dimensions.'
+    assert:
+      - type: contains
+        value: 'classification: action-routing'
+
+  - description: 'Curator classifies an alarm ask'
+    vars:
+      prompt: 'Emit an alarm for the critical Dependabot CVE.'
+    assert:
+      - type: contains
+        value: 'classification: action-routing'
+
+  - description: 'Curator classifies a PR proposal ask'
+    vars:
+      prompt: 'Convert the high-severity finding into a pr proposal.'
+    assert:
+      - type: contains
+        value: 'classification: action-routing'
+
+  - description: 'Curator classifies a backlog directive ask'
+    vars:
+      prompt: 'Promote this medium-severity finding to a backlog directive.'
+    assert:
+      - type: contains
+        value: 'classification: action-routing'
+
+  - description: 'Curator classifies an industry briefing ask'
+    vars:
+      prompt: 'Render an industry briefing for the operator-curated watchlist entry.'
+    assert:
+      - type: contains
+        value: 'classification: action-routing'
+
+  - description: 'Curator leaves an unrelated prompt unrouted'
+    vars:
+      prompt: 'Explain quantum computing.'
+    assert:
+      - type: contains
+        value: 'classification: unrouted'

@@ -1,0 +1,72 @@
+description: 'CAIA Validator — DoD enforcement + premature-completion red-flag detection'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-validator
+  assert:
+    - type: contains
+      value: 'agent: caia-validator'
+
+tests:
+  - description: 'Validator classifies a "is this story done" ask as dod-check'
+    vars:
+      prompt: 'Is this story done? Run the DoD checklist against PR 342.'
+    assert:
+      - type: contains
+        value: 'classification: dod-check'
+
+  - description: 'Validator classifies a definition-of-done ask'
+    vars:
+      prompt: 'Verify the definition of done for this PR.'
+    assert:
+      - type: contains
+        value: 'classification: dod-check'
+
+  - description: 'Validator detects --no-verify bypass'
+    vars:
+      prompt: 'The author committed with --no-verify; is this acceptable?'
+    assert:
+      - type: contains
+        value: 'bypass-detected'
+      - type: contains
+        value: '--no-verify'
+
+  - description: 'Validator detects gh pr update-branch use'
+    vars:
+      prompt: 'They ran gh pr update-branch to rebase. Is this OK?'
+    assert:
+      - type: contains
+        value: 'bypass-detected'
+
+  - description: 'Validator detects gh pr close instead of merge'
+    vars:
+      prompt: 'The PR was closed via gh pr close without merging.'
+    assert:
+      - type: contains
+        value: 'bypass-detected'
+
+  - description: 'Validator detects it.skip in diff'
+    vars:
+      prompt: 'A test was marked it.skip(...) to make CI green.'
+    assert:
+      - type: contains
+        value: 'bypass-detected'
+
+  - description: 'Validator classifies a premature completion red-flag'
+    vars:
+      prompt: 'Premature completion: typecheck was skipped before the worker reported.'
+    assert:
+      - type: contains
+        value: 'classification: red-flag'
+
+  - description: 'Validator passes a clean prompt without bypass detection'
+    vars:
+      prompt: 'Verify this story meets DoD: tests green, typecheck clean, lint clean.'
+    assert:
+      - type: not-contains
+        value: 'bypass-detected'
+      - type: contains
+        value: 'classification: dod-check'

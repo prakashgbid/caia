@@ -1,0 +1,48 @@
+{
+  "name": "@chiefaia/prompt-evals",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Promptfoo-based eval suites for CAIA agent prompts. Wave 1.2 of the Enterprise Wave 1 campaign per agent/memory/enterprise_ai_landscape_directive.md (W1-2). Ships YAML test suites for the PO, BA, EA, Validator, Test-Design, Coding, Fix-It, Steward, Mentor, and Curator subagents along with a deterministic local provider so the CI eval check runs free + fast (no LLM API key required). Optional Ollama provider lets operators run live-LLM evals locally.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-prompt-evals": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "evals",
+    "baselines"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist",
+    "eval": "node dist/cli.js run",
+    "eval:baseline": "node dist/cli.js baseline"
+  },
+  "dependencies": {
+    "@chiefaia/claude-subagents": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "promptfoo": "^0.103.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  }
+}

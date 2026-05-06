@@ -1,0 +1,56 @@
+description: 'CAIA EA Agent — architecture-decision vocabulary stability'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-ea
+  assert:
+    - type: contains
+      value: 'agent: caia-ea'
+    - type: contains
+      value: '[result] DONE'
+
+tests:
+  - description: 'EA classifies an architecture-decision prompt'
+    vars:
+      prompt: 'Choose between Postgres and SQLite for the new analytics store; produce an architecture decision.'
+    assert:
+      - type: contains
+        value: 'classification: architecture'
+
+  - description: 'EA classifies a build-vs-buy prompt'
+    vars:
+      prompt: 'Build-vs-buy: should we use Promptfoo or build our own eval harness?'
+    assert:
+      - type: contains
+        value: 'classification: architecture'
+
+  - description: 'EA classifies a primary-domain ask'
+    vars:
+      prompt: 'Classify this story by primary domain.'
+    assert:
+      - type: contains
+        value: 'classification: classification'
+
+  - description: 'EA classifies a "what domain" prompt'
+    vars:
+      prompt: 'Which domain does this work belong to?'
+    assert:
+      - type: contains
+        value: 'classification: classification'
+
+  - description: 'EA classifies a design prompt'
+    vars:
+      prompt: 'Design the data model for the new feature registry.'
+    assert:
+      - type: contains
+        value: 'classification: architecture'
+
+  - description: 'EA leaves a generic chat prompt unrouted'
+    vars:
+      prompt: 'Hi, how are you doing today?'
+    assert:
+      - type: contains
+        value: 'classification: unrouted'

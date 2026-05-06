@@ -1,0 +1,54 @@
+description: 'CAIA Steward Gatekeeper — verdict-routing vocabulary stability'
+
+providers:
+  - file://./_lib/local-provider.mjs
+
+defaultTest:
+  vars:
+    agent: caia-steward
+  assert:
+    - type: contains
+      value: 'agent: caia-steward'
+
+tests:
+  - description: 'Steward classifies a verdict ask'
+    vars:
+      prompt: 'Run the gatekeeper analysis on PR 342 and produce a BLOCK / WARN / PASS verdict.'
+    assert:
+      - type: contains
+        value: 'classification: gatekeeper-verdict'
+
+  - description: 'Steward classifies a "what failure mode" ask'
+    vars:
+      prompt: 'Which failure mode applies here — prematurecompletion or gitflowdrift?'
+    assert:
+      - type: contains
+        value: 'classification: gatekeeper-verdict'
+
+  - description: 'Steward classifies a block-decision ask'
+    vars:
+      prompt: 'Should we block this PR? Apply the 15-failure-mode analysis.'
+    assert:
+      - type: contains
+        value: 'classification: gatekeeper-verdict'
+
+  - description: 'Steward classifies a warn-decision ask'
+    vars:
+      prompt: 'Warn or pass on this PR? Per the steward gatekeeper directive.'
+    assert:
+      - type: contains
+        value: 'classification: gatekeeper-verdict'
+
+  - description: 'Steward detects --no-verify in the prompt context'
+    vars:
+      prompt: 'The author committed with --no-verify. What is the steward verdict?'
+    assert:
+      - type: contains
+        value: 'bypass-detected'
+
+  - description: 'Steward detects gh pr update-branch'
+    vars:
+      prompt: 'They invoked gh pr update-branch — should the steward block?'
+    assert:
+      - type: contains
+        value: 'bypass-detected'
