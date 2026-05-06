@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Apprentice Phase 2 — LoRA training scheduled task.
+
+  This plist is committed with PLACEHOLDER values per
+  `feedback_monorepo_regression_gate_ergonomics.md` rule 2 (LaunchAgent
+  plists committed to source MUST use install-time-substituted
+  placeholders). The install script `scripts/install-apprentice-training.sh`
+  fills these in from the operator's environment.
+
+  Phase 2 ships this DISABLED. Phase 4's retrainer cron is what activates
+  scheduled retraining (Saturday 02:00 local; off-hours).
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.chiefaia.apprentice-training</string>
+
+    <key>Disabled</key>
+    <true/>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>CURRENT_NODE_BIN</string>
+        <string>CURRENT_PKG_DIR/dist/cli.js</string>
+        <string>train</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>CURRENT_PKG_DIR</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>CURRENT_HOME</string>
+        <key>PATH</key>
+        <string>CURRENT_PATH</string>
+        <key>PYTHON_BINARY</key>
+        <string>CURRENT_PYTHON_BIN</string>
+        <key>APPRENTICE_CORPUS_ROOT</key>
+        <string>CURRENT_HOME/Documents/projects/apprentice/corpora</string>
+        <key>APPRENTICE_ADAPTER_ROOT</key>
+        <string>CURRENT_HOME/Documents/projects/apprentice/adapters</string>
+        <key>APPRENTICE_WORK_ROOT</key>
+        <string>CURRENT_HOME/Documents/projects/apprentice/work</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>6</integer>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>CURRENT_HOME/Library/Logs/chiefaia/apprentice-training.log</string>
+    <key>StandardErrorPath</key>
+    <string>CURRENT_HOME/Library/Logs/chiefaia/apprentice-training.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>ThrottleInterval</key>
+    <integer>3600</integer>
+</dict>
+</plist>
