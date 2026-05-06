@@ -11,8 +11,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ─── 0. detect-changes ────────────────────────────────────────────────
+  # Skip heavy build/test/lint/typecheck for PRs that only touch markdown,
+  # docs, agent memory, or changesets. Required-status-checks pass via
+  # GitHub's "skipped due to `if:` is treated as successful" semantics.
+  # Reference: velocity-acceleration-strategy-2026-05-06.md §1.2 (Tier 1.3),
+  # §A.4. Estimated savings: ~5 min per doc-only PR.
+  detect-changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # `code` is true if ANY non-documentation file changed.
+          # `**` matches everything; the `!` patterns subtract doc-only paths.
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!**/*.mdx'
+              - '!docs/**'
+              - '!agent/memory/**'
+              - '!AGENTS.md'
+              - '!CHANGELOG.md'
+              - '!.changeset/**'
+
   ci:
     name: Build · Test · Lint · Typecheck
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
