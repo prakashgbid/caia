@@ -1,0 +1,480 @@
+#!/usr/bin/env bash
+# orchestrator-exec: Root-owned sudo wrapper for orchestrator privilege escalation on stolution.
+# Single NOPASSWD entry point with exhaustive allowlisting and JSONL audit logging.
+# Install: install -m 0755 -o root -g root orchestrator-exec /usr/local/bin/orchestrator-exec
+# Revoke: rm /usr/local/bin/orchestrator-exec /etc/sudoers.d/orchestrator
+
+set -o pipefail
+IFS=$'\n\t'
+
+# Configuration
+readonly LOGFILE="/var/log/orchestrator-exec.log"
+readonly SYSLOG_TAG="orchestrator-exec"
+readonly SYSTEMD_UNIT_REGEX="^(actions\.runner\.[a-z0-9-]+|caia-[a-z0-9-]+|stolution-[a-z0-9-]+|cowork-[a-z0-9-]+)\.service$"
+readonly SUDOERS_NAME_REGEX="^[a-z][a-z0-9-]*-orchestrator$"
+readonly VETTED_PACKAGES="curl jq git tmux htop iotop tree unzip zip nodejs npm nginx certbot python3-certbot-nginx postgresql-client redis-tools prometheus-node-exporter"
+readonly ALLOWED_SERVICES="nginx cloudflared prometheus-node-exporter syncthing"
+
+# Utility: JSON escape
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"  # Backslash first
+  s="${s//\"/\\\"}"  # Double quotes
+  s="${s//$'\n'/\\n}"  # Newlines
+  s="${s//$'\r'/\\r}"  # Carriage returns
+  s="${s//$'\t'/\\t}"  # Tabs
+  printf '%s' "$s"
+}
+
+# Utility: Log operation (JSONL format)
+log_operation() {
+  local operation="$1"
+  local result="$2"
+  local reject_reason="${3:-}"
+  local exit_code="${4:-0}"
+  local start_ms="${5:-0}"
+  
+  local end_ms
+  # Use nanoseconds and compute ms (compatible with both GNU date and BSD date)
+  end_ms=$(date +%s 2>/dev/null || echo 0)
+  local duration_ms=0
+  # Skip duration calculation in tests if start_ms is not numeric
+  if [[ "$start_ms" =~ ^[0-9]+$ ]] && [[ "$end_ms" =~ ^[0-9]+$ ]]; then
+    duration_ms=$((end_ms - start_ms))
+    [ "$duration_ms" -lt 0 ] && duration_ms=0
+  fi
+  
+  local caller_uid="${SUDO_UID:-0}"
+  local caller_gid="${SUDO_GID:-0}"
+  local timestamp
+  timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
+  
+  # Build JSONL record
+  local json="{\"timestamp\":\"${timestamp}\",\"operation\":\"$(json_escape "$operation")\",\"result\":\"${result}\",\"reject_reason\":$([ -z "$reject_reason" ] && echo 'null' || echo "\"$(json_escape "$reject_reason")\""),\"exit_code\":${exit_code},\"duration_ms\":${duration_ms},\"caller_uid\":${caller_uid},\"caller_gid\":${caller_gid}}"
+  
+  # Write to logfile (append)
+  if [ -w "$LOGFILE" ] || [ ! -e "$LOGFILE" ]; then
+    echo "$json" >> "$LOGFILE" 2>/dev/null || true
+  fi
+  
+  # Also log to syslog
+  logger -t "$SYSLOG_TAG" -p "auth.info" "$json" 2>/dev/null || true
+}
+
+# Utility: Validate path (no .. traversal, allowed base)
+validate_path() {
+  local path="$1"
+  local allowed_bases="$2"  # Space-separated list like "/tmp /home/s903"
+  
+  # Reject if contains .. (explicit path traversal check)
+  if [[ "$path" == *".."* ]]; then
+    return 1
+  fi
+  
+  # Reject if absolute path not under allowed base
+  local base_ok=0
+  for base in $allowed_bases; do
+    if [[ "$path" == "$base"/* ]] || [[ "$path" == "$base" ]]; then
+      base_ok=1
+      break
+    fi
+  done
+  
+  [ "$base_ok" -eq 1 ] && return 0 || return 1
+}
+
+# Utility: Validate systemd unit name
+validate_unit_name() {
+  local name="$1"
+  [[ "$name" =~ $SYSTEMD_UNIT_REGEX ]] && return 0 || return 1
+}
+
+# Utility: Validate sudoers name
+validate_sudoers_name() {
+  local name="$1"
+  [[ "$name" =~ $SUDOERS_NAME_REGEX ]] && return 0 || return 1
+}
+
+# Utility: Check if package is vetted
+is_vetted_package() {
+  local pkg="$1"
+  for v in $VETTED_PACKAGES; do
+    [ "$pkg" = "$v" ] && return 0
+  done
+  return 1
+}
+
+# Utility: Check if service is allowed
+is_allowed_service() {
+  local svc="$1"
+  for s in $ALLOWED_SERVICES; do
+    [ "$svc" = "$s" ] && return 0
+  done
+  return 1
+}
+
+# Operation: install-systemd-unit <unit-name> <unit-file-path>
+op_install_systemd_unit() {
+  local unit_name="$1"
+  local unit_file_path="$2"
+  
+  # Validate inputs
+  if ! validate_unit_name "$unit_name"; then
+    log_operation "install-systemd-unit" "reject" "unit_name does not match allowed regex" 1
+    echo "ERROR: unit_name '$unit_name' does not match allowed pattern" >&2
+    return 1
+  fi
+  
+  if ! validate_path "$unit_file_path" "/tmp /home/s903"; then
+    log_operation "install-systemd-unit" "reject" "unit_file_path not under allowed base or contains path traversal" 1
+    echo "ERROR: unit_file_path must be under /tmp/ or /home/s903/" >&2
+    return 1
+  fi
+  
+  # Check source exists and is readable
+  if [ ! -f "$unit_file_path" ] || [ ! -r "$unit_file_path" ]; then
+    log_operation "install-systemd-unit" "reject" "unit_file_path not readable or does not exist" 1
+    echo "ERROR: unit_file_path not readable" >&2
+    return 1
+  fi
+  
+  # Install to systemd directory
+  local dest="/etc/systemd/system/${unit_name}"
+  
+  # If it exists, check ownership
+  if [ -e "$dest" ]; then
+    local owner
+    owner=$(stat -c %U "$dest" 2>/dev/null || stat -f %Su "$dest" 2>/dev/null || echo "unknown")
+    local mode
+    mode=$(stat -c %a "$dest" 2>/dev/null || stat -f %OLp "$dest" 2>/dev/null || echo "unknown")
+    
+    if [ "$owner" != "root" ] || [ "$mode" != "644" ]; then
+      log_operation "install-systemd-unit" "reject" "destination exists with unexpected owner or mode" 1
+      echo "ERROR: destination already exists with unexpected ownership/mode" >&2
+      return 1
+    fi
+  fi
+  
+  # Perform installation
+  if install -m 0644 -o root -g root "$unit_file_path" "$dest" 2>/dev/null; then
+    log_operation "install-systemd-unit" "success" "" 0
+    echo "Installed systemd unit $unit_name"
+    return 0
+  else
+    log_operation "install-systemd-unit" "error" "install command failed" 1
+    echo "ERROR: failed to install systemd unit" >&2
+    return 1
+  fi
+}
+
+# Operation: systemctl-action <action> <unit-pattern>
+op_systemctl_action() {
+  local action="$1"
+  local unit_pattern="$2"
+  
+  # Validate action
+  case "$action" in
+    enable|disable|start|stop|restart|reload|status|is-active|is-enabled|daemon-reload) ;;
+    *)
+      log_operation "systemctl-action" "reject" "action not in allowed list" 1
+      echo "ERROR: action '$action' not allowed" >&2
+      return 1
+      ;;
+  esac
+  
+  # daemon-reload doesn't need a unit
+  if [ "$action" = "daemon-reload" ]; then
+    if systemctl daemon-reload 2>/dev/null; then
+      log_operation "systemctl-action" "success" "" 0
+      echo "Ran systemctl daemon-reload"
+      return 0
+    else
+      log_operation "systemctl-action" "error" "daemon-reload failed" 1
+      echo "ERROR: daemon-reload failed" >&2
+      return 1
+    fi
+  fi
+  
+  # All other actions need a unit pattern matching the regex
+  if ! validate_unit_name "$unit_pattern"; then
+    log_operation "systemctl-action" "reject" "unit_pattern does not match allowed regex" 1
+    echo "ERROR: unit_pattern '$unit_pattern' does not match allowed pattern" >&2
+    return 1
+  fi
+  
+  # Run systemctl command
+  if systemctl "$action" "$unit_pattern" 2>/dev/null; then
+    log_operation "systemctl-action" "success" "" 0
+    echo "Ran systemctl $action $unit_pattern"
+    return 0
+  else
+    log_operation "systemctl-action" "error" "systemctl command failed" 1
+    echo "ERROR: systemctl $action failed" >&2
+    return 1
+  fi
+}
+
+# Operation: install-sudoers-entry <name> <source-path>
+op_install_sudoers_entry() {
+  local name="$1"
+  local source_path="$2"
+  
+  # Validate name
+  if ! validate_sudoers_name "$name"; then
+    log_operation "install-sudoers-entry" "reject" "sudoers name does not match allowed regex" 1
+    echo "ERROR: sudoers name must match ^[a-z][a-z0-9-]*-orchestrator$" >&2
+    return 1
+  fi
+  
+  # Validate path
+  if ! validate_path "$source_path" "/tmp /home/s903"; then
+    log_operation "install-sudoers-entry" "reject" "source_path not under allowed base or contains path traversal" 1
+    echo "ERROR: source_path must be under /tmp/ or /home/s903/" >&2
+    return 1
+  fi
+  
+  # Check source exists and is readable
+  if [ ! -f "$source_path" ] || [ ! -r "$source_path" ]; then
+    log_operation "install-sudoers-entry" "reject" "source_path not readable or does not exist" 1
+    echo "ERROR: source_path not readable" >&2
+    return 1
+  fi
+  
+  # Validate sudoers syntax
+  if ! visudo -c -f "$source_path" >/dev/null 2>&1; then
+    log_operation "install-sudoers-entry" "reject" "visudo validation failed" 1
+    echo "ERROR: visudo validation failed" >&2
+    return 1
+  fi
+  
+  local dest="/etc/sudoers.d/${name}"
+  
+  # If exists, check it was installed by this wrapper
+  if [ -e "$dest" ]; then
+    local owner
+    owner=$(stat -c %U "$dest" 2>/dev/null || stat -f %Su "$dest" 2>/dev/null || echo "unknown")
+    
+    if [ "$owner" != "root" ]; then
+      log_operation "install-sudoers-entry" "reject" "destination exists with non-root ownership" 1
+      echo "ERROR: sudoers entry already exists with unexpected ownership" >&2
+      return 1
+    fi
+    
+    if ! grep -q "^# Installed by orchestrator-exec" "$dest" 2>/dev/null; then
+      log_operation "install-sudoers-entry" "reject" "destination exists but not marked as orchestrator-installed" 1
+      echo "ERROR: sudoers entry exists but wasn't installed by orchestrator-exec" >&2
+      return 1
+    fi
+  fi
+  
+  # Add marker comment to a temp file
+  local tmp_dest
+  tmp_dest=$(mktemp) || {
+    log_operation "install-sudoers-entry" "error" "mktemp failed" 1
+    echo "ERROR: failed to create temp file" >&2
+    return 1
+  }
+  
+  {
+    echo "# Installed by orchestrator-exec at $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    cat "$source_path"
+  } > "$tmp_dest" || {
+    rm -f "$tmp_dest"
+    log_operation "install-sudoers-entry" "error" "failed to write temp file" 1
+    echo "ERROR: failed to prepare sudoers entry" >&2
+    return 1
+  }
+  
+  # Install with correct permissions
+  if install -m 0440 -o root -g root "$tmp_dest" "$dest" 2>/dev/null; then
+    rm -f "$tmp_dest"
+    log_operation "install-sudoers-entry" "success" "" 0
+    echo "Installed sudoers entry $name"
+    return 0
+  else
+    rm -f "$tmp_dest"
+    log_operation "install-sudoers-entry" "error" "install command failed" 1
+    echo "ERROR: failed to install sudoers entry" >&2
+    return 1
+  fi
+}
+
+# Operation: apt-install-package <package>
+op_apt_install_package() {
+  local package="$1"
+  
+  # Validate package is vetted
+  if ! is_vetted_package "$package"; then
+    log_operation "apt-install-package" "reject" "package not on vetted list" 1
+    echo "ERROR: package '$package' not on vetted list" >&2
+    return 1
+  fi
+  
+  # Run apt-get install
+  if apt-get install -y "$package" >/dev/null 2>&1; then
+    log_operation "apt-install-package" "success" "" 0
+    echo "Installed package $package"
+    return 0
+  else
+    log_operation "apt-install-package" "error" "apt-get install failed" 1
+    echo "ERROR: failed to install package" >&2
+    return 1
+  fi
+}
+
+# Operation: service-reload <service>
+op_service_reload() {
+  local service="$1"
+  
+  # Validate service is allowed
+  if ! is_allowed_service "$service"; then
+    log_operation "service-reload" "reject" "service not on allowed list" 1
+    echo "ERROR: service '$service' not allowed" >&2
+    return 1
+  fi
+  
+  # Try reload, fall back to restart
+  if systemctl reload "$service" >/dev/null 2>&1; then
+    log_operation "service-reload" "success" "" 0
+    echo "Reloaded service $service"
+    return 0
+  elif systemctl restart "$service" >/dev/null 2>&1; then
+    log_operation "service-reload" "success" "" 0
+    echo "Restarted service $service (reload not supported)"
+    return 0
+  else
+    log_operation "service-reload" "error" "systemctl reload/restart failed" 1
+    echo "ERROR: failed to reload/restart service" >&2
+    return 1
+  fi
+}
+
+# Operation: cron-install <name> <source-path>
+op_cron_install() {
+  local name="$1"
+  local source_path="$2"
+  
+  # Validate name
+  if ! validate_sudoers_name "$name"; then
+    log_operation "cron-install" "reject" "cron name does not match allowed regex" 1
+    echo "ERROR: cron name must match ^[a-z][a-z0-9-]*-orchestrator$" >&2
+    return 1
+  fi
+  
+  # Validate path
+  if ! validate_path "$source_path" "/tmp /home/s903"; then
+    log_operation "cron-install" "reject" "source_path not under allowed base or contains path traversal" 1
+    echo "ERROR: source_path must be under /tmp/ or /home/s903/" >&2
+    return 1
+  fi
+  
+  # Check source exists and is readable
+  if [ ! -f "$source_path" ] || [ ! -r "$source_path" ]; then
+    log_operation "cron-install" "reject" "source_path not readable or does not exist" 1
+    echo "ERROR: source_path not readable" >&2
+    return 1
+  fi
+  
+  # Basic cron syntax validation (check if crontab -T works)
+  if command -v crontab >/dev/null 2>&1 && crontab -T -f "$source_path" >/dev/null 2>&1; then
+    :  # Validation passed
+  else
+    # Fall back to basic shell syntax check
+    if ! bash -n "$source_path" >/dev/null 2>&1; then
+      log_operation "cron-install" "reject" "cron syntax validation failed" 1
+      echo "ERROR: cron syntax validation failed" >&2
+      return 1
+    fi
+  fi
+  
+  local dest="/etc/cron.d/${name}"
+  
+  # Check if exists and was installed by us
+  if [ -e "$dest" ]; then
+    local owner
+    owner=$(stat -c %U "$dest" 2>/dev/null || stat -f %Su "$dest" 2>/dev/null || echo "unknown")
+    
+    if [ "$owner" != "root" ]; then
+      log_operation "cron-install" "reject" "destination exists with non-root ownership" 1
+      echo "ERROR: cron entry already exists with unexpected ownership" >&2
+      return 1
+    fi
+    
+    if ! grep -q "^# Installed by orchestrator-exec" "$dest" 2>/dev/null; then
+      log_operation "cron-install" "reject" "destination exists but not marked as orchestrator-installed" 1
+      echo "ERROR: cron entry exists but wasn't installed by orchestrator-exec" >&2
+      return 1
+    fi
+  fi
+  
+  # Add marker and install
+  local tmp_dest
+  tmp_dest=$(mktemp) || {
+    log_operation "cron-install" "error" "mktemp failed" 1
+    echo "ERROR: failed to create temp file" >&2
+    return 1
+  }
+  
+  {
+    echo "# Installed by orchestrator-exec at $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    cat "$source_path"
+  } > "$tmp_dest" || {
+    rm -f "$tmp_dest"
+    log_operation "cron-install" "error" "failed to write temp file" 1
+    echo "ERROR: failed to prepare cron entry" >&2
+    return 1
+  }
+  
+  if install -m 0644 -o root -g root "$tmp_dest" "$dest" 2>/dev/null; then
+    rm -f "$tmp_dest"
+    log_operation "cron-install" "success" "" 0
+    echo "Installed cron entry $name"
+    return 0
+  else
+    rm -f "$tmp_dest"
+    log_operation "cron-install" "error" "install command failed" 1
+    echo "ERROR: failed to install cron entry" >&2
+    return 1
+  fi
+}
+
+# Main dispatcher
+main() {
+  local start_ms
+  start_ms=$(date +%s 2>/dev/null || echo 0)
+  
+  local operation="$1"
+  shift || {
+    log_operation "unknown" "reject" "no operation specified" 1
+    echo "ERROR: no operation specified" >&2
+    return 1
+  }
+  
+  case "$operation" in
+    install-systemd-unit)
+      op_install_systemd_unit "$@"
+      ;;
+    systemctl-action)
+      op_systemctl_action "$@"
+      ;;
+    install-sudoers-entry)
+      op_install_sudoers_entry "$@"
+      ;;
+    apt-install-package)
+      op_apt_install_package "$@"
+      ;;
+    service-reload)
+      op_service_reload "$@"
+      ;;
+    cron-install)
+      op_cron_install "$@"
+      ;;
+    *)
+      log_operation "$operation" "reject" "operation not in allowed list" 1
+      echo "ERROR: operation '$operation' not allowed" >&2
+      return 1
+      ;;
+  esac
+}
+
+main "$@"

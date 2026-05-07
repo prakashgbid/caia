@@ -1,0 +1,6 @@
+# orchestrator-elevate: NOPASSWD elevation for s903 to invoke /usr/local/bin/orchestrator-exec ONLY.
+# All allowlisting is enforced inside that wrapper script.
+# To revoke: rm /etc/sudoers.d/orchestrator
+# Installed: AUTO-TIMESTAMP-REPLACED-BY-BOOTSTRAP
+
+s903 ALL=(root) NOPASSWD: /usr/local/bin/orchestrator-exec

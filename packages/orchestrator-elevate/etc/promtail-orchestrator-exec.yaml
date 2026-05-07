@@ -1,0 +1,31 @@
+# Promtail config for orchestrator-exec audit logging
+# Append this to existing /etc/promtail/config.yaml under the scrape_configs section
+
+scrape_configs:
+  - job_name: orchestrator-exec
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: orchestrator-exec
+          app: orchestrator-elevate
+          component: wrapper
+    pipeline_stages:
+      - multiline:
+          line_start_pattern: '^\{'
+      - json:
+          expressions:
+            timestamp: timestamp
+            operation: operation
+            result: result
+            reject_reason: reject_reason
+            exit_code: exit_code
+            duration_ms: duration_ms
+            caller_uid: caller_uid
+            caller_gid: caller_gid
+      - labels:
+          operation:
+          result:
+          caller_uid:
+    positions:
+      filename: /tmp/promtail-orchestrator-exec.positions.yaml
