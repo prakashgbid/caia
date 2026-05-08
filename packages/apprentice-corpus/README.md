@@ -115,8 +115,27 @@ Env vars (in priority order: CLI flag → env → CAIA fallback):
 LaunchAgent runs daily at 02:00 local. Install:
 
 ```bash
+# Build first
+pnpm --filter @chiefaia/apprentice-corpus build
+
 # Pass the current orchestrator session id (replace with current value)
-scripts/install-launchagent.sh 6c9158cd-cd01-44af-b82f-bf27b437c618/84f7697e-7ae3-4ba4-9f98-166613a82e98
+packages/apprentice-corpus/scripts/install-apprentice-corpus.sh \
+  6c9158cd-cd01-44af-b82f-bf27b437c618/84f7697e-7ae3-4ba4-9f98-166613a82e98
+```
+
+The install script renders the plist with the local node binary path, package
+directory, $HOME, claude binary path and the supplied session id; bootstraps
+the agent into the user gui domain via `launchctl bootstrap`; and kickstarts
+a one-off run for immediate verification. Idempotent — bootouts any existing
+instance first. Pass `--no-kickstart` to skip the immediate run, or
+`CAIA_DRY_INSTALL=1` to render and lint the plist without touching launchd.
+
+Manual ops:
+
+```bash
+launchctl kickstart -k gui/$(id -u)/com.chiefaia.apprentice-corpus  # one-off run
+tail -f ~/Library/Logs/chiefaia/apprentice-corpus.log               # tail logs
+launchctl bootout gui/$(id -u)/com.chiefaia.apprentice-corpus       # uninstall
 ```
 
 Logs at `~/Library/Logs/chiefaia/apprentice-corpus.log`.
