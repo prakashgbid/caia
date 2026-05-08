@@ -1,7 +1,7 @@
-import { exec, spawn } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
-import { StolutionDispatchInput, StolutionDispatchOutput, DispatchError } from './types.js';
+import type { StolutionDispatchInput, StolutionDispatchOutput, DispatchError } from './types.js';
 
 const execPromise = promisify(exec);
 
@@ -89,9 +89,10 @@ export async function dispatchToStolution(
       };
     }
 
-    // Step 3: Write task brief to temp file for stdin
+    // Step 3: Write task brief to temp file for stdin.
+    // Using a quoted heredoc ('TASK_EOF') so the shell does no expansion on
+    // the body — no need to escape quotes or $ in input.task_brief.
     const taskFile = `${sessionDir}/task.txt`;
-    const escapedTask = input.task_brief.replace(/"/g, '\\"').replace(/\$/g, '\\$');
     const writeTaskCmd = `cat > "${taskFile}" << 'TASK_EOF'\n${input.task_brief}\nTASK_EOF\necho "WRITTEN"`;
 
     result = await sshExec(writeTaskCmd, 10000);

@@ -1,7 +1,8 @@
-import {
+import type {
   StolutionDispatchInput,
-  StolutionDispatchInputSchema,
-  StolutionDispatchOutput,
+  StolutionDispatchOutput} from './types.js';
+import {
+  StolutionDispatchInputSchema
 } from './types.js';
 import { dispatchToStolution } from './dispatch.js';
 
