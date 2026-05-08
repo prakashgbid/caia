@@ -25,6 +25,8 @@ export interface WriteCorpusInputs {
   configHash: string;
   generatedAt: string;
   elapsedMs: number;
+  /** Stable ids of pairs held out from training (excluded from samples.jsonl). */
+  holdoutIds: ReadonlyArray<string>;
 }
 
 export function buildManifest(inputs: WriteCorpusInputs): CorpusManifest {
@@ -69,7 +71,8 @@ export function buildManifest(inputs: WriteCorpusInputs): CorpusManifest {
     redactedSpansHistogram,
     qualityHistogram,
     configSha256: inputs.configHash,
-    warnings: [...inputs.warnings]
+    warnings: [...inputs.warnings],
+    holdout: [...inputs.holdoutIds]
   };
 }
 

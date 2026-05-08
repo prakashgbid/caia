@@ -34,6 +34,7 @@ import type {
   ReaderContext,
   SourceReader
 } from './types.js';
+import { splitHoldout } from './holdout.js';
 
 export class ApprenticeCorpusAggregator {
   private readonly cfg: ResolvedApprenticeCorpusConfig;
@@ -175,6 +176,18 @@ export class ApprenticeCorpusAggregator {
       highQuality = highQuality.slice(0, this.cfg.maxSamples);
     }
 
+    // ── Step 7b: deterministic holdout split ─────────────────────────
+    // Stable across reruns of the same config (seeded by `holdoutSeed`).
+    // The holdout ids are recorded in `manifest.json` so Phase 1's
+    // apprentice-eval can recover the same prompts deterministically.
+    const split = splitHoldout({
+      pairs: highQuality,
+      seed: this.cfg.holdoutSeed,
+      fraction: this.cfg.holdoutFraction
+    });
+    const trainablePairs = split.trainable;
+    const holdoutIds = split.holdoutIds;
+
     // ── Step 8: write outputs ────────────────────────────────────────
     const elapsedMs = Date.now() - startedAtMs;
     const datedDir = generatedAt.slice(0, 10);
@@ -186,7 +199,7 @@ export class ApprenticeCorpusAggregator {
       afterQuality: pairs.length,
       distilled,
       dropped: dropped.length,
-      final: highQuality.length
+      final: trainablePairs.length
     };
     const configSnapshotJson = snapshotConfigForHash(this.cfg);
     const configHash = hashConfig(configSnapshotJson);
@@ -194,13 +207,14 @@ export class ApprenticeCorpusAggregator {
     const inputs = {
       outputDir,
       rawArtifacts,
-      finalPairs: highQuality,
+      finalPairs: trainablePairs,
       dropped,
       totals,
       warnings,
       configHash,
       generatedAt,
-      elapsedMs
+      elapsedMs,
+      holdoutIds
     };
 
     if (opts.dryRun !== true) {
@@ -213,11 +227,12 @@ export class ApprenticeCorpusAggregator {
       outputDir,
       elapsedMs,
       totals,
-      perSource: emptyPerSourceFromArtifacts(rawArtifacts, highQuality),
-      redactedSpansHistogram: histogramFromPairs(highQuality, (p) => p.meta.redactedSpans),
-      qualityHistogram: qualityHistogram(highQuality),
+      perSource: emptyPerSourceFromArtifacts(rawArtifacts, trainablePairs),
+      redactedSpansHistogram: histogramFromPairs(trainablePairs, (p) => p.meta.redactedSpans),
+      qualityHistogram: qualityHistogram(trainablePairs),
       configSha256: configHash,
-      warnings
+      warnings,
+      holdout: [...holdoutIds]
     };
   }
 

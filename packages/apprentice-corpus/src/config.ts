@@ -43,6 +43,10 @@ export interface ApprenticeCorpusConfig {
   redactPII?: boolean;
   /** Optional extra patterns the PII masker should redact. */
   extraRedactPatterns?: ReadonlyArray<{ tag: string; pattern: RegExp; replacement: string }>;
+  /** Holdout seed — deterministic across reruns. Default: 42. */
+  holdoutSeed?: number;
+  /** 0..1 fraction of curated pairs to exclude from training; default 0.05 (5%). */
+  holdoutFraction?: number;
 
   // ── Test seams (DI) ──────────────────────────────────────────────────
   fs?: FsReader;
@@ -76,6 +80,8 @@ export interface ResolvedApprenticeCorpusConfig {
   maxAgeDays: number;
   redactPII: boolean;
   extraRedactPatterns: ReadonlyArray<{ tag: string; pattern: RegExp; replacement: string }>;
+  holdoutSeed: number;
+  holdoutFraction: number;
 }
 
 /** Resolve `~` to `$HOME` in a path. Returns `path` unchanged if it doesn't start with `~/`. */
@@ -133,7 +139,9 @@ export function resolveConfig(input: ApprenticeCorpusConfig): ResolvedApprentice
     maxDistillCalls: input.maxDistillCalls ?? 200,
     maxAgeDays: input.maxAgeDays ?? 365,
     redactPII: input.redactPII ?? true,
-    extraRedactPatterns: input.extraRedactPatterns ?? []
+    extraRedactPatterns: input.extraRedactPatterns ?? [],
+    holdoutSeed: input.holdoutSeed ?? 42,
+    holdoutFraction: input.holdoutFraction ?? 0.05
   };
 }
 
@@ -158,6 +166,8 @@ export function snapshotConfigForHash(cfg: ResolvedApprenticeCorpusConfig): stri
     qualityThreshold: cfg.qualityThreshold,
     maxDistillCalls: cfg.maxDistillCalls,
     maxAgeDays: cfg.maxAgeDays,
+    holdoutSeed: cfg.holdoutSeed,
+    holdoutFraction: cfg.holdoutFraction,
     redactPII: cfg.redactPII
   });
 }
