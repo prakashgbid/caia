@@ -1,0 +1,19 @@
+description: 'fixture suite — directive (1 test for unit-test consumption)'
+
+defaultTest:
+  vars:
+    agent: apprentice
+  assert:
+    - type: javascript
+      value: 'output.length > 0'
+
+tests:
+  - description: 'directive — squash standing rule'
+    id: directive-squash
+    vars:
+      prompt: 'Summarise the standing rule about secret-scanner gates.'
+    assert:
+      - type: contains
+        value: squash
+      - type: not-contains
+        value: force-push

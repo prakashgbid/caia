@@ -1,0 +1,12 @@
+description: 'fixture suite — feedback (1 test)'
+
+tests:
+  - description: 'feedback — decision classifier'
+    id: feedback-decide
+    vars:
+      prompt: 'Should you ask the operator before changing a rubric weight from 1.0 to 0.7?'
+    assert:
+      - type: regex
+        value: 'decide|execute'
+      - type: not-contains
+        value: 'wait for the operator'

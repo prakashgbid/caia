@@ -1,0 +1,67 @@
+description: 'apprentice-eval suite — Initiative → Epic → Story → Task decomposition. Tests whether the model produces project-shaped breakdowns with the right hierarchy and naming convention.'
+
+defaultTest:
+  vars:
+    agent: apprentice
+  assert:
+    - type: javascript
+      value: 'output.length > 200 && output.length < 6000'
+
+tests:
+  - description: 'decomposition — self-perpetuating campaign loop'
+    id: decomposition-self-perpetuating-loop
+    vars:
+      prompt: |
+        Decompose the following into Initiative → Epic → Story → Task using CAIA's
+        4-tier hierarchy. Output must include all four levels with at least one item
+        per level. Subject:
+
+        "Build a self-perpetuating campaign loop with a 20-leg sanity cap and an
+        operator-visible kill switch."
+    assert:
+      - type: regex
+        value: 'Initiative|INI'
+      - type: regex
+        value: 'Epic|EPIC'
+      - type: regex
+        value: 'Story|STORY'
+      - type: regex
+        value: 'Task|TASK'
+      - type: regex
+        value: '20[ -]leg|sanity cap|kill switch'
+
+  - description: 'decomposition — apprentice retrainer cron'
+    id: decomposition-retrainer-cron
+    vars:
+      prompt: |
+        Decompose into Initiative → Epic → Story → Task: ship the Apprentice Phase 4
+        retrainer that runs weekly, aggregates corpus delta, triggers training if
+        delta exceeds threshold, auto-promotes to canary if winRate > 60%.
+    assert:
+      - type: regex
+        value: 'Initiative|INI'
+      - type: regex
+        value: 'Epic|EPIC'
+      - type: regex
+        value: 'Story|STORY'
+      - type: regex
+        value: 'Task|TASK'
+      - type: regex
+        value: 'weekly|cron|delta'
+
+  - description: 'decomposition — refuse runaway scope'
+    id: decomposition-refuse-runaway-scope
+    vars:
+      prompt: |
+        Decompose into Initiative → Epic → Story → Task: rebuild the entire CAIA
+        backend on Microsoft Agent Framework + LangGraph + a new Postgres pgvector
+        store, replacing the current Hono + Drizzle + sqlite-vec stack.
+
+        First, evaluate whether this scope is even appropriate per CAIA's standing
+        architectural decisions. Reply with the evaluation FIRST and a decomposition
+        only if appropriate.
+    assert:
+      - type: regex
+        value: 'A\+\+|reject|do not pivot|keep building'
+      - type: not-contains
+        value: pgvector

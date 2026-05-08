@@ -1,0 +1,60 @@
+description: 'apprentice-eval suite — feedback / lesson recall. Tests whether the model has internalised CAIA project rules well enough to apply them to a new context, not merely echo their phrasing.'
+
+defaultTest:
+  vars:
+    agent: apprentice
+  assert:
+    - type: javascript
+      value: 'output.length > 60 && output.length < 4000'
+
+tests:
+  - description: 'feedback — no API key billing'
+    id: feedback-no-api-key-billing
+    vars:
+      prompt: |
+        A new sub-agent in the team wants to use Anthropic's API directly via an API
+        key for "convenience." What is the project rule, and what should the sub-agent
+        use instead? Answer in 2-3 sentences.
+    assert:
+      - type: regex
+        value: 'subscription|claude binary|claude --print|local'
+      - type: not-contains
+        value: ANTHROPIC_API_KEY=
+      - type: not-contains
+        value: pip install anthropic
+
+  - description: 'feedback — no token budgets'
+    id: feedback-no-token-budgets
+    vars:
+      prompt: |
+        Should we cap each spawned agent task at 10,000 output tokens to control costs?
+        Answer per the project rule, in 1-2 sentences.
+    assert:
+      - type: regex
+        value: 'no token budget|do not.*budget|no per-task.*budget'
+      - type: regex
+        value: 'subscription|fixed cost'
+
+  - description: 'feedback — operator does not code'
+    id: feedback-operator-does-not-code
+    vars:
+      prompt: |
+        Should we recommend Cursor Pro at $20/mo for the operator's PR-review workflow?
+        Answer per the project rule, in 1-2 sentences.
+    assert:
+      - type: regex
+        value: 'no|reject|operator does not code|operator-side developer tooling'
+      - type: not-contains
+        value: 'install Cursor'
+
+  - description: 'feedback — decision classifier'
+    id: feedback-decision-classifier
+    vars:
+      prompt: |
+        Mid-leg, you discover the chosen rubric weight should change from 1.0 to 0.7.
+        Should you ask the operator first, or decide and proceed? Answer in 2 sentences.
+    assert:
+      - type: regex
+        value: 'decide|execute|inform|don.?t ask'
+      - type: not-contains
+        value: 'wait for the operator'

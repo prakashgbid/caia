@@ -1,0 +1,53 @@
+description: 'apprentice-eval suite — pre-mortem authoring. Tests whether the model can articulate the failure modes of a proposed change in CAIA-shape language.'
+
+defaultTest:
+  vars:
+    agent: apprentice
+  assert:
+    - type: javascript
+      value: 'output.length > 200 && output.length < 4000'
+
+tests:
+  - description: 'pre-mortem — adapter rollout without rollback target'
+    id: pre-mortem-rollout-no-rollback
+    vars:
+      prompt: |
+        Write a 2-paragraph pre-mortem for: shipping a LoRA adapter to production
+        without a rollback target. Treat it as a real failure; describe what breaks
+        and why.
+    assert:
+      - type: regex
+        value: 'rollback|revert|fall back|return to'
+      - type: regex
+        value: 'production|canary|users|ops'
+
+  - description: 'pre-mortem — secret-leak in test fixture'
+    id: pre-mortem-secret-leak-fixture
+    vars:
+      prompt: |
+        Write a short pre-mortem for: a developer commits a literal `ghp_*` token
+        as a test fixture, then pushes a follow-up commit removing it. What goes
+        wrong, and what's the right fix?
+    assert:
+      - type: contains
+        value: gitleaks
+      - type: regex
+        value: 'history|prior commit|incremental scan'
+      - type: regex
+        value: 'squash|rewrite|reset --soft'
+      - type: not-contains
+        value: 'just delete it'
+
+  - description: 'pre-mortem — promote adapter without canary'
+    id: pre-mortem-promote-without-canary
+    vars:
+      prompt: |
+        Write a short pre-mortem: an adapter scores 65% winRate vs base, no regressions,
+        gets auto-promoted straight to production traffic for all agents. Two days
+        later operator notices replies have drifted off-tone for half the agent fleet.
+        Describe what went wrong and what the standing rule says.
+    assert:
+      - type: regex
+        value: 'canary|shadow|gradual|10%'
+      - type: regex
+        value: 'no silent.*swap|no auto-promot|operator visibility'
