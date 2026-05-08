@@ -1,0 +1,41 @@
+{
+  "name": "@chiefaia/vastu",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VASTU pipeline — text → formal page brief → Figma spec → Next.js scaffold. Private @chiefaia/* package per Option E (agent_architecture_shape_2026-05-06.md). Ports the shape of Stolution's @stolution/vastu-figma-bridge, extended with text-to-doc (Stage A) and figma-to-scaffold (Stage C) stages so the CAIA website factory can drive page creation from free-form prose. Phase 1 (T4.8) ships the skeleton + integration contract; Phases 2-4 fill in the stages. Never published to public npm.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./config": {
+      "import": "./dist/config.js",
+      "types": "./dist/config.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  }
+}

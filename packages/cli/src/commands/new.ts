@@ -19,9 +19,13 @@ export function registerNewCommand(program: Command): void {
     .command('site <name>')
     .description('Scaffold a standalone Tier-5 site repo outside the monorepo')
     .option('--domain <url>', 'Primary domain for the site')
+    .option(
+      '--vastu-from <textOrFile>',
+      'Drive scaffolding from a free-form page brief (text or path to a file). Phase 1 contract only — full pipeline lands in T4.8 Phase 4.'
+    )
     .option('--dry-run', 'Print what would be created without writing files')
-    .action(async (name: string, opts: { domain?: string; dryRun?: boolean }) => {
-      await scaffoldSite(name, opts.domain, opts.dryRun ?? false);
+    .action(async (name: string, opts: { domain?: string; vastuFrom?: string; dryRun?: boolean }) => {
+      await scaffoldSite(name, opts.domain, opts.vastuFrom, opts.dryRun ?? false);
     });
 
   newCmd
@@ -86,7 +90,12 @@ async function scaffoldUtility(name: string, dryRun: boolean): Promise<void> {
   console.log(`Next: pnpm install && pnpm --filter @chiefaia/${name} build`);
 }
 
-async function scaffoldSite(name: string, domain: string | undefined, dryRun: boolean): Promise<void> {
+async function scaffoldSite(
+  name: string,
+  domain: string | undefined,
+  vastuFrom: string | undefined,
+  dryRun: boolean
+): Promise<void> {
   const templateDir = resolve(new URL('../../../templates/site', import.meta.url).pathname);
   const target = resolve(process.cwd(), '..', name);
 
@@ -94,6 +103,9 @@ async function scaffoldSite(name: string, domain: string | undefined, dryRun: bo
     console.log(`[dry-run] Would scaffold site repo at ../${name}/`);
     console.log(`  Domain: ${domain ?? '(not set)'}`);
     console.log(`  Template: ${templateDir}`);
+    if (vastuFrom) {
+      announceVastuHook(vastuFrom);
+    }
     return;
   }
 
@@ -107,5 +119,36 @@ async function scaffoldSite(name: string, domain: string | undefined, dryRun: bo
   // Copy template and substitute placeholders
   console.log(`Scaffolded site at ../${name}/`);
   if (domain) console.log(`   Domain: ${domain}`);
+  if (vastuFrom) {
+    announceVastuHook(vastuFrom);
+  }
   console.log(`Next: cd ../${name} && pnpm install && pnpm dev`);
+}
+
+/**
+ * VASTU pipeline hook (T4.8 Phase 1 — contract only).
+ *
+ * Phase 1 ships only the contract: the flag is parsed and acknowledged so
+ * downstream consumers can wire against `caia new site --vastu-from <…>`
+ * today. The real call site that invokes `runVastuPipeline` from
+ * `@chiefaia/vastu` and materialises the resulting `scaffold.files` onto
+ * the freshly-scaffolded site lands in Phase 4.
+ *
+ * Future shape (Phase 4):
+ *   import { runVastuPipeline, defaultCaiaVastuConfig } from '@chiefaia/vastu';
+ *   const { scaffold } = await runVastuPipeline({
+ *     inputText: readVastuInput(vastuFrom),
+ *     config: defaultCaiaVastuConfig,
+ *     pageId: 'home'
+ *   });
+ *   for (const file of scaffold.files) writeFileSync(join(target, file.path), file.contents, 'utf8');
+ *
+ * See:
+ *   - agent/memory/vastu_caia_port_design_2026-05-08.md
+ *   - packages/vastu/README.md
+ */
+function announceVastuHook(vastuFrom: string): void {
+  console.log(`   VASTU brief: ${vastuFrom}`);
+  console.log('   ⚠ VASTU pipeline scheduled — full text→design→scaffold flow lands in T4.8 Phase 4.');
+  console.log('   Phase 1 wires the contract only; the brief is recorded but not yet processed.');
 }
