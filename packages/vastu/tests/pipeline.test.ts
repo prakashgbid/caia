@@ -4,15 +4,19 @@ import { textToDoc } from '../src/text-to-doc.js';
 import { docToFigma, computeChecksum } from '../src/doc-to-figma.js';
 import { figmaToScaffold } from '../src/figma-to-scaffold.js';
 import { mockVastuConfig } from './fixtures/mock-config.js';
+import { happyDocResponse, makeMockRouter } from './fixtures/mock-route.js';
 
-describe('runVastuPipeline (Phase 1 stub contract)', () => {
+describe('runVastuPipeline (contract)', () => {
   it('returns formalDoc + figmaSpec + scaffold from raw inputText', async () => {
+    const router = makeMockRouter([happyDocResponse()]);
     const result = await runVastuPipeline({
       inputText: 'A hero, three feature cards, and a newsletter signup.',
-      config: mockVastuConfig
+      config: mockVastuConfig,
+      routeFn: router.route
     });
 
-    expect(result.formalDoc.origin).toBe('stub');
+    // Phase 2 — origin is hybrid (heuristic signals + LLM) or llm.
+    expect(['llm', 'hybrid']).toContain(result.formalDoc.origin);
     expect(result.formalDoc.sections.length).toBeGreaterThan(0);
     expect(result.figmaSpec.frames.length).toBe(result.formalDoc.sections.length);
     expect(result.figmaSpec.writeStatus).toBe('dry-run');
@@ -20,10 +24,12 @@ describe('runVastuPipeline (Phase 1 stub contract)', () => {
   });
 
   it('honours pageId override', async () => {
+    const router = makeMockRouter([happyDocResponse()]);
     const result = await runVastuPipeline({
       inputText: 'Content',
       config: mockVastuConfig,
-      pageId: 'custom-page-id'
+      pageId: 'custom-page-id',
+      routeFn: router.route
     });
     expect(result.formalDoc.id).toBe('custom-page-id');
     expect(result.figmaSpec.meta.pageId).toBe('custom-page-id');
@@ -68,18 +74,22 @@ describe('runVastuPipeline (Phase 1 stub contract)', () => {
   });
 });
 
-describe('textToDoc (Phase 1 stub)', () => {
+describe('textToDoc (smoke)', () => {
   it('throws on empty input', async () => {
     await expect(
-      textToDoc({ inputText: '   ', config: mockVastuConfig })
+      textToDoc({ inputText: '   ', config: mockVastuConfig, routeFn: makeMockRouter([]).route })
     ).rejects.toThrow();
   });
 
-  it('returns a single-section stub doc with origin=stub', async () => {
-    const doc = await textToDoc({ inputText: 'Hello world', config: mockVastuConfig });
-    expect(doc.origin).toBe('stub');
-    expect(doc.sections.length).toBe(1);
-    expect(doc.sections[0]?.intent).toBe('Hello world');
+  it('produces an llm/hybrid-origin doc with at least one section', async () => {
+    const router = makeMockRouter([happyDocResponse()]);
+    const doc = await textToDoc({
+      inputText: 'Hello world',
+      config: mockVastuConfig,
+      routeFn: router.route
+    });
+    expect(['llm', 'hybrid']).toContain(doc.origin);
+    expect(doc.sections.length).toBeGreaterThan(0);
   });
 });
 
