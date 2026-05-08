@@ -1,0 +1,47 @@
+{
+  "name": "@chiefaia/reviewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Craftsmanship-focused PR review agent. Reads PR diffs, runs deterministic pattern detectors plus LLM-reasoned craftsmanship review (claude binary, subscription-only) for readability/idiom/maintainability dimensions, and files advisory findings as PR comments. Reviewer findings are NEVER blocking — Steward consumes only Critic blockers. Tier-A item 9.5 of agent_ecosystem_expansion_directive.md. Option E shape — private workspace package, parameterised constructor, fixture-tested.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-reviewer": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/mentor-event-bus": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "1.6.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

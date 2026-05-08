@@ -1,0 +1,13 @@
+diff --git a/packages/example/src/big.ts b/packages/example/src/big.ts
+new file mode 100644
+index 0000000..bbbbbbb
+--- /dev/null
++++ b/packages/example/src/big.ts
+@@ -495,5 +495,7 @@
+ const PADDING_END = 1;
+ const PADDING_END_2 = 1;
+ const PADDING_END_3 = 1;
++const ADD_LINE_501 = 1;
++const ADD_LINE_502 = 1;
+ const PADDING_END_4 = 1;
+ const PADDING_END_5 = 1;

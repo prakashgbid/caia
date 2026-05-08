@@ -1,0 +1,77 @@
+diff --git a/packages/example/src/long-fn.ts b/packages/example/src/long-fn.ts
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/packages/example/src/long-fn.ts
+@@ -0,0 +1,72 @@
++/**
++ * Function longer than the threshold.
++ */
++export function megaProcess(input: number): number {
++  let total = input;
++  total = total + 1;
++  total = total + 2;
++  total = total + 3;
++  total = total + 4;
++  total = total + 5;
++  total = total + 6;
++  total = total + 7;
++  total = total + 8;
++  total = total + 9;
++  total = total + 10;
++  total = total + 11;
++  total = total + 12;
++  total = total + 13;
++  total = total + 14;
++  total = total + 15;
++  total = total + 16;
++  total = total + 17;
++  total = total + 18;
++  total = total + 19;
++  total = total + 20;
++  total = total + 21;
++  total = total + 22;
++  total = total + 23;
++  total = total + 24;
++  total = total + 25;
++  total = total + 26;
++  total = total + 27;
++  total = total + 28;
++  total = total + 29;
++  total = total + 30;
++  total = total + 31;
++  total = total + 32;
++  total = total + 33;
++  total = total + 34;
++  total = total + 35;
++  total = total + 36;
++  total = total + 37;
++  total = total + 38;
++  total = total + 39;
++  total = total + 40;
++  total = total + 41;
++  total = total + 42;
++  total = total + 43;
++  total = total + 44;
++  total = total + 45;
++  total = total + 46;
++  total = total + 47;
++  total = total + 48;
++  total = total + 49;
++  total = total + 50;
++  total = total + 51;
++  total = total + 52;
++  total = total + 53;
++  total = total + 54;
++  total = total + 55;
++  total = total + 56;
++  total = total + 57;
++  total = total + 58;
++  total = total + 59;
++  total = total + 60;
++  total = total + 61;
++  total = total + 62;
++  total = total + 63;
++  total = total + 64;
++  return total;
++}
