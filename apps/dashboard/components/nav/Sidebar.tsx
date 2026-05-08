@@ -258,12 +258,12 @@ export function Sidebar() {
               </span>
             </button>
             {isOpen && (
-              <ul
+              <div
                 id={regionId}
                 role="region"
                 aria-label={`${group.label} navigation`}
-                style={{ listStyle: 'none', padding: 0, margin: 0 }}
               >
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {group.leaves.map((leaf) => {
                   const isActive =
                     pathname === leaf.path || pathname.startsWith(leaf.path + '/');
@@ -314,7 +314,8 @@ export function Sidebar() {
                     </li>
                   );
                 })}
-              </ul>
+                </ul>
+              </div>
             )}
           </div>
         );
