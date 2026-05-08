@@ -1,0 +1,154 @@
+name: Code Reviewer
+
+# Runs the @chiefaia/code-reviewer agent on PR open + push, posts the review
+# verdict as a PR comment, and submits the PR review (approve / request-changes)
+# via the GitHub API. Together with the Architecture/Security Reviewer
+# (Ollama-based, Phase 5 of PR Review Pipeline Campaign) this fulfills the
+# two-AI-reviewer setup described in operator_decisions_2026-05-08.md.
+#
+# This workflow is the BLOCKING reviewer for correctness/bugs/style/types/
+# tests/naming/comments. The advisory @chiefaia/reviewer agent is sibling
+# but never blocks (its review-comment workflow is non-gating).
+#
+# Subscription-only: never sets ANTHROPIC_API_KEY in the spawn env. The
+# CLAUDE_OAUTH_TOKEN secret authenticates the `claude` binary via the
+# operator's Max subscription accounts.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main, develop]
+
+# Skip drafts unless explicitly invoked.
+concurrency:
+  group: code-reviewer-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  detect-changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!**/*.mdx'
+              - '!docs/**'
+              - '!agent/memory/**'
+              - '!AGENTS.md'
+              - '!CHANGELOG.md'
+              - '!.changeset/**'
+
+  code-review:
+    name: Code Reviewer (blocking)
+    needs: detect-changes
+    if: |
+      needs.detect-changes.outputs.code == 'true' &&
+      !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-pnpm-mono
+
+      - name: Build code-reviewer
+        run: pnpm --filter @chiefaia/code-reviewer build
+
+      - name: Fetch PR diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr.diff
+          echo "Diff size: $(wc -c < /tmp/pr.diff) bytes"
+
+      - name: Run code-reviewer
+        env:
+          # Subscription-only auth — the binary picks up CLAUDE_OAUTH_TOKEN
+          # and routes through the operator's Max account, no API-key billing.
+          # Per `feedback_no_api_key_billing.md`: ANTHROPIC_API_KEY is
+          # explicitly NOT set; the agent's spawn env strips any inherited copy.
+          CLAUDE_OAUTH_TOKEN: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+        id: review
+        run: |
+          set +e
+          node packages/code-reviewer/dist/cli.js review \
+            --pr ${{ github.event.pull_request.number }} \
+            --diff-file /tmp/pr.diff \
+            --output json \
+            --base-branch ${{ github.event.pull_request.base.ref }} \
+            --branch ${{ github.event.pull_request.head.ref }} \
+            --title "${{ github.event.pull_request.title }}" \
+            > /tmp/review.json
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          # Extract verdict for the next steps.
+          VERDICT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('/tmp/review.json','utf-8')).verdict)")
+          echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
+
+      - name: Render review comment
+        id: render
+        run: |
+          node packages/code-reviewer/dist/cli.js review \
+            --pr ${{ github.event.pull_request.number }} \
+            --diff-file /tmp/pr.diff \
+            --output text \
+            --base-branch ${{ github.event.pull_request.base.ref }} \
+            --branch ${{ github.event.pull_request.head.ref }} \
+            --title "${{ github.event.pull_request.title }}" \
+            --no-llm \
+            > /tmp/review.txt || true
+          # Build a body file we can pass to gh.
+          {
+            echo "<!-- caia-code-reviewer -->"
+            echo "## :robot: Code Reviewer (@chiefaia/code-reviewer)"
+            echo ""
+            echo "**Verdict:** \`${{ steps.review.outputs.verdict }}\`"
+            echo ""
+            echo "Sibling: \`@chiefaia/critic\` (security/regression/cost — also blocking) and \`@chiefaia/reviewer\` (advisory craftsmanship — non-blocking)."
+            echo ""
+            echo "<details><summary>Full review</summary>"
+            echo ""
+            echo '```'
+            cat /tmp/review.txt
+            echo '```'
+            echo ""
+            echo "</details>"
+          } > /tmp/comment.md
+
+      - name: Post review verdict comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md
+
+      - name: Submit PR review (approve / request-changes)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ steps.review.outputs.verdict }}" = "request-changes" ]; then
+            gh pr review ${{ github.event.pull_request.number }} \
+              --request-changes \
+              --body "Code-Reviewer requests changes. See the verdict comment above."
+          else
+            gh pr review ${{ github.event.pull_request.number }} \
+              --approve \
+              --body "Code-Reviewer approves. See the verdict comment above."
+          fi
+
+      - name: Fail job on request-changes (blocks merge)
+        if: steps.review.outputs.verdict == 'request-changes'
+        run: |
+          echo "::error::Code Reviewer requested changes — see PR comment for findings."
+          exit 1
