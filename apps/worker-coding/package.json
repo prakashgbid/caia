@@ -13,9 +13,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@chiefaia/capability-broker": "workspace:*",
+    "@chiefaia/logger": "workspace:*",
     "@chiefaia/ticket-template": "workspace:*",
-    "zod": "^4.1.12",
-    "@chiefaia/capability-broker": "workspace:*"
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

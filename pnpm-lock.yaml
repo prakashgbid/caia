@@ -428,6 +428,9 @@ importers:
       '@chiefaia/capability-broker':
         specifier: workspace:*
         version: link:../../packages/capability-broker
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@chiefaia/ticket-template':
         specifier: workspace:*
         version: link:../../packages/ticket-template
