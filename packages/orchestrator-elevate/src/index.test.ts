@@ -9,7 +9,8 @@ import {
   ALLOWED_OPERATIONS,
   OPERATION_DESCRIPTIONS,
   DEFAULT_CONFIG,
-} from './index';
+  type AllowedOperation,
+} from './index.js';
 
 describe('orchestrator-elevate constants', () => {
   describe('SYSTEMD_UNIT_REGEX', () => {
@@ -148,7 +149,7 @@ describe('orchestrator-elevate constants', () => {
     });
 
     it('has descriptions for all operations', () => {
-      ALLOWED_OPERATIONS.forEach((op) => {
+      ALLOWED_OPERATIONS.forEach((op: AllowedOperation) => {
         expect(OPERATION_DESCRIPTIONS[op]).toBeDefined();
         expect(OPERATION_DESCRIPTIONS[op].length).toBeGreaterThan(0);
       });

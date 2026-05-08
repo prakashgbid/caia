@@ -18,7 +18,7 @@ const bashScript = join(__dirname, '../../bin/bootstrap-orchestrator-elevate.sh'
 try {
   execSync(`bash "${bashScript}"`, {
     stdio: 'inherit',
-    shell: true,
+    encoding: 'utf-8',
   });
 } catch (error) {
   console.error('Bootstrap failed:', error instanceof Error ? error.message : error);
