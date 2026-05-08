@@ -1,8 +1,8 @@
 {
   "name": "@chiefaia/librarian",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Librarian Agent Phase-1 — pre-spawn precedent retrieval. Embeds the entire memory + reports corpus (directives, registries, architecture docs, master plans, landscape research, gate completion reports, handoffs) via Ollama nomic-embed-text, persists to a per-memoryDir SQLite index, retrieves top-N most similar prior decisions, and prepends them to spawned-task prompts as 'Precedent from prior decisions — for context:'. Mirrors the `@chiefaia/mentor-retrieval` pattern but with broader corpus + 'precedent' framing instead of 'lesson — do not repeat'. Composes left-to-right with Mentor's prepend so the orchestrator pipeline becomes `echo $P | caia-mentor-prepend | caia-librarian-prepend`. Phase 1 ships the index + retrieval + prepend hook; PR titles + transcripts ingestion is deferred.",
+  "description": "Librarian Agent — pre-spawn precedent retrieval. Embeds the entire memory + reports corpus (directives, registries, architecture docs, master plans, landscape research, gate completion reports, handoffs) via Ollama nomic-embed-text, persists to a per-memoryDir SQLite index, retrieves top-N most similar prior decisions, and prepends them to spawned-task prompts as 'Precedent from prior decisions — for context:'. Mirrors the `@chiefaia/mentor-retrieval` pattern but with broader corpus + 'precedent' framing instead of 'lesson — do not repeat'. Composes left-to-right with Mentor's prepend so the orchestrator pipeline becomes `echo $P | caia-mentor-prepend | caia-librarian-prepend`. Phase 1 ships the better-sqlite3 + JS-side cosine backend; Phase 2 ships the Mem0 alternative backend behind an internal abstraction (validation decision #4, 2026-05-06).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -28,6 +28,10 @@
     "./prepend": {
       "import": "./dist/prepend.js",
       "types": "./dist/prepend.d.ts"
+    },
+    "./backends": {
+      "import": "./dist/backends/index.js",
+      "types": "./dist/backends/index.d.ts"
     }
   },
   "files": [
@@ -43,7 +47,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "better-sqlite3": "^12.6.2"
+    "better-sqlite3": "^12.6.2",
+    "mem0ai": "^3.0.2"
   },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
