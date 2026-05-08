@@ -81,16 +81,23 @@ jobs:
           # Per `feedback_no_api_key_billing.md`: ANTHROPIC_API_KEY is
           # explicitly NOT set; the agent's spawn env strips any inherited copy.
           CLAUDE_OAUTH_TOKEN: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          # Indirected through env vars to avoid shell-injection (semgrep
+          # yaml.github-actions.security.run-shell-injection): never
+          # interpolate ${{ github.event... }} directly inside `run:`.
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         id: review
         run: |
           set +e
           node packages/code-reviewer/dist/cli.js review \
-            --pr ${{ github.event.pull_request.number }} \
+            --pr "$PR_NUMBER" \
             --diff-file /tmp/pr.diff \
             --output json \
-            --base-branch ${{ github.event.pull_request.base.ref }} \
-            --branch ${{ github.event.pull_request.head.ref }} \
-            --title "${{ github.event.pull_request.title }}" \
+            --base-branch "$PR_BASE_REF" \
+            --branch "$PR_HEAD_REF" \
+            --title "$PR_TITLE" \
             > /tmp/review.json
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
           # Extract verdict for the next steps.
@@ -99,14 +106,20 @@ jobs:
 
       - name: Render review comment
         id: render
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          VERDICT: ${{ steps.review.outputs.verdict }}
         run: |
           node packages/code-reviewer/dist/cli.js review \
-            --pr ${{ github.event.pull_request.number }} \
+            --pr "$PR_NUMBER" \
             --diff-file /tmp/pr.diff \
             --output text \
-            --base-branch ${{ github.event.pull_request.base.ref }} \
-            --branch ${{ github.event.pull_request.head.ref }} \
-            --title "${{ github.event.pull_request.title }}" \
+            --base-branch "$PR_BASE_REF" \
+            --branch "$PR_HEAD_REF" \
+            --title "$PR_TITLE" \
             --no-llm \
             > /tmp/review.txt || true
           # Build a body file we can pass to gh.
@@ -114,7 +127,7 @@ jobs:
             echo "<!-- caia-code-reviewer -->"
             echo "## :robot: Code Reviewer (@chiefaia/code-reviewer)"
             echo ""
-            echo "**Verdict:** \`${{ steps.review.outputs.verdict }}\`"
+            echo "**Verdict:** \`$VERDICT\`"
             echo ""
             echo "Sibling: \`@chiefaia/critic\` (security/regression/cost — also blocking) and \`@chiefaia/reviewer\` (advisory craftsmanship — non-blocking)."
             echo ""
@@ -130,19 +143,22 @@ jobs:
       - name: Post review verdict comment
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md
+          gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
 
       - name: Submit PR review (approve / request-changes)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          VERDICT: ${{ steps.review.outputs.verdict }}
         run: |
-          if [ "${{ steps.review.outputs.verdict }}" = "request-changes" ]; then
-            gh pr review ${{ github.event.pull_request.number }} \
+          if [ "$VERDICT" = "request-changes" ]; then
+            gh pr review "$PR_NUMBER" \
               --request-changes \
               --body "Code-Reviewer requests changes. See the verdict comment above."
           else
-            gh pr review ${{ github.event.pull_request.number }} \
+            gh pr review "$PR_NUMBER" \
               --approve \
               --body "Code-Reviewer approves. See the verdict comment above."
           fi
