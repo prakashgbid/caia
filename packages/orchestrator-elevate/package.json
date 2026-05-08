@@ -21,7 +21,7 @@
     "etc"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && chmod +x dist/bin/orchestrator-exec.sh",
+    "build": "tsc -p tsconfig.json && chmod +x dist/bin/bootstrap-orchestrator-elevate.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:wrapper": "bash tests/wrapper.test.sh",
