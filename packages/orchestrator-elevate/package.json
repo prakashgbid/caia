@@ -1,0 +1,47 @@
+{
+  "name": "@chiefaia/orchestrator-elevate",
+  "version": "0.1.0",
+  "description": "Root-owned sudo wrapper + scoped Vault AppRole for permanent Cowork orchestrator privilege escalation on stolution. Single NOPASSWD entry point with exhaustive allowlisting and JSONL audit logging.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "orchestrator-elevate-bootstrap": "./dist/bin/bootstrap-orchestrator-elevate.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "etc"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/bin/bootstrap-orchestrator-elevate.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:wrapper": "bash tests/wrapper.test.sh",
+    "test:integration": "bash tests/integration/bootstrap.test.sh",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
