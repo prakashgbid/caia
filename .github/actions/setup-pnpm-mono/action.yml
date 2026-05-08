@@ -1,0 +1,58 @@
+name: setup-pnpm-mono
+description: Cached pnpm install for the CAIA monorepo (one-shot, shared across jobs in workflow)
+
+# Composite action that consolidates the standard pnpm + node + cache + install
+# pattern repeated across every CI workflow.
+#
+# Replaces five copies of the following block in evidence-gate.yml plus one in
+# ci.yml + others:
+#
+#     - uses: pnpm/action-setup@v4
+#     - uses: actions/setup-node@v4
+#       with:
+#         node-version: 20
+#         cache: pnpm
+#     - run: pnpm install --frozen-lockfile
+#
+# Adds an extra `actions/cache@v4` layer keyed on `pnpm-lock.yaml` hash so the
+# pnpm-store + node_modules survive across jobs in the same workflow run when
+# the lockfile is unchanged. On a cache hit, `pnpm install --offline` runs
+# in seconds instead of the usual 45-90s.
+#
+# Reference: velocity-acceleration-strategy-2026-05-06.md §1.2 (Tier 1.2), §A.3.
+# Estimated savings: 2-4 min per Evidence Gate run (5 redundant installs ×
+# ~30s saved each); ≈1 hour saved across a 25-PR campaign.
+
+inputs:
+  node-version:
+    description: 'Node.js version to install'
+    required: false
+    default: '20'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    - name: Restore pnpm-store + node_modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          **/node_modules
+        # Hard key includes lockfile hash; restore-keys allow partial reuse
+        # across runs that change the lockfile (rebuilds only the delta).
+        key: pnpm-mono-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-mono-${{ runner.os }}-${{ inputs.node-version }}-
+
+    - name: Install dependencies (frozen lockfile, prefer offline)
+      shell: bash
+      run: pnpm install --frozen-lockfile --prefer-offline
