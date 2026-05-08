@@ -1,0 +1,11 @@
+diff --git a/packages/sample/src/api.ts b/packages/sample/src/api.ts
+index 1234567..89abcde 100644
+--- a/packages/sample/src/api.ts
++++ b/packages/sample/src/api.ts
+@@ -1,2 +1,7 @@
+ // public API
++export class WidgetService {
++  doThing(): void {}
++}
++
++export function helperFn(x: number): number { return x * 2; }

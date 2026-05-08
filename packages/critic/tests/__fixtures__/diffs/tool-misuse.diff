@@ -1,0 +1,10 @@
+diff --git a/packages/util/src/fetcher.ts b/packages/util/src/fetcher.ts
+index 1234567..89abcde 100644
+--- a/packages/util/src/fetcher.ts
++++ b/packages/util/src/fetcher.ts
+@@ -1,2 +1,4 @@
+ export async function getDocs(): Promise<string> {
+-  return webFetch('https://docs.example.com');
++  const result = await fetch('https://docs.example.com');
++  return result.text();
+ }

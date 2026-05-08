@@ -1,0 +1,9 @@
+diff --git a/scripts/deploy.sh b/scripts/deploy.sh
+index 1234567..89abcde 100644
+--- a/scripts/deploy.sh
++++ b/scripts/deploy.sh
+@@ -1,2 +1,4 @@
+ #!/bin/bash
+ git pull origin main
++gh pr update-branch
++git push --force origin develop
