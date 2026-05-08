@@ -10,10 +10,11 @@ import { NextResponse } from 'next/server';
 
 const ORCHESTRATOR_URL = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   try {
+    const { id } = await params;
     const upstream = await fetch(
-      `${ORCHESTRATOR_URL}/stories/${encodeURIComponent(params.id)}/bundle`,
+      `${ORCHESTRATOR_URL}/stories/${encodeURIComponent(id)}/bundle`,
       { cache: 'no-store' },
     );
     if (!upstream.ok) return NextResponse.json({ error: `Upstream ${upstream.status}` }, { status: upstream.status });

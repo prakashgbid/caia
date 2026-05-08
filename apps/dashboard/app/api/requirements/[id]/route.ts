@@ -11,10 +11,11 @@ const CONDUCTOR_URL = process.env['CONDUCTOR_URL'] ?? 'http://localhost:7776';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const res = await fetch(`${CONDUCTOR_URL}/requirements/${encodeURIComponent(params.id)}`, { next: { revalidate: 0 } });
+    const { id } = await params;
+    const res = await fetch(`${CONDUCTOR_URL}/requirements/${encodeURIComponent(id)}`, { next: { revalidate: 0 } });
     if (!res.ok) {
       return NextResponse.json({ error: 'Not found' }, { status: res.status });
     }
