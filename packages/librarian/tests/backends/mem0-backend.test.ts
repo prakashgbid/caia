@@ -72,7 +72,11 @@ describe('isLibrarianBackendName', () => {
     expect(isLibrarianBackendName(42)).toBe(false);
   });
   it('exposes a sane default', () => {
-    expect(DEFAULT_BACKEND).toBe('sqlite-vec');
+    // 2026-05-08: default flipped from 'sqlite-vec' to 'mem0' after
+    // A/B parity (Mem0 won 7/10 vs sqlite-vec 3/10) and operator
+    // "scaling forward" authorization. See
+    // feedback_validation_decisions_2026-05-06.md decision #4.
+    expect(DEFAULT_BACKEND).toBe('mem0');
   });
 });
 
@@ -425,6 +429,165 @@ describe('dispatcher: backend flag', () => {
       expect(r.augmentedPrompt).toBe('totally unrelated zzqxxq');
       expect(r.precedent).toEqual([]);
       expect(r.preambleLength).toBe(0);
+    } finally {
+      cleanup();
+    }
+  });
+});
+
+/**
+ * Phase-2 default-flip parity smoke test (2026-05-08).
+ *
+ * Per the Phase-2 brief: "write a small integration test that proves
+ * both backends pass the same suite of operations." The two backends
+ * have separate test surfaces elsewhere — this suite runs the same
+ * sequence of build → retrieve → prepend operations against BOTH
+ * backends back-to-back and asserts the result shapes are
+ * structurally compatible (same `RetrievedPrecedent` keys, same
+ * preamble format, same prompt-augmentation semantics).
+ *
+ * Similarity scores are NOT compared across backends — Mem0's
+ * `MemoryVectorStore` uses unnormalized cosine similarity while the
+ * Phase-1 path uses normalized cosine. Callers comparing across
+ * backends should use rank order, not raw scores.
+ *
+ * Both backends are exercised offline:
+ *   - sqlite-vec via a deterministic `embed` stub.
+ *   - Mem0 via the same `createFakeMemory` fixture used elsewhere.
+ *
+ * No Ollama, no network, no API keys.
+ */
+describe('parity smoke: same operations across both backends', () => {
+  // Deterministic embed stub for the sqlite-vec backend. Returns a
+  // stable 768-dim zero vector — sqlite-vec's Phase-1 retrieve will
+  // match all rows at similarity 0, which is fine for this smoke test
+  // because we only assert structural shape (not score order).
+  const stubEmbed = async (): Promise<{ vector: Float32Array; model: string }> => ({
+    vector: new Float32Array(768),
+    model: 'parity-stub'
+  });
+
+  it('build → retrieve → prepend produces structurally compatible outputs on both backends', async () => {
+    // Set up a fresh corpus directory used by BOTH backends.
+    const tmp = mkdtempSync(join(tmpdir(), 'librarian-parity-'));
+    const memoryDir = join(tmp, 'memory');
+    mkdirSync(memoryDir, { recursive: true });
+    writeFileSync(
+      join(memoryDir, 'mentor_agent_directive.md'),
+      'mentor agent topic — pre-spawn injection rules'
+    );
+
+    const fake = createFakeMemory({ dimension: 32 });
+    const mem0 = new Mem0Backend({
+      memoryDir,
+      userId: 'parity-fixture',
+      memoryFactory: () => fake
+    });
+
+    try {
+      // ---- BUILD ----
+      const sqliteStats = await buildIndexWithBackend({
+        memoryDir,
+        embed: stubEmbed,
+        log: () => undefined,
+        backend: 'sqlite-vec'
+      });
+      const mem0Stats = await buildIndexWithBackend({
+        memoryDir,
+        embed: stubEmbed,  // unused on the mem0 path
+        log: () => undefined,
+        backend: 'mem0',
+        mem0: { backend: mem0 }
+      });
+
+      // Both backends scan the same number of files and report the
+      // same per-kind counts shape (BuildIndexStats).
+      expect(sqliteStats.scanned).toBe(1);
+      expect(mem0Stats.scanned).toBe(1);
+      expect(sqliteStats.embeddedNew).toBe(1);
+      expect(mem0Stats.embeddedNew).toBe(1);
+      // Same key shape on the result objects.
+      expect(Object.keys(sqliteStats).sort()).toEqual(
+        Object.keys(mem0Stats).sort()
+      );
+
+      // ---- RETRIEVE ----
+      const sqliteHits = await retrieveWithBackend('mentor agent', {
+        memoryDir,
+        backend: 'sqlite-vec',
+        embed: stubEmbed,
+        topN: 5,
+        minSimilarity: 0
+      });
+      const mem0Hits = await retrieveWithBackend('mentor agent', {
+        memoryDir,
+        backend: 'mem0',
+        topN: 5,
+        minSimilarity: 0,
+        mem0: { backend: mem0 }
+      });
+
+      // Both backends found the doc.
+      expect(sqliteHits.length).toBeGreaterThan(0);
+      expect(mem0Hits.length).toBeGreaterThan(0);
+      // Same RetrievedPrecedent key shape on every row.
+      const sqliteKeys = Object.keys(sqliteHits[0] ?? {}).sort();
+      const mem0Keys = Object.keys(mem0Hits[0] ?? {}).sort();
+      expect(sqliteKeys).toEqual(mem0Keys);
+      // Both surface the corpus slug we wrote.
+      expect(sqliteHits.some((r) => r.slug === 'mentor_agent_directive')).toBe(true);
+      expect(mem0Hits.some((r) => r.slug === 'mentor_agent_directive')).toBe(true);
+
+      // ---- PREPEND ----
+      const sqlitePrepended = await prependWithBackend('mentor agent', {
+        memoryDir,
+        backend: 'sqlite-vec',
+        embed: stubEmbed,
+        topN: 5,
+        minSimilarity: 0
+      });
+      const mem0Prepended = await prependWithBackend('mentor agent', {
+        memoryDir,
+        backend: 'mem0',
+        topN: 5,
+        minSimilarity: 0,
+        mem0: { backend: mem0 }
+      });
+
+      // Both augmented the prompt.
+      expect(sqlitePrepended.augmented).toBe(true);
+      expect(mem0Prepended.augmented).toBe(true);
+      // Both used the byte-identical preamble header.
+      const HEADER = 'Precedent from prior decisions — for context:';
+      expect(sqlitePrepended.augmentedPrompt.startsWith(HEADER)).toBe(true);
+      expect(mem0Prepended.augmentedPrompt.startsWith(HEADER)).toBe(true);
+      // Both preserve the original prompt at the tail.
+      expect(sqlitePrepended.augmentedPrompt.endsWith('mentor agent')).toBe(true);
+      expect(mem0Prepended.augmentedPrompt.endsWith('mentor agent')).toBe(true);
+      // PrependPrecedentResult key shape matches on both backends.
+      expect(Object.keys(sqlitePrepended).sort()).toEqual(
+        Object.keys(mem0Prepended).sort()
+      );
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('default backend (no explicit flag) routes to mem0 after Phase-2 default-flip', async () => {
+    const { backend, fake, memoryDir, cleanup } = buildBackendWithFake();
+    try {
+      writeFileSync(join(memoryDir, 'mentor_agent_directive.md'), 'topic');
+      // Omit `backend:` flag entirely — should route to DEFAULT_BACKEND.
+      const stats = await buildIndexWithBackend({
+        memoryDir,
+        embed: async () => ({ vector: new Float32Array(768), model: 'unused' }),
+        log: () => undefined,
+        mem0: { backend }
+      });
+      expect(stats.scanned).toBe(1);
+      // Confirm it landed in the mem0 fake (proves the default routed
+      // through the mem0 dispatcher, not the sqlite-vec dispatcher).
+      expect(fake.rows.size).toBe(1);
     } finally {
       cleanup();
     }
