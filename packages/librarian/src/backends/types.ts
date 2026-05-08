@@ -5,17 +5,18 @@
  *
  * Two backends are supported:
  *
- *   - `'sqlite-vec'`  (default) — Librarian Phase-1's existing
- *     better-sqlite3 + JS-side cosine implementation. Named
- *     `'sqlite-vec'` in the user-facing flag for consistency with the
- *     campaign brief; the actual implementation does NOT use the
- *     sqlite-vec extension.
+ *   - `'sqlite-vec'` — Librarian Phase-1's existing better-sqlite3 +
+ *     JS-side cosine implementation. Named `'sqlite-vec'` in the
+ *     user-facing flag for consistency with the campaign brief; the
+ *     actual implementation does NOT use the sqlite-vec extension.
+ *     Retained as an opt-in for tests and rollback.
  *
- *   - `'mem0'` — Mem0 OSS Node.js (`mem0ai/oss`). Configured with
- *     `infer: false` (no LLM round-trip) + Ollama embedder + `'memory'`
- *     vector-store provider (which is misleadingly named — it is
- *     actually better-sqlite3 + JS-side cosine, with a different
- *     schema from Librarian Phase-1).
+ *   - `'mem0'`  (default since Phase 2 default-flip, 2026-05-08) —
+ *     Mem0 OSS Node.js (`mem0ai/oss`). Configured with `infer: false`
+ *     (no LLM round-trip) + Ollama embedder + `'memory'` vector-store
+ *     provider (which is misleadingly named — it is actually
+ *     better-sqlite3 + JS-side cosine, with a different schema from
+ *     Librarian Phase-1).
  *
  * Both backends honour the same hard constraints from
  * `feedback_no_api_key_billing.md` — no Anthropic API key, no OpenAI
@@ -28,18 +29,23 @@
  */
 
 /**
- * The user-facing backend choice flag. `'sqlite-vec'` is the
- * Librarian Phase-1 default; `'mem0'` is the new Mem0-backed option
- * shipped per validation decision #4.
+ * The user-facing backend choice flag. `'mem0'` is the
+ * default since the Phase 2 default-flip on 2026-05-08 (operator
+ * "scaling forward" authorization, per
+ * `feedback_validation_decisions_2026-05-06.md`). `'sqlite-vec'` is
+ * kept available as an opt-in fallback / rollback.
  */
 export type LibrarianBackendName = 'sqlite-vec' | 'mem0';
 
 /**
- * Default backend when callers don't supply one. Stays `'sqlite-vec'`
- * for backwards compatibility until A/B parity is confirmed and the
- * operator explicitly approves a default-flip.
+ * Default backend when callers don't supply one. Flipped from
+ * `'sqlite-vec'` to `'mem0'` on 2026-05-08 after the A/B harness
+ * (PR #370) confirmed Mem0 won 7/10 vs sqlite-vec's 3/10 on the live
+ * 286-file CAIA corpus, with latency well under the 1-2 sec
+ * pre-spawn budget. Re-evaluation triggers documented in
+ * `feedback_validation_decisions_2026-05-06.md` (decision #4).
  */
-export const DEFAULT_BACKEND: LibrarianBackendName = 'sqlite-vec';
+export const DEFAULT_BACKEND: LibrarianBackendName = 'mem0';
 
 /**
  * Type guard for the runtime CLI parser. Returns true if `v` is a
