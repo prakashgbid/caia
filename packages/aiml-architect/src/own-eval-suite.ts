@@ -161,6 +161,10 @@ function checkAssertionAnchor(
       return `assertion "regex" missing pattern`;
     }
     try {
+      // Validates that the developer-authored regex pattern from canonical
+      // suite config is well-formed. The constructed RegExp is discarded
+      // immediately; no execution occurs on user input here.
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
       new RegExp(a.value);
     } catch (e) {
       return `assertion "regex" pattern invalid: ${String(e)}`;
