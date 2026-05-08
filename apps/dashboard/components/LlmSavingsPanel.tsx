@@ -8,7 +8,7 @@
 //   - cache hit rate (if @chiefaia/llm-cache is wired)
 //   - per-task-type breakdown of calls + savings
 
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 
 interface PerTask {
   taskType: string;

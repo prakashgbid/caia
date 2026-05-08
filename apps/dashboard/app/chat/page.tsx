@@ -5,6 +5,7 @@
  * `agent/memory/enterprise_ai_landscape_directive.md` (W1-2-add).
  */
 
+import type { JSX } from 'react';
 import { ChatPanel } from '../../components/chat/ChatPanel';
 
 export const dynamic = 'force-dynamic';

@@ -1,6 +1,7 @@
 // LAI-006 — Dashboard page that surfaces the LLM token-savings panel.
 
 import Link from 'next/link';
+import type { JSX } from 'react';
 import { LlmSavingsPanel } from '../../../components/LlmSavingsPanel';
 
 export const dynamic = 'force-dynamic';
