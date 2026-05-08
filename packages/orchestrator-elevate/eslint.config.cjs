@@ -1,6 +1,5 @@
-module.exports = [
-  {
-    files: ["src/**/*.ts"],
-    extends: ["@chiefaia/eslint-config"]
-  }
-];
+'use strict';
+
+const { createConfig } = require('@chiefaia/eslint-config');
+
+module.exports = createConfig('./tsconfig.json');
