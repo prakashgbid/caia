@@ -100,34 +100,35 @@ jobs:
             fi
 
             COMMITS=$(git log "origin/develop..origin/${branch}" --pretty=format:'- %h %s' | head -20)
-            BODY=$(cat <<EOF
-**Auto-opened by the hygiene watchdog** (\`.github/workflows/auto-pr.yml\`).
 
-This branch has ${AHEAD} commit(s) ahead of \`develop\` but no open PR. The watchdog opens a draft PR so the work stays visible.
+            # Build PR body via printf (heredoc with unindented body breaks YAML
+            # parse — `**` at column 0 is interpreted as a YAML alias indicator).
+            BODY_FILE=$(mktemp)
+            {
+              printf '**Auto-opened by the hygiene watchdog** (`.github/workflows/auto-pr.yml`).\n\n'
+              printf 'This branch has %s commit(s) ahead of `develop` but no open PR. The watchdog opens a draft PR so the work stays visible.\n\n' "${AHEAD}"
+              printf '## Commits\n\n%s\n\n' "${COMMITS}"
+              printf '## Next steps\n'
+              printf -- '- If the work is complete: `pnpm flow ready` to flip this PR from draft to ready-for-review (CI runs, squash-merge auto-fires when green).\n'
+              printf -- '- If abandoned: rename to `backup/<reason>` via `pnpm flow archive <reason>` (the branch is preserved, this PR auto-closes).\n\n'
+              printf 'Reference: `caia/docs/git-flow.md`.\n'
+            } > "${BODY_FILE}"
 
-## Commits
-
-${COMMITS}
-
-## Next steps
-- If the work is complete: \`pnpm flow ready\` to flip this PR from draft to ready-for-review (CI runs, squash-merge auto-fires when green).
-- If abandoned: rename to \`backup/<reason>\` via \`pnpm flow archive <reason>\` (the branch is preserved, this PR auto-closes).
-
-Reference: \`caia/docs/git-flow.md\`.
-EOF
-)
             echo "→ opening draft PR for ${branch} (${AHEAD} commits ahead)"
             gh pr create \
               --draft \
               --base develop \
               --head "${branch}" \
               --title "[draft] ${branch}" \
-              --body "${BODY}" || {
+              --body-file "${BODY_FILE}" || {
                 echo "::warning::failed to open draft PR for ${branch} — continuing."
+                rm -f "${BODY_FILE}"
                 continue
               }
+            rm -f "${BODY_FILE}"
             OPENED=$((OPENED + 1))
           done <<< "${CANDIDATES}"
 
           echo
           echo "Opened ${OPENED} draft PR(s)."
+          exit 0
