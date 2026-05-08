@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Adr {
@@ -18,8 +18,8 @@ interface Adr {
   updatedAt: string;
 }
 
-export default function AdrDetailPage({ params }: { params: { number: string } }) {
-  const { number } = params;
+export default function AdrDetailPage({ params }: { params: Promise<{ number: string }> }) {
+  const { number } = use(params);
   const [adr, setAdr] = useState<Adr | null>(null);
   const [loading, setLoading] = useState(true);
 

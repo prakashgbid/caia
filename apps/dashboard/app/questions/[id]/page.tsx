@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Question {
@@ -19,8 +19,8 @@ interface Question {
   createdAt: string;
 }
 
-export default function QuestionDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function QuestionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [question, setQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(true);
 

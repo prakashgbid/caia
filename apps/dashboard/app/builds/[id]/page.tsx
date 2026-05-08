@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 
 const API = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:7776';
@@ -39,13 +39,14 @@ const STATUS_COLOR: Record<string, string> = {
   pending: '#9ca3af',
 };
 
-export default function BuildDetailPage({ params }: { params: { id: string } }) {
+export default function BuildDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [build, setBuild] = useState<BuildRun | null>(null);
   const [steps, setSteps] = useState<BuildStep[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/builds/${params.id}`)
+    fetch(`${API}/builds/${id}`)
       .then(r => r.json())
       .then((d: { build: BuildRun; steps: BuildStep[] }) => {
         setBuild(d.build);
@@ -55,7 +56,7 @@ export default function BuildDetailPage({ params }: { params: { id: string } }) 
         if (failing) setExpanded(failing.id);
       })
       .catch(() => {});
-  }, [params.id]);
+  }, [id]);
 
   if (!build) return <div style={{ padding: 20, color: '#9ca3af' }}>Loading…</div>;
 

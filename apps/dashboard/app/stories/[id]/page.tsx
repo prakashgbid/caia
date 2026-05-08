@@ -9,7 +9,7 @@
  * `BACollabInspector`. Live-refreshes when a Phase-1 event for this
  * story (or its parent prompt) arrives on the WS bus.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import { TicketBundleViewer, type TicketBundle } from '../../../components/TicketBundleViewer';
@@ -35,8 +35,8 @@ interface PromptPhase1Payload {
   agentMessages: AgentMessage[];
 }
 
-export default function StoryDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function StoryDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [bundle, setBundle] = useState<TicketBundle | null>(null);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [err, setErr] = useState<string | null>(null);

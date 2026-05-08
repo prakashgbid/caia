@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
-export default function ProjectQuestions({ params }: { params: { slug: string } }) {
-  redirect(`/questions?project=${params.slug}`);
+export default async function ProjectQuestions({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  redirect(`/questions?project=${slug}`);
 }

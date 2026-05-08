@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Feature {
@@ -16,8 +16,8 @@ interface Feature {
   updatedAt: string;
 }
 
-export default function FeatureDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function FeatureDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [feature, setFeature] = useState<Feature | null>(null);
   const [loading, setLoading] = useState(true);
 

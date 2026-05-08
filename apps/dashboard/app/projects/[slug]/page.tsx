@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Project {
@@ -31,8 +31,8 @@ const SUB_PAGES = [
   { label: 'Timeline', path: 'timeline' },
 ] as const;
 
-export default function ProjectDetailPage({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+export default function ProjectDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const [project, setProject] = useState<Project | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Blocker {
@@ -22,8 +22,8 @@ interface Blocker {
   rootPromptId?: string | null;
 }
 
-export default function BlockerDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function BlockerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [blocker, setBlocker] = useState<Blocker | null>(null);
   const [loading, setLoading] = useState(true);
 
