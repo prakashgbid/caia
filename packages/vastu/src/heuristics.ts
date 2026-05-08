@@ -210,15 +210,12 @@ export function extractHeuristics(inputText: string): ExtractedHints {
 }
 
 function matchAll(text: string, pattern: RegExp): string[] {
-  // Defensive: rebuild a fresh global regex so /g state from the source
-  // cannot leak between calls in a hot path.
-  const re = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
+  // All patterns above are built with the `g` flag. Use String.prototype.matchAll
+  // to avoid any /g lastIndex leakage between calls without dynamically
+  // rebuilding the RegExp (which trips semgrep's detect-non-literal-regexp rule).
   const out: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
+  for (const m of text.matchAll(pattern)) {
     out.push(m[0]);
-    // safety against zero-width match infinite loops
-    if (m.index === re.lastIndex) re.lastIndex++;
   }
   return out;
 }
