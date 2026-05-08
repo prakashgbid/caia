@@ -1,0 +1,47 @@
+{
+  "name": "@chiefaia/code-reviewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Blocking PR code-review agent — runCodeReview({prRef,repoPath}) → {verdict, findings}. Reviews correctness, bugs, style, type safety, test coverage, naming, comments. Sibling to @chiefaia/critic (security/regression/cost) and @chiefaia/reviewer (advisory craftsmanship). One of the two AI reviewers required by branch protection per operator_decisions_2026-05-08.md. Subscription-only LLM via claude --print. Option E shape — private workspace package, parameterised constructor, fixture-tested.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-code-reviewer": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/mentor-event-bus": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "1.6.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
