@@ -6,12 +6,12 @@ Private CAIA package. Text → formal page brief → Figma spec → Next.js scaf
 
 ## Status
 
-Phase 2 (T4.8) — Stage A real implementation landed. Stages B and C remain stubs.
+Phase 3 (T4.8) — Stages A and B real implementation landed. Stage C remains a stub.
 
 | Stage | Module | Phase | Status |
 |---|---|---:|---|
 | A — text → formal doc | `src/text-to-doc.ts` | 2 | ✅ real impl (heuristic regex pre-pass + local-LLM-router via Ollama, zero-dollar) |
-| B — formal doc → Figma spec | `src/doc-to-figma.ts` | 3 | stub (Stolution port pending) |
+| B — formal doc → Figma spec | `src/doc-to-figma.ts` | 3 | ✅ real impl (Stolution port: `layout.ts`, `component-map.ts`, `approvals.ts`, `mcp-client.ts`, parameterised against `VastuConfig`) |
 | C — Figma spec → scaffold | `src/figma-to-scaffold.ts` | 4 | stub |
 
 ### Stage A pipeline
@@ -22,6 +22,18 @@ Phase 2 (T4.8) — Stage A real implementation landed. Stages B and C remain stu
 4. A second failure throws `TextToDocLLMError` carrying both raw responses for triage.
 
 `origin` is `'hybrid'` when heuristic signals contributed and `'llm'` otherwise.
+
+### Stage B pipeline
+
+1. `ComponentMapper.lookup(sectionName)` resolves each FormalDoc section against `config.componentLibrary`. Unknown sections become `placeholder` refs and are surfaced via `figmaSpec.unmappedSections`.
+2. `stackFrames()` lays out frames vertically with cumulative `y` offsets at `config.desktopWidth`. Heights default to `config.defaultSectionHeight` when the FormalDoc omits them.
+3. SHA-256 checksum is computed over a canonical payload serialisation.
+4. Triple gate for live writes (`writeStatus` reflects the outcome):
+   - Gate 1 — `config.allowFigmaWrite` (default `false`)
+   - Gate 2 — `process.env.FIGMA_WRITE === '1'`
+   - Gate 3 — approvals.json checksum match (when `config.approvalsPath` set)
+   All three must pass; otherwise `writeStatus` is `dry-run` / `blocked-env-gate` / `blocked-missing-approval` / `blocked-checksum-drift`.
+5. `mcp-client.ts` exposes a DI-friendly `generateFigmaDesignViaMcp` that production wires to the `figma-remote-mcp` server and tests inject via `__setMockMcpClient`.
 
 ## Usage
 
