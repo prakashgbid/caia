@@ -10,7 +10,7 @@ set -o pipefail
 readonly LOGFILE="/var/log/orchestrator-exec.log"
 readonly SYSLOG_TAG="orchestrator-exec"
 readonly SYSTEMD_UNIT_REGEX="^(actions\.runner\.[a-z0-9-]+|caia-[a-z0-9-]+|stolution-[a-z0-9-]+|cowork-[a-z0-9-]+)\.service$"
-readonly SUDOERS_NAME_REGEX="^[a-z][a-z0-9-]*-orchestrator$"
+readonly SUDOERS_NAME_REGEX="^[a-z][a-z0-9]*(-[a-z0-9]+)*-orchestrator$"
 readonly VETTED_PACKAGES="curl jq git tmux htop iotop tree unzip zip nodejs npm nginx certbot python3-certbot-nginx postgresql-client redis-tools prometheus-node-exporter"
 readonly ALLOWED_SERVICES="nginx cloudflared prometheus-node-exporter syncthing"
 
@@ -225,7 +225,7 @@ op_install_sudoers_entry() {
   # Validate name
   if ! validate_sudoers_name "$name"; then
     log_operation "install-sudoers-entry" "reject" "sudoers name does not match allowed regex" 1
-    echo "ERROR: sudoers name must match ^[a-z][a-z0-9-]*-orchestrator$" >&2
+    echo "ERROR: sudoers name must match ^[a-z][a-z0-9]*(-[a-z0-9]+)*-orchestrator$" >&2
     return 1
   fi
   
@@ -360,7 +360,7 @@ op_cron_install() {
   # Validate name
   if ! validate_sudoers_name "$name"; then
     log_operation "cron-install" "reject" "cron name does not match allowed regex" 1
-    echo "ERROR: cron name must match ^[a-z][a-z0-9-]*-orchestrator$" >&2
+    echo "ERROR: cron name must match ^[a-z][a-z0-9]*(-[a-z0-9]+)*-orchestrator$" >&2
     return 1
   fi
   

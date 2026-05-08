@@ -65,8 +65,8 @@ export const OPERATION_DESCRIPTIONS: Record<AllowedOperation, string> = {
 
 export const SYSTEMD_UNIT_REGEX =
   /^(actions\.runner\.[a-z0-9-]+|caia-[a-z0-9-]+|stolution-[a-z0-9-]+|cowork-[a-z0-9-]+)\.service$/;
-export const SUDOERS_NAME_REGEX = /^[a-z][a-z0-9-]*-orchestrator$/;
-export const CRON_NAME_REGEX = /^[a-z][a-z0-9-]*-orchestrator$/;
+export const SUDOERS_NAME_REGEX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*-orchestrator$/;
+export const CRON_NAME_REGEX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*-orchestrator$/;
 
 export const VETTED_PACKAGES = [
   'curl',
