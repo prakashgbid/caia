@@ -525,6 +525,34 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
 
+  packages/aiml-architect:
+    dependencies:
+      '@chiefaia/apprentice-corpus':
+        specifier: workspace:*
+        version: link:../apprentice-corpus
+      '@chiefaia/local-llm-router':
+        specifier: workspace:*
+        version: link:../local-llm-router
+      '@chiefaia/mentor-event-bus':
+        specifier: workspace:*
+        version: link:../mentor-event-bus
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.1
+    devDependencies:
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/analytics:
     dependencies:
       next:

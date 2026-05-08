@@ -1,0 +1,50 @@
+{
+  "name": "@chiefaia/aiml-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI/ML Architect Agent — first of 12 domain-specialist architect agents (item 8.5 in master sequencing). Unifies scattered AI/ML decisions across CAIA into a coherent practice: model selection (Claude / Ollama / Apprentice adapters), prompt-pattern review, canonical eval suite ownership, and Apprentice loop coordination. Serves OTHER agents (EA, Coding, Fix-It, Critic) — operator never invokes directly. No runtime LLM calls — pure analysis over injected state from local-llm-router (model catalog + routing rules), mentor-event-bus (failure events), and the Apprentice corpus + adapter registry. Ships in Option E shape — private workspace package, parameterised constructor with CAIA defaults, fixture-corpora-tested, never published.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-aiml-architect": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/local-llm-router": "workspace:*",
+    "@chiefaia/mentor-event-bus": "workspace:*",
+    "@chiefaia/apprentice-corpus": "workspace:*",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
