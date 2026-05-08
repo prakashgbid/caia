@@ -6,9 +6,10 @@ import { NextResponse } from 'next/server';
 
 const ORCHESTRATOR_URL = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   try {
-    const upstream = await fetch(`${ORCHESTRATOR_URL}/buckets/${encodeURIComponent(params.id)}`, { cache: 'no-store' });
+    const { id } = await params;
+    const upstream = await fetch(`${ORCHESTRATOR_URL}/buckets/${encodeURIComponent(id)}`, { cache: 'no-store' });
     if (!upstream.ok) return NextResponse.json({ error: `Upstream ${upstream.status}` }, { status: upstream.status });
     const data = await upstream.json() as unknown;
     return NextResponse.json(data);

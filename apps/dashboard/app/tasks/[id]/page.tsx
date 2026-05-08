@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Task {
@@ -23,8 +23,8 @@ interface Task {
   parentEntityId?: string | null;
 }
 
-export default function TaskDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
 

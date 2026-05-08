@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 const API = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:7776';
@@ -71,8 +71,8 @@ function groupByType(descendants: Descendant[]) {
   return groups;
 }
 
-export default function PromptDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function PromptDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [descendants, setDescendants] = useState<Descendant[]>([]);
   const [recentEvents, setRecentEvents] = useState<Event[]>([]);

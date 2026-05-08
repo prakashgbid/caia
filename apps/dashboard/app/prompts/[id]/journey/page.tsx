@@ -8,7 +8,7 @@
  * for this prompt — that gives the user a live view of every stage
  * as it happens, end-to-end (PO → BA → Task Manager → bucket placed).
  */
-import { useEffect, useState, useCallback } from 'react';
+import { use, useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useWebSocket } from '../../../../hooks/useWebSocket';
 import { Phase1Timeline, type Phase1Payload } from '../../../../components/Phase1Timeline';
@@ -75,8 +75,8 @@ function isPhase1EventType(type: string | undefined): boolean {
   return PHASE1_TRIGGERS.some((p) => type === p || type.startsWith(p));
 }
 
-export default function PromptJourneyPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function PromptJourneyPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [journey, setJourney] = useState<Journey | null>(null);
   const [phase1, setPhase1] = useState<Phase1Payload | null>(null);
   const [loading, setLoading] = useState(true);

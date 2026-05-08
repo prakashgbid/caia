@@ -6,7 +6,8 @@
       ".next/static/css/**/*.css"
     ],
     "limit": "500 KB",
-    "gzip": true
+    "gzip": true,
+    "running": false
   },
   {
     "name": "dashboard / first-load JS (gzip)",
@@ -17,6 +18,7 @@
       ".next/static/chunks/pages/_app-*.js"
     ],
     "limit": "200 KB",
-    "gzip": true
+    "gzip": true,
+    "running": false
   }
 ]

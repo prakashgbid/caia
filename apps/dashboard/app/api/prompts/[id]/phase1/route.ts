@@ -10,8 +10,8 @@ import { NextResponse } from 'next/server';
 
 const ORCHESTRATOR_URL = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
-  const id = params.id;
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const { id } = await params;
   try {
     const upstream = await fetch(`${ORCHESTRATOR_URL}/prompts/${encodeURIComponent(id)}/phase1`, {
       cache: 'no-store',

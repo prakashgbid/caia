@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Requirement {
@@ -22,8 +22,8 @@ interface Requirement {
   parentEntityId?: string | null;
 }
 
-export default function RequirementDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function RequirementDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [req, setReq] = useState<Requirement | null>(null);
   const [loading, setLoading] = useState(true);
 

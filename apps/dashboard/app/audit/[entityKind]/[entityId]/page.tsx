@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface AuditEntry {
@@ -14,8 +14,8 @@ interface AuditEntry {
   createdAt: string;
 }
 
-export default function EntityAuditPage({ params }: { params: { entityKind: string; entityId: string } }) {
-  const { entityKind, entityId } = params;
+export default function EntityAuditPage({ params }: { params: Promise<{ entityKind: string; entityId: string }> }) {
+  const { entityKind, entityId } = use(params);
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -9,7 +9,7 @@
  */
 
 import { useChat } from '@ai-sdk/react';
-import { type FormEvent, useEffect, useRef } from 'react';
+import { type FormEvent, type JSX, useEffect, useRef } from 'react';
 
 const SUBAGENT_HINT = [
   'Try one of these to see routing:',
