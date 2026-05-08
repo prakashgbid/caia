@@ -1990,6 +1990,9 @@ importers:
 
   packages/vastu:
     dependencies:
+      '@chiefaia/local-llm-router':
+        specifier: workspace:*
+        version: link:../local-llm-router
       zod:
         specifier: ^3.23.8
         version: 3.25.76

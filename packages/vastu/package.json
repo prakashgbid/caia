@@ -30,6 +30,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@chiefaia/local-llm-router": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {

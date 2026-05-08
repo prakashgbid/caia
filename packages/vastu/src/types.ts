@@ -40,10 +40,16 @@ export interface FormalDoc {
   audience: string;
   /** Brand voice override — defaults to config.brandVoice if omitted. */
   brandVoice?: string;
+  /** Optional inferred industry slug (e.g. 'legal', 'real-estate', 'saas'). */
+  industry?: string;
+  /** Primary calls-to-action surfaced from the prose. */
+  primaryCtas?: string[];
   /** Ordered section list. */
   sections: FormalDocSection[];
   /** Provenance: how this doc was built (heuristic, llm, hybrid, hand-authored). */
   origin: 'heuristic' | 'llm' | 'hybrid' | 'hand-authored' | 'stub';
+  /** Free-form metadata (heuristic hints, LLM provenance, etc.). */
+  metadata?: Record<string, unknown>;
 }
 
 /* ───────────────── Stage B — FigmaSpec ───────────────── */

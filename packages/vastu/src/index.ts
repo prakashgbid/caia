@@ -11,8 +11,18 @@
 export { runVastuPipeline } from './pipeline.js';
 export type { RunVastuPipelineOptions } from './pipeline.js';
 
-export { textToDoc } from './text-to-doc.js';
-export type { TextToDocOptions } from './text-to-doc.js';
+export { textToDoc, TextToDocLLMError } from './text-to-doc.js';
+export type { TextToDocOptions, RouteFn } from './text-to-doc.js';
+
+export { extractHeuristics } from './heuristics.js';
+export type { ExtractedHints } from './heuristics.js';
+
+export {
+  FormalDocSchema,
+  FormalDocSectionSchema,
+  FormalDocOriginSchema,
+  FormalDocMinimalSchema
+} from './formal-doc-schema.js';
 
 export { docToFigma, computeChecksum } from './doc-to-figma.js';
 export type { DocToFigmaOptions } from './doc-to-figma.js';

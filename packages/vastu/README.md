@@ -6,13 +6,22 @@ Private CAIA package. Text → formal page brief → Figma spec → Next.js scaf
 
 ## Status
 
-Phase 1 (T4.8) — skeleton + integration contract. Stages are stub implementations.
+Phase 2 (T4.8) — Stage A real implementation landed. Stages B and C remain stubs.
 
 | Stage | Module | Phase | Status |
 |---|---|---:|---|
-| A — text → formal doc | `src/text-to-doc.ts` | 2 | stub |
+| A — text → formal doc | `src/text-to-doc.ts` | 2 | ✅ real impl (heuristic regex pre-pass + local-LLM-router via Ollama, zero-dollar) |
 | B — formal doc → Figma spec | `src/doc-to-figma.ts` | 3 | stub (Stolution port pending) |
 | C — Figma spec → scaffold | `src/figma-to-scaffold.ts` | 4 | stub |
+
+### Stage A pipeline
+
+1. Heuristic regex pre-pass extracts URLs, emails, phone numbers, address lines, industry keywords (legal/saas/real-estate/restaurant/etc.) and section keywords (hero/features/pricing/faq/...) from the prose.
+2. The hints + raw prose are sent to a local Ollama model via `@chiefaia/local-llm-router` (`forceLocal: true`, `fallbackOnError: false` — zero-dollar gate).
+3. The LLM JSON output is validated against `FormalDocSchema` (Zod). On validation failure the call retries ONCE with a simpler prompt + minimal schema, then patches in heuristic + config defaults.
+4. A second failure throws `TextToDocLLMError` carrying both raw responses for triage.
+
+`origin` is `'hybrid'` when heuristic signals contributed and `'llm'` otherwise.
 
 ## Usage
 
