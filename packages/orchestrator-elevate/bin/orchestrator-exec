@@ -5,7 +5,6 @@
 # Revoke: rm /usr/local/bin/orchestrator-exec /etc/sudoers.d/orchestrator
 
 set -o pipefail
-IFS=$'\n\t'
 
 # Configuration
 readonly LOGFILE="/var/log/orchestrator-exec.log"
@@ -14,6 +13,10 @@ readonly SYSTEMD_UNIT_REGEX="^(actions\.runner\.[a-z0-9-]+|caia-[a-z0-9-]+|stolu
 readonly SUDOERS_NAME_REGEX="^[a-z][a-z0-9-]*-orchestrator$"
 readonly VETTED_PACKAGES="curl jq git tmux htop iotop tree unzip zip nodejs npm nginx certbot python3-certbot-nginx postgresql-client redis-tools prometheus-node-exporter"
 readonly ALLOWED_SERVICES="nginx cloudflared prometheus-node-exporter syncthing"
+
+# Start time in nanoseconds (set by main()) — used by log_operation to compute duration_ms.
+# 0 means "not initialised"; in that case duration_ms is logged as 0.
+START_NS=0
 
 # Utility: JSON escape
 json_escape() {
@@ -32,31 +35,31 @@ log_operation() {
   local result="$2"
   local reject_reason="${3:-}"
   local exit_code="${4:-0}"
-  local start_ms="${5:-0}"
-  
-  local end_ms
-  # Use nanoseconds and compute ms (compatible with both GNU date and BSD date)
-  end_ms=$(date +%s 2>/dev/null || echo 0)
+
+  # Compute duration in milliseconds using nanosecond-precision GNU date.
+  # On systems where `date +%s%N` is unsupported (BSD), or START_NS was never set,
+  # duration_ms falls back to 0.
+  local end_ns
+  end_ns=$(date +%s%N 2>/dev/null || echo 0)
   local duration_ms=0
-  # Skip duration calculation in tests if start_ms is not numeric
-  if [[ "$start_ms" =~ ^[0-9]+$ ]] && [[ "$end_ms" =~ ^[0-9]+$ ]]; then
-    duration_ms=$((end_ms - start_ms))
+  if [[ "$START_NS" =~ ^[0-9]+$ ]] && [[ "$end_ns" =~ ^[0-9]+$ ]] && [ "$START_NS" -gt 0 ] && [ "$end_ns" -gt 0 ]; then
+    duration_ms=$(( (end_ns - START_NS) / 1000000 ))
     [ "$duration_ms" -lt 0 ] && duration_ms=0
   fi
-  
+
   local caller_uid="${SUDO_UID:-0}"
   local caller_gid="${SUDO_GID:-0}"
   local timestamp
   timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
-  
+
   # Build JSONL record
   local json="{\"timestamp\":\"${timestamp}\",\"operation\":\"$(json_escape "$operation")\",\"result\":\"${result}\",\"reject_reason\":$([ -z "$reject_reason" ] && echo 'null' || echo "\"$(json_escape "$reject_reason")\""),\"exit_code\":${exit_code},\"duration_ms\":${duration_ms},\"caller_uid\":${caller_uid},\"caller_gid\":${caller_gid}}"
-  
+
   # Write to logfile (append)
   if [ -w "$LOGFILE" ] || [ ! -e "$LOGFILE" ]; then
     echo "$json" >> "$LOGFILE" 2>/dev/null || true
   fi
-  
+
   # Also log to syslog
   logger -t "$SYSLOG_TAG" -p "auth.info" "$json" 2>/dev/null || true
 }
@@ -440,9 +443,12 @@ op_cron_install() {
 
 # Main dispatcher
 main() {
-  local start_ms
-  start_ms=$(date +%s 2>/dev/null || echo 0)
-  
+  # Capture start time in nanoseconds (GNU date). Falls back to 0 if unsupported,
+  # in which case log_operation logs duration_ms as 0.
+  START_NS=$(date +%s%N 2>/dev/null || echo 0)
+  # date +%s%N can return a literal "%N" on BSD date; treat that as 0.
+  [[ "$START_NS" =~ ^[0-9]+$ ]] || START_NS=0
+
   local operation="$1"
   shift || {
     log_operation "unknown" "reject" "no operation specified" 1

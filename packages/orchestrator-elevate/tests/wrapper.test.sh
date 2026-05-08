@@ -3,7 +3,10 @@
 # Unit tests for orchestrator-exec wrapper script
 # Run as: bash tests/wrapper.test.sh
 
-set -euo pipefail
+# errexit OFF — assert_* helpers return 1 on failure to track counters; we
+# want to keep running through all tests. The script exit code is driven
+# explicitly by $TESTS_FAILED at the bottom.
+set -uo pipefail
 
 # Color codes
 RED='\033[0;31m'
@@ -20,14 +23,20 @@ TESTS_SKIPPED=0
 TEST_DIR=$(mktemp -d)
 trap "rm -rf $TEST_DIR" EXIT
 
-# Copy the wrapper for testing (we'll run it directly, not via sudo)
-WRAPPER="$TEST_DIR/orchestrator-exec"
-cp "$(dirname "$0")/../bin/orchestrator-exec" "$WRAPPER"
-chmod +x "$WRAPPER"
-
 # Mock log file
 TEST_LOG="$TEST_DIR/test.log"
 export LOGFILE="$TEST_LOG"
+
+# Copy the wrapper for testing (we'll run it directly, not via sudo).
+# The wrapper declares LOGFILE as `readonly` at the top, so we patch the copy
+# to point at the test log instead of /var/log/orchestrator-exec.log. This
+# keeps the source script unchanged but makes the audit log inspectable.
+WRAPPER="$TEST_DIR/orchestrator-exec"
+cp "$(dirname "$0")/../bin/orchestrator-exec" "$WRAPPER"
+# BSD-portable in-place sed (works on macOS and GNU)
+sed -i.bak "s|^readonly LOGFILE=.*|readonly LOGFILE=\"$TEST_LOG\"|" "$WRAPPER"
+rm -f "$WRAPPER.bak"
+chmod +x "$WRAPPER"
 
 # Test helper
 assert_success() {
@@ -36,11 +45,11 @@ assert_success() {
   
   if eval "$cmd" >/dev/null 2>&1; then
     echo -e "${GREEN}✓${NC} $name"
-    ((TESTS_PASSED++))
+    ((TESTS_PASSED+=1))
     return 0
   else
     echo -e "${RED}✗${NC} $name"
-    ((TESTS_FAILED++))
+    ((TESTS_FAILED+=1))
     return 1
   fi
 }
@@ -51,11 +60,11 @@ assert_failure() {
   
   if ! eval "$cmd" >/dev/null 2>&1; then
     echo -e "${GREEN}✓${NC} $name"
-    ((TESTS_PASSED++))
+    ((TESTS_PASSED+=1))
     return 0
   else
     echo -e "${RED}✗${NC} $name"
-    ((TESTS_FAILED++))
+    ((TESTS_FAILED+=1))
     return 1
   fi
 }
@@ -67,11 +76,11 @@ assert_contains() {
   
   if grep -q "$pattern" "$file" 2>/dev/null; then
     echo -e "${GREEN}✓${NC} $name"
-    ((TESTS_PASSED++))
+    ((TESTS_PASSED+=1))
     return 0
   else
     echo -e "${RED}✗${NC} $name (pattern not found: $pattern)"
-    ((TESTS_FAILED++))
+    ((TESTS_FAILED+=1))
     return 1
   fi
 }
@@ -183,6 +192,71 @@ assert_contains "Rejection logged" "$TEST_LOG" '"result":"reject"'
 assert_contains "Log has well-formed JSON (timestamp)" "$TEST_LOG" '"timestamp"'
 assert_contains "Log has well-formed JSON (operation)" "$TEST_LOG" '"operation"'
 assert_contains "Log has well-formed JSON (result)" "$TEST_LOG" '"result"'
+
+echo ""
+echo "--- Duration Tests ---"
+
+# Test: duration_ms field is present in log records
+assert_contains "duration_ms field present" "$TEST_LOG" '"duration_ms":'
+
+# Test: duration_ms is a small millisecond duration, NOT a unix timestamp.
+#
+# Pre-fix bug: log_operation used `date +%s` (seconds since epoch). When the
+# implicit start_ms argument was 0 (the default — no caller threaded it in),
+# duration_ms was logged as `end_seconds - 0 = current_unix_timestamp`, which
+# is roughly 1.78e9 in 2026. Audit log entries showed values like
+# "duration_ms":1778193195 — clearly a wall-clock timestamp, not a duration.
+#
+# Post-fix: log_operation uses date +%s%N (nanoseconds) at start (in main)
+# and end (in log_operation), then computes ms = (end_ns - start_ns) / 1e6.
+# A wrapper invocation that fails fast (validation reject) completes in well
+# under a second, so duration_ms must be < 60000 ms. The threshold of 100000
+# (100 seconds) gives plenty of headroom for slow CI while still being orders
+# of magnitude below any plausible unix-timestamp value.
+duration_test_log="$TEST_DIR/duration-check.log"
+# Run a fast operation (rejected, so ~no real work) and capture its log line.
+# We re-use $TEST_LOG and grab the most recent record.
+"$WRAPPER" apt-install-package 'evil-pkg-for-duration' 2>/dev/null || true
+last_duration_ms=$(tail -n 1 "$TEST_LOG" 2>/dev/null | grep -oE '"duration_ms":[0-9]+' | grep -oE '[0-9]+' || echo "")
+if [ -z "$last_duration_ms" ]; then
+  echo -e "${RED}✗${NC} duration_ms could not be parsed from log"
+  ((TESTS_FAILED+=1))
+elif [ "$last_duration_ms" -ge 100000 ]; then
+  echo -e "${RED}✗${NC} duration_ms looks like a unix timestamp, not a duration: $last_duration_ms"
+  ((TESTS_FAILED+=1))
+else
+  echo -e "${GREEN}✓${NC} duration_ms is a sane millisecond duration (got: $last_duration_ms ms)"
+  ((TESTS_PASSED+=1))
+fi
+
+# Test: duration_ms is non-negative (defensive check; clamped to 0 in wrapper)
+if [ -n "$last_duration_ms" ] && [ "$last_duration_ms" -ge 0 ]; then
+  echo -e "${GREEN}✓${NC} duration_ms is non-negative"
+  ((TESTS_PASSED+=1))
+else
+  echo -e "${RED}✗${NC} duration_ms is negative or unparseable: $last_duration_ms"
+  ((TESTS_FAILED+=1))
+fi
+
+echo ""
+echo "--- IFS Regression Test ---"
+
+# Test: IFS=$'\n\t' line is NOT present in source.
+#
+# Background: an earlier version of this wrapper set IFS=$'\n\t' near the top.
+# That made unquoted word splitting in `for x in $space_separated_list` loops
+# stop splitting on spaces — which broke validate_path's `for base in $allowed_bases`
+# (and similarly is_vetted_package / is_allowed_service), causing the wrapper to
+# treat the entire space-joined list as a single literal "base" and reject all
+# legitimate paths with "not under allowed base". Live-patched on stolution
+# 2026-05-08; we keep an explicit guard against re-introduction here.
+if grep -nE "^IFS=\\\$'" "$(dirname "$0")/../bin/orchestrator-exec" >/dev/null 2>&1; then
+  echo -e "${RED}✗${NC} IFS=\$'...' line re-introduced — will break space-separated list iteration"
+  ((TESTS_FAILED+=1))
+else
+  echo -e "${GREEN}✓${NC} No IFS=\$'...' override in wrapper source"
+  ((TESTS_PASSED+=1))
+fi
 
 echo ""
 echo "--- Operation Allowlist Tests ---"
