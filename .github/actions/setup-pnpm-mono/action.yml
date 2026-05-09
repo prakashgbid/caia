@@ -14,14 +14,43 @@ description: Cached pnpm install for the CAIA monorepo (one-shot, shared across 
 #         cache: pnpm
 #     - run: pnpm install --frozen-lockfile
 #
-# Adds an extra `actions/cache@v4` layer keyed on `pnpm-lock.yaml` hash so the
-# pnpm-store + node_modules survive across jobs in the same workflow run when
-# the lockfile is unchanged. On a cache hit, `pnpm install --offline` runs
-# in seconds instead of the usual 45-90s.
+# Caching strategy
+# ----------------
+# We rely SOLELY on `actions/setup-node@v4`'s built-in `cache: pnpm` to cache
+# `~/.pnpm-store` keyed on `pnpm-lock.yaml`. Combined with `pnpm install
+# --prefer-offline`, an unchanged lockfile rebuilds the workspace
+# `node_modules/` trees in seconds from the local store with no network
+# fetches.
+#
+# Why we do NOT additionally cache `**/node_modules`
+# --------------------------------------------------
+# pnpm builds `node_modules/` as a forest of symlinks AND uses hardlinks
+# liberally across nested package `node_modules/.bin/` entries (a single
+# binary file may have 50+ hardlinked names across different packages'
+# bin folders).
+#
+# `actions/cache@v4` archives this tree with `tar`, which encodes
+# duplicate-inode files as hardlink entries. On RESTORE, `tar` extracts
+# entries in archive order; a hardlink whose target hasn't been written
+# yet fails with `Cannot hard link to '<path>': No such file or
+# directory`. This is a fundamental incompatibility — symlinks pointing
+# at `.pnpm/<pkg>/node_modules/<pkg>` plus cross-package hardlinks make
+# the tree non-restorable in tar's serial pass. Restore fails on the
+# first such hardlink and cascades into "Cannot mkdir: File exists" on
+# every subsequent dir whose parent is now a broken symlink, blocking
+# every downstream job (Build, typecheck, lint, test, semgrep, etc).
+#
+# Symptom in the failing run (run 25612091911 on PR #404):
+#   tar: apps/executor/node_modules/@chiefaia/logger/.../bin/eslint:
+#        Cannot hard link to 'apps/executor/.../@chiefaia/capability-broker/
+#        .../bin/eslint': No such file or directory
+#
+# Pure pnpm-store caching avoids this entirely: the store contains plain
+# files (no hardlinks across package roots), and `pnpm install --offline`
+# re-creates the workspace symlinks/hardlinks fresh on each run.
 #
 # Reference: velocity-acceleration-strategy-2026-05-06.md §1.2 (Tier 1.2), §A.3.
-# Estimated savings: 2-4 min per Evidence Gate run (5 redundant installs ×
-# ~30s saved each); ≈1 hour saved across a 25-PR campaign.
+# Reference: ci_fix_setup_pnpm_mono_2026-05-09.md (this fix).
 
 inputs:
   node-version:
@@ -35,23 +64,11 @@ runs:
     - name: Set up pnpm
       uses: pnpm/action-setup@v4
 
-    - name: Set up Node.js
+    - name: Set up Node.js (with built-in pnpm-store cache)
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache: pnpm
-
-    - name: Restore pnpm-store + node_modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pnpm-store
-          **/node_modules
-        # Hard key includes lockfile hash; restore-keys allow partial reuse
-        # across runs that change the lockfile (rebuilds only the delta).
-        key: pnpm-mono-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('pnpm-lock.yaml') }}
-        restore-keys: |
-          pnpm-mono-${{ runner.os }}-${{ inputs.node-version }}-
 
     - name: Install dependencies (frozen lockfile, prefer offline)
       shell: bash
