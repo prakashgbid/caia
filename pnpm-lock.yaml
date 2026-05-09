@@ -1905,6 +1905,21 @@ importers:
         specifier: ^5.4.0
         version: 5.9.3
 
+  packages/surface:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      '@vitest/coverage-v8':
+        specifier: 1.6.1
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/system-prompt-block:
     devDependencies:
       '@types/node':
