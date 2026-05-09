@@ -47,6 +47,28 @@ export type {
   ComponentMappingEntry
 } from './config.js';
 
+export { ComponentMapper } from './component-map.js';
+export type { ComponentMapperOpts } from './component-map.js';
+
+export { stackFrames, totalHeight } from './layout.js';
+
+export {
+  ApprovalStatus,
+  ApprovalEntrySchema,
+  ApprovalsRegistrySchema,
+  readApprovals,
+  verifyApprovals
+} from './approvals.js';
+export type { ApprovalEntry, ApprovalsRegistry, ApprovalVerdict } from './approvals.js';
+
+export {
+  generateFigmaDesignViaMcp,
+  __setMockMcpClient,
+  __resetMcpCallCount,
+  __getMcpCallCount
+} from './mcp-client.js';
+export type { McpWriteResult } from './mcp-client.js';
+
 export type {
   FormalDoc,
   FormalDocSection,

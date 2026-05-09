@@ -4,11 +4,11 @@
  * Public entry: `runVastuPipeline({ inputText, config, ... })`.
  * Composes Stages A → B → C left-to-right.
  *
- * Phase 2 (T4.8): Stage A is now real (LLM-routed text→FormalDoc with
- * heuristic regex pre-pass). Stages B and C remain Phase-1 stubs until
- * Phases 3 and 4 land. The orchestrator + contract are stable; downstream
- * consumers can wire against this API today and pick up the real
- * behaviour as later phases land.
+ * Phase 3 (T4.8): Stages A and B are now real:
+ *  - Stage A: LLM-routed text→FormalDoc with heuristic regex pre-pass (Phase 2)
+ *  - Stage B: FormalDoc → FigmaSpec with component mapping + layout + MCP gate (Phase 3)
+ * Stage C remains a Phase-1 stub until Phase 4 lands. The contract is stable;
+ * downstream consumers can wire against this API today.
  */
 
 import { textToDoc, type RouteFn } from './text-to-doc.js';
