@@ -147,7 +147,49 @@ jobs:
         run: |
           gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
 
+      - name: Detect self-authored PR
+        # GitHub rejects PR reviews when the authenticated token user equals
+        # the PR author with "Can not approve your own pull request". The
+        # autonomous-loop pipeline opens PRs under the same identity that
+        # owns GH_TOKEN, so any review submission for those PRs would 422
+        # and turn the required `Code Reviewer (blocking)` check red even
+        # when the LLM verdict was `approve`. We detect that case here and
+        # gate the submission step on the result. The verdict has already
+        # been posted as a regular PR comment above, so reviewers (human or
+        # bot) still see the LLM output. Job exit code below preserves the
+        # required-check semantics: approve/comment -> 0 (green),
+        # request-changes -> 1 (red).
+        id: self_check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set +e
+          TOKEN_LOGIN=$(gh api user --jq .login 2>/dev/null)
+          rc=$?
+          set -e
+          if [ $rc -ne 0 ] || [ -z "$TOKEN_LOGIN" ]; then
+            # If we can't resolve the token identity (e.g. a fine-grained
+            # token without /user scope), fall through and let the review
+            # submission step run. GitHub will still reject self-approvals
+            # with a clear error, which is no worse than the prior state.
+            TOKEN_LOGIN="unknown"
+          fi
+          echo "token_login=$TOKEN_LOGIN" >> "$GITHUB_OUTPUT"
+          if [ "$TOKEN_LOGIN" = "$PR_AUTHOR" ]; then
+            echo "self_authored=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Code Reviewer: PR author ($PR_AUTHOR) matches GH_TOKEN identity ($TOKEN_LOGIN) — skipping review submission to avoid GitHub self-approval rejection. Verdict posted as a regular comment instead."
+            {
+              echo "### Code Reviewer self-approval skip"
+              echo ""
+              echo "PR author \`$PR_AUTHOR\` equals GH_TOKEN identity \`$TOKEN_LOGIN\`. GitHub disallows self-reviews, so the review submission was skipped. The LLM verdict was posted as a regular PR comment, and this job's exit code reflects the verdict (approve/comment -> green, request-changes -> red)."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "self_authored=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Submit PR review (approve / request-changes)
+        if: steps.self_check.outputs.self_authored != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
