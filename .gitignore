@@ -47,3 +47,11 @@ pnpm-debug.log*
 **/yarn.lock
 # autonomous spawner per-task worktrees (do not commit)
 .spawn-worktrees/
+
+# Runtime sidecars (added 2026-05-10 to keep the spawner's dirty-parent guard happy)
+# Idle-detector writes here; canonical agent-memory dir is at ~/Documents/projects/agent-memory/
+agent-memory/
+# Operator + agent outputs land here ad-hoc; canonical destination is ~/Documents/projects/reports/
+outputs/
+# Legacy claude worktree path (live spawner uses .spawn-worktrees/ — see WORKTREE_SUBDIR_NAME in claude_spawner_agent.py)
+.claude/
