@@ -109,6 +109,7 @@ paths = [
   '''.gitleaks.toml''',
   '''tests/fixtures/.*''',
   '''__fixtures__/.*''',
+  '''packages/.*/tests/.*\.test\.ts''',
   '''\.example$''',
   '''\.sample$''',
   '''README\.md''',

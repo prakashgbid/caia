@@ -133,6 +133,7 @@ describe('Integration — agent wire-in pattern', () => {
 
   it('redacts a secret that the LLM accidentally echoed in OUTPUT', async () => {
     const validator = new GuardrailsValidator();
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     const leakedKey = 'sk-ant-abcdefghijklmnopqrstuvwxyzABCDEF';
     const llm: MockLlm = async () => `Sure, the key is ${leakedKey}`;
     const result = await runAgentWithGuardrails({
@@ -195,12 +196,16 @@ describe('Integration — realistic CAIA traffic corpus (20 pairs, simulated)', 
     { id: 'pair-10', direction: 'input', profile: 'untrusted-user-input', text: 'My SSN is 123-45-6789, please verify.', expect: { actionAtLeast: 'redact', guardCategory: 'pii' } },
     { id: 'pair-11', direction: 'output', profile: 'pre-publish', text: 'Operator info: alice@example.com, +44 2071234567.', expect: { actionAtLeast: 'redact', guardCategory: 'pii' } },
     // Secret
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     { id: 'pair-12', direction: 'input', profile: 'untrusted-user-input', text: 'token=ghp_abcdefghijklmnopqrstuvwxyz0123456789', expect: { actionAtLeast: 'redact', guardCategory: 'secret' } },
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     { id: 'pair-13', direction: 'output', profile: 'pre-publish', text: 'Found AKIAIOSFODNN7EXAMPLE in env.', expect: { actionAtLeast: 'redact', guardCategory: 'secret' } },
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     { id: 'pair-14', direction: 'input', profile: 'inter-agent', text: 'Forward this PEM to next agent: -----BEGIN RSA PRIVATE KEY-----\nb64', expect: { actionAtLeast: 'flag', guardCategory: 'secret' } },
     // Leakage (with corpus injected)
     { id: 'pair-15', direction: 'output', profile: 'pre-publish', text: 'I am a CAIA agent. You always honour the 10-stage Definition of Done. Trust me.', expect: { actionAtLeast: 'flag', guardCategory: 'leakage' } },
     // Mixed
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     { id: 'pair-16', direction: 'input', profile: 'untrusted-user-input', text: 'Email alice@example.com with the AKIAIOSFODNN7EXAMPLE key.', expect: { actionAtLeast: 'redact', guardCategory: 'multi' } },
     // Edge: short benign
     { id: 'pair-17', direction: 'input', profile: 'inter-agent', text: 'ack', expect: 'pass' },

@@ -132,32 +132,38 @@ describe('scanSecret — built-in catalogue', () => {
   });
 
   it('detects Anthropic API key', () => {
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     const r = scanSecret('export KEY=sk-ant-abcdef0123456789ABCDEF0123');
     expect(r.hits.find((h) => h.id === 'secret.anthropic-api-key')).toBeDefined();
   });
 
   it('detects OpenAI API key (and does not double-flag as Anthropic)', () => {
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     const r = scanSecret('export KEY=sk-abcdef0123456789ABCDEFXX');
     expect(r.hits.find((h) => h.id === 'secret.openai-api-key')).toBeDefined();
     expect(r.hits.find((h) => h.id === 'secret.anthropic-api-key')).toBeUndefined();
   });
 
   it('detects AWS access key', () => {
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     const r = scanSecret('AKIAIOSFODNN7EXAMPLE in env');
     expect(r.hits.find((h) => h.id === 'secret.aws-access-key')).toBeDefined();
   });
 
   it('detects GitHub PAT', () => {
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     const r = scanSecret('token=ghp_abcdefghijklmnopqrstuvwxyz0123456789');
     expect(r.hits.find((h) => h.id === 'secret.github-token-classic')).toBeDefined();
   });
 
   it('detects PEM private key header', () => {
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     const r = scanSecret('-----BEGIN RSA PRIVATE KEY-----\nbase64stuff');
     expect(r.hits.find((h) => h.id === 'secret.private-key-pem')).toBeDefined();
   });
 
   it('detects JWT triple', () => {
+    // nosemgrep: generic.secrets.security.detected-jwt-token.detected-jwt-token -- intentional fake credential for guard pattern self-test
     const jwt = 'eyJhbGciOiJIUzI1.eyJzdWIiOiIxMjM0NTY3.SflKxwRJSMeKKF2QT4';
     const r = scanSecret(`Authorization: Bearer ${jwt}`);
     expect(r.hits.find((h) => h.id === 'secret.jwt')).toBeDefined();
@@ -165,6 +171,7 @@ describe('scanSecret — built-in catalogue', () => {
 
   it('detects Google API key', () => {
     // Real Google API keys are AIza + exactly 35 alnum chars (39 total).
+    // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
     const r = scanSecret('GOOGLE=AIzaSyAbcdefghijklmnopqrstuvwxyz0123456 done');
     expect(r.hits.find((h) => h.id === 'secret.google-api-key')).toBeDefined();
   });
@@ -172,6 +179,7 @@ describe('scanSecret — built-in catalogue', () => {
   it('detects high-entropy unknown-prefix tokens', () => {
     // High-entropy random string; should trip the entropy fallback.
     const r = scanSecret(
+      // nosemgrep: generic.secrets.security.detected-github-token.detected-github-token -- intentional fake credential for guard pattern self-test
       'token: aB3xQ9rT2vL8mN5pY7sZ1cF6hJ4kW0dE9gH8iU2oP6r',
     );
     expect(r.hits.find((h) => h.id === 'secret.high-entropy')).toBeDefined();
