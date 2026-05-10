@@ -147,63 +147,62 @@ jobs:
         run: |
           gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
 
-      - name: Detect self-authored PR
-        # GitHub rejects PR reviews when the authenticated token user equals
-        # the PR author with "Can not approve your own pull request". The
-        # autonomous-loop pipeline opens PRs under the same identity that
-        # owns GH_TOKEN, so any review submission for those PRs would 422
-        # and turn the required `Code Reviewer (blocking)` check red even
-        # when the LLM verdict was `approve`. We detect that case here and
-        # gate the submission step on the result. The verdict has already
-        # been posted as a regular PR comment above, so reviewers (human or
-        # bot) still see the LLM output. Job exit code below preserves the
-        # required-check semantics: approve/comment -> 0 (green),
-        # request-changes -> 1 (red).
-        id: self_check
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-        run: |
-          set +e
-          TOKEN_LOGIN=$(gh api user --jq .login 2>/dev/null)
-          rc=$?
-          set -e
-          if [ $rc -ne 0 ] || [ -z "$TOKEN_LOGIN" ]; then
-            # If we can't resolve the token identity (e.g. a fine-grained
-            # token without /user scope), fall through and let the review
-            # submission step run. GitHub will still reject self-approvals
-            # with a clear error, which is no worse than the prior state.
-            TOKEN_LOGIN="unknown"
-          fi
-          echo "token_login=$TOKEN_LOGIN" >> "$GITHUB_OUTPUT"
-          if [ "$TOKEN_LOGIN" = "$PR_AUTHOR" ]; then
-            echo "self_authored=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Code Reviewer: PR author ($PR_AUTHOR) matches GH_TOKEN identity ($TOKEN_LOGIN) — skipping review submission to avoid GitHub self-approval rejection. Verdict posted as a regular comment instead."
-            {
-              echo "### Code Reviewer self-approval skip"
-              echo ""
-              echo "PR author \`$PR_AUTHOR\` equals GH_TOKEN identity \`$TOKEN_LOGIN\`. GitHub disallows self-reviews, so the review submission was skipped. The LLM verdict was posted as a regular PR comment, and this job's exit code reflects the verdict (approve/comment -> green, request-changes -> red)."
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "self_authored=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Submit PR review (approve / request-changes)
-        if: steps.self_check.outputs.self_authored != 'true'
+        # GitHub disallows reviews where the authenticated token user equals
+        # the PR author with "Can not approve your own pull request" (or the
+        # equivalent "request changes" message). This happens whenever the
+        # autonomous-loop pipeline opens PRs as the GITHUB_TOKEN identity
+        # (`github-actions[bot]`). When that specific error fires we
+        # gracefully degrade: the verdict has already been posted as a
+        # regular PR comment in the prior step, and we exit 0 here so the
+        # required `Code Reviewer (blocking)` check still reflects the LLM
+        # verdict. Other failures still propagate normally. Identity-based
+        # pre-detection (e.g. `gh api user`) was tried first but doesn't
+        # work for GITHUB_TOKEN installation tokens — the /user endpoint
+        # 404s — so we rely on the well-defined GitHub error message
+        # instead. The `Fail job on request-changes` step below preserves
+        # the red-on-request-changes semantics regardless of which path
+        # this step took.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           VERDICT: ${{ steps.review.outputs.verdict }}
         run: |
+          set +e
           if [ "$VERDICT" = "request-changes" ]; then
-            gh pr review "$PR_NUMBER" \
+            OUTPUT=$(gh pr review "$PR_NUMBER" \
               --request-changes \
-              --body "Code-Reviewer requests changes. See the verdict comment above."
+              --body "Code-Reviewer requests changes. See the verdict comment above." 2>&1)
+            RC=$?
           else
-            gh pr review "$PR_NUMBER" \
+            OUTPUT=$(gh pr review "$PR_NUMBER" \
               --approve \
-              --body "Code-Reviewer approves. See the verdict comment above."
+              --body "Code-Reviewer approves. See the verdict comment above." 2>&1)
+            RC=$?
           fi
+          set -e
+          echo "$OUTPUT"
+          if [ $RC -eq 0 ]; then
+            exit 0
+          fi
+          # Self-review rejection — degrade to comment-only and exit 0. The
+          # verdict comment was already posted in the prior step, and the
+          # required-check status remains correct because the
+          # `Fail job on request-changes` step still fires for
+          # request-changes verdicts.
+          if echo "$OUTPUT" | grep -qE "Can not (approve|request changes on) your own pull request"; then
+            echo "::notice::Code Reviewer: GitHub rejected the review submission as a self-review (PR author matches GH_TOKEN identity). Verdict was posted as a regular PR comment instead."
+            {
+              echo "### Code Reviewer self-approval skip"
+              echo ""
+              echo "GitHub rejected the review submission as a self-review. The LLM verdict was posted as a regular PR comment, and this job's exit code reflects the verdict (approve/comment -> green, request-changes -> red via the trailing fail step)."
+              echo ""
+              echo "GitHub error: \`$(printf '%s' "$OUTPUT" | tr '\n' ' ' | head -c 200)\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # Any other failure — propagate.
+          exit $RC
 
       - name: Fail job on request-changes (blocks merge)
         if: steps.review.outputs.verdict == 'request-changes'
