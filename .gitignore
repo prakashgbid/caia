@@ -45,3 +45,5 @@ pnpm-debug.log*
 # Lockfiles per package (workspace lockfile is at root)
 **/package-lock.json
 **/yarn.lock
+# autonomous spawner per-task worktrees (do not commit)
+.spawn-worktrees/
