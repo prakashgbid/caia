@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -111,6 +112,128 @@ def health(base_url: str = DEFAULT_BASE_URL, timeout: float = 3.0) -> bool:
         return False
 
 
+# ───────────────────────── prompt optimizer ───────────────────────────────
+# LAI phase 7: spawner escalation path must run the prompt through the
+# 3-stage optimizer (rule-prepass → tool-output-summarize → token-prune)
+# before invoking the claude binary. We try the router daemon's
+# /v1/optimize endpoint first (it dispatches the TS @chiefaia/prompt-optimizer
+# pipeline). If the endpoint isn't deployed yet — older router versions —
+# we fall back to a pure-Python rule-based prepass that mirrors stage 1.
+# The fallback never reaches stage 2/3, so compression is modest (~10-25%)
+# but the path stays unblocked and the spawn record honestly tags the
+# `backend` so dashboards can distinguish full-pipeline vs prepass-only.
+
+_WHITESPACE_RUN_RE = re.compile(r"[ \t]{2,}")
+_BLANK_LINES_RE = re.compile(r"\n{3,}")
+_TRAILING_WS_RE = re.compile(r"[ \t]+\n")
+
+
+def _estimate_tokens(text: str) -> int:
+    """Cheap ~4-chars-per-token estimate. Matches the TS optimizer's
+    `estimateTokens()` so spawn-record numbers line up with router metrics."""
+    if not text:
+        return 0
+    return max(1, (len(text) + 3) // 4)
+
+
+def _stage1_prepass_inline(text: str) -> str:
+    """Pure-Python mirror of @chiefaia/prompt-optimizer stage1Prepass for the
+    fallback path. Collapses runs of whitespace and blank lines; strips
+    trailing space. Intentionally does NOT touch fenced code blocks or
+    backticked spans heuristically — we accept slightly lower compression
+    for safety in the fallback (the real optimizer has protected-span logic
+    we don't try to reproduce here)."""
+    if not text:
+        return text
+    out = _TRAILING_WS_RE.sub("\n", text)
+    out = _WHITESPACE_RUN_RE.sub(" ", out)
+    out = _BLANK_LINES_RE.sub("\n\n", out)
+    return out.strip()
+
+
+def optimize_prompt(prompt: str,
+                    system_prompt: Optional[str] = None,
+                    base_url: str = DEFAULT_BASE_URL,
+                    timeout: float = 30.0) -> tuple[str, dict]:
+    """Run a prompt through the optimizer before claude escalation.
+
+    Returns (optimized_prompt, metrics) where `metrics` always contains:
+      - backend:        'router-v1-optimize' | 'inline-stage1' | 'noop'
+      - pre_token_count, post_token_count, compression_ratio
+      - stages_run:     list[str] (e.g. ['stage1','stage2','stage3'] or ['stage1'])
+      - wall_ms:        wall-clock duration
+      - error:          str | None  (set on partial failure; result still safe to use)
+
+    The function never raises — on any failure, returns the original prompt
+    with backend='noop'. This is critical: the spawner must always have a
+    runnable prompt to hand to the claude binary."""
+    t0 = time.time()
+    pre_tokens = _estimate_tokens(prompt) + _estimate_tokens(system_prompt or "")
+
+    # Path 1 — router daemon's /v1/optimize endpoint (preferred).
+    body = json.dumps({
+        "prompt": prompt,
+        "system_prompt": system_prompt or "",
+        "caller": "claude-spawner",
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        f"{base_url}/v1/optimize",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            payload = json.loads(r.read().decode("utf-8"))
+        optimized = payload.get("optimized_prompt") or payload.get("prompt") or prompt
+        m = payload.get("metrics", {})
+        post_tokens = int(m.get("post_token_count") or _estimate_tokens(optimized))
+        return optimized, {
+            "backend": "router-v1-optimize",
+            "pre_token_count": int(m.get("pre_token_count") or pre_tokens),
+            "post_token_count": post_tokens,
+            "compression_ratio": (post_tokens / pre_tokens) if pre_tokens else 1.0,
+            "stages_run": m.get("stages_run") or ["stage1", "stage2", "stage3"],
+            "wall_ms": int((time.time() - t0) * 1000),
+            "error": None,
+        }
+    except (urllib.error.HTTPError, urllib.error.URLError,
+            TimeoutError, json.JSONDecodeError):
+        # 404 = endpoint not deployed yet (older router); URLError = router
+        # offline; JSON errors = malformed response. All fall through to
+        # the pure-Python stage-1 path below.
+        pass
+    except Exception:
+        pass
+
+    # Path 2 — inline pure-Python stage 1 prepass (fallback).
+    try:
+        opt_system = _stage1_prepass_inline(system_prompt or "")
+        opt_user = _stage1_prepass_inline(prompt)
+        optimized = (opt_system + "\n\n" + opt_user).strip() if opt_system else opt_user
+        post_tokens = _estimate_tokens(optimized)
+        return optimized, {
+            "backend": "inline-stage1",
+            "pre_token_count": pre_tokens,
+            "post_token_count": post_tokens,
+            "compression_ratio": (post_tokens / pre_tokens) if pre_tokens else 1.0,
+            "stages_run": ["stage1"],
+            "wall_ms": int((time.time() - t0) * 1000),
+            "error": None,
+        }
+    except Exception as e:
+        # Path 3 — true no-op. Hand the original prompt back unchanged.
+        return prompt, {
+            "backend": "noop",
+            "pre_token_count": pre_tokens,
+            "post_token_count": pre_tokens,
+            "compression_ratio": 1.0,
+            "stages_run": [],
+            "wall_ms": int((time.time() - t0) * 1000),
+            "error": f"{type(e).__name__}: {e}",
+        }
+
+
 def classify_and_maybe_route(task_spec: str,
                               base_url: str = DEFAULT_BASE_URL,
                               max_local_latency_s: float = 90.0) -> tuple[Optional[str], dict]:
@@ -170,3 +293,9 @@ if __name__ == "__main__":
     response, meta = classify_and_maybe_route(spec)
     print(f"response: {response}")
     print(f"meta: {meta}")
+    # LAI phase 7: exercise the optimizer path even when classify routes
+    # to claude — this is the spawner escalation flow.
+    opt_text, opt_meta = optimize_prompt(spec)
+    print(f"optimize backend: {opt_meta['backend']} "
+          f"pre={opt_meta['pre_token_count']} post={opt_meta['post_token_count']} "
+          f"ratio={opt_meta['compression_ratio']:.3f}")

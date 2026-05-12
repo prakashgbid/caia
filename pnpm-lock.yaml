@@ -1373,6 +1373,9 @@ importers:
 
   packages/local-llm-router:
     dependencies:
+      '@hono/node-server':
+        specifier: ^1.13.0
+        version: 1.19.14(hono@4.12.15)
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1
@@ -1385,6 +1388,9 @@ importers:
       '@opentelemetry/sdk-node':
         specifier: ^0.215.0
         version: 0.215.0(@opentelemetry/api@1.9.1)
+      hono:
+        specifier: ^4.12.14
+        version: 4.12.15
     devDependencies:
       '@chiefaia/eslint-config':
         specifier: workspace:*
@@ -1410,6 +1416,22 @@ importers:
       vitest:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/local-llm-router-mcp:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.0.0
+        version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6)
+    devDependencies:
+      '@chiefaia/tsconfig':
+        specifier: workspace:*
+        version: link:../../configs/tsconfig
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
 
   packages/local-rag:
     dependencies:

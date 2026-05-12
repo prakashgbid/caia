@@ -1,0 +1,201 @@
+# Routing rules + intent taxonomy for classifier v2.
+#
+# Externalized from src/classifier.ts so the taxonomy + thresholds can evolve
+# without code changes. Consumed by src/classifier-v2.ts at module load time.
+#
+# Schema:
+#   version:                       integer  (currently 2)
+#   default_confidence_threshold:  float    (intent confidence below this -> abstain/escalate)
+#   escalation_threshold:          float    (below this -> needs_escalation=true)
+#   cascade_thresholds:            map of tier->confidence required to STAY at tier
+#   intents:                       list of { name, default_tier, keywords[], min_confidence }
+#   tier_order:                    ordered ladder used for cascade routing
+#
+# Editing notes:
+#   - Keep the YAML strictly two-space indented; the loader is a minimal hand-rolled
+#     parser scoped to this file's shape (no anchors, flow-style, or multi-line scalars).
+#   - Intent names must match the Intent union in classifier-v2.ts.
+
+version: 2
+default_confidence_threshold: 0.6
+escalation_threshold: 0.5
+
+# Each tier has a minimum confidence the classifier must report to STAY at that tier.
+# Below that, the cascade promotes to the next tier in tier_order.
+cascade_thresholds:
+  local-7b: 0.6
+  local-14b: 0.55
+  local-32b: 0.5
+  claude: 0.0
+  stolution-batch: 0.5
+
+# Ladder used by the cascade controller when promoting/escalating a request.
+# The classifier returns next_tier = the next entry strictly after the recommended tier.
+tier_order:
+  - local-7b
+  - local-14b
+  - local-32b
+  - claude
+
+# Intent taxonomy. The `keywords` field powers the lightweight rule-based prepass
+# in classifier-v2 — if a task spec contains ≥1 keyword for exactly one intent, we
+# skip the LLM call entirely and emit that intent at confidence 0.92.
+intents:
+  - name: classify
+    default_tier: local-7b
+    min_confidence: 0.6
+    keywords:
+      - classify
+      - categorize
+      - label
+      - tag
+
+  - name: summarize
+    default_tier: local-7b
+    min_confidence: 0.6
+    keywords:
+      - summarize
+      - summary
+      - tldr
+      - condense
+
+  - name: draft-prose
+    default_tier: local-7b
+    min_confidence: 0.6
+    keywords:
+      - draft
+      - write a paragraph
+      - blurb
+
+  - name: format
+    default_tier: local-7b
+    min_confidence: 0.65
+    keywords:
+      - format
+      - reformat
+      - prettify
+
+  - name: lint-fix
+    default_tier: local-7b
+    min_confidence: 0.65
+    keywords:
+      - lint
+      - eslint
+      - fix style
+
+  - name: rename
+    default_tier: local-7b
+    min_confidence: 0.7
+    keywords:
+      - rename
+      - rename variable
+      - rename function
+
+  - name: fill-template
+    default_tier: local-7b
+    min_confidence: 0.6
+    keywords:
+      - fill template
+      - boilerplate
+      - scaffold
+
+  - name: memory-search
+    default_tier: local-7b
+    min_confidence: 0.6
+    keywords:
+      - search memory
+      - recall
+      - lookup memory
+
+  - name: medium-code
+    default_tier: local-14b
+    min_confidence: 0.55
+    keywords:
+      - implement function
+      - add endpoint
+      - write a class
+
+  - name: doc-write
+    default_tier: local-14b
+    min_confidence: 0.55
+    keywords:
+      - write docs
+      - documentation
+      - readme
+
+  - name: spec-check
+    default_tier: local-14b
+    min_confidence: 0.55
+    keywords:
+      - spec check
+      - validate spec
+      - acceptance criteria
+
+  - name: review-prose
+    default_tier: local-14b
+    min_confidence: 0.55
+    keywords:
+      - review prose
+      - copyedit
+      - proofread
+
+  - name: hard-code
+    default_tier: local-32b
+    min_confidence: 0.5
+    keywords:
+      - refactor
+      - multi-file
+      - complex algorithm
+
+  - name: reason-over-context
+    default_tier: claude
+    min_confidence: 0.0
+    keywords:
+      - reason over
+      - analyze given context
+      - deep reasoning
+
+  - name: new-design
+    default_tier: claude
+    min_confidence: 0.0
+    keywords:
+      - design
+      - architecture
+      - propose
+
+  - name: architect
+    default_tier: claude
+    min_confidence: 0.0
+    keywords:
+      - architect
+      - system design
+      - blueprint
+
+  - name: batch-summarize
+    default_tier: stolution-batch
+    min_confidence: 0.5
+    keywords:
+      - batch summarize
+      - bulk summary
+      - corpus summary
+
+  - name: corpus-distill
+    default_tier: stolution-batch
+    min_confidence: 0.5
+    keywords:
+      - distill corpus
+      - corpus distill
+      - extract themes
+
+  - name: embedding-generate
+    default_tier: stolution-batch
+    min_confidence: 0.5
+    keywords:
+      - embed
+      - embedding
+      - vectorize
+
+  - name: unknown
+    default_tier: claude
+    min_confidence: 0.0
+    keywords: []

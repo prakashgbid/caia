@@ -1,6 +1,23 @@
 // Public API for @chiefaia/local-llm-router
 
 export { route, __setAdapters } from './router.js';
+export {
+  classifyV2,
+  loadRoutingRules,
+  parseRoutingRulesYaml,
+  parseClassifierV2Output,
+  keywordPrepass,
+  nextTier,
+  intentRule,
+  CLASSIFIER_V2_SYSTEM_PROMPT,
+  __resetRulesCache,
+} from './classifier-v2.js';
+export type {
+  IntentRule,
+  IntentResultV2,
+  RoutingRules,
+  ClassifyV2Options,
+} from './classifier-v2.js';
 export { OllamaAdapter } from './ollama-adapter.js';
 export {
   ClaudeAdapter,
@@ -28,6 +45,7 @@ export type {
   LLMProvider,
   LLMRequest,
   LLMResponse,
+  OptimizerMetrics,
   RouterOptions,
 } from './types.js';
 

@@ -1,0 +1,48 @@
+{
+  "name": "@chiefaia/prompt-optimizer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Three-stage prompt optimizer: rule-based prepass + tool-output summarize + token-importance prune. Sits in front of every model call routed through @chiefaia/local-llm-router.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./stage1": {
+      "types": "./dist/stage1.d.ts",
+      "default": "./dist/stage1.js"
+    },
+    "./stage2": {
+      "types": "./dist/stage2.d.ts",
+      "default": "./dist/stage2.js"
+    },
+    "./stage3": {
+      "types": "./dist/stage3.d.ts",
+      "default": "./dist/stage3.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

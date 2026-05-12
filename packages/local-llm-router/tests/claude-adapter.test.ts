@@ -14,11 +14,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 import { Readable, Writable } from 'node:stream';
+import type {
+  OptimizerInput,
+  OptimizerResult,
+} from '@chiefaia/prompt-optimizer';
 import {
   ClaudeAdapter,
   ClaudeBinaryError,
   ClaudeRateLimitedError,
 } from '../src/claude-adapter.js';
+import type { OptimizerMetrics } from '../src/types.js';
 
 // ─── fake child_process.spawn ───────────────────────────────────────────
 
@@ -307,6 +312,206 @@ describe('ClaudeAdapter (binary spawn)', () => {
       promptTokens: 100,
       completionTokens: 250,
       totalTokens: 350,
+    });
+  });
+
+  // ─── LAI phase 6 — prompt-optimizer integration ────────────────────
+  describe('prompt-optimizer integration (LAI phase 6)', () => {
+    /** Build a fake optimizeFn that returns a scripted compressed prompt. */
+    function fakeOptimize(opts: {
+      out: string;
+      preTokens: number;
+      postTokens: number;
+      protectedSpans?: number;
+      skipped?: boolean;
+    }): (input: OptimizerInput) => Promise<OptimizerResult> {
+      return async (_input) => ({
+        optimizedPrompt: opts.out,
+        protectedSpanCount: opts.protectedSpans ?? 0,
+        metrics: {
+          promptTokensRaw: opts.preTokens,
+          stage1: {
+            tokensIn: opts.preTokens,
+            tokensOut: opts.preTokens,
+            wallMs: 0,
+            ratio: 1,
+            skipped: false,
+          },
+          stage2: {
+            tokensIn: opts.preTokens,
+            tokensOut: opts.postTokens,
+            wallMs: 0,
+            ratio: opts.preTokens > 0 ? opts.postTokens / opts.preTokens : 1,
+            skipped: opts.skipped ?? false,
+          },
+          stage3: {
+            tokensIn: opts.postTokens,
+            tokensOut: opts.postTokens,
+            wallMs: 0,
+            ratio: 1,
+            skipped: opts.skipped ?? false,
+          },
+          totalWallMs: 7,
+        },
+      });
+    }
+
+    it('routes the prompt through the optimizer before spawn (compressed body lands on stdin)', async () => {
+      const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({
+        spawnFn: fn,
+        optimizeFn: fakeOptimize({
+          out: 'COMPRESSED',
+          preTokens: 1000,
+          postTokens: 200,
+        }),
+      });
+      await adapter.generate('claude-sonnet-4-6', {
+        taskType: 't',
+        prompt: 'the original verbose prompt body with redundant filler text',
+      });
+      expect(invocations[0]!.stdinChunks.join('')).toBe('COMPRESSED');
+    });
+
+    it('emits pre_token_count / post_token_count / compression_ratio on the response', async () => {
+      const { fn } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({
+        spawnFn: fn,
+        optimizeFn: fakeOptimize({
+          out: 'COMPRESSED',
+          preTokens: 1000,
+          postTokens: 400,
+          protectedSpans: 2,
+        }),
+      });
+      const out = await adapter.generate('claude-sonnet-4-6', {
+        taskType: 't',
+        prompt: 'whatever',
+      });
+      expect(out.optimizer).toBeDefined();
+      expect(out.optimizer!.pre_token_count).toBe(1000);
+      expect(out.optimizer!.post_token_count).toBe(400);
+      expect(out.optimizer!.compression_ratio).toBeCloseTo(0.4, 5);
+      expect(out.optimizer!.protected_span_count).toBe(2);
+      expect(out.optimizer!.skipped).toBe(false);
+    });
+
+    it('forwards optimizer metrics to onOptimizerMetrics sink (OTel/dashboard hook)', async () => {
+      const sink = vi.fn();
+      const { fn } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({
+        spawnFn: fn,
+        optimizeFn: fakeOptimize({
+          out: 'COMPRESSED',
+          preTokens: 800,
+          postTokens: 320,
+        }),
+        onOptimizerMetrics: sink,
+      });
+      await adapter.generate('claude-sonnet-4-6', { taskType: 't', prompt: 'x' });
+      expect(sink).toHaveBeenCalledTimes(1);
+      const m = sink.mock.calls[0]![0] as OptimizerMetrics;
+      expect(m.pre_token_count).toBe(800);
+      expect(m.post_token_count).toBe(320);
+      expect(m.compression_ratio).toBeCloseTo(0.4, 5);
+    });
+
+    it('marks skipped=true when both stage2 and stage3 bailed out (short prompt path)', async () => {
+      const { fn } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({
+        spawnFn: fn,
+        optimizeFn: fakeOptimize({
+          out: 'short prompt',
+          preTokens: 50,
+          postTokens: 50,
+          skipped: true,
+        }),
+      });
+      const out = await adapter.generate('claude-sonnet-4-6', {
+        taskType: 't',
+        prompt: 'short prompt',
+      });
+      expect(out.optimizer?.skipped).toBe(true);
+      expect(out.optimizer?.compression_ratio).toBe(1);
+    });
+
+    it('degrades gracefully when optimizer throws — sends raw prompt and emits skipped metric', async () => {
+      const sink = vi.fn();
+      const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({
+        spawnFn: fn,
+        optimizeFn: async () => {
+          throw new Error('optimizer exploded');
+        },
+        onOptimizerMetrics: sink,
+      });
+      const out = await adapter.generate('claude-sonnet-4-6', {
+        taskType: 't',
+        prompt: 'original verbose body',
+      });
+      // The raw prompt must reach the binary even when the optimizer fails.
+      expect(invocations[0]!.stdinChunks.join('')).toBe('original verbose body');
+      expect(out.optimizer?.skipped).toBe(true);
+      expect(out.optimizer?.compression_ratio).toBe(1);
+      expect(sink).toHaveBeenCalledTimes(1);
+    });
+
+    it('honors optimizerDisabled — sends raw prompt unchanged and emits no optimizer field', async () => {
+      const sink = vi.fn();
+      const optimizeFn = vi.fn(async (_input: OptimizerInput) => {
+        throw new Error('optimizer should not be called when disabled');
+      });
+      const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({
+        spawnFn: fn,
+        optimizerDisabled: true,
+        optimizeFn,
+        onOptimizerMetrics: sink,
+      });
+      const out = await adapter.generate('claude-sonnet-4-6', {
+        taskType: 't',
+        prompt: 'untouched body',
+      });
+      expect(optimizeFn).not.toHaveBeenCalled();
+      expect(sink).not.toHaveBeenCalled();
+      expect(invocations[0]!.stdinChunks.join('')).toBe('untouched body');
+      expect(out.optimizer).toBeUndefined();
+    });
+
+    it('does NOT feed systemPrompt to the optimizer (would otherwise duplicate it on stdin)', async () => {
+      // Capture the optimizer input so we can assert systemPrompt is omitted.
+      let captured: OptimizerInput | null = null;
+      const optimizeFn: (input: OptimizerInput) => Promise<OptimizerResult> = async (
+        input,
+      ) => {
+        captured = input;
+        return {
+          optimizedPrompt: input.userQuestion,
+          protectedSpanCount: 0,
+          metrics: {
+            promptTokensRaw: 10,
+            stage1: { tokensIn: 10, tokensOut: 10, wallMs: 0, ratio: 1, skipped: false },
+            stage2: { tokensIn: 10, tokensOut: 10, wallMs: 0, ratio: 1, skipped: true },
+            stage3: { tokensIn: 10, tokensOut: 10, wallMs: 0, ratio: 1, skipped: true },
+            totalWallMs: 1,
+          },
+        };
+      };
+      const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({ spawnFn: fn, optimizeFn });
+      await adapter.generate('claude-sonnet-4-6', {
+        taskType: 't',
+        prompt: 'the user-side body',
+        systemPrompt: 'you are a poet',
+      });
+      expect(captured).not.toBeNull();
+      expect(captured!.systemPrompt).toBeUndefined();
+      expect(captured!.userQuestion).toBe('the user-side body');
+      // System prompt still goes through the binary's --append-system-prompt flag,
+      // not stdin — so stdin only carries the optimized user prompt.
+      expect(invocations[0]!.stdinChunks.join('')).toBe('the user-side body');
+      expect(invocations[0]!.args).toContain('--append-system-prompt');
+      expect(invocations[0]!.args).toContain('you are a poet');
     });
   });
 });

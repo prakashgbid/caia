@@ -12,7 +12,16 @@
 // Ollama on `ClaudeBinaryError`. The adapter itself is pure: spawn → parse → return.
 
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import type { LLMRequest, LLMResponse } from './types.js';
+import {
+  optimize as defaultOptimize,
+  type OptimizerInput,
+  type OptimizerResult,
+} from '@chiefaia/prompt-optimizer';
+import type {
+  LLMRequest,
+  LLMResponse,
+  OptimizerMetrics as RouterOptimizerMetrics,
+} from './types.js';
 
 /** Default path to the `claude` binary. Overridable via env. */
 const DEFAULT_CLAUDE_BINARY = process.env['CLAUDE_BINARY_PATH'] ?? 'claude';
@@ -86,6 +95,25 @@ export interface ClaudeAdapterOptions {
   timeoutMs?: number;
   /** Test seam — replace `node:child_process`'s `spawn`. */
   spawnFn?: typeof spawn;
+  /**
+   * Disable the @chiefaia/prompt-optimizer pre-pass. Default: optimizer
+   * runs on every call so the spawned `claude` binary sees a compressed
+   * prompt. Disable for adapters that already received an optimized
+   * prompt upstream (e.g. the spawner) or in tests that assert on the
+   * exact byte content of stdin.
+   */
+  optimizerDisabled?: boolean;
+  /**
+   * Test seam — replace the optimizer entry point. Defaults to
+   * `optimize` from @chiefaia/prompt-optimizer.
+   */
+  optimizeFn?: (input: OptimizerInput) => Promise<OptimizerResult>;
+  /**
+   * Optional sink for optimizer metrics. Called after each optimization
+   * pass, before the prompt is sent to the binary. Use to forward to
+   * OTel / llm-metrics. Defaults to a no-op.
+   */
+  onOptimizerMetrics?: (metrics: RouterOptimizerMetrics) => void;
 }
 
 /** Shape of the JSON object emitted by `claude --print --output-format json`. */
@@ -112,6 +140,11 @@ export class ClaudeAdapter {
   private readonly accountId: string | null;
   private readonly timeoutMs: number;
   private readonly spawnFn: typeof spawn;
+  private readonly optimizerDisabled: boolean;
+  private readonly optimizeFn: (input: OptimizerInput) => Promise<OptimizerResult>;
+  private readonly onOptimizerMetrics:
+    | ((metrics: RouterOptimizerMetrics) => void)
+    | null;
 
   constructor(opts: ClaudeAdapterOptions = {}) {
     this.binaryPath = opts.binaryPath ?? DEFAULT_CLAUDE_BINARY;
@@ -119,6 +152,9 @@ export class ClaudeAdapter {
     this.accountId = opts.accountId ?? null;
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.spawnFn = opts.spawnFn ?? spawn;
+    this.optimizerDisabled = opts.optimizerDisabled ?? false;
+    this.optimizeFn = opts.optimizeFn ?? defaultOptimize;
+    this.onOptimizerMetrics = opts.onOptimizerMetrics ?? null;
   }
 
   /**
@@ -132,6 +168,16 @@ export class ClaudeAdapter {
    */
   async generate(model: string, request: LLMRequest): Promise<LLMResponse> {
     const start = Date.now();
+
+    // ─── Pre-pass: run the prompt through the 3-stage optimizer ──────
+    // The optimizer bails out cheaply for short prompts (<500 tok), so
+    // calling it on every request is safe. If it fails for any reason
+    // (e.g. router daemon unreachable), it returns the prepass-only
+    // result — we still get Stage 1 dedup without the local-LLM-backed
+    // Stage 2 / 3.
+    const { promptForBinary, optimizerMetrics } = await this.optimizePrompt(
+      request,
+    );
 
     const args = ['--print', '--output-format', 'json', '--model', model];
     if (request.systemPrompt) {
@@ -169,7 +215,7 @@ export class ClaudeAdapter {
         accountId: this.accountId,
       });
     }
-    stdin.write(request.prompt);
+    stdin.write(promptForBinary);
     stdin.end();
 
     // Collect output with a wall-clock timeout.
@@ -273,7 +319,7 @@ export class ClaudeAdapter {
     const inputTokens = parsed.usage?.input_tokens ?? 0;
     const outputTokens = parsed.usage?.output_tokens ?? 0;
 
-    return {
+    const resp: LLMResponse = {
       response: text,
       model,
       provider: 'claude',
@@ -284,6 +330,83 @@ export class ClaudeAdapter {
         totalTokens: inputTokens + outputTokens,
       },
     };
+    if (optimizerMetrics) resp.optimizer = optimizerMetrics;
+    return resp;
+  }
+
+  /**
+   * Run the request prompt + systemPrompt through @chiefaia/prompt-optimizer
+   * and return both the prompt to feed the binary and the metrics to emit.
+   *
+   * Failure mode: the optimizer is best-effort. If it throws (which it
+   * normally shouldn't — Stage 2 swallows router errors internally),
+   * we fall back to the original prompt and emit a metrics object with
+   * compression_ratio=1.0 and skipped=true so the call still observes
+   * an optimizer record (helps the dashboard distinguish "no compression
+   * attempted" from "no adapter touched the metric").
+   */
+  private async optimizePrompt(request: LLMRequest): Promise<{
+    promptForBinary: string;
+    optimizerMetrics: RouterOptimizerMetrics | null;
+  }> {
+    if (this.optimizerDisabled) {
+      return { promptForBinary: request.prompt, optimizerMetrics: null };
+    }
+
+    // NOTE: `request.systemPrompt` is intentionally NOT passed to the
+    // optimizer. The system prompt is forwarded to the binary separately
+    // via `--append-system-prompt`, so feeding it to the optimizer here
+    // would duplicate it on stdin. The optimizer only sees the user-side
+    // prompt that actually flows through stdin.
+    const input: OptimizerInput = {
+      userQuestion: request.prompt,
+    };
+
+    let result: OptimizerResult;
+    try {
+      result = await this.optimizeFn(input);
+    } catch {
+      // Optimizer blew up — degrade to the raw prompt and emit a
+      // "skipped" metric so the dashboard sees the call.
+      const fallback: RouterOptimizerMetrics = {
+        pre_token_count: 0,
+        post_token_count: 0,
+        compression_ratio: 1,
+        protected_span_count: 0,
+        wall_ms: 0,
+        skipped: true,
+      };
+      this.emitOptimizerMetrics(fallback);
+      return { promptForBinary: request.prompt, optimizerMetrics: fallback };
+    }
+
+    const pre = result.metrics.promptTokensRaw;
+    const post =
+      result.metrics.stage3.skipped && !result.metrics.stage2.skipped
+        ? result.metrics.stage2.tokensOut
+        : result.metrics.stage3.skipped
+          ? result.metrics.stage1.tokensOut
+          : result.metrics.stage3.tokensOut;
+    const metrics: RouterOptimizerMetrics = {
+      pre_token_count: pre,
+      post_token_count: post,
+      compression_ratio: pre > 0 ? post / pre : 1,
+      protected_span_count: result.protectedSpanCount,
+      wall_ms: result.metrics.totalWallMs,
+      skipped:
+        result.metrics.stage2.skipped && result.metrics.stage3.skipped,
+    };
+    this.emitOptimizerMetrics(metrics);
+    return { promptForBinary: result.optimizedPrompt, optimizerMetrics: metrics };
+  }
+
+  private emitOptimizerMetrics(metrics: RouterOptimizerMetrics): void {
+    if (!this.onOptimizerMetrics) return;
+    try {
+      this.onOptimizerMetrics(metrics);
+    } catch {
+      /* sink errors must not break the dispatch */
+    }
   }
 }
 
