@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  com.chiefaia.local-llm-router.plist
+
+  Always-on LaunchAgent for the local-llm-router daemon. Listens on
+  port 7411 over 0.0.0.0 (Tailscale ACL is the auth boundary).
+
+  Install:
+    pnpm --filter @chiefaia/local-llm-router build
+    cp packages/local-llm-router/plists/com.chiefaia.local-llm-router.plist \
+       ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.chiefaia.local-llm-router.plist
+
+  Uninstall:
+    launchctl bootout gui/$(id -u)/com.chiefaia.local-llm-router
+    rm ~/Library/LaunchAgents/com.chiefaia.local-llm-router.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.chiefaia.local-llm-router</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/opt/node@22/bin/node</string>
+    <string>/Users/macbook32/Documents/projects/caia/packages/local-llm-router/dist/bin/router-daemon.js</string>
+    <string>--port</string>
+    <string>7411</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>OLLAMA_BASE_URL</key>
+    <string>http://127.0.0.1:11434</string>
+    <key>ROUTER_CLASSIFIER_MODEL</key>
+    <string>qwen2.5-coder:7b</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+    <key>NetworkState</key>
+    <true/>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/macbook32/Library/Logs/chiefaia/local-llm-router.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/macbook32/Library/Logs/chiefaia/local-llm-router.err.log</string>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/macbook32/Documents/projects/caia/packages/local-llm-router</string>
+
+  <key>ProcessType</key>
+  <string>Interactive</string>
+</dict>
+</plist>

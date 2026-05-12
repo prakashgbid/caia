@@ -1,6 +1,6 @@
 {
   "name": "@chiefaia/local-llm-router",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "LLM routing layer — dispatches tasks to local Ollama models or Claude API based on complexity and cost rules",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -39,6 +39,11 @@
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/exporter-trace-otlp-http": "^0.215.0",
     "@opentelemetry/resources": "^2.7.0",
-    "@opentelemetry/sdk-node": "^0.215.0"
+    "@opentelemetry/sdk-node": "^0.215.0",
+    "hono": "^4.12.14",
+    "@hono/node-server": "^1.13.0"
+  },
+  "bin": {
+    "caia-llm-router-daemon": "./dist/bin/router-daemon.js"
   }
 }

@@ -1,0 +1,36 @@
+{
+  "name": "@chiefaia/local-llm-router-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP stdio server that exposes the local-llm-router daemon as 5 Cowork tools (local_classify, local_summarize, local_draft, local_format, local_search_memory).",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "caia-local-llm-router-mcp": "./dist/bin/server.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@chiefaia/tsconfig": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module"
+}
