@@ -8,7 +8,7 @@ export interface ToolOutputBlob {
   // Optional source hint — used by Stage 1 to know whether to apply
   // file-fold heuristics ("file") vs JSON-normalize ("json") vs leave the
   // content alone ("opaque").
-  source?: 'file' | 'json' | 'shell' | 'opaque';
+  source?: 'file' | 'json' | 'shell' | 'opaque' | undefined;
 }
 
 export interface OptimizerInput {
@@ -43,7 +43,7 @@ export interface StageMetrics {
   wallMs: number;
   ratio: number; // tokensOut / tokensIn
   skipped: boolean;
-  error?: string;
+  error?: string | undefined;
 }
 
 export interface OptimizerMetrics {
