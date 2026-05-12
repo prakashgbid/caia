@@ -1,0 +1,7 @@
+{
+  "name": "@chiefaia/local-llm-router-py-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Python client for the local-llm-router daemon. Vendored into claude-spawner-agent on M1+M3+stolution to add the pre-spawn classify-and-maybe-route gate. Pure stdlib (no pip deps); HTTP via urllib.",
+  "files": ["src/local_llm_router_client.py", "src/spawner_patch.diff", "README.md"]
+}
