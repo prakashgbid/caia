@@ -10,13 +10,31 @@
 //
 // The router (router.ts) is responsible for the optional fall-through to
 // Ollama on `ClaudeBinaryError`. The adapter itself is pure: spawn → parse → return.
+//
+// ─── Prompt compression pipeline (LAI phase 2 — Headroom integration) ───
+// Each request runs through a two-step compression pipeline before the
+// prompt reaches the `claude` binary:
+//
+//   1. Stage 1 (`stage1Prepass`) — rule-based prepass from
+//      @chiefaia/prompt-optimizer. Strips ANSI/CRLF/BOM, dedupes blocks,
+//      folds long file reads, normalizes JSON, etc. Cheap and deterministic.
+//
+//   2. Headroom sidecar — spawns a Python subprocess that calls
+//      headroom.compress(). Headroom owns the heavy lifting: SmartCrusher
+//      for JSON blobs, CodeCompressor for AST-aware code dedup, Kompress
+//      (ModernBERT) for prose summarization. Stage 1 is kept because
+//      Headroom's router protects user turns (it won't dedupe within them),
+//      so our rule prepass handles the in-turn duplication while Headroom
+//      handles tool-result/system content.
+//
+// The two stages are complementary, not redundant. If the sidecar fails for
+// any reason (subprocess error, malformed JSON, timeout), we degrade to
+// Stage-1-only output and emit a `skipped: true` metric — the prompt still
+// goes through; only the savings are reduced.
 
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import {
-  optimize as defaultOptimize,
-  type OptimizerInput,
-  type OptimizerResult,
-} from '@chiefaia/prompt-optimizer';
+import { join, dirname } from 'node:path';
+import { stage1Prepass, estimateTokens } from '@chiefaia/prompt-optimizer';
 import type {
   LLMRequest,
   LLMResponse,
@@ -39,6 +57,33 @@ const DEFAULT_CLAUDE_BINARY = process.env['CLAUDE_BINARY_PATH'] ?? 'claude';
  * deliberately want a longer ceiling (e.g., bulk decomposition).
  */
 const DEFAULT_TIMEOUT_MS = 45_000;
+
+/** Default Python interpreter that has `headroom-ai` installed.
+ *
+ * Phase 1 (install_headroom_on_m3) reports headroom is wheeled against
+ * CPython 3.13; the system `python3` is 3.14 which PyO3 does not yet
+ * support. We pin the absolute path so the sidecar always finds the right
+ * interpreter regardless of $PATH ordering. Override via env or opts. */
+const DEFAULT_HEADROOM_PYTHON =
+  process.env['HEADROOM_PYTHON'] ?? '/opt/homebrew/opt/python@3.13/bin/python3.13';
+
+/** Default headroom sidecar path — resolved from the compiled file's
+ *  location at runtime. After build, `__dirname` is `<pkg>/dist`; the
+ *  sidecar lives at `<pkg>/python/headroom_sidecar.py`. */
+const DEFAULT_HEADROOM_SIDECAR = join(dirname(__filename), '..', 'python', 'headroom_sidecar.py');
+
+/** Default Headroom sidecar timeout (ms).
+ *
+ * Cold start dominates: Headroom's Kompress backend lazy-loads a
+ * ModernBERT model on first call, which on M3 takes ~20-25s. After warm,
+ * compression itself is sub-second. 60s gives the first call comfortable
+ * room without unbounded ceilings; subsequent calls finish well under it.
+ * If the sidecar hangs the adapter falls back to Stage-1-only output. */
+const DEFAULT_HEADROOM_TIMEOUT_MS = 60_000;
+
+/** Default target model passed to `headroom.compress(..., model=)`. Headroom
+ *  uses this for token estimation and per-model heuristics. */
+const DEFAULT_HEADROOM_MODEL = 'claude-sonnet-4-5-20250929';
 
 /** Generic binary-spawn failure. Thrown for missing binary, non-zero exit,
  *  malformed JSON, or any other non-rate-limit error. */
@@ -77,6 +122,28 @@ export class ClaudeRateLimitedError extends ClaudeBinaryError {
   }
 }
 
+// ─── Headroom sidecar protocol ─────────────────────────────────────────
+
+export interface HeadroomMessage {
+  role: string;
+  content: string;
+  [key: string]: unknown;
+}
+
+export interface HeadroomSidecarRequest {
+  messages: HeadroomMessage[];
+  model: string;
+}
+
+export interface HeadroomSidecarResponse {
+  compressed_messages: HeadroomMessage[];
+  tokens_saved: number;
+  compression_ratio: number;
+  original_tokens: number;
+  final_tokens: number;
+  transforms_applied?: string[];
+}
+
 /** Configuration for a single ClaudeAdapter instance. */
 export interface ClaudeAdapterOptions {
   /** Override path to the `claude` binary. */
@@ -96,24 +163,39 @@ export interface ClaudeAdapterOptions {
   /** Test seam — replace `node:child_process`'s `spawn`. */
   spawnFn?: typeof spawn;
   /**
-   * Disable the @chiefaia/prompt-optimizer pre-pass. Default: optimizer
-   * runs on every call so the spawned `claude` binary sees a compressed
-   * prompt. Disable for adapters that already received an optimized
-   * prompt upstream (e.g. the spawner) or in tests that assert on the
-   * exact byte content of stdin.
+   * Disable the compression pipeline entirely (Stage 1 + Headroom). The
+   * raw prompt is passed straight through to the binary. Use for adapters
+   * that already received an optimized prompt upstream (e.g. the spawner)
+   * or in tests that assert on the exact byte content of stdin.
    */
   optimizerDisabled?: boolean;
   /**
-   * Test seam — replace the optimizer entry point. Defaults to
-   * `optimize` from @chiefaia/prompt-optimizer.
-   */
-  optimizeFn?: (input: OptimizerInput) => Promise<OptimizerResult>;
-  /**
-   * Optional sink for optimizer metrics. Called after each optimization
+   * Optional sink for compression metrics. Called after each compression
    * pass, before the prompt is sent to the binary. Use to forward to
    * OTel / llm-metrics. Defaults to a no-op.
    */
   onOptimizerMetrics?: (metrics: RouterOptimizerMetrics) => void;
+  /**
+   * Absolute path to the Python interpreter that has `headroom-ai`
+   * installed. Defaults to env var HEADROOM_PYTHON, then to
+   * `/opt/homebrew/opt/python@3.13/bin/python3.13` (the path the LAI
+   * Phase 1 install report points at).
+   */
+  headroomPython?: string;
+  /** Absolute path to the headroom_sidecar.py script. */
+  headroomSidecarPath?: string;
+  /** Override sidecar subprocess timeout (ms). */
+  headroomTimeoutMs?: number;
+  /** Override the Headroom-side target model used for token estimation. */
+  headroomModel?: string;
+  /**
+   * Test seam — replace the sidecar invocation. When provided, the
+   * adapter skips spawning a subprocess and calls this function directly.
+   * Used by the unit tests to inject scripted compression results.
+   */
+  sidecarFn?: (
+    req: HeadroomSidecarRequest,
+  ) => Promise<HeadroomSidecarResponse>;
 }
 
 /** Shape of the JSON object emitted by `claude --print --output-format json`. */
@@ -141,9 +223,15 @@ export class ClaudeAdapter {
   private readonly timeoutMs: number;
   private readonly spawnFn: typeof spawn;
   private readonly optimizerDisabled: boolean;
-  private readonly optimizeFn: (input: OptimizerInput) => Promise<OptimizerResult>;
   private readonly onOptimizerMetrics:
     | ((metrics: RouterOptimizerMetrics) => void)
+    | null;
+  private readonly headroomPython: string;
+  private readonly headroomSidecarPath: string;
+  private readonly headroomTimeoutMs: number;
+  private readonly headroomModel: string;
+  private readonly sidecarFn:
+    | ((req: HeadroomSidecarRequest) => Promise<HeadroomSidecarResponse>)
     | null;
 
   constructor(opts: ClaudeAdapterOptions = {}) {
@@ -153,8 +241,12 @@ export class ClaudeAdapter {
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.spawnFn = opts.spawnFn ?? spawn;
     this.optimizerDisabled = opts.optimizerDisabled ?? false;
-    this.optimizeFn = opts.optimizeFn ?? defaultOptimize;
     this.onOptimizerMetrics = opts.onOptimizerMetrics ?? null;
+    this.headroomPython = opts.headroomPython ?? DEFAULT_HEADROOM_PYTHON;
+    this.headroomSidecarPath = opts.headroomSidecarPath ?? DEFAULT_HEADROOM_SIDECAR;
+    this.headroomTimeoutMs = opts.headroomTimeoutMs ?? DEFAULT_HEADROOM_TIMEOUT_MS;
+    this.headroomModel = opts.headroomModel ?? DEFAULT_HEADROOM_MODEL;
+    this.sidecarFn = opts.sidecarFn ?? null;
   }
 
   /**
@@ -169,12 +261,9 @@ export class ClaudeAdapter {
   async generate(model: string, request: LLMRequest): Promise<LLMResponse> {
     const start = Date.now();
 
-    // ─── Pre-pass: run the prompt through the 3-stage optimizer ──────
-    // The optimizer bails out cheaply for short prompts (<500 tok), so
-    // calling it on every request is safe. If it fails for any reason
-    // (e.g. router daemon unreachable), it returns the prepass-only
-    // result — we still get Stage 1 dedup without the local-LLM-backed
-    // Stage 2 / 3.
+    // Run Stage 1 prepass + Headroom sidecar. Failure-mode for the
+    // compression pipeline is best-effort: any error inside degrades to
+    // a less-compressed prompt and a skipped metric, never throws.
     const { promptForBinary, optimizerMetrics } = await this.optimizePrompt(
       request,
     );
@@ -335,15 +424,13 @@ export class ClaudeAdapter {
   }
 
   /**
-   * Run the request prompt + systemPrompt through @chiefaia/prompt-optimizer
-   * and return both the prompt to feed the binary and the metrics to emit.
+   * Run the request prompt through Stage 1 prepass + Headroom sidecar.
+   * Returns the prompt to feed the binary and the metrics to emit.
    *
-   * Failure mode: the optimizer is best-effort. If it throws (which it
-   * normally shouldn't — Stage 2 swallows router errors internally),
-   * we fall back to the original prompt and emit a metrics object with
-   * compression_ratio=1.0 and skipped=true so the call still observes
-   * an optimizer record (helps the dashboard distinguish "no compression
-   * attempted" from "no adapter touched the metric").
+   * Failure mode: best-effort. If Stage 1 throws or Headroom misbehaves
+   * we fall back to the most-compressed prompt we have so far (raw, or
+   * Stage-1 output) and emit a `skipped: true` metric so the dashboard
+   * still observes the call.
    */
   private async optimizePrompt(request: LLMRequest): Promise<{
     promptForBinary: string;
@@ -353,51 +440,161 @@ export class ClaudeAdapter {
       return { promptForBinary: request.prompt, optimizerMetrics: null };
     }
 
-    // NOTE: `request.systemPrompt` is intentionally NOT passed to the
-    // optimizer. The system prompt is forwarded to the binary separately
-    // via `--append-system-prompt`, so feeding it to the optimizer here
-    // would duplicate it on stdin. The optimizer only sees the user-side
-    // prompt that actually flows through stdin.
-    const input: OptimizerInput = {
-      userQuestion: request.prompt,
-    };
+    const wallStart = Date.now();
+    const rawPrompt = request.prompt;
+    const preTokens = estimateTokens(rawPrompt);
 
-    let result: OptimizerResult;
+    // ─── Stage 1: rule-based prepass ──────────────────────────────────
+    // Cheap, deterministic. We keep it even though Headroom exists
+    // because Headroom's router protects user-role turns from
+    // compression by default, so any in-turn duplication (dedupe of
+    // repeated blocks, ANSI stripping, long file-read folding, base64
+    // truncation) has to happen before Headroom sees the messages.
+    let stage1Text: string;
+    let protectedSpans: number;
     try {
-      result = await this.optimizeFn(input);
+      const r = stage1Prepass(rawPrompt);
+      stage1Text = r.text;
+      protectedSpans = r.protectedSpans;
     } catch {
-      // Optimizer blew up — degrade to the raw prompt and emit a
-      // "skipped" metric so the dashboard sees the call.
-      const fallback: RouterOptimizerMetrics = {
-        pre_token_count: 0,
-        post_token_count: 0,
-        compression_ratio: 1,
-        protected_span_count: 0,
-        wall_ms: 0,
-        skipped: true,
-      };
-      this.emitOptimizerMetrics(fallback);
-      return { promptForBinary: request.prompt, optimizerMetrics: fallback };
+      // Prepass blew up — degrade to raw prompt for Stage 1, still try Headroom.
+      stage1Text = rawPrompt;
+      protectedSpans = 0;
     }
 
-    const pre = result.metrics.promptTokensRaw;
-    const post =
-      result.metrics.stage3.skipped && !result.metrics.stage2.skipped
-        ? result.metrics.stage2.tokensOut
-        : result.metrics.stage3.skipped
-          ? result.metrics.stage1.tokensOut
-          : result.metrics.stage3.tokensOut;
+    // ─── Stage 2: Headroom sidecar ────────────────────────────────────
+    const messages: HeadroomMessage[] = [{ role: 'user', content: stage1Text }];
+
+    let sidecarOut: HeadroomSidecarResponse | null = null;
+    try {
+      sidecarOut = await this.invokeSidecar({
+        messages,
+        model: this.headroomModel,
+      });
+    } catch {
+      // Sidecar failed — fall back to Stage-1-only output.
+      const stage1Tokens = estimateTokens(stage1Text);
+      const fallback: RouterOptimizerMetrics = {
+        pre_token_count: preTokens,
+        post_token_count: stage1Tokens,
+        compression_ratio: preTokens > 0 ? stage1Tokens / preTokens : 1,
+        protected_span_count: protectedSpans,
+        wall_ms: Date.now() - wallStart,
+        skipped: true,
+        headroom_tokens_saved: 0,
+        headroom_ratio: 0,
+      };
+      this.emitOptimizerMetrics(fallback);
+      return { promptForBinary: stage1Text, optimizerMetrics: fallback };
+    }
+
+    // Reconstruct the final prompt from compressed messages. With a
+    // single-turn input we expect a single user message back; if
+    // Headroom adds turns (e.g. a system synopsis) we concatenate
+    // their content with double-newlines.
+    const finalPrompt = sidecarOut.compressed_messages
+      .map((m) => (typeof m.content === 'string' ? m.content : ''))
+      .filter((s) => s.length > 0)
+      .join('\n\n');
+
+    const postTokens = sidecarOut.final_tokens;
     const metrics: RouterOptimizerMetrics = {
-      pre_token_count: pre,
-      post_token_count: post,
-      compression_ratio: pre > 0 ? post / pre : 1,
-      protected_span_count: result.protectedSpanCount,
-      wall_ms: result.metrics.totalWallMs,
-      skipped:
-        result.metrics.stage2.skipped && result.metrics.stage3.skipped,
+      pre_token_count: preTokens,
+      post_token_count: postTokens,
+      compression_ratio: preTokens > 0 ? postTokens / preTokens : 1,
+      protected_span_count: protectedSpans,
+      wall_ms: Date.now() - wallStart,
+      skipped: false,
+      headroom_tokens_saved: sidecarOut.tokens_saved,
+      headroom_ratio: sidecarOut.compression_ratio,
     };
     this.emitOptimizerMetrics(metrics);
-    return { promptForBinary: result.optimizedPrompt, optimizerMetrics: metrics };
+    return { promptForBinary: finalPrompt, optimizerMetrics: metrics };
+  }
+
+  /**
+   * Invoke the Headroom Python sidecar.
+   *
+   * Tests pass `sidecarFn` to bypass the subprocess entirely. In
+   * production we spawn `<headroomPython> <headroomSidecarPath>` and
+   * pipe JSON in/out.
+   */
+  private async invokeSidecar(
+    req: HeadroomSidecarRequest,
+  ): Promise<HeadroomSidecarResponse> {
+    if (this.sidecarFn) return this.sidecarFn(req);
+
+    return new Promise<HeadroomSidecarResponse>((resolve, reject) => {
+      let child: ChildProcess;
+      try {
+        child = this.spawnFn(this.headroomPython, [this.headroomSidecarPath], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: { ...(process.env as Record<string, string>) },
+        });
+      } catch (err) {
+        reject(new Error(`failed to spawn headroom sidecar: ${String(err)}`));
+        return;
+      }
+
+      const stdin = child.stdin;
+      if (!stdin) {
+        reject(new Error('headroom sidecar has no stdin'));
+        return;
+      }
+
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        try {
+          child.kill('SIGTERM');
+        } catch {
+          /* ignore */
+        }
+      }, this.headroomTimeoutMs);
+
+      const stdoutChunks: Buffer[] = [];
+      const stderrChunks: Buffer[] = [];
+      child.stdout?.on('data', (c: Buffer) => stdoutChunks.push(c));
+      child.stderr?.on('data', (c: Buffer) => stderrChunks.push(c));
+
+      child.on('error', (err) => {
+        clearTimeout(timer);
+        reject(new Error(`headroom sidecar error: ${String(err)}`));
+      });
+
+      child.on('close', (code) => {
+        clearTimeout(timer);
+        if (timedOut) {
+          reject(new Error(`headroom sidecar timed out after ${String(this.headroomTimeoutMs)}ms`));
+          return;
+        }
+        const stdout = Buffer.concat(stdoutChunks).toString('utf8');
+        const stderr = Buffer.concat(stderrChunks).toString('utf8');
+        if (code !== 0) {
+          reject(
+            new Error(
+              `headroom sidecar exited ${String(code)}: ${stderr.slice(0, 500)}`,
+            ),
+          );
+          return;
+        }
+        let parsed: HeadroomSidecarResponse;
+        try {
+          parsed = JSON.parse(stdout) as HeadroomSidecarResponse;
+        } catch (e) {
+          reject(new Error(`headroom sidecar bad JSON: ${String(e)}`));
+          return;
+        }
+        if (!Array.isArray(parsed.compressed_messages)) {
+          reject(new Error('headroom sidecar response missing compressed_messages array'));
+          return;
+        }
+        resolve(parsed);
+      });
+
+      stdin.write(JSON.stringify(req));
+      stdin.end();
+    });
   }
 
   private emitOptimizerMetrics(metrics: RouterOptimizerMetrics): void {

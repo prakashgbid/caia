@@ -1373,6 +1373,9 @@ importers:
 
   packages/local-llm-router:
     dependencies:
+      '@chiefaia/prompt-optimizer':
+        specifier: workspace:*
+        version: link:../prompt-optimizer
       '@hono/node-server':
         specifier: ^1.13.0
         version: 1.19.14(hono@4.12.15)
@@ -1432,6 +1435,8 @@ importers:
       typescript:
         specifier: ^5.4.5
         version: 5.9.3
+
+  packages/local-llm-router-py-client: {}
 
   packages/local-rag:
     dependencies:
@@ -1696,6 +1701,27 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/prompt-optimizer:
+    devDependencies:
+      '@chiefaia/eslint-config':
+        specifier: workspace:*
+        version: link:../../configs/eslint-config
+      '@chiefaia/tsconfig':
+        specifier: workspace:*
+        version: link:../../configs/tsconfig
+      '@chiefaia/vitest-config':
+        specifier: workspace:*
+        version: link:../../configs/vitest-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/researcher:

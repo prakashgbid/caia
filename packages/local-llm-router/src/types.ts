@@ -42,7 +42,7 @@ export interface LLMResponse {
 export interface OptimizerMetrics {
   /** Raw prompt token estimate before optimizer ran. */
   pre_token_count: number;
-  /** Optimized prompt token estimate after the 3-stage pipeline. */
+  /** Optimized prompt token estimate after the full pipeline (Stage 1 + Headroom). */
   post_token_count: number;
   /** post / pre. 1.0 = no compression, 0.5 = halved. */
   compression_ratio: number;
@@ -50,8 +50,13 @@ export interface OptimizerMetrics {
   protected_span_count: number;
   /** Wall-clock ms the optimizer pipeline took. */
   wall_ms: number;
-  /** True if the prompt was below the skip-threshold and stages 2/3 were bypassed. */
+  /** True if the Headroom sidecar bailed out (failure or no-op). */
   skipped: boolean;
+  /** Tokens removed by Headroom alone (post-Stage-1). 0 when Headroom skipped. */
+  headroom_tokens_saved: number;
+  /** Headroom's self-reported compression ratio (tokens_saved / original_tokens),
+   *  in [0, 1]. 0 = no compression, 0.7 = 70% of bytes removed. */
+  headroom_ratio: number;
 }
 
 export interface RouterOptions {
