@@ -323,13 +323,19 @@ def classify_llm(prompt: str, router_base: str, model: str = "qwen2.5-coder:7b",
             "intent": "unknown", "confidence": 0.0, "recommended_tier": "claude",
             "source": "abstain", "reasoning": f"json-parse-failed: {text[:80]}"
         }
+    if isinstance(obj, dict):
+        return {
+            "intent": obj.get("intent", "unknown"),
+            "confidence": float(obj.get("confidence", 0.0) or 0.0),
+            "recommended_tier": obj.get("recommended_tier", "claude"),
+            "source": "llm",
+            "reasoning": (obj.get("reasoning") or "")[:200],
+            "needs_escalation": bool(obj.get("needs_escalation", False)),
+        }
+    # Non-dict JSON (e.g. classifier returned a bare string as reasoning); treat as abstain.
     return {
-        "intent": obj.get("intent", "unknown"),
-        "confidence": float(obj.get("confidence", 0.0) or 0.0),
-        "recommended_tier": obj.get("recommended_tier", "claude"),
-        "source": "llm",
-        "reasoning": (obj.get("reasoning") or "")[:200],
-        "needs_escalation": bool(obj.get("needs_escalation", False)),
+        "intent": "unknown", "confidence": 0.0, "recommended_tier": "claude",
+        "source": "abstain", "reasoning": f"non-dict-json: {str(obj)[:80]}",
     }
 
 
