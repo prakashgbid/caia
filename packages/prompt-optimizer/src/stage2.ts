@@ -32,7 +32,7 @@ export interface Stage2BlobResult {
   tokensIn: number;
   tokensOut: number;
   compressed: boolean;
-  error?: string;
+  error?: string | undefined;
 }
 
 const DEFAULTS: Required<Omit<Stage2Options, 'fetchImpl'>> = {
@@ -55,7 +55,7 @@ Output ONLY the compressed text. No commentary, no preamble, no markdown fences.
 export async function stage2Summarize(
   blobs: ToolOutputBlob[],
   opts: Stage2Options = {},
-): Promise<{ blobs: Stage2BlobResult[]; wallMs: number; error?: string }> {
+): Promise<{ blobs: Stage2BlobResult[]; wallMs: number; error?: string | undefined }> {
   const o = { ...DEFAULTS, ...opts };
   const fetcher = opts.fetchImpl ?? fetch;
   const startedAt = Date.now();

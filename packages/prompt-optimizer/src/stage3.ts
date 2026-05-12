@@ -51,7 +51,7 @@ export interface Stage3Result {
   tokensOut: number;
   wallMs: number;
   backend: 'router' | 'heuristic' | 'skipped';
-  error?: string;
+  error?: string | undefined;
 }
 
 const DEFAULTS: Required<Omit<Stage3Options, 'fetchImpl' | 'forceHeuristic'>> = {
