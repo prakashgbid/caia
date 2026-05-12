@@ -3,10 +3,12 @@
 // Endpoints:
 //   GET  /healthz                  → { ok, ollama, models }
 //   GET  /metrics                  → Prometheus exposition (LLM call totals, savings)
-//   POST /v1/intent                → classify a task spec into Intent JSON
+//   POST /v1/intent                → classify a task spec into Intent JSON (v1)
+//   POST /v1/intent/v2             → classifier v2 — cascade-aware, taxonomy from YAML
 //   POST /v1/route                 → return route decision without executing
 //   POST /v1/chat/completions      → OpenAI-compatible chat (single-turn)
 //   POST /v1/embeddings            → OpenAI-compatible embeddings
+//   POST /v1/optimize              → 3-stage prompt optimizer (LAI phase 8)
 //
 // Listens on port 7411 by default (env ROUTER_PORT to override).
 // Binds to 0.0.0.0 so Tailscale-private peers can reach it; the Tailscale
@@ -14,8 +16,10 @@
 
 import { Hono } from 'hono';
 import type { Context } from 'hono';
+import { optimize } from '@chiefaia/prompt-optimizer';
 import { route as routerRoute } from './router.js';
 import { classify, type IntentResult } from './classifier.js';
+import { classifyV2 } from './classifier-v2.js';
 import { OllamaAdapter } from './ollama-adapter.js';
 import { llmMetrics } from './llm-metrics.js';
 import { ROUTING_RULES } from './routing-config.js';
@@ -84,6 +88,30 @@ export function buildApp(opts: ServerOptions = {}): Hono {
     if (taskSpec === '') return c.json({ error: 'task_spec-required' }, 400);
     const startMs = Date.now();
     const result = await classify(taskSpec, { model: body.model ?? classifierModel, ollamaBaseUrl });
+    const latency_ms = Date.now() - startMs;
+    return c.json({ ...result, latency_ms, classifier_model: body.model ?? classifierModel });
+  });
+
+  // ─── /v1/intent/v2 (classifier v2 — cascade-aware) ───────────────────
+  // Same shape as /v1/intent but uses the externalized taxonomy in
+  // config/routing-rules.yaml and returns cascade hints (next_tier,
+  // needs_cascade). v1 endpoint above is unchanged.
+  app.post('/v1/intent/v2', async (c: Context) => {
+    let body: { task_spec?: string; model?: string; skip_keyword_prepass?: boolean };
+    try { body = await c.req.json(); } catch { return c.json({ error: 'invalid-json' }, 400); }
+    const taskSpec = (body.task_spec ?? '').trim();
+    if (taskSpec === '') return c.json({ error: 'task_spec-required' }, 400);
+    const startMs = Date.now();
+    let result;
+    try {
+      result = await classifyV2(taskSpec, {
+        model: body.model ?? classifierModel,
+        ollamaBaseUrl,
+        skipKeywordPrepass: body.skip_keyword_prepass === true,
+      });
+    } catch (e) {
+      return c.json({ error: 'classifier-v2-failed', message: (e as Error).message }, 500);
+    }
     const latency_ms = Date.now() - startMs;
     return c.json({ ...result, latency_ms, classifier_model: body.model ?? classifierModel });
   });
@@ -164,6 +192,59 @@ export function buildApp(opts: ServerOptions = {}): Hono {
       });
     } catch (e) {
       return c.json({ error: 'route-failed', message: (e as Error).message }, 502);
+    }
+  });
+
+  // ─── /v1/optimize (LAI phase 8 — 3-stage prompt optimizer) ──────────
+  // Accepts an OptimizerInput-shaped body (userQuestion required; systemPrompt,
+  // toolOutputs, recentReasoning, budget optional) and returns the
+  // OptimizerResult: { optimizedPrompt, metrics, protectedSpanCount }.
+  //
+  // Calls @chiefaia/prompt-optimizer in-process. Stage 2/3 re-enter this same
+  // daemon via /v1/chat/completions, so we default the optimizer's
+  // routerBaseUrl to ourselves (the in-binding loopback) unless caller overrides.
+  app.post('/v1/optimize', async (c: Context) => {
+    let body: {
+      userQuestion?: string;
+      systemPrompt?: string;
+      toolOutputs?: Array<{ id: string; content: string; source?: 'file' | 'json' | 'shell' | 'opaque' }>;
+      recentReasoning?: string[];
+      budget?: {
+        stage2Ratio?: number;
+        stage3Ratio?: number;
+        skipStagesUnderTokens?: number;
+        routerBaseUrl?: string;
+        model?: string;
+      };
+    };
+    try { body = await c.req.json(); } catch { return c.json({ error: 'invalid-json' }, 400); }
+    const userQuestion = (body.userQuestion ?? '').trim();
+    if (userQuestion === '') return c.json({ error: 'userQuestion-required' }, 400);
+
+    const startMs = Date.now();
+    try {
+      const result = await optimize({
+        userQuestion,
+        ...(body.systemPrompt !== undefined ? { systemPrompt: body.systemPrompt } : {}),
+        ...(body.toolOutputs !== undefined ? { toolOutputs: body.toolOutputs } : {}),
+        ...(body.recentReasoning !== undefined ? { recentReasoning: body.recentReasoning } : {}),
+        budget: {
+          // Default to loopback so Stage 2/3 hit ourselves; caller can override.
+          routerBaseUrl: body.budget?.routerBaseUrl ?? 'http://127.0.0.1:7411',
+          ...(body.budget?.model !== undefined ? { model: body.budget.model } : {}),
+          ...(body.budget?.stage2Ratio !== undefined ? { stage2Ratio: body.budget.stage2Ratio } : {}),
+          ...(body.budget?.stage3Ratio !== undefined ? { stage3Ratio: body.budget.stage3Ratio } : {}),
+          ...(body.budget?.skipStagesUnderTokens !== undefined ? { skipStagesUnderTokens: body.budget.skipStagesUnderTokens } : {}),
+        },
+      });
+      return c.json({
+        optimized_prompt: result.optimizedPrompt,
+        protected_span_count: result.protectedSpanCount,
+        metrics: result.metrics,
+        wall_ms: Date.now() - startMs,
+      });
+    } catch (e) {
+      return c.json({ error: 'optimize-failed', message: (e as Error).message }, 500);
     }
   });
 

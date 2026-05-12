@@ -58,6 +58,7 @@ Endpoints:
   POST /v1/route              { task_type, prompt }
   POST /v1/chat/completions   OpenAI-compatible
   POST /v1/embeddings         OpenAI-compatible
+  POST /v1/optimize           3-stage prompt optimizer (LAI phase 8)
 `);
   process.exit(0);
 }

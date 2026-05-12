@@ -30,6 +30,28 @@ export interface LLMResponse {
     completionTokens?: number;
     totalTokens?: number;
   };
+  /**
+   * Prompt-optimizer metrics (LAI phase 6). Present when the adapter ran
+   * the prompt through @chiefaia/prompt-optimizer before dispatch. Used
+   * by the router daemon's OTel spans + llm-metrics dashboard to report
+   * compression effectiveness.
+   */
+  optimizer?: OptimizerMetrics;
+}
+
+export interface OptimizerMetrics {
+  /** Raw prompt token estimate before optimizer ran. */
+  pre_token_count: number;
+  /** Optimized prompt token estimate after the 3-stage pipeline. */
+  post_token_count: number;
+  /** post / pre. 1.0 = no compression, 0.5 = halved. */
+  compression_ratio: number;
+  /** Number of «protected:…» spans preserved verbatim. */
+  protected_span_count: number;
+  /** Wall-clock ms the optimizer pipeline took. */
+  wall_ms: number;
+  /** True if the prompt was below the skip-threshold and stages 2/3 were bypassed. */
+  skipped: boolean;
 }
 
 export interface RouterOptions {
