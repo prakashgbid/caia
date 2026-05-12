@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { stage2Summarize } from '../src/stage2.js';
+import { STAGE2_TIMEOUT_MS, stage2Summarize } from '../src/stage2.js';
 
 function makeFakeFetch(opts: {
   status?: number;
@@ -127,6 +127,64 @@ describe('stage2 — failure modes degrade gracefully', () => {
     });
     expect(result.blobs[0].compressed).toBe(false);
     expect(result.blobs[0].error).toContain('router-empty-response');
+  });
+});
+
+describe('stage2 — STAGE2_TIMEOUT_MS env override', () => {
+  const originalEnv = process.env.STAGE2_TIMEOUT_MS;
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env.STAGE2_TIMEOUT_MS;
+    else process.env.STAGE2_TIMEOUT_MS = originalEnv;
+    vi.resetModules();
+  });
+
+  it('defaults to 60000 ms when env var is unset', async () => {
+    delete process.env.STAGE2_TIMEOUT_MS;
+    const mod = await import('../src/stage2.js?default-timeout');
+    expect(mod.STAGE2_TIMEOUT_MS).toBe(60000);
+  });
+
+  it('reads STAGE2_TIMEOUT_MS from process.env', async () => {
+    process.env.STAGE2_TIMEOUT_MS = '17500';
+    const mod = await import('../src/stage2.js?override-timeout');
+    expect(mod.STAGE2_TIMEOUT_MS).toBe(17500);
+  });
+
+  it('exports the module-level default at the configured value', () => {
+    // Sanity: the constant imported at top-of-file (60_000 default) is exported.
+    expect(typeof STAGE2_TIMEOUT_MS).toBe('number');
+    expect(STAGE2_TIMEOUT_MS).toBeGreaterThanOrEqual(60000);
+  });
+
+  it('uses the env-derived timeout as the default for stage2Summarize', async () => {
+    // Set a small env timeout, re-import, and verify a slow fetch aborts in <100ms.
+    process.env.STAGE2_TIMEOUT_MS = '50';
+    const mod = await import('../src/stage2.js?short-timeout');
+    expect(mod.STAGE2_TIMEOUT_MS).toBe(50);
+
+    const longContent = 'verbose '.repeat(300);
+    let abortedAt = 0;
+    const fetchImpl = vi.fn(async (_url: string, init: RequestInit) => {
+      const signal = init.signal as AbortSignal;
+      return new Promise<Response>((_resolve, reject) => {
+        const start = Date.now();
+        signal.addEventListener('abort', () => {
+          abortedAt = Date.now() - start;
+          reject(new Error('aborted'));
+        });
+      });
+    }) as unknown as typeof fetch;
+
+    const result = await mod.stage2Summarize(
+      [{ id: 'env-timeout', content: longContent }],
+      { fetchImpl, minTokensToCompress: 100 },
+    );
+    expect(result.blobs[0].compressed).toBe(false);
+    expect(abortedAt).toBeGreaterThan(0);
+    expect(abortedAt).toBeLessThan(500);
   });
 });
 

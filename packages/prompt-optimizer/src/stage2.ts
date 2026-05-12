@@ -9,6 +9,12 @@
 // The pipeline is best-effort — a missing router degrades quality but
 // never blocks routing.
 //
+// Timeout: the per-blob router call is bounded by STAGE2_TIMEOUT_MS,
+// read from `process.env.STAGE2_TIMEOUT_MS` (default 60_000 ms). Real
+// 7b summarize calls on a busy local model can take 10–30 s, so the
+// previous 8 s hardcoded ceiling aborted most live calls. Callers can
+// still override per-invocation via `opts.timeoutMs`.
+//
 // Phase 5 of the Local-AI-First build chain.
 
 import type { ToolOutputBlob } from './types.js';
@@ -35,11 +41,13 @@ export interface Stage2BlobResult {
   error?: string | undefined;
 }
 
+export const STAGE2_TIMEOUT_MS = parseInt(process.env.STAGE2_TIMEOUT_MS ?? '60000', 10);
+
 const DEFAULTS: Required<Omit<Stage2Options, 'fetchImpl'>> = {
   routerBaseUrl: 'http://127.0.0.1:7411',
   model: 'qwen2.5-coder:7b',
   targetRatio: 0.4,
-  timeoutMs: 8000,
+  timeoutMs: STAGE2_TIMEOUT_MS,
   minTokensToCompress: 200,
 };
 
