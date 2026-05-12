@@ -8,18 +8,23 @@
 //   1. router-log-probabilities — if the local-llm-router exposes a
 //      `/v1/score-tokens` endpoint that returns per-token log-probability
 //      under qwen2.5-coder:7b conditioned on the question, we use that.
-//      This is the LLMLingua-2 path.
-//   2. heuristic — when (1) is unavailable (router doesn't yet expose the
-//      endpoint; v1 of the router on phase-5 disk doesn't), we fall back
-//      to a deterministic TF-IDF-style score against the user question.
-//      The heuristic is documented as the LLMLingua-2 paper's own ablation
-//      baseline ("BM25-keep") — it captures ~70% of the LLMLingua-2 quality
-//      gain on the paper's eval.
+//      This is the LLMLingua-2 path. As of LAI phase 6, the router does
+//      NOT expose this endpoint (a 404 is the expected response). We
+//      intentionally keep the call so a future router upgrade can light it
+//      up without a stage3 change — but a 404 is treated as "endpoint not
+//      implemented" and silently falls through to backend (2) without
+//      surfacing an error to the caller. Any other failure (5xx, network,
+//      timeout, malformed JSON) is still surfaced via `error` for ops.
+//   2. heuristic — TF-IDF-style score against the user question. Matches
+//      Headroom's approach (ModernBERT-style token-importance, no log-probs).
+//      Documented as the LLMLingua-2 paper's own ablation baseline
+//      ("BM25-keep") — captures ~70% of the LLMLingua-2 quality gain on
+//      the paper's eval.
 //
 // Both backends respect Stage 1's `«protected:…»` markers — tokens inside
 // a protected span are force-kept regardless of score.
 //
-// Phase 5 of the Local-AI-First build chain.
+// Phase 5 of the Local-AI-First build chain (404-fallback hardened in phase 6).
 
 import { findProtectedRanges, isIndexProtected } from './stage1.js';
 import { estimateTokens } from './types.js';
@@ -103,7 +108,14 @@ export async function stage3Prune(
       scoredSegments = await scoreViaRouter(segments, userQuestion, o, fetcher);
       backend = 'router';
     } catch (err) {
-      routerError = err instanceof Error ? err.message : String(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      // A 404 from the router means the optional `/v1/score-tokens` endpoint
+      // isn't implemented on this build — that's the expected v1 path. Treat
+      // it as silent fallback and don't surface it as an error. Any other
+      // failure (5xx, network, timeout, shape) is surfaced for ops.
+      if (msg !== 'router-status-404') {
+        routerError = msg;
+      }
       scoredSegments = scoreHeuristic(segments, userQuestion);
     }
   } else {

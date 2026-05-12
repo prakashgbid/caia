@@ -186,4 +186,29 @@ describe('stage3 — router backend with fallback', () => {
     expect(out.backend).toBe('heuristic');
     expect(out.error).toContain('router-status-500');
   });
+
+  it('falls back silently to heuristic on router 404 (endpoint not implemented)', async () => {
+    const segments: PromptSegment[] = [
+      {
+        kind: 'tool-output',
+        text: 'verbose '.repeat(100) + 'keyword',
+        weight: 1,
+      },
+      { kind: 'user-question', text: 'keyword', weight: 0 },
+    ];
+    const fetchImpl = vi.fn(async () => {
+      return new Response('', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const out = await stage3Prune(segments, 'keyword', {
+      targetRatio: 0.5,
+      minTokensToPrune: 10,
+      fetchImpl,
+    });
+    expect(out.backend).toBe('heuristic');
+    // 404 = endpoint-not-implemented is the expected v1 path; should NOT
+    // surface as an error to the caller.
+    expect(out.error).toBeUndefined();
+    expect(out.tokensOut).toBeLessThan(out.tokensIn);
+  });
 });
