@@ -36,3 +36,22 @@ them; B15.C is otherwise behaviour-neutral until B15.E lands.
 
 See `tests/test_b15b_done_triggers.sh` for the 3 negative + 1 positive
 acceptance tests.
+
+## 2026-05-13 — B15.D verifier verdicts
+
+`migrations/2026-05-13_b15d_verifier_verdicts.sql` adds the `verifier_verdicts`
+table (full provenance for every VERIFIER spawn run — see
+`packages/verifier/`) and replaces `done_status_guard` with a version that
+ALSO checks for a row in that table with `overall='pass'` for every
+autonomous-loop (scope-2/3) subtask done-transition. Operator-routed
+(scope-1) subtasks remain advisory — the verdict is recorded but does not
+block, matching the design's
+"blocking-for-autonomous-loop / advisory-for-operator-routed" rule.
+
+See `tests/test_b15d_verifier_verdicts.sh` for the negative + positive
+acceptance tests (6/6 pass).
+
+Apply order: `2026-05-13_b15b_done_triggers.sql` first, then
+`2026-05-13_b15d_verifier_verdicts.sql`. The B15.D migration drops and
+recreates `done_status_guard`; B15.B's `done_status_history_guard` and
+`cascade_on_done` are untouched.

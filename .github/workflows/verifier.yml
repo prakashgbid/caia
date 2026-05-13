@@ -1,0 +1,155 @@
+name: Verifier (B15.D)
+
+# Runs the @chiefaia/verifier agent on PRs whose body declares an SPS task
+# binding. The verifier is the fourth review-sibling — its domain is
+# acceptance-criteria-satisfaction (the spec-truth check), distinct from
+# Critic (security/regression/cost), Code-Reviewer (correctness/style/types),
+# and Reviewer (craftsmanship). See packages/verifier/DESIGN.md.
+#
+# BLOCKING for PRs flagged routing-class=autonomous-loop in the PR body
+# (e.g. "<!-- routing-class: autonomous-loop -->"); ADVISORY otherwise.
+#
+# Subscription-only: never sets ANTHROPIC_API_KEY in the spawn env. The
+# CLAUDE_OAUTH_TOKEN secret authenticates the `claude` binary via the
+# operator's Max subscription accounts.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main, develop]
+
+concurrency:
+  group: verifier-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  detect-spec-binding:
+    name: detect-spec-binding
+    runs-on: ubuntu-latest
+    outputs:
+      bound: ${{ steps.scan.outputs.bound }}
+      routing_class: ${{ steps.scan.outputs.routing_class }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan PR body for SPS task binding
+        id: scan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        # The PR body is expected to carry an `<!-- sps-task-id: ... -->`
+        # marker added by the slot-manager when the autonomous-loop opens
+        # the PR. PRs without that marker get verifier=ADVISORY and the
+        # verifier inputs are skipped — the workflow exits 0.
+        run: |
+          BODY=$(gh pr view "$PR_NUMBER" --json body --jq .body 2>/dev/null || echo "")
+          ROUTING="advisory"
+          if echo "$BODY" | grep -q "routing-class: autonomous-loop"; then
+            ROUTING="autonomous-loop"
+          elif echo "$BODY" | grep -q "routing-class: operator-routed"; then
+            ROUTING="operator-routed"
+          fi
+          BOUND="false"
+          if echo "$BODY" | grep -q "sps-task-id:"; then
+            BOUND="true"
+          fi
+          echo "bound=$BOUND"        >> "$GITHUB_OUTPUT"
+          echo "routing_class=$ROUTING" >> "$GITHUB_OUTPUT"
+
+  verify:
+    name: Verifier (${{ needs.detect-spec-binding.outputs.routing_class }})
+    needs: detect-spec-binding
+    if: |
+      needs.detect-spec-binding.outputs.bound == 'true' &&
+      !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-pnpm-mono
+
+      - name: Build verifier
+        run: pnpm --filter @chiefaia/verifier build
+
+      - name: Fetch SPS task spec
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # The slot-manager attaches the SPS task spec as an artifact on the
+          # PR via a `<!-- sps-task-spec-url: ... -->` marker. We materialize
+          # it into a verifier-inputs JSON file (see
+          # packages/verifier/src/types.ts VerifierSpawnInputs).
+          BODY=$(gh pr view "$PR_NUMBER" --json body --jq .body)
+          SPEC_URL=$(echo "$BODY" | sed -n 's/.*sps-task-spec-url: \([^ ]*\).*/\1/p' | head -1)
+          if [ -z "$SPEC_URL" ]; then
+            echo "::warning::No sps-task-spec-url on PR — verifier exiting advisory-skip."
+            echo "skip=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          curl -sSL "$SPEC_URL" -o /tmp/verifier-inputs.json
+          echo "skip=false" >> "$GITHUB_ENV"
+
+      - name: Run verifier
+        if: env.skip != 'true'
+        env:
+          CLAUDE_OAUTH_TOKEN: ${{ secrets.CLAUDE_OAUTH_TOKEN }}
+          ROUTING_CLASS: ${{ needs.detect-spec-binding.outputs.routing_class }}
+        id: verify
+        run: |
+          set +e
+          # The wrapper handles worktree create/cleanup via trap.
+          packages/verifier/bin/run-verifier.sh \
+            --inputs /tmp/verifier-inputs.json \
+            --out    /tmp/verifier-verdict.json \
+            --repo   "$PWD" \
+            --budget-seconds 900
+          RC=$?
+          OVERALL=$(node -e "
+            try {
+              const v = JSON.parse(require('fs').readFileSync('/tmp/verifier-verdict.json','utf8'));
+              console.log((v.verdict && v.verdict.overall) || 'unknown');
+            } catch (e) { console.log('parse-failed'); }
+          ")
+          echo "rc=$RC"           >> "$GITHUB_OUTPUT"
+          echo "overall=$OVERALL" >> "$GITHUB_OUTPUT"
+
+      - name: Post verifier verdict comment
+        if: env.skip != 'true' && always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          OVERALL: ${{ steps.verify.outputs.overall }}
+          ROUTING: ${{ needs.detect-spec-binding.outputs.routing_class }}
+        run: |
+          {
+            echo "<!-- caia-verifier -->"
+            echo "## :detective: Verifier (@chiefaia/verifier)"
+            echo ""
+            echo "**Routing:** \`$ROUTING\`"
+            echo "**Overall verdict:** \`$OVERALL\`"
+            echo ""
+            echo "Sibling agents: \`@chiefaia/critic\` (security/regression/cost), \`@chiefaia/code-reviewer\` (correctness/style/types), \`@chiefaia/reviewer\` (advisory craftsmanship). The verifier covers acceptance-criteria-satisfaction."
+            echo ""
+            echo '<details><summary>Full verdict JSON</summary>'
+            echo ""
+            echo '```json'
+            cat /tmp/verifier-verdict.json 2>/dev/null || echo '{"error":"no verdict file"}'
+            echo '```'
+            echo "</details>"
+          } > /tmp/verifier-comment.md
+          gh pr comment "$PR_NUMBER" --body-file /tmp/verifier-comment.md
+
+      - name: Fail on verifier=fail (autonomous-loop only — blocks merge)
+        if: |
+          env.skip != 'true' &&
+          needs.detect-spec-binding.outputs.routing_class == 'autonomous-loop' &&
+          steps.verify.outputs.overall != 'pass'
+        run: |
+          echo "::error::Verifier returned overall=${{ steps.verify.outputs.overall }} for an autonomous-loop PR — blocking merge."
+          exit 1
