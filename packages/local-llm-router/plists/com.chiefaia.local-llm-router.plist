@@ -35,6 +35,12 @@
     <string>http://127.0.0.1:11434</string>
     <key>ROUTER_CLASSIFIER_MODEL</key>
     <string>qwen2.5-coder:7b</string>
+    <key>ROUTER_RAG_ENABLED</key>
+    <string>true</string>
+    <key>ROUTER_RAG_TOP_K</key>
+    <string>3</string>
+    <key>ROUTER_RAG_TOKEN_BUDGET</key>
+    <string>2000</string>
     <key>PATH</key>
     <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
   </dict>
