@@ -4,7 +4,9 @@
   "description": "Multi-phase chain runner for long-running autonomous Claude work — atomic state machine, lockfile + heartbeat, audit log, and CLI dispatched by a scheduled wake.",
   "type": "module",
   "bin": {
-    "caia-chain": "./bin/caia-chain.js"
+    "caia-chain": "./bin/caia-chain.js",
+    "caia-pr-merge-or-fail": "./bin/caia-pr-merge-or-fail.js",
+    "caia-pr-create-safe": "./bin/caia-pr-create-safe.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,6 +26,14 @@
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
+    },
+    "./pr-merge": {
+      "import": "./dist/pr-merge/index.js",
+      "types": "./dist/pr-merge/index.d.ts"
+    },
+    "./pr-create": {
+      "import": "./dist/pr-create/index.js",
+      "types": "./dist/pr-create/index.d.ts"
     }
   },
   "files": [
@@ -31,7 +41,7 @@
     "bin"
   ],
   "scripts": {
-    "build": "tsc && node -e \"import('node:fs').then(fs=>fs.chmodSync('bin/caia-chain.js','755'))\"",
+    "build": "tsc && node -e \"import('node:fs').then(fs=>{fs.chmodSync('bin/caia-chain.js','755');fs.chmodSync('bin/caia-pr-merge-or-fail.js','755');fs.chmodSync('bin/caia-pr-create-safe.js','755');})\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src",

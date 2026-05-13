@@ -153,3 +153,78 @@ pnpm --filter @chiefaia/chain-runner test
 ```
 
 The vitest suite ports the original 75-case Python regression: 15 paths × 5 cases each, covering fresh init, advancement, lock staleness (heartbeat + runtime), retry exhaustion, pause/resume, budget cap, all-done detection, dependency gating, atomic-write recovery, owner authentication, mark-failed, audit log, and idempotent init.
+
+## PR-merge enforcement (added 2026-05-13)
+
+This package ships **six guardrails** to drain the recurring PR-accumulation
+failure mode. The standing rule is: **NO chain phase marks itself done with an
+open PR for its branch.**
+
+### Guardrail 1 — `caia-pr-merge-or-fail`
+
+CLI binary that drives a PR to MERGED state or exits non-zero. Polls
+`gh pr view` every 30s up to a configurable timeout; on green-mergeable
+it runs `gh pr merge --admin --squash --delete-branch`; on non-substantive
+check failures (lint, format, dependabot, doc-only, semgrep tier-warn,
+axe/visual/lighthouse/bundle-size) it cycles `enforce_admins` off, merges,
+and re-arms. Every attempt is appended to
+`~/.caia/chain-runner/pr-merge-attempts.jsonl`.
+
+```bash
+node bin/caia-pr-merge-or-fail.js --repo OWNER/REPO --pr 123 --timeout-seconds 900
+```
+
+Exit codes: `0` iff `gh pr view` confirms `state=MERGED && mergedAt!=null`,
+`1` for any other outcome (with a clear reason on stderr).
+
+### Guardrail 2 — runner `mark-done` gate (`bin/gate-mark-done.sh`)
+
+Both `_stability_completion_run_phase.sh` and `_a3_reliability_run_phase.sh`
+invoke this gate before calling `caia-chain mark-done`. The gate greps the
+phase log for `github.com/.../pull/N` URLs and:
+- if the PR is already MERGED → pass through;
+- if OPEN → invokes `caia-pr-merge-or-fail`;
+- if it cannot be merged (substantive conflicts/failures) → returns 1 and
+  the runner marks the phase **failed** rather than done.
+
+### Guardrail 3 — hourly drainer (cron)
+
+`~/.caia/pr-drainer/drain.sh` + launchd `com.caia.pr-drainer-hourly`.
+Every hour: scans open PRs across the configured repos, tries the same
+merge logic, attempts `gh pr update-branch` once on conflicts, prunes
+worktrees, and writes a daily summary to
+`~/Documents/projects/reports/pr_drainer_<date>.md`.
+
+### Guardrail 4 — `caia-pr-create-safe`
+
+Wrapper around `gh pr create`. Before pushing, it:
+1. enables `git config rerere.enabled true`;
+2. fetches `origin/<base>` (default: `develop`);
+3. attempts `git rebase origin/<base>` if behind;
+4. aborts cleanly with a clear error if conflicts can't auto-resolve;
+5. pushes with `--force-with-lease`;
+6. runs `gh pr create` with the supplied passthrough args.
+
+**All chain runner phases should use `caia-pr-create-safe` instead of
+bare `gh pr create`.**
+
+```bash
+node bin/caia-pr-create-safe.js --base develop -- --title "..." --body "..."
+```
+
+### Guardrail 5 — post-merge sweep
+
+Runs automatically inside `caia-pr-merge-or-fail` after a successful merge:
+- `git push origin --delete <branch>` (remote)
+- `git branch -D <branch>` (local)
+- `git worktree prune`
+- drop any stash whose description mentions the branch name
+
+### Guardrail 6 — daily hygiene audit (cron)
+
+`~/.caia/hygiene/audit.sh` + launchd `com.caia.hygiene-audit-daily` running at
+02:00 local. Reports stashes, orphan worktrees, open PRs >24h, local branches
+without upstream, and untracked files; writes
+`~/Documents/projects/reports/git_hygiene_<date>.md` and appends a single
+INBOX line if anything drifted.
+
