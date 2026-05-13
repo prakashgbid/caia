@@ -23,9 +23,14 @@ import { scoreOne } from '../dist/rubric-scorer.js';
 import { createOllamaClient } from '../dist/ollama-client.js';
 
 function parseArgs(argv) {
+  // Defaults must reference models that are actually pulled in the
+  // operator's local Ollama. llama3.1:8b was the prior default but is
+  // not installed; qwen2.5:7b-instruct is the closest available stand-in
+  // (different instruct family from the coder base, so still exercises
+  // pairwise/rubric divergence). Override via --degraded.
   const out = {
     base: 'qwen2.5-coder:7b',
-    degraded: 'llama3.1:8b',
+    degraded: 'qwen2.5:7b-instruct',
     suiteIds: ['directive', 'feedback'],
     perSuiteCap: 3
   };

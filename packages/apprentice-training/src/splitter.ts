@@ -41,18 +41,29 @@ export function splitSamples(
   }
 
   const holdoutIds = new Set<string>(Array.isArray(manifest.holdout) ? manifest.holdout : []);
-  const holdoutFromManifest = holdoutIds.size > 0;
+  let holdoutFromManifest = holdoutIds.size > 0;
 
   // Test bucket: from manifest if present, otherwise id-hash fallback.
-  const test: CorpusSample[] = [];
-  const remainder: CorpusSample[] = [];
+  let test: CorpusSample[] = [];
+  let remainder: CorpusSample[] = [];
 
   if (holdoutFromManifest) {
     for (const s of samples) {
       if (holdoutIds.has(s.id)) test.push(s);
       else remainder.push(s);
     }
-  } else {
+    // Guard against stale/upstream-mismatched holdout IDs. If the
+    // manifest's holdout doesn't intersect the loaded samples (e.g.
+    // upstream regenerated ids after holdout selection, or holdout
+    // belongs to a sibling manifest), fall back to id-hash so test
+    // is never empty — preserves DESIGN.md §7 honest-eval invariant.
+    if (test.length === 0) {
+      holdoutFromManifest = false;
+      test = [];
+      remainder = [];
+    }
+  }
+  if (!holdoutFromManifest) {
     // Fallback: use id-hash test bucket sized to testSplitFraction.
     const testFracMod = Math.max(1, Math.round(1 / Math.max(testSplitFraction, 0.001)));
     for (const s of samples) {
@@ -60,6 +71,23 @@ export function splitSamples(
         test.push(s);
       } else {
         remainder.push(s);
+      }
+    }
+    // Tiny-corpus floor: when N is small enough that floor(N * testFrac)
+    // could round to zero buckets-hit, force-promote at least one sample
+    // into test (the lowest-hash id in remainder). Without this a
+    // ~20-sample run can produce test=0 even with non-empty fraction.
+    if (test.length === 0 && samples.length > 0) {
+      const sortedRem = [...remainder].sort((a, b) => {
+        const ba = bucket(splitSeed, a.id, 1_000_000);
+        const bb = bucket(splitSeed, b.id, 1_000_000);
+        if (ba !== bb) return ba - bb;
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+      });
+      const promoted = sortedRem.shift();
+      if (promoted) {
+        test = [promoted];
+        remainder = sortedRem;
       }
     }
   }
