@@ -319,13 +319,27 @@ intents:
     default_tier: local-32b
     min_confidence: 0.45
     keywords:
-      - refactor
-      - multi-file
       - complex algorithm
       - migrate the
       - rewrite the 140-loc
       - extract the duplicated
       - large refactor
+
+  # SPS T2.5 (2026-05-13): refactor work that crosses module boundaries, preserves
+  # public contracts/schemas, or pairs an edit with a new integration test is too
+  # hard for local-32b — escalate to claude. Split out of `hard-code` so that
+  # plain "refactor" prompts no longer get pinned to a local tier that returned
+  # the wrong answer ("install stream-json") on the canonical classifier-v2 task.
+  - name: refactor-complex
+    default_tier: claude
+    min_confidence: 0.45
+    keywords:
+      - refactor
+      - multi-file refactor
+      - streaming parser
+      - buffered json
+      - preserving all
+      - add an integration test
 
   - name: architecture
     default_tier: local-32b

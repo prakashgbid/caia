@@ -305,6 +305,21 @@ prompts:
     expected_tier: cloud-sonnet
     expected_intent: edit
 
+  # Added 2026-05-13 (SPS T2.5 escalation_fix): canonical failure from tonight's
+  # verification — refactor prompt about classifier-v2 mis-routed to local-7b and
+  # returned the wrong answer ("install stream-json"). Must escalate to claude.
+  - id: cel-006
+    category: code-edit-large
+    prompt: |
+      Refactor packages/local-llm-router/src/classifier-v2.ts to use a streaming parser instead of buffered JSON, preserving all schema validation, and add an integration test.
+    expected_tier: cloud-sonnet
+    expected_intent: refactor-complex
+    expected_route: claude
+    tags:
+      - refactor-complex
+      - code-edit-substantial
+      - multi-file
+
   # ───────────────────────────── 5. code-review ─────────────────────────────
   - id: crv-001
     category: code-review
