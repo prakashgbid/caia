@@ -133,4 +133,78 @@ describe('HTTP Health Server', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  describe('regression: VAL-RESTART-1777591616 dashboard timeout (event cap)', () => {
+    it('/status caps events at 100 even with large event history', async () => {
+      // Regression guard: /status must not serialise more than 100 events to avoid
+      // blocking the event loop under high event volume (VAL-RESTART-1777591616).
+      for (let i = 0; i < 150; i++) {
+        await conductor.add({ title: `Cap task ${i}`, cwd: '/tmp', files: [`src/cap-${i}.ts`] });
+      }
+      const res = await httpGet(`http://localhost:${PORT}/status`);
+      expect(res.status).toBe(200);
+      const data = JSON.parse(res.body) as Record<string, unknown>;
+      expect(Array.isArray(data['events'])).toBe(true);
+      expect((data['events'] as unknown[]).length).toBeLessThanOrEqual(100);
+    }, 30_000);
+  });
+
+  describe('regression: VAL-RESTART-1777591566 dashboard timeout', () => {
+    it('does not timeout on /status with large task queue', async () => {
+      // Regression guard: ensure dashboard endpoints respond within 5s timeout
+      // even with many pending tasks (VAL-RESTART-1777591566).
+      // Previously, large conductor.status() serialization could exceed request timeout.
+      const taskCount = 500;
+      for (let i = 0; i < taskCount; i++) {
+        await conductor.add({
+          title: `Task ${i}`,
+          cwd: '/tmp',
+          files: [`src/file-${i}.ts`],
+        });
+      }
+
+      // /status must respond within 5s timeout
+      const res = await httpGet(`http://localhost:${PORT}/status`);
+      expect(res.status).toBe(200);
+      const data = JSON.parse(res.body) as Record<string, unknown>;
+      expect(typeof data['tasks']).toBe('object');
+      expect(data['events']).toBeDefined();
+    }, 10_000);
+
+    it('does not timeout on /events with large event history', async () => {
+      // Create events through task additions
+      for (let i = 0; i < 100; i++) {
+        await conductor.add({
+          title: `Event task ${i}`,
+          cwd: '/tmp',
+          files: [`src/task-${i}.ts`],
+        });
+      }
+
+      // /events must respond within 5s timeout
+      const res = await httpGet(`http://localhost:${PORT}/events`);
+      expect(res.status).toBe(200);
+      const data = JSON.parse(res.body) as unknown[];
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBeGreaterThan(0);
+    }, 10_000);
+
+    it('does not timeout on /dag with large dependency graph', async () => {
+      // Create tasks that generate DAG structure
+      for (let i = 0; i < 50; i++) {
+        await conductor.add({
+          title: `DAG task ${i}`,
+          cwd: '/tmp',
+          files: [`src/dag-${i}.ts`],
+        });
+      }
+
+      // /dag must respond within 5s timeout
+      const res = await httpGet(`http://localhost:${PORT}/dag`);
+      expect(res.status).toBe(200);
+      const data = JSON.parse(res.body) as Record<string, unknown>;
+      expect(Array.isArray(data['nodes'])).toBe(true);
+      expect(Array.isArray(data['edges'])).toBe(true);
+    }, 10_000);
+  });
 });
