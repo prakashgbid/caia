@@ -31,6 +31,7 @@ export type Intent =
   | 'test-gen'
   | 'schema-design'
   | 'hard-code'
+  | 'refactor-complex'
   | 'architecture'
   | 'reason-over-context'
   | 'new-design'
@@ -57,7 +58,7 @@ export const INTENT_VALUES: ReadonlyArray<Intent> = [
   'format', 'format-convert', 'lint-fix', 'rename', 'fill-template',
   'memory-search', 'small-code-edit', 'code-explain', 'doc-update', 'extract',
   'error-recovery', 'medium-code', 'doc-write', 'spec-check', 'review-prose',
-  'code-review', 'test-gen', 'schema-design', 'hard-code', 'architecture',
+  'code-review', 'test-gen', 'schema-design', 'hard-code', 'refactor-complex', 'architecture',
   'reason-over-context', 'new-design', 'architect', 'research-synthesis',
   'batch-summarize', 'corpus-distill', 'long-context-reason',
   'embedding-generate', 'unknown',
