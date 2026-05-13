@@ -64,6 +64,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
       i += 1;
       continue;
     }
+    if (a === '--max-distill-calls' && i + 1 < argv.length) {
+      out.config.maxDistillCalls = Number.parseInt(argv[i + 1]!, 10);
+      i += 2;
+      continue;
+    }
+    if (a === '--memory-roots' && i + 1 < argv.length) {
+      out.config.memoryRoots = (argv[i + 1] ?? '').split(',').filter(Boolean);
+      i += 2;
+      continue;
+    }
     if (a === '--max-samples' && i + 1 < argv.length) {
       out.config.maxSamples = Number.parseInt(argv[i + 1]!, 10);
       i += 2;

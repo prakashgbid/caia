@@ -31,6 +31,7 @@ import {
   type RouteDecision,
 } from './otel.js';
 import { getRoute } from './routing-config.js';
+import { resolveApprenticeOverride } from './apprentice-override.js';
 import type {
   LLMProvider,
   LLMRequest,
@@ -97,9 +98,28 @@ export async function route(
   }
 
   const fallbackEnabled = options.fallbackOnError ?? true;
+
+  // Apprentice Phase 3 override: when a trained apprentice adapter is
+  // promoted via apprentice-serving (production / canary), and the task
+  // is in the eligible set, swap the rule's `localModel` for the
+  // apprentice ollama tag. No-ops cleanly when no adapter is registered.
+  let localModelForRequest = rule.localModel;
+  let apprenticeSlot: 'production' | 'canary' | null = null;
+  if (preferredProvider === 'local') {
+    const override = resolveApprenticeOverride(
+      options.requestId !== undefined
+        ? { taskType, requestId: options.requestId }
+        : { taskType }
+    );
+    if (override !== null) {
+      localModelForRequest = override.model;
+      apprenticeSlot = override.slot;
+    }
+  }
+
   const initialDecision: RouteDecision = preferredProvider === 'local' ? 'local' : 'claude';
   const initialModel = preferredProvider === 'local'
-    ? rule.localModel
+    ? localModelForRequest
     : rule.claudeModel ?? 'claude-sonnet-4-6';
 
   return withSpan(
@@ -138,9 +158,16 @@ export async function route(
       let fallbackFrom: 'local' | 'claude' | null = null;
       let fallbackReason: string | null = null;
 
+      if (apprenticeSlot !== null) {
+        ctx.span.setAttributes({
+          ['caia.apprentice.slot']: apprenticeSlot,
+          ['caia.apprentice.model']: localModelForRequest,
+        });
+      }
+
       if (preferredProvider === 'local') {
         try {
-          result = await dispatchLocal(rule.localModel, request);
+          result = await dispatchLocal(localModelForRequest, request);
         } catch (localErr) {
           if (fallbackEnabled && rule.claudeModel) {
             usedFallback = true;
@@ -174,7 +201,7 @@ export async function route(
                 `[local-llm-router] Claude binary rate-limited for task "${taskType}"; ` +
                   `falling back to Ollama (${rule.localModel}). Spend-guard should pause / rotate.`,
               );
-              result = await dispatchLocal(rule.localModel, request);
+              result = await dispatchLocal(localModelForRequest, request);
             } else {
               throw claudeErr;
             }
@@ -187,7 +214,7 @@ export async function route(
                 `[local-llm-router] Claude binary failed (${claudeErr.message}) for task "${taskType}"; ` +
                   `falling back to Ollama (${rule.localModel}). NO API-key fallback (rule).`,
               );
-              result = await dispatchLocal(rule.localModel, request);
+              result = await dispatchLocal(localModelForRequest, request);
             } else {
               throw claudeErr;
             }
@@ -201,7 +228,7 @@ export async function route(
                 `[local-llm-router] Claude path failed (${String(claudeErr)}) for task "${taskType}"; ` +
                   `falling back to Ollama (${rule.localModel}).`,
               );
-              result = await dispatchLocal(rule.localModel, request);
+              result = await dispatchLocal(localModelForRequest, request);
             } else {
               throw claudeErr;
             }

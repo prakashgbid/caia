@@ -64,7 +64,9 @@ export function stage1Prepass(input: string, opts: Stage1Options = {}): Stage1Re
 
 // ─── 1. ANSI / BOM / line-ending normalization ─────────────────────────
 
+// eslint-disable-next-line no-control-regex
 const ANSI_RE = /\x1B\[[0-?]*[ -/]*[@-~]/g;
+// eslint-disable-next-line no-irregular-whitespace
 const BOM_RE = /^﻿/;
 
 export function stripAnsiBomCrlf(s: string): string {

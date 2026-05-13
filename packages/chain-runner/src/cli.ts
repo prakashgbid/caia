@@ -300,7 +300,7 @@ export function buildProgram(): Command {
         return;
       }
       // Tail in JS (avoid shelling out)
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
       const fs = require('node:fs') as typeof import('node:fs');
       const lines = fs.readFileSync(ctx.paths.auditFile, 'utf8').trimEnd().split('\n');
       const n = Number(opts.n ?? '20');

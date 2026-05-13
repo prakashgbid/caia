@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Daily Apprentice-corpus heartbeat watchdog.
+
+  Runs at 04:00 local — two hours after the 02:00 corpus aggregator —
+  and compares today's `totals.final` vs yesterday's. Non-zero exit
+  means a 20%+ drop was detected; launchd routes stderr to
+  `apprentice-corpus-heartbeat.err.log` which the operator can tail.
+
+  Committed with PLACEHOLDER values; substituted at install time by
+  scripts/install-heartbeat.sh (or by hand: replace CURRENT_NODE_BIN,
+  CURRENT_PKG_DIR, CURRENT_HOME).
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.chiefaia.apprentice-corpus-heartbeat</string>
+
+    <key>Disabled</key>
+    <false/>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>CURRENT_NODE_BIN</string>
+        <string>CURRENT_PKG_DIR/scripts/heartbeat.mjs</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>CURRENT_PKG_DIR</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>CURRENT_HOME</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>4</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>CURRENT_HOME/Library/Logs/chiefaia/apprentice-corpus-heartbeat.log</string>
+    <key>StandardErrorPath</key>
+    <string>CURRENT_HOME/Library/Logs/chiefaia/apprentice-corpus-heartbeat.err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

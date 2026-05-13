@@ -20,6 +20,13 @@ import type {
 export interface ApprenticeCorpusConfig {
   // ── Source paths / URLs ──────────────────────────────────────────────
   memoryRoot?: string;
+  /**
+   * Additional memory roots walked alongside `memoryRoot`. Resolves
+   * `~` and dedupes. Empty by default; production callers can populate
+   * via env `CAIA_MEMORY_DIRS` (comma-separated) or the
+   * `--memory-roots` CLI flag.
+   */
+  memoryRoots?: ReadonlyArray<string>;
   reportsRoot?: string;
   eventsDbPath?: string;
   langfuseProjectId?: string;
@@ -64,6 +71,8 @@ export interface ApprenticeCorpusConfig {
  */
 export interface ResolvedApprenticeCorpusConfig {
   memoryRoot: string;
+  /** Additional memory roots, expanded + deduped (excludes memoryRoot). */
+  memoryRoots: ReadonlyArray<string>;
   reportsRoot: string;
   eventsDbPath: string;
   langfuseProjectId: string;
@@ -107,10 +116,24 @@ const FALLBACK_MEMORY_ROOT =
 
 /** Build the resolved config from a partial input. */
 export function resolveConfig(input: ApprenticeCorpusConfig): ResolvedApprenticeCorpusConfig {
+  const primary = expandHome(
+    input.memoryRoot ?? process.env['CAIA_MEMORY_DIR'] ?? FALLBACK_MEMORY_ROOT
+  );
+  const envExtra = (process.env['CAIA_MEMORY_DIRS'] ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const extraInput = (input.memoryRoots ?? envExtra).map(expandHome);
+  const seen = new Set<string>([primary]);
+  const memoryRoots: string[] = [];
+  for (const root of extraInput) {
+    if (seen.has(root)) continue;
+    seen.add(root);
+    memoryRoots.push(root);
+  }
   return {
-    memoryRoot: expandHome(
-      input.memoryRoot ?? process.env['CAIA_MEMORY_DIR'] ?? FALLBACK_MEMORY_ROOT
-    ),
+    memoryRoot: primary,
+    memoryRoots,
     reportsRoot: expandHome(
       input.reportsRoot
         ?? process.env['CAIA_REPORTS_DIR']
@@ -153,6 +176,7 @@ export function resolveConfig(input: ApprenticeCorpusConfig): ResolvedApprentice
 export function snapshotConfigForHash(cfg: ResolvedApprenticeCorpusConfig): string {
   return JSON.stringify({
     memoryRoot: cfg.memoryRoot,
+    memoryRoots: cfg.memoryRoots,
     reportsRoot: cfg.reportsRoot,
     eventsDbPath: cfg.eventsDbPath,
     langfuseProjectId: cfg.langfuseProjectId,

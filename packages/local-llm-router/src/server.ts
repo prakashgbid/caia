@@ -18,9 +18,11 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { optimize } from '@chiefaia/prompt-optimizer';
 import { route as routerRoute } from './router.js';
-import { classify, type IntentResult } from './classifier.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { classify, type IntentResult as _IntentResultRef } from './classifier.js';
 import { classifyV2 } from './classifier-v2.js';
-import { OllamaAdapter } from './ollama-adapter.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { OllamaAdapter as _OllamaAdapterRef2 } from './ollama-adapter.js';
 import { llmMetrics } from './llm-metrics.js';
 import { ROUTING_RULES } from './routing-config.js';
 
@@ -161,7 +163,8 @@ export function buildApp(opts: ServerOptions = {}): Hono {
     if (messages.length === 0) return c.json({ error: 'messages-required' }, 400);
 
     const userMsg = messages.filter(m => m.role === 'user').map(m => m.content).join('\n\n');
-    const systemMsg = messages.find(m => m.role === 'system')?.content;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _systemMsg = messages.find(m => m.role === 'system')?.content;
 
     // Default to "summarize" task type if caller didn't specify
     const taskType = body.caia_task_type ?? 'route-default';

@@ -80,6 +80,13 @@ export interface RouterOptions {
     taskType: string,
     prompt: string,
   ) => Promise<LLMResponse | null> | LLMResponse | null;
+  /**
+   * Optional stable id for the request. Used by the Apprentice canary
+   * override to hash-bucket the request deterministically across retries.
+   * If omitted, a fresh random id is used; the canary share % still
+   * holds in aggregate.
+   */
+  requestId?: string;
 }
 
 interface OllamaCommonOptions {

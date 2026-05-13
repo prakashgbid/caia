@@ -239,8 +239,14 @@ export class ApprenticeCorpusAggregator {
   /** Build the SourceReader array, instantiating clients. */
   private async buildReaders(): Promise<SourceReader[]> {
     const eventBus = await this.eventBusFactory();
-    return [
+    const memoryReaders = [
       createMemoryWalker({ memoryRoot: this.cfg.memoryRoot, fs: this.fs }),
+      ...this.cfg.memoryRoots.map((root) =>
+        createMemoryWalker({ memoryRoot: root, fs: this.fs })
+      )
+    ];
+    return [
+      ...memoryReaders,
       createReportsWalker({ reportsRoot: this.cfg.reportsRoot, fs: this.fs }),
       createEventBusReader({ client: eventBus }),
       createGithubReader({ client: this.githubClient, repo: this.cfg.githubRepo }),

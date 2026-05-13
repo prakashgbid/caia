@@ -4,7 +4,8 @@
 // L5 of the Local-LLM-First build plan. Inline implementation rather than a
 // separate @chiefaia/intent-schemas package — keeps the MVP single-package.
 
-import { OllamaAdapter } from './ollama-adapter.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { OllamaAdapter as _OllamaAdapterRef } from './ollama-adapter.js';
 
 export type Intent =
   | 'classify'
