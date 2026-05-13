@@ -9,22 +9,36 @@ import { OllamaAdapter } from './ollama-adapter.js';
 export type Intent =
   | 'classify'
   | 'summarize'
+  | 'doc-summarize'
   | 'draft-prose'
+  | 'prose-rewrite'
   | 'format'
+  | 'format-convert'
   | 'lint-fix'
   | 'rename'
   | 'fill-template'
   | 'memory-search'
+  | 'small-code-edit'
+  | 'code-explain'
+  | 'doc-update'
+  | 'extract'
+  | 'error-recovery'
   | 'medium-code'
   | 'doc-write'
   | 'spec-check'
   | 'review-prose'
+  | 'code-review'
+  | 'test-gen'
+  | 'schema-design'
   | 'hard-code'
+  | 'architecture'
   | 'reason-over-context'
   | 'new-design'
   | 'architect'
+  | 'research-synthesis'
   | 'batch-summarize'
   | 'corpus-distill'
+  | 'long-context-reason'
   | 'embedding-generate'
   | 'unknown';
 
@@ -39,10 +53,14 @@ export interface IntentResult {
 }
 
 export const INTENT_VALUES: ReadonlyArray<Intent> = [
-  'classify', 'summarize', 'draft-prose', 'format', 'lint-fix', 'rename',
-  'fill-template', 'memory-search', 'medium-code', 'doc-write', 'spec-check',
-  'review-prose', 'hard-code', 'reason-over-context', 'new-design', 'architect',
-  'batch-summarize', 'corpus-distill', 'embedding-generate', 'unknown',
+  'classify', 'summarize', 'doc-summarize', 'draft-prose', 'prose-rewrite',
+  'format', 'format-convert', 'lint-fix', 'rename', 'fill-template',
+  'memory-search', 'small-code-edit', 'code-explain', 'doc-update', 'extract',
+  'error-recovery', 'medium-code', 'doc-write', 'spec-check', 'review-prose',
+  'code-review', 'test-gen', 'schema-design', 'hard-code', 'architecture',
+  'reason-over-context', 'new-design', 'architect', 'research-synthesis',
+  'batch-summarize', 'corpus-distill', 'long-context-reason',
+  'embedding-generate', 'unknown',
 ];
 
 export const TIER_VALUES: ReadonlyArray<RecommendedTier> = [
