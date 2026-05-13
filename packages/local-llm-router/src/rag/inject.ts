@@ -1,16 +1,16 @@
 // inject.ts — format top-K file contents into a system context block.
 //
 // Token budget: we approximate "tokens" as `chars / 4`, which is roughly
-// the GPT-tokenizer ratio for English+code. The 4K-token cap in the spec
-// translates to ~16 000 characters of context. The budget is split evenly
-// across the K files, with each file allowed to use less than its share if
-// the file is small.
+// the GPT-tokenizer ratio for English+code. The 2K-token cap (per the T2.5
+// Phase 2 spec) translates to ~8 000 characters of context. The budget is
+// split evenly across the K files, with each file allowed to use less than
+// its share if the file is small.
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
 
 import type { IndexEntry } from './index.js';
 
-export const DEFAULT_TOKEN_BUDGET = Number(process.env['ROUTER_RAG_TOKEN_BUDGET'] ?? 4_000);
+export const DEFAULT_TOKEN_BUDGET = Number(process.env['ROUTER_RAG_TOKEN_BUDGET'] ?? 2_000);
 export const CHARS_PER_TOKEN = 4;                       // ~ heuristic
 const HEADER = '## CAIA RAG context — auto-injected from local file index';
 
