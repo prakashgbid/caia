@@ -188,8 +188,7 @@ export function buildApp(opts: ServerOptions = {}): Hono {
     if (messages.length === 0) return c.json({ error: 'messages-required' }, 400);
 
     const userMsg = messages.filter(m => m.role === 'user').map(m => m.content).join('\n\n');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _systemMsg = messages.find(m => m.role === 'system')?.content;
+    const systemMsg = messages.find(m => m.role === 'system')?.content;
 
     // Default to "summarize" task type if caller didn't specify
     const taskType = body.caia_task_type ?? 'route-default';
