@@ -9,3 +9,18 @@ export * from './runner.js';
 export * from './time.js';
 export * from './bootstrap.js';
 export * from './watchdog.js';
+export {
+  mergeOrFail,
+  viewPR,
+  findOpenPrForBranch,
+  isNonSubstantive,
+  PR_MERGE_LOG_FILE,
+} from './pr-merge/index.js';
+export type {
+  MergeOrFailOpts,
+  MergeOutcome,
+  PRState,
+  CheckEntry,
+} from './pr-merge/index.js';
+export { createSafe } from './pr-create/index.js';
+export type { CreateSafeOpts, CreateSafeOutcome } from './pr-create/index.js';
