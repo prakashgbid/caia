@@ -465,6 +465,7 @@ export class ClaudeAdapter {
     // ─── Stage 2: Headroom sidecar ────────────────────────────────────
     const messages: HeadroomMessage[] = [{ role: 'user', content: stage1Text }];
 
+    // eslint-disable-next-line no-useless-assignment
     let sidecarOut: HeadroomSidecarResponse | null = null;
     try {
       sidecarOut = await this.invokeSidecar({
