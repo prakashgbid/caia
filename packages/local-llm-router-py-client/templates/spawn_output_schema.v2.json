@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caia.chiefaia.dev/schemas/spawn_output.v2.json",
+  "title": "Spawn Output v2 (B15.C)",
+  "description": "Strict JSON output schema for the v2 spawn prompt. The spawn's last stdout line MUST be a JSON object conforming to this schema. The B15.C spawner gates outcome on schema conformance + ok-flag; the B15.D VERIFIER spawn consumes this same blob to compare against the live diff.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ok",
+    "task_id",
+    "spawn_id",
+    "files_touched",
+    "commits_made",
+    "acceptance_criteria_self_cert",
+    "tests_required_self_cert",
+    "dod_self_cert",
+    "ready_for_verifier",
+    "reason_class",
+    "reason_evidence",
+    "summary"
+  ],
+  "properties": {
+    "ok": { "type": "boolean" },
+    "task_id": { "type": "string", "minLength": 1 },
+    "spawn_id": { "type": "string", "minLength": 1 },
+    "files_touched": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "additions", "deletions"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "additions": { "type": "integer", "minimum": 0 },
+          "deletions": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "extra_files_touched": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "rationale"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "commits_made": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sha", "message_subject"],
+        "properties": {
+          "sha": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+          "message_subject": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "commit_hashes": {
+      "type": "array",
+      "description": "Convenience: list of commit SHAs for the B15.D VERIFIER. Derivable from commits_made[].sha; included for schema-direct consumers.",
+      "items": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" }
+    },
+    "acceptance_criteria_self_cert": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ac", "self_status", "evidence"],
+        "properties": {
+          "ac": { "type": "string", "minLength": 1 },
+          "self_status": { "enum": ["met", "not-met", "uncertain"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "acceptance_criteria_met": {
+      "type": "array",
+      "description": "Booleans aligned positionally with acceptance_criteria_self_cert[]. Convenience for the B15.D VERIFIER (faster to scan than parsing self_status). True iff self_status == 'met'.",
+      "items": { "type": "boolean" }
+    },
+    "file_scope_honored": {
+      "type": "boolean",
+      "description": "True iff every entry in files_touched[] was inside the FILE SCOPE allowlist. False whenever extra_files_touched[] is non-empty."
+    },
+    "tests_added": {
+      "type": "array",
+      "description": "Paths of test files added or extended in this spawn. Distinct from tests_required_self_cert[], which is the spec's required tests; tests_added captures NEW tests the implementor wrote.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "tests_passing": {
+      "type": "boolean",
+      "description": "True iff every test in tests_required_self_cert[] has self_status == 'passing'."
+    },
+    "tests_required_self_cert": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["test", "self_status", "evidence"],
+        "properties": {
+          "test": { "type": "string", "minLength": 1 },
+          "self_status": { "enum": ["passing", "failing", "not-run"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "dod_self_cert": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "self_status", "evidence"],
+        "properties": {
+          "stage": {
+            "enum": [
+              "Analyze",
+              "Research",
+              "Solution/Design",
+              "Implement",
+              "Unit-test",
+              "Integration-test",
+              "Deploy",
+              "End-to-end live verify",
+              "Regression test",
+              "Document + capture learnings"
+            ]
+          },
+          "self_status": { "enum": ["done", "skipped", "not-applicable"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "definition_of_done": {
+      "type": "object",
+      "description": "Aggregated DoD report for the B15.D VERIFIER. Keys mirror dod_self_cert[].stage; values are the self_status. Convenience for verifier code that wants a stage->status map without re-iterating.",
+      "additionalProperties": { "enum": ["done", "skipped", "not-applicable"] }
+    },
+    "ready_for_verifier": { "type": "boolean" },
+    "reason_class": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "enum": [
+            "code/uncompletable",
+            "data/missing-input",
+            "policy/rejected",
+            "infra/transient",
+            "infra/persistent"
+          ]
+        }
+      ]
+    },
+    "reason_evidence": { "type": "string" },
+    "summary": { "type": "string", "maxLength": 200 }
+  }
+}

@@ -1,0 +1,141 @@
+# Reference patch v3 for claude_spawner_agent.py — B15.C
+#
+# Supersedes spawner_patch_v2.diff (v2 added the LAI phase 7 optimizer);
+# v3 adds the B15.C v2 spawn prompt + strict-JSON output schema gate.
+#
+# v3 changes from v2:
+#   - Import `build_prompt` and `validate_spawn_output` from
+#     `spawn_prompt_loader` (vendored alongside local_llm_router_client.py).
+#   - Replace the call site at claude_spawner_agent.py:1692 from
+#       `build_prompt_real_edit(task_spec, ...)` to
+#       `build_prompt(None, task_spec, ..., spawned_by_trailer=SPAWNED_BY_TRAILER)`
+#     so the version dispatch reads SPAWN_PROMPT_VERSION at request time.
+#   - Replace the outcome derivation block (claude_spawner_agent.py:1572-1586)
+#     to gate `outcome="ok"` on (a) parseable final-JSON, (b) schema
+#     conformance, (c) `ok=true`, (d) `ready_for_verifier=true`, (e) non-empty
+#     `commits_made`. Maps to the new outcome value `implementor-claimed`
+#     (consumed by slot_manager's sm_outcome→sps_outcome mapping in B15.E).
+#   - Keep the v1 build_prompt_real_edit function in the module for the
+#     SPAWN_PROMPT_VERSION=v1 rollback (build_prompt() delegates to v1 or v2;
+#     when v1 is selected the legacy outcome derivation also kicks in via
+#     the `parsed is None` short-circuit at the top of the new gate block).
+#
+# DO NOT auto-apply — operator review required. This is a reference patch.
+# The real spawner is ~1800 lines; the hunks below show the intent and exact
+# lines to change against the v2-patched source tree.
+#
+# Smoke test post-deploy:
+#   1. Verify SPAWN_PROMPT_VERSION env (default "v2") is loaded by the
+#      spawner systemd/launchd unit. The com.caia.claude-spawner-agent.plist
+#      template should pick up env from the operator's shell.
+#   2. Send a synthetic /spawn carrying a task_spec.prompt_material with
+#      acceptance_criteria, file_scope, tests_required, dod_required_stages
+#      populated (see tests/test_spawn_prompt_v2.py for a fixture).
+#   3. Confirm the rendered prompt (logged at DEBUG) contains an
+#      "ACCEPTANCE CRITERIA" header and the JSON schema block.
+#   4. Stub the claude subprocess with a script that prints a v2-schema
+#      conformant final-JSON line and verify the spawn record carries
+#      outcome='implementor-claimed' (NOT 'ok').
+#   5. Flip SPAWN_PROMPT_VERSION=v1, restart, repeat smoke; confirm legacy
+#      prompt is rendered and outcome derivation falls back to rc-only.
+
+--- claude_spawner_agent.py
++++ claude_spawner_agent.py
+@@ -1,9 +1,11 @@
+ #!/usr/bin/env python3
+ import asyncio
+ import json
+ import os
+ import subprocess
+ import time
+ import uuid
+ from local_llm_router_client import classify_and_maybe_route, health, optimize_prompt
++# B15.C — vendored v2 prompt + strict-JSON output schema validator
++from spawn_prompt_loader import build_prompt, validate_spawn_output, resolve_version
+@@ -10,8 +12,12 @@ CLAUDE_BINARY = os.environ.get("CLAUDE_BINARY", "/opt/homebrew/bin/claude")
+ ROUTER_URL = os.environ.get("LOCAL_LLM_ROUTER_URL", "http://100.68.247.58:7411")
+ ROUTER_GATE_ENABLED = os.environ.get("ROUTER_GATE_ENABLED", "true").lower() in ("1", "true", "yes")
+ OPTIMIZER_ENABLED = os.environ.get("OPTIMIZER_ENABLED", "true").lower() in ("1", "true", "yes")
+ OPTIMIZER_TIMEOUT_S = float(os.environ.get("OPTIMIZER_TIMEOUT_S", "30.0"))
++
++# B15.C — prompt version dispatch. Default v2 (B15 contract); operator can
++# flip to v1 for emergency rollback without redeploying. resolve_version()
++# reads the env at request time, so a hot-flip + service restart is enough.
+@@ -1689,8 +1695,11 @@ async def _do_spawn(...):
+     # ── Build the prompt ─────────────────────────────────────────────
+-    prompt = build_prompt_real_edit(
+-        task_spec,
++    prompt_version = resolve_version()  # "v1" | "v2"
++    prompt = build_prompt(
++        prompt_version,
++        task_spec,
++        spawned_by_trailer=SPAWNED_BY_TRAILER,
+         permission_mode=permission_mode,
+         cwd=cwd,
+         branch=branch,
+         spawn_id=spawn_id,
+         risk_tier=risk_tier,
+     )
++    record["prompt_version"] = prompt_version  # journal which version ran
+@@ -1572,8 +1581,46 @@ async def _finalize_record(record, ...):
+-    # Legacy outcome derivation (v1): rc-only signal.
+-    rc = record.get("rc")
+-    timed_out = record.get("timed_out")
+-    if timed_out:
+-        outcome = "timeout"
+-    elif rc is not None and rc < 0:
+-        outcome = "crashed"
+-    elif rc != 0:
+-        outcome = "spawner_error"
+-    else:
+-        outcome = "ok"
+-    record["outcome"] = outcome
++    # B15.C — gated outcome derivation.
++    # Falls back to legacy rc-only when the request used SPAWN_PROMPT_VERSION=v1
++    # (the v1 prompt does not emit a v2-schema final JSON, so schema gating
++    # would always reject it).
++    rc = record.get("rc")
++    timed_out = record.get("timed_out")
++    parsed = record.get("parsed_final_json")  # produced by the existing
++                                              # stdout-tail parser; v2 prompt
++                                              # promises one JSON line at end.
++    prompt_version = record.get("prompt_version", "v2")
++
++    if timed_out:
++        outcome = "timeout"
++        outcome_detail = None
++    elif rc is not None and rc < 0:
++        outcome = "crashed"
++        outcome_detail = f"signal rc={rc}"
++    elif rc != 0:
++        outcome = "spawner_error"
++        outcome_detail = f"rc={rc}"
++    elif prompt_version == "v1":
++        # Rollback path — v1 prompt has no schema contract; preserve old behaviour.
++        outcome = "ok"
++        outcome_detail = "v1-prompt-rollback"
++    elif not parsed or not isinstance(parsed, dict):
++        outcome = "spawner_error"
++        outcome_detail = "missing-final-json"
++    else:
++        is_valid, errs = validate_spawn_output(parsed)
++        if not is_valid:
++            outcome = "spawner_error"
++            outcome_detail = "json-schema-violation: " + "; ".join(errs[:3])
++        elif parsed.get("ok") is not True:
++            outcome = "task-self-failed"
++            outcome_detail = json.dumps({
++                "reason_class": parsed.get("reason_class"),
++                "reason_evidence": parsed.get("reason_evidence"),
++            })
++        elif parsed.get("ready_for_verifier") is not True:
++            outcome = "task-self-failed"
++            outcome_detail = "ready_for_verifier=false"
++        elif not parsed.get("commits_made"):
++            outcome = "task-self-failed"
++            outcome_detail = "commits_made empty"
++        else:
++            outcome = "implementor-claimed"
++            outcome_detail = f"commits={len(parsed['commits_made'])}"
++    record["outcome"] = outcome
++    record["outcome_detail"] = outcome_detail
