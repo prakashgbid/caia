@@ -25,6 +25,20 @@ import {
 } from './lock.js';
 import { dispatchPhase } from './runner.js';
 import { findPhase } from './spec.js';
+import {
+  DEFAULT_BACKOFF_MS,
+  preflightAuditDetails,
+  preflightSummary,
+  retryWithBackoff,
+  verifyBootstrap,
+} from './bootstrap.js';
+import {
+  attemptReRegister,
+  detectStall,
+  recordStallDetected,
+} from './watchdog.js';
+import { appendAudit } from './audit.js';
+import { spawnSync } from 'node:child_process';
 
 interface BaseOptions {
   chainId: string;
@@ -294,6 +308,167 @@ export function buildProgram(): Command {
         process.stdout.write(`${line}\n`);
       }
     });
+
+  attachCommonOptions(program.command('verify-bootstrap'))
+    .description(
+      'Block until a wake event lands in audit.jsonl or timeout. Use after registering a scheduled task to prove cron is firing.',
+    )
+    .option(
+      '--wake-interval-sec <n>',
+      'configured wake interval (seconds)',
+      '900',
+    )
+    .option(
+      '--max-wait-sec <n>',
+      'total wait timeout (seconds); default 2 * wake-interval-sec',
+    )
+    .option(
+      '--poll-interval-sec <n>',
+      'how often to poll audit.jsonl (seconds)',
+      '10',
+    )
+    .action(
+      async (
+        cmdOpts: {
+          wakeIntervalSec?: string;
+          maxWaitSec?: string;
+          pollIntervalSec?: string;
+        },
+        cmd: Command,
+      ) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions & typeof cmdOpts;
+        const ctx = ctxFromOpts(opts);
+        const wakeInterval = Number(cmdOpts.wakeIntervalSec ?? '900');
+        const maxWait = Number(cmdOpts.maxWaitSec ?? String(wakeInterval * 2));
+        const pollInterval = Number(cmdOpts.pollIntervalSec ?? '10');
+        const since = new Date();
+        const result = await verifyBootstrap(ctx, {
+          maxWaitMs: maxWait * 1000,
+          pollIntervalMs: pollInterval * 1000,
+          since,
+        });
+        appendAudit(ctx.paths.auditFile, 'preflight_verified', preflightAuditDetails(result));
+        process.stdout.write(`${preflightSummary(result)}\n`);
+        if (!result.ok) process.exit(3);
+      },
+    );
+
+  attachCommonOptions(program.command('check-stall'))
+    .description(
+      'Self-healing watchdog: detect cron stall and (optionally) re-register the scheduled task.',
+    )
+    .option(
+      '--wake-interval-sec <n>',
+      'configured wake interval (seconds)',
+      '900',
+    )
+    .option('--multiplier <n>', 'stall threshold = multiplier * wake-interval', '2')
+    .option('--inbox <path>', 'path to INBOX.md to append alert')
+    .option('--reregister-cmd <cmd>', 'shell command to re-register the scheduled task on stall')
+    .option('--no-alert', 'suppress INBOX append even when --inbox is given')
+    .action(
+      (
+        cmdOpts: {
+          wakeIntervalSec?: string;
+          multiplier?: string;
+          inbox?: string;
+          reregisterCmd?: string;
+          alert?: boolean;
+        },
+        cmd: Command,
+      ) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions & typeof cmdOpts;
+        const ctx = ctxFromOpts(opts);
+        const state = loadState(ctx);
+        const result = detectStall(state, {
+          wakeIntervalSec: Number(cmdOpts.wakeIntervalSec ?? '900'),
+          multiplier: Number(cmdOpts.multiplier ?? '2'),
+        });
+        if (!result.stalled) {
+          process.stdout.write(
+            `HEALTHY age_sec=${Math.floor(result.ageSec)} threshold_sec=${result.thresholdSec}\n`,
+          );
+          return;
+        }
+        const inboxPath =
+          cmdOpts.alert === false ? undefined : cmdOpts.inbox;
+        recordStallDetected(ctx, result, {
+          ...(inboxPath ? { inboxPath } : {}),
+          chainId: opts.chainId,
+        });
+        let reregOutput = '';
+        if (cmdOpts.reregisterCmd) {
+          const reReg = attemptReRegister(
+            { command: '/bin/sh', args: ['-c', cmdOpts.reregisterCmd] },
+            ctx,
+          );
+          reregOutput = ` reregister_attempted=${reReg.attempted} reregister_ok=${reReg.ok}`;
+        }
+        process.stdout.write(
+          `STALL_DETECTED age_sec=${Math.floor(result.ageSec)} threshold_sec=${result.thresholdSec} reason=${result.reason}${reregOutput}\n`,
+        );
+        process.exit(4);
+      },
+    );
+
+  program
+    .command('retry-cmd')
+    .description(
+      'Run a shell command with exponential backoff (default 5s, 15s, 45s). Exit code 0 on success, last failure code otherwise.',
+    )
+    .option(
+      '--backoff-ms <csv>',
+      'comma-separated delays in ms (default 5000,15000,45000)',
+    )
+    .option('--max-attempts <n>', 'override max attempts')
+    .argument('<command...>')
+    .action(
+      async (
+        command: string[],
+        cmdOpts: { backoffMs?: string; maxAttempts?: string },
+      ) => {
+        if (command.length === 0) fail('retry-cmd requires a command');
+        const backoff = cmdOpts.backoffMs
+          ? cmdOpts.backoffMs.split(',').map((s) => Number(s.trim()))
+          : Array.from(DEFAULT_BACKOFF_MS);
+        const maxAttempts = cmdOpts.maxAttempts
+          ? Number(cmdOpts.maxAttempts)
+          : undefined;
+        let lastCode: number | null = null;
+        let lastStderr = '';
+        try {
+          await retryWithBackoff(
+            () => {
+              const out = spawnSync(command[0]!, command.slice(1), {
+                stdio: ['ignore', 'inherit', 'pipe'],
+              });
+              lastCode = out.status;
+              lastStderr = out.stderr ? out.stderr.toString('utf8') : '';
+              if (out.status !== 0) {
+                throw new Error(
+                  `exit=${out.status} cmd=${command.join(' ').slice(0, 200)}`,
+                );
+              }
+              return out.status;
+            },
+            {
+              backoffMs: backoff,
+              ...(maxAttempts !== undefined ? { maxAttempts } : {}),
+              onRetry: (attempt, err, delayMs) => {
+                process.stderr.write(
+                  `retry-cmd attempt ${attempt} failed (${(err as Error).message}); sleeping ${delayMs}ms\n`,
+                );
+              },
+            },
+          );
+          process.stdout.write('RETRY_OK\n');
+        } catch (err) {
+          if (lastStderr) process.stderr.write(lastStderr);
+          process.stderr.write(`RETRY_EXHAUSTED ${(err as Error).message}\n`);
+          process.exit(lastCode ?? 5);
+        }
+      },
+    );
 
   // Provide a save passthrough (used by some tests)
   attachCommonOptions(program.command('save-state-from-stdin'))
