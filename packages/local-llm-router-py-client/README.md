@@ -50,3 +50,39 @@ The reference patch in `src/spawner_patch.diff` modifies the `/spawn`
 handler — production-critical code. Operator should review the diff,
 test on a non-production spawner first, and apply with `patch -p0`
 manually. Do NOT auto-deploy.
+
+## B15.C — v2 spawn prompt + strict JSON output schema
+
+The `templates/spawn_prompt_v2.md` + `src/spawn_prompt_loader.py` ship the
+v2 spawn template that replaces `build_prompt_real_edit` in
+`claude_spawner_agent.py`. Design authority:
+`~/Documents/projects/agent-memory/reliability_99pct_design_2026-05-11.md`
+§6.2.2.
+
+Wire-up (reference): `src/spawner_patch_v3.diff`.
+Output schema: `templates/spawn_output_schema.v2.json`.
+
+The v2 template injects four contract sections — `acceptance_criteria`,
+`file_scope`, `tests_required`, `dod_required_stages` — from the task's
+`prompt_material` (populated by the orchestrator's BA/EA agents via UDP),
+and demands the implementor emit a strict-JSON final line that the spawner
+validates before deciding outcome. The B15.D VERIFIER spawn reads the
+same JSON to grade the diff independently.
+
+### Env knob for rollback
+
+| Var | Default | Description |
+|---|---|---|
+| `SPAWN_PROMPT_VERSION` | `v2` | Set to `v1` for emergency rollback to legacy prompt (no AC, no schema, rc-only outcome). |
+
+### Run the tests
+
+```bash
+cd packages/local-llm-router-py-client
+python3 -m unittest tests.test_spawn_prompt_v2 -v
+```
+
+Eighteen tests cover template rendering, env-driven version dispatch,
+the strict schema validator (positive + 6 negatives), and an end-to-end
+fixture task ("add SPDX header to file X") that renders the v2 prompt
+and validates a simulated spawn output against the schema.

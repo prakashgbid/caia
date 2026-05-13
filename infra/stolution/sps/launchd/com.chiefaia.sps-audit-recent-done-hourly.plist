@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.chiefaia.sps-audit-recent-done-hourly
+  ============================================================================
+  Hourly trigger for the B15.E audit_recent_done feedback loop.
+
+  Cron equivalent: 0 * * * *  (minute=0 of every hour).
+  Audits the closed hour (e.g. fires at 04:00:00, audits [03:00, 04:00)).
+
+  Source script:    infra/stolution/sps/scripts/audit_recent_done.py
+  Writes to:        ~/.sps/sps.db (reliability_rolling + redecompose_queue)
+  May append to:    ~/Documents/projects/agent-memory/INBOX.md (on breach)
+  Logs:             ~/Library/Logs/chiefaia/sps-audit-recent-done.{out,err}.log
+
+  Aligned with the existing chiefaia LaunchAgent convention used by
+  com.chiefaia.apprentice-corpus and com.chiefaia.local-llm-router (the cron
+  pattern the operator's standing scheduling rule follows on this Mac).
+  ============================================================================
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.chiefaia.sps-audit-recent-done-hourly</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>python3</string>
+    <string>/Users/macbook32/Documents/projects/caia/infra/stolution/sps/scripts/audit_recent_done.py</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>HOME</key>
+    <string>/Users/macbook32</string>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/macbook32/Documents/projects/caia/infra/stolution/sps</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/macbook32/Library/Logs/chiefaia/sps-audit-recent-done.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/macbook32/Library/Logs/chiefaia/sps-audit-recent-done.err.log</string>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>Nice</key>
+  <integer>5</integer>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

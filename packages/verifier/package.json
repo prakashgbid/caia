@@ -1,0 +1,47 @@
+{
+  "name": "@chiefaia/verifier",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VERIFIER review-sibling — fourth sibling alongside Critic, Code-Reviewer, Reviewer. Spawns a fresh-prompt, fresh-worktree claude binary that re-derives acceptance-criteria/test/file-scope verdicts from the actual diff and emits a strict-JSON verdict. BLOCKING for autonomous-loop spawns (gates `nodes.status='done'` via SPS done_status_guard trigger), ADVISORY for operator-routed spawns. Subscription-only — never sets ANTHROPIC_API_KEY.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "caia-verifier": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "templates",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "1.6.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

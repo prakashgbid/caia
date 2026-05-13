@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caia.chiefaia.dev/schemas/verifier_verdict.v1.json",
+  "title": "Verifier Verdict v1 (B15.D)",
+  "description": "Strict JSON output schema for the VERIFIER spawn (4th review-sibling). The verifier's last stdout line MUST be a JSON object conforming to this schema. The B15.B done_status_guard SQLite trigger checks json_extract(verifier_verdict_json, '$.overall') == 'pass' for every scope-2/3 subtask done-transition; the autonomous-loop done-path also short-circuits to status='failed' when overall='fail-impl' or 'fail-spec'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verifier_spawn_id",
+    "implementing_spawn_id",
+    "task_id",
+    "overall",
+    "verdict",
+    "acceptance_criteria_verdicts",
+    "tests_required_verdicts",
+    "tests_run_verdict",
+    "file_scope_verdict",
+    "dod_stages_verdicts",
+    "out_of_scope_files_touched",
+    "architectural_constraint_violations",
+    "recommendation",
+    "reasons",
+    "summary",
+    "blocking",
+    "schema_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "v1",
+      "description": "Schema version. Bump on breaking change; spawner / SPS gate on this."
+    },
+    "verifier_spawn_id": { "type": "string", "minLength": 1 },
+    "implementing_spawn_id": { "type": "string", "minLength": 1 },
+    "task_id": { "type": "string", "minLength": 1 },
+    "pr_url": { "type": ["string", "null"] },
+    "pr_head_sha": { "type": ["string", "null"], "pattern": "^[0-9a-f]{7,40}$|^$" },
+    "overall": {
+      "enum": ["pass", "fail"],
+      "description": "Coarse-grained binary verdict for the SPS done_status_guard trigger. `pass` iff verdict=='pass'; `fail` for fail-impl / fail-spec / uncertain (uncertain second-attempt is also `fail`). The trigger reads json_extract(..., '$.overall')."
+    },
+    "verdict": {
+      "enum": ["pass", "fail-impl", "fail-spec", "uncertain"],
+      "description": "Fine-grained verdict driving slot-manager routing. `fail-impl` => re-dispatch implementor with feedback. `fail-spec` => re-decompose parent. `uncertain` => second-attempt or treat-as-fail-impl."
+    },
+    "acceptance_criteria_verdicts": {
+      "type": "array",
+      "description": "One row per AC in spec; positionally aligned with the implementor's acceptance_criteria_self_cert[] for diff comparison.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ac", "verdict", "evidence"],
+        "properties": {
+          "ac": { "type": "string", "minLength": 1 },
+          "verdict": { "enum": ["met", "not-met", "uncertain"] },
+          "evidence": { "type": "string" },
+          "implementor_self_cert_matches": { "type": "boolean" }
+        }
+      }
+    },
+    "tests_required_verdicts": {
+      "type": "array",
+      "description": "One row per test in spec; verifier RAN each test in the fresh worktree.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["test", "verdict", "runner_output_excerpt"],
+        "properties": {
+          "test": { "type": "string", "minLength": 1 },
+          "verdict": { "enum": ["passing", "failing", "not-run"] },
+          "runner_output_excerpt": { "type": "string", "maxLength": 500 },
+          "implementor_self_cert_matches": { "type": "boolean" }
+        }
+      }
+    },
+    "tests_run_verdict": {
+      "type": "boolean",
+      "description": "Convenience: TRUE iff every entry in tests_required_verdicts[].verdict == 'passing'. The B15.B done_status_guard does NOT read this directly (it gates on $.overall) but the autonomous-loop guard reads it for the 4-way AND."
+    },
+    "file_scope_verdict": {
+      "type": "boolean",
+      "description": "TRUE iff out_of_scope_files_touched[] is empty (i.e. every changed file was inside FILE SCOPE)."
+    },
+    "dod_stages_verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "verdict", "evidence"],
+        "properties": {
+          "stage": { "type": "string", "minLength": 1 },
+          "verdict": { "enum": ["evidenced", "missing-evidence", "not-applicable"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "out_of_scope_files_touched": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "implementor_rationale": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "architectural_constraint_violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["constraint", "evidence"],
+        "properties": {
+          "constraint": { "type": "string", "minLength": 1 },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "recommendation": {
+      "enum": ["merge", "re-implement", "re-decompose", "operator-decide"]
+    },
+    "reasons": {
+      "type": "array",
+      "description": "Free-form list of reason strings the SPS surfaces as the failure error message. Empty when overall=='pass'.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "blocking": {
+      "type": "boolean",
+      "description": "Mirror of the prompt's `blocking` flag — TRUE for autonomous-loop, FALSE for operator-routed. Lets the SPS know whether to enforce the verdict."
+    },
+    "summary": { "type": "string", "maxLength": 300 },
+    "verifier_worktree_cleaned_up": {
+      "type": "boolean",
+      "description": "Self-attestation that the verifier worktree was removed before exit. The spawner ALSO cleans up via trap as defence-in-depth."
+    }
+  }
+}
