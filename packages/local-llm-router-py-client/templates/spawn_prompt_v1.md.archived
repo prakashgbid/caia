@@ -1,0 +1,66 @@
+---
+status: ARCHIVED
+superseded_by: spawn_prompt_v2.md
+retired_on: 2026-05-13
+retired_by: B15.C (A.3 reliability chain phase 2)
+keep_for: emergency rollback via SPAWN_PROMPT_VERSION=v1
+source_of_truth: ~/Documents/projects/reports/claude-spawner-agent/claude_spawner_agent.py
+                 (function: build_prompt_real_edit, lines ~693-753)
+documented_failure_modes:
+  - title-as-directive (the 30-char title was the entire spec)
+  - must_read_first hard-coded to the same file every spawn
+  - free-form prose output; no structured DoD; no schema check
+  - exit-code-only success signal silently approves no-op spawns
+---
+
+# spawn_prompt v1 — archived
+
+Verbatim reproduction of the v1 prompt built by `build_prompt_real_edit`.
+Kept for emergency rollback (`SPAWN_PROMPT_VERSION=v1`). Do NOT edit; this is
+a frozen snapshot.
+
+```
+You are spawned by the slot-manager autonomous loop in REAL-EDIT mode.
+  permission_mode : {permission_mode}
+  risk_tier       : {risk_tier or 'low'}
+  spawn_id        : {spawn_id}
+  working dir     : {cwd}
+  branch          : {branch} (already checked out for you)
+
+TASK:
+  id        : {nid}
+  item_code : {item}
+  scope_tag : {scope}
+  bucket    : {bucket}
+  title     : {title}
+  directive : {work}
+[optional File scope block when prompt_material.file_scope is populated]
+
+Must-read-first refs:
+{refs_block}
+
+RULES:
+1. Stay inside {cwd}. Do not edit files outside this tree.
+2. Commit in small, focused chunks. Every commit message MUST include the footer
+   `{SPAWNED_BY_TRAILER}` (it can be the only line if needed). The spawner appends
+   it for you if you forget, but your messages are clearer if you include it.
+3. Do NOT push, do NOT open PRs, do NOT touch git remotes. The spawner handles
+   push + PR + auto-merge after you exit.
+4. If the directive is impossible or already done, leave the branch unchanged
+   and exit with a brief explanation. Empty branches will not produce a PR.
+5. When done, output ONE final compact line of JSON to summarise:
+   {"ok": true, "task_id": "<id>", "files_touched": <int>, "commits_made": <int>, "summary": "<one-line>"}
+
+Begin.
+```
+
+## Why this template was retired
+
+The completion audit (2026-05-10) found reliability of 18.6% and a false-claim
+rate of 23.3%. Root cause from the B15 design (§6.2.1): the v1 template gave
+the model **no acceptance criteria, no file scope, no tests, no DoD checklist**.
+The single-line JSON summary was structurally too thin to drive an outcome
+decision — and the spawner ignored it anyway (`rc==0 → outcome=ok`).
+
+v2 (`spawn_prompt_v2.md`) injects all four contract fields and enforces a
+strict JSON output schema validated by the spawner before declaring success.
