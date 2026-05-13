@@ -23,6 +23,8 @@ import { classifyV2 } from './classifier-v2.js';
 import { OllamaAdapter } from './ollama-adapter.js';
 import { llmMetrics } from './llm-metrics.js';
 import { ROUTING_RULES } from './routing-config.js';
+import { ragEnabled, runRag } from './rag/middleware.js';
+import { defaultIndexPath, loadIndex } from './rag/index.js';
 
 const ROUTER_VERSION = '0.3.0';
 const DEFAULT_PORT = 7411;
@@ -49,12 +51,35 @@ export function buildApp(opts: ServerOptions = {}): Hono {
         ollamaOk = true;
       }
     } catch { /* ollamaOk stays false */ }
+    // RAG status — surfaced so operators can verify post-restart that the
+    // middleware is wired and the index is loadable.
+    const ragOn = ragEnabled();
+    const indexPath = defaultIndexPath();
+    let ragIndexLoaded = false;
+    let ragIndexEntries = 0;
+    let ragIndexModel: string | undefined;
+    if (ragOn) {
+      const idx = loadIndex(indexPath);
+      if (idx !== null) {
+        ragIndexLoaded = true;
+        ragIndexEntries = idx.entries.length;
+        ragIndexModel = idx.model;
+      }
+    }
     return c.json({
       ok: true,
       router_version: ROUTER_VERSION,
       ollama: { base_url: ollamaBaseUrl, ok: ollamaOk, models_count: models.length },
       models,
       classifier_model: classifierModel,
+      rag_enabled: ragOn,
+      rag: {
+        enabled: ragOn,
+        index_path: indexPath,
+        index_loaded: ragIndexLoaded,
+        index_entries: ragIndexEntries,
+        index_model: ragIndexModel ?? null,
+      },
       uptime_seconds: Math.floor(process.uptime()),
     });
   });
@@ -166,12 +191,31 @@ export function buildApp(opts: ServerOptions = {}): Hono {
     // Default to "summarize" task type if caller didn't specify
     const taskType = body.caia_task_type ?? 'route-default';
 
+    // ── RAG middleware (Tier 2.5 — feat/sps-t2.5-rag-layer) ──────────
+    // Runs BEFORE classification so injected context can also flow into the
+    // classifier's view of the request. Best-effort: any failure short-circuits
+    // back to the un-augmented path without surfacing the error to the caller.
+    let ragDecision: Awaited<ReturnType<typeof runRag>> | null = null;
+    let augmentedPrompt = userMsg;
+    try {
+      ragDecision = await runRag(userMsg, { ollamaBaseUrl });
+      if (ragDecision.injected && ragDecision.systemPrepend.length > 0) {
+        // Prepend the RAG context. We do NOT replace any existing system msg
+        // the caller passed — we concatenate, RAG first then the caller's.
+        const rag = ragDecision.systemPrepend;
+        const callerSys = (systemMsg !== undefined && systemMsg.length > 0) ? `\n\n---\n\n${systemMsg}` : '';
+        augmentedPrompt = `${rag}${callerSys}\n\n---\n\n${userMsg}`;
+      }
+    } catch {
+      ragDecision = null;
+    }
+
     try {
       // Note: existing route() takes positional (taskType, prompt, options).
       // systemPrompt + max_tokens + temperature are not part of the current
       // router signature; the routing-config's per-task max_tokens applies.
       // Future enhancement: extend router to accept per-call overrides.
-      const llmRes = await routerRoute(taskType, userMsg);
+      const llmRes = await routerRoute(taskType, augmentedPrompt);
       // Shape as OpenAI chat-completions
       return c.json({
         id: `caia-router-${Date.now()}`,
@@ -188,7 +232,17 @@ export function buildApp(opts: ServerOptions = {}): Hono {
           completion_tokens: llmRes.usage?.completionTokens ?? 0,
           total_tokens: llmRes.usage?.totalTokens ?? 0,
         },
-        caia: { provider: llmRes.provider, duration_ms: llmRes.durationMs },
+        caia: {
+          provider: llmRes.provider,
+          duration_ms: llmRes.durationMs,
+          rag: ragDecision === null ? { injected: false, reason: 'middleware-error' } : {
+            injected: ragDecision.injected,
+            reason: ragDecision.reason,
+            files_included: ragDecision.filesIncluded,
+            matched_paths: ragDecision.matchedPaths,
+            ...(ragDecision.topSimilarity !== undefined ? { top_similarity: ragDecision.topSimilarity } : {}),
+          },
+        },
       });
     } catch (e) {
       return c.json({ error: 'route-failed', message: (e as Error).message }, 502);
