@@ -71,18 +71,10 @@ if [[ ! -f "${DB_PATH}" ]]; then
     echo "  mentor-event-bus is installed and produces events." >&2
 fi
 
-# Resolve node binary path (mirror mentor-event-bus install.sh logic).
-if [[ -x /opt/homebrew/bin/node ]]; then
-    NODE_BIN="/opt/homebrew/bin/node"
-elif [[ -x /usr/local/bin/node ]]; then
-    NODE_BIN="/usr/local/bin/node"
-else
-    NODE_BIN="$(command -v node || true)"
-    if [[ -z "${NODE_BIN}" ]]; then
-        echo "ERROR: node not found." >&2
-        exit 2
-    fi
-fi
+# Refuse to install if node major doesn't match expected (default 22).
+# shellcheck source=/dev/null
+source "${REPO_ROOT}/scripts/lib/check-node-version.sh"
+NODE_BIN="$(check_node_version)"
 
 # ─── Setup directories ──────────────────────────────────────────────────────
 mkdir -p "${LA_DIR}" "${LOG_DIR}" "${MEMORY_DIR}/proposals"

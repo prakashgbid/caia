@@ -60,7 +60,6 @@ LOG_DIR="$HOME/Library/Logs/chiefaia"
 DOMAIN="gui/$(id -u)"
 SERVICE_TARGET="$DOMAIN/$LABEL"
 
-NODE_BIN="${CAIA_NODE_BIN:-$(command -v node || echo /usr/local/bin/node)}"
 CLAUDE_BIN="${CAIA_CLAUDE_BIN:-$(command -v claude || echo /usr/local/bin/claude)}"
 DEFAULT_PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 RENDERED_PATH="${CAIA_PATH:-$DEFAULT_PATH}"
@@ -75,11 +74,11 @@ if [[ ! -d "$PKG_DIR/dist" ]]; then
   exit 1
 fi
 
-if [[ ! -x "$NODE_BIN" ]]; then
-  echo "node binary not found / not executable at: $NODE_BIN" >&2
-  echo "set CAIA_NODE_BIN to override" >&2
-  exit 1
-fi
+# Refuse to install if node major version doesn't match expected (default 22).
+# See scripts/lib/check-node-version.sh for the rationale (better-sqlite3 ABI lock).
+# shellcheck source=/dev/null
+source "$(cd "$(dirname "$0")/../../.." && pwd)/scripts/lib/check-node-version.sh"
+NODE_BIN="$(check_node_version)"
 
 mkdir -p "$LOG_DIR"
 mkdir -p "$(dirname "$PLIST_DST")"

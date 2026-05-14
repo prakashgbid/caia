@@ -35,6 +35,8 @@
         <string>CURRENT_HOME</string>
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>CAIA_NODE_BIN</key>
+        <string>CURRENT_NODE_BIN</string>
     </dict>
 
     <key>StartCalendarInterval</key>

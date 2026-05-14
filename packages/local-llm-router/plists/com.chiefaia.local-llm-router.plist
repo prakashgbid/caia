@@ -31,6 +31,8 @@
 
   <key>EnvironmentVariables</key>
   <dict>
+    <key>CAIA_NODE_BIN</key>
+    <string>/opt/homebrew/opt/node@22/bin/node</string>
     <key>OLLAMA_BASE_URL</key>
     <string>http://127.0.0.1:11434</string>
     <key>ROUTER_CLASSIFIER_MODEL</key>

@@ -42,6 +42,8 @@
         <string>__USER_HOME__</string>
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>CAIA_NODE_BIN</key>
+        <string>__NODE_BIN__</string>
         <key>CAIA_EVENT_BUS_DB_PATH</key>
         <string>__EVENTS_DB_PATH__</string>
         <key>CAIA_EVENT_BUS_SECRET_PATH</key>

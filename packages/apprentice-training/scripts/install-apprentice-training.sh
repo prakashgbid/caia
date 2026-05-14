@@ -44,11 +44,10 @@ if [[ ! -d "$PKG_DIR/dist" ]]; then
   exit 1
 fi
 
-NODE_BIN="${CAIA_NODE_BIN:-$(command -v node 2>/dev/null || true)}"
-if [[ -z "$NODE_BIN" ]]; then
-  echo "node binary not found on PATH; set CAIA_NODE_BIN" >&2
-  exit 1
-fi
+# Refuse to install if node major version doesn't match expected (default 22).
+# shellcheck source=/dev/null
+source "$(cd "$(dirname "$0")/../../.." && pwd)/scripts/lib/check-node-version.sh"
+NODE_BIN="$(check_node_version)"
 
 PYTHON_BIN="${CAIA_PYTHON_BIN:-$HOME/Documents/projects/apprentice/venv/bin/python}"
 if [[ ! -x "$PYTHON_BIN" ]]; then

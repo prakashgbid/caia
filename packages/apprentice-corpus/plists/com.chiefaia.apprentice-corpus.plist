@@ -32,6 +32,9 @@
   <key>EnvironmentVariables</key>
   <dict>
     <!-- Patched at install time by scripts/install-apprentice-corpus.sh -->
+    <key>CAIA_NODE_BIN</key>
+    <string>CURRENT_NODE_BIN</string>
+
     <key>CAIA_MEMORY_DIR</key>
     <string>CURRENT_HOME/Library/Application Support/Claude/local-agent-mode-sessions/CURRENT_SESSION_ID/agent/memory</string>
 

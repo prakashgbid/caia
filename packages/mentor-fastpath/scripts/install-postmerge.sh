@@ -65,11 +65,10 @@ if [[ ! -f "${WATCHER_DIST}" ]] || [[ ! -f "${CONSUMER_DIST}" ]]; then
     exit 2
 fi
 
-NODE_BIN="$(command -v node || true)"
-if [[ -z "${NODE_BIN}" ]]; then
-    echo "ERROR: 'node' not found on PATH." >&2
-    exit 2
-fi
+# Refuse to install if node major doesn't match expected (default 22).
+# shellcheck source=/dev/null
+source "${REPO_ROOT}/scripts/lib/check-node-version.sh"
+NODE_BIN="$(check_node_version)"
 
 # ─── Prepare host filesystem ────────────────────────────────────────────────
 mkdir -p "${LA_DIR}" "${LOG_DIR}" "${MEMORY_DIR}/proposals"
