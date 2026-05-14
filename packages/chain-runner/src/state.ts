@@ -5,6 +5,7 @@ import { ensureChainDir } from './paths.js';
 import { isoNow } from './time.js';
 import { loadChainSpec } from './spec.js';
 import { failureFromReason } from './classify.js';
+import { resolveRetryPolicy } from './retry-policy.js';
 import type {
   ChainPaths,
   ChainSpec,
@@ -42,6 +43,8 @@ export function buildInitialState(spec: ChainSpec): StateFile {
       session_id: null,
       error: null,
       failure: null,
+      last_failure_class: null,
+      backoff_until: null,
     };
   }
   return {
@@ -49,6 +52,8 @@ export function buildInitialState(spec: ChainSpec): StateFile {
     started_at: isoNow(),
     last_wake: null,
     paused: false,
+    paused_until: null,
+    paused_reason: null,
     budget_consumed_pct: 0,
     budget_cap_pct: DEFAULT_BUDGET_CAP_PCT,
     phase_status: phaseStatus,
@@ -98,6 +103,7 @@ export function ensurePhaseEntry(state: StateFile, phaseId: string): PhaseState 
 export type NextPhaseResult =
   | { kind: 'phase_id'; id: number }
   | { kind: 'in_progress'; id: number }
+  | { kind: 'backoff'; id: number; seconds: number; until: string }
   | {
       kind:
         | 'paused'
@@ -113,6 +119,7 @@ export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhase
   }
   if (state.all_done) return { kind: 'all_done' };
 
+  const nowMs = Date.now();
   let mutated = false;
   for (const p of ctx.spec.phases) {
     const pid = String(p.id);
@@ -127,14 +134,59 @@ export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhase
     if (!depsMet) continue;
 
     if (ps.status === 'pending' || ps.status === 'failed') {
-      if (ps.status === 'failed' && ps.attempts >= ps.max_retries) {
-        ps.status = 'blocked';
-        mutated = true;
-        appendAudit(ctx.paths.auditFile, 'phase_blocked', {
-          phase_id: p.id,
-          reason: 'retries_exhausted',
-        });
-        continue;
+      // H-9: class-aware retry decision. Falls back to max_retries when the
+      // phase has no recorded failure class (legacy state files, fresh
+      // phases, or a `pending`-from-init). When the failure came in via the
+      // legacy string-reason CLI shim (evidence.legacy_string_reason=true,
+      // class=unknown), we honor the *legacy* ps.max_retries bound instead
+      // of the H-9 default policy to keep the pre-H-9 regression suite
+      // green; typed failures (with --class on mark-failed or via the
+      // classifier) get class-aware policy.
+      if (ps.status === 'failed') {
+        const cls = ps.last_failure_class ?? ps.failure?.class ?? null;
+        const isLegacyShim =
+          ps.failure?.evidence?.['legacy_string_reason'] === true;
+        const policy =
+          cls && !isLegacyShim ? resolveRetryPolicy(ctx.spec, cls) : null;
+        const policyMax = policy?.max_attempts ?? ps.max_retries;
+        // pause_until_* / adjudicate / alert / block all imply no more retries.
+        const policyTerminal =
+          policy?.action === 'pause_until_reset' ||
+          policy?.action === 'pause_until_operator' ||
+          policy?.action === 'adjudicate' ||
+          policy?.action === 'alert' ||
+          policy?.action === 'block';
+        const retriesExhausted = ps.attempts >= policyMax;
+        if (policyTerminal || retriesExhausted) {
+          ps.status = 'blocked';
+          mutated = true;
+          appendAudit(ctx.paths.auditFile, 'phase_blocked', {
+            phase_id: p.id,
+            reason: policyTerminal
+              ? `policy_action_${policy?.action ?? 'unknown'}`
+              : 'retries_exhausted',
+            class: cls,
+            policy_action: policy?.action ?? null,
+            attempts: ps.attempts,
+            policy_max_attempts: policyMax,
+          });
+          continue;
+        }
+        // Backoff active: return BACKOFF for this phase so wake script
+        // noops without consuming a retry. Surface only if the backoff
+        // timestamp is in the future.
+        if (ps.backoff_until) {
+          const bt = new Date(ps.backoff_until).getTime();
+          if (Number.isFinite(bt) && bt > nowMs) {
+            if (mutated) saveState(ctx, state);
+            return {
+              kind: 'backoff',
+              id: p.id,
+              seconds: Math.max(0, Math.ceil((bt - nowMs) / 1000)),
+              until: ps.backoff_until,
+            };
+          }
+        }
       }
       if (mutated) saveState(ctx, state);
       return { kind: 'phase_id', id: p.id };
@@ -252,6 +304,9 @@ export function markDone(ctx: StateContext, phaseId: string): void {
   const ps2 = ensurePhaseEntry(state2, phaseId);
   ps2.status = 'done';
   ps2.completed_at = isoNow();
+  // H-9: a successful retry clears the backoff window; the class is left in
+  // place as audit trail (it's purely informational once the phase is done).
+  ps2.backoff_until = null;
   saveState(ctx, state2);
   appendAudit(ctx.paths.auditFile, 'phase_done', {
     phase_id: Number(phaseId),
@@ -323,6 +378,39 @@ export function markFailed(
   ps.status = 'failed';
   ps.error = failure.reason.slice(0, 500);
   ps.failure = failure;
+  // H-9: copy class onto top-level field for cheap policy lookup, and if the
+  // policy has a backoff schedule for the next attempt, stamp backoff_until.
+  // Legacy string-reason calls (evidence.legacy_string_reason=true, class=
+  // unknown) skip policy-based backoff to preserve the pre-H-9 retry contract
+  // for callers that haven't migrated to typed failures.
+  ps.last_failure_class = failure.class;
+  const isLegacyShim =
+    failure.evidence?.['legacy_string_reason'] === true;
+  const policy = isLegacyShim
+    ? null
+    : resolveRetryPolicy(ctx.spec, failure.class);
+  // attempts is the next-attempt index (0 for first retry, 1 for second).
+  // Only retry-action policies populate backoff_until. The block/pause/etc
+  // actions deliberately leave it null so the wake doesn't sleep on them.
+  let backoffSec: number | null = null;
+  if (
+    policy &&
+    (policy.action === 'retry' || policy.action === undefined) &&
+    ps.attempts < policy.max_attempts &&
+    policy.backoff_sec &&
+    policy.backoff_sec.length > 0
+  ) {
+    const idx = Math.min(ps.attempts, policy.backoff_sec.length - 1);
+    const v = policy.backoff_sec[idx];
+    if (typeof v === 'number' && v >= 0) backoffSec = v;
+  }
+  if (backoffSec !== null) {
+    ps.backoff_until = new Date(Date.now() + backoffSec * 1000)
+      .toISOString()
+      .replace(/\.\d{3}Z$/, 'Z');
+  } else {
+    ps.backoff_until = null;
+  }
   saveState(ctx, state);
   appendAudit(ctx.paths.auditFile, 'phase_failed', {
     phase_id: Number(phaseId),
@@ -331,19 +419,41 @@ export function markFailed(
     attempt: ps.attempts,
     ran_substantively: ranSubstantively,
     evidence: failure.evidence,
+    policy_action: policy?.action ?? null,
+    policy_max_attempts: policy?.max_attempts ?? null,
+    backoff_sec: backoffSec,
+    backoff_until: ps.backoff_until,
   });
 }
 
-export function pause(ctx: StateContext): void {
+export interface PauseOptions {
+  /** Free-form reason; persisted to state.paused_reason. */
+  reason?: string;
+  /**
+   * H-4b / D-4. When set, the wake-script shim auto-resumes the chain once
+   * wallclock passes this ISO timestamp. Used to encode rate-limit reset
+   * times. Persisted to state.paused_until.
+   */
+  pausedUntil?: string;
+}
+
+export function pause(ctx: StateContext, opts: PauseOptions = {}): void {
   const state = loadState(ctx);
   state.paused = true;
+  if (opts.reason !== undefined) state.paused_reason = opts.reason;
+  if (opts.pausedUntil !== undefined) state.paused_until = opts.pausedUntil;
   saveState(ctx, state);
-  appendAudit(ctx.paths.auditFile, 'paused', {});
+  appendAudit(ctx.paths.auditFile, 'paused', {
+    reason: opts.reason ?? null,
+    paused_until: opts.pausedUntil ?? null,
+  });
 }
 
 export function resume(ctx: StateContext): void {
   const state = loadState(ctx);
   state.paused = false;
+  state.paused_until = null;
+  state.paused_reason = null;
   saveState(ctx, state);
   appendAudit(ctx.paths.auditFile, 'resumed', {});
 }

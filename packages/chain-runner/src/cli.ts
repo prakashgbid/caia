@@ -43,6 +43,12 @@ import {
 import { appendAudit } from './audit.js';
 import { doctorExitCode, formatDoctorReport, runDoctor } from './doctor.js';
 import { fireHandoffRefresh } from './handoff-refresh.js';
+import {
+  DEFAULT_PROMPT as PREFLIGHT_DEFAULT_PROMPT,
+  DEFAULT_TIMEOUT_MS as PREFLIGHT_DEFAULT_TIMEOUT_MS,
+  formatPreflightLine,
+  preflightDispatch,
+} from './preflight.js';
 import { spawnSync } from 'node:child_process';
 
 interface BaseOptions {
@@ -152,6 +158,13 @@ export function buildProgram(): Command {
           break;
         case 'in_progress':
           process.stdout.write(`IN_PROGRESS ${result.id}\n`);
+          break;
+        case 'backoff':
+          // H-9: BACKOFF <seconds> phase=<id> until=<iso>. Wake scripts treat
+          // this as noop (log + exit 0).
+          process.stdout.write(
+            `BACKOFF ${result.seconds} phase=${result.id} until=${result.until}\n`,
+          );
           break;
         case 'phase_id':
           process.stdout.write(`${result.id}\n`);
@@ -300,12 +313,27 @@ export function buildProgram(): Command {
     );
 
   attachCommonOptions(program.command('pause'))
+    .option('--reason <text>', 'reason (persisted to state.paused_reason)')
+    .option(
+      '--until <iso>',
+      'ISO timestamp; wake-script shim auto-resumes once now >= until',
+    )
     .description('Suppress further dispatch until resume')
-    .action((opts: BaseOptions) => {
-      const ctx = ctxFromOpts(opts);
-      pause(ctx);
-      process.stdout.write('PAUSED\n');
-    });
+    .action(
+      (
+        cmdOpts: { reason?: string; until?: string },
+        cmd: Command,
+      ) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions;
+        const ctx = ctxFromOpts(opts);
+        const pauseOpts: { reason?: string; pausedUntil?: string } = {};
+        if (cmdOpts.reason !== undefined) pauseOpts.reason = cmdOpts.reason;
+        if (cmdOpts.until !== undefined) pauseOpts.pausedUntil = cmdOpts.until;
+        pause(ctx, pauseOpts);
+        const suffix = cmdOpts.until ? ` until=${cmdOpts.until}` : '';
+        process.stdout.write(`PAUSED${suffix}\n`);
+      },
+    );
 
   attachCommonOptions(program.command('resume'))
     .description('Re-enable dispatch')
@@ -333,6 +361,69 @@ export function buildProgram(): Command {
       }
       recordWake(ctx);
     });
+
+  // H-4 (chain-runner-battle-harden phase 4, 2026-05-14). preflight-dispatch
+  // probes the claude binary BEFORE we burn a dispatch slot. Exit codes are
+  // contract: 0 healthy, 1 generic, 2 rate_limited, 3 auth_failure, 4 timeout,
+  // 5 unknown, 6 api_key_leak. Wake scripts read the exit code + the stdout
+  // PREFLIGHT line; the result is also appended to audit.jsonl when --chain-id
+  // is supplied.
+  program
+    .command('preflight-dispatch')
+    .description(
+      'Probe claude binary before dispatch. Exit codes: 0 healthy, 2 rate_limited, 3 auth_failure, 4 timeout, 5 unknown, 6 api_key_leak.',
+    )
+    .option('--chain-id <id>', 'chain identifier (audit log destination)')
+    .option('--phases <path>', 'path to phases YAML spec (audit log destination)')
+    .option('--binary <path>', 'path to claude binary', 'claude')
+    .option('--prompt <text>', 'one-shot prompt sent via --print -p', PREFLIGHT_DEFAULT_PROMPT)
+    .option(
+      '--timeout-ms <n>',
+      'overall preflight wallclock timeout (ms)',
+      String(PREFLIGHT_DEFAULT_TIMEOUT_MS),
+    )
+    .option('--log <path>', 'append raw stdout/stderr to this path')
+    .option('--allow-api-key', 'do NOT refuse if ANTHROPIC_API_KEY is set (CI tests)')
+    .action(
+      async (cmdOpts: {
+        chainId?: string;
+        phases?: string;
+        binary?: string;
+        prompt?: string;
+        timeoutMs?: string;
+        log?: string;
+        allowApiKey?: boolean;
+      }) => {
+        const preOpts: Parameters<typeof preflightDispatch>[0] = {
+          refuseIfApiKeySet: !cmdOpts.allowApiKey,
+        };
+        if (cmdOpts.binary) preOpts.binary = cmdOpts.binary;
+        if (cmdOpts.prompt) preOpts.prompt = cmdOpts.prompt;
+        if (cmdOpts.timeoutMs) preOpts.timeoutMs = Number(cmdOpts.timeoutMs);
+        if (cmdOpts.log) preOpts.logPath = cmdOpts.log;
+        const r = await preflightDispatch(preOpts);
+        process.stdout.write(`${formatPreflightLine(r)}\n`);
+        // Audit if a chain context is available (chain-id + phases required).
+        if (cmdOpts.chainId && cmdOpts.phases) {
+          try {
+            const ctx = loadContext(cmdOpts.chainId, cmdOpts.phases);
+            const audit: Record<string, unknown> = {
+              status: r.status,
+              exit_code: r.exit_code,
+              elapsed_ms: r.elapsed_ms,
+              message: r.message.slice(0, 500),
+            };
+            if (r.reset_iso) audit['reset_iso'] = r.reset_iso;
+            if (r.reset_banner) audit['reset_banner'] = r.reset_banner;
+            appendAudit(ctx.paths.auditFile, 'preflight_dispatch', audit);
+          } catch {
+            // ignore — audit is a convenience, not load-bearing.
+          }
+        }
+        // 0/1/2/3/4/5/6
+        process.exit(r.exit_code);
+      },
+    );
 
   attachCommonOptions(program.command('dispatch'))
     .argument('<phase-id>')
