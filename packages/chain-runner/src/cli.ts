@@ -42,6 +42,7 @@ import {
 } from './watchdog.js';
 import { appendAudit } from './audit.js';
 import { doctorExitCode, formatDoctorReport, runDoctor } from './doctor.js';
+import { fireHandoffRefresh } from './handoff-refresh.js';
 import { spawnSync } from 'node:child_process';
 
 interface BaseOptions {
@@ -175,6 +176,11 @@ export function buildProgram(): Command {
       const ctx = ctxFromOpts(opts);
       markDone(ctx, phaseId);
       clearLock(ctx);
+      // Event-triggered SESSION_HANDOFF.md refresh closes the staleness gap
+      // between hourly cron ticks (red-flag-remediation phase 5, 2026-05-14).
+      fireHandoffRefresh({
+        triggeredBy: `chain-phase-done-${opts.chainId}-${phaseId}`,
+      });
     });
 
   attachCommonOptions(program.command('mark-failed'))

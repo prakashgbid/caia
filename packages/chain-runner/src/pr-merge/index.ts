@@ -19,6 +19,7 @@ import { spawnSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fireHandoffRefresh } from '../handoff-refresh.js';
 
 export interface MergeOrFailOpts {
   repo: string; // OWNER/REPO
@@ -366,6 +367,9 @@ export async function mergeOrFail(
         mergedAt: st.mergedAt,
       });
       postMergeSweep(st.headRefName, opts.workdir);
+      fireHandoffRefresh({
+        triggeredBy: `pr-merged-${opts.repo}#${opts.pr}`,
+      });
       return {
         kind: 'merged',
         pr: opts.pr,
@@ -480,6 +484,9 @@ export async function mergeOrFail(
             mergedAt: verify.mergedAt,
             bypassed: false,
           });
+          fireHandoffRefresh({
+            triggeredBy: `pr-merged-${opts.repo}#${opts.pr}`,
+          });
           return {
             kind: 'merged',
             pr: opts.pr,
@@ -547,6 +554,9 @@ export async function mergeOrFail(
             pr: opts.pr,
             mergedAt: verify.mergedAt,
             bypassed: true,
+          });
+          fireHandoffRefresh({
+            triggeredBy: `pr-merged-${opts.repo}#${opts.pr}`,
           });
           return {
             kind: 'merged',
