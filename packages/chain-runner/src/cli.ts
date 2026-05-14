@@ -337,26 +337,54 @@ export function buildProgram(): Command {
   attachCommonOptions(program.command('dispatch'))
     .argument('<phase-id>')
     .option('--spawn <command>', 'background command to spawn (receives PHASE_ID SESSION_ID PROMPT_FILE)')
+    .option(
+      '--early-exit-window-ms <n>',
+      'window (ms) to watch for an immediate child exit; default 5000',
+    )
     .description('Build the prompt file, mark in_progress, acquire lock, optionally spawn a runner')
     .action(
-      (
+      async (
         phaseId: string,
-        cmdOpts: { spawn?: string },
+        cmdOpts: { spawn?: string; earlyExitWindowMs?: string },
         cmd: Command,
       ) => {
-        const opts = cmd.optsWithGlobals() as BaseOptions & { spawn?: string };
+        const opts = cmd.optsWithGlobals() as BaseOptions & {
+          spawn?: string;
+          earlyExitWindowMs?: string;
+        };
         const ctx = ctxFromOpts(opts);
         // Validate the phase exists in the spec
         findPhase(ctx.spec, Number(phaseId));
         const dispatchOpts = cmdOpts.spawn
-          ? { command: cmdOpts.spawn, args: [] as string[] }
+          ? {
+              command: cmdOpts.spawn,
+              args: [] as string[],
+              ...(cmdOpts.earlyExitWindowMs
+                ? { earlyExitWindowMs: Number(cmdOpts.earlyExitWindowMs) }
+                : {}),
+            }
           : undefined;
-        const result = dispatchPhase(ctx, Number(phaseId), dispatchOpts);
+        const result = await dispatchPhase(ctx, Number(phaseId), dispatchOpts);
         process.stdout.write(
           `dispatched phase=${result.phaseId} session=${result.sessionId} prompt=${result.promptFile}` +
             (result.pid ? ` pid=${result.pid}` : '') +
+            (result.logFile ? ` log=${result.logFile}` : '') +
             '\n',
         );
+        // Surface H-3 early-exit signal on stderr+exit code so wake scripts
+        // can react without parsing stdout.
+        if (typeof result.early_exit_code === 'number') {
+          const cls = result.early_failure?.class ?? 'graceful';
+          process.stderr.write(
+            `EARLY_EXIT phase=${result.phaseId} exit_code=${result.early_exit_code} class=${cls}\n`,
+          );
+          if (result.early_failure) {
+            // Distinct exit code so the wake script can fall through to
+            // its own backoff / classification log without treating this as
+            // a generic dispatch error.
+            process.exit(7);
+          }
+        }
       },
     );
 

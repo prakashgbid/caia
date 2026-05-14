@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, unlinkSync } from 'node:fs';
 import { atomicWriteJson } from './atomic.js';
 import { appendAudit } from './audit.js';
 import { isoNow, parseIso } from './time.js';
@@ -13,6 +13,33 @@ import { checkArtifact, classifyStaleLock } from './classify.js';
 import type { LockFile, PhaseFailure } from './types.js';
 
 export const HEARTBEAT_GRACE_SEC = 3600; // 60 min
+
+// H-2 (chain-runner-battle-harden phase 3, 2026-05-14). A worker is counted
+// as having run "substantively" if any of these are true at staleness-detect
+// time:
+//   - it fired at least one heartbeat() (hadAnyHeartbeat)
+//   - its dispatch log accumulated more than SUBSTANTIVE_LOG_BYTES
+//   - the declared artifact landed (worker reached deliverable write)
+// Anything less (rate-limit at spawn, /bin/false, immediate crash before
+// stdout flush) leaves attempts untouched so a benign re-dispatch isn't
+// burned as a retry.
+export const SUBSTANTIVE_LOG_BYTES = 1024;
+
+export function hadAnyHeartbeat(lock: LockFile): boolean {
+  if (!lock.heartbeat || !lock.started_at) return false;
+  return lock.heartbeat !== lock.started_at;
+}
+
+function logFileSize(path: string | null | undefined): number {
+  if (!path) return 0;
+  try {
+    if (!existsSync(path)) return 0;
+    const st = statSync(path);
+    return st.isFile() ? st.size : 0;
+  } catch {
+    return 0;
+  }
+}
 
 export function loadLock(ctx: StateContext): LockFile | null {
   if (!existsSync(ctx.paths.lockFile)) return null;
@@ -115,6 +142,14 @@ export function checkLockStaleness(
   const runSec = (now.getTime() - started.getTime()) / 1000;
   const capSec = (ps.max_minutes ?? 45) * 60;
 
+  // H-2 evidence used by both staleness branches to decide whether to
+  // increment ps.attempts when we mark the phase failed.
+  const hbFired = hadAnyHeartbeat(lock);
+  const logBytes = logFileSize(opts.dispatchLogPath ?? null);
+  const art = checkArtifact(ctx, lock.phase_id);
+  const ranSubstantively =
+    hbFired || logBytes > SUBSTANTIVE_LOG_BYTES || art.exists;
+
   if (ageSec > HEARTBEAT_GRACE_SEC) {
     const failure = classifyStaleLock(ctx, lock, {
       trigger: 'heartbeat',
@@ -131,7 +166,6 @@ export function checkLockStaleness(
       failure.class === 'worker_hung_post_success' &&
       isAutoResolveEnabled(ctx)
     ) {
-      const art = checkArtifact(ctx, lock.phase_id);
       const grepOk = art.grep_matched !== false;
       if (art.exists && art.meets_min_bytes && grepOk) {
         markAutoAdjudicated(ctx, String(lock.phase_id), failure, {
@@ -156,13 +190,19 @@ export function checkLockStaleness(
         };
       }
     }
-    markFailed(ctx, String(lock.phase_id), failure);
+    markFailed(ctx, String(lock.phase_id), failure, { ranSubstantively });
     clearLock(ctx);
     appendAudit(ctx.paths.auditFile, 'lock_cleared', {
       phase_id: lock.phase_id,
       reason: 'heartbeat',
       age_sec: Math.floor(ageSec),
       class: failure.class,
+      ran_substantively: ranSubstantively,
+      evidence: {
+        hb_fired: hbFired,
+        log_bytes: logBytes,
+        artifact_exists: art.exists,
+      },
     });
     return {
       kind: 'cleared',
@@ -180,7 +220,9 @@ export function checkLockStaleness(
       cap_sec: capSec,
       dispatchLogPath: opts.dispatchLogPath ?? null,
     });
-    markFailed(ctx, String(lock.phase_id), failure);
+    // Runtime cap exceeded implies the worker ran past its budget — treat as
+    // substantive regardless of the heuristic-evidence inputs.
+    markFailed(ctx, String(lock.phase_id), failure, { ranSubstantively: true });
     clearLock(ctx);
     appendAudit(ctx.paths.auditFile, 'lock_cleared', {
       phase_id: lock.phase_id,

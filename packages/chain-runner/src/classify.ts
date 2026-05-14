@@ -313,3 +313,52 @@ export function failureFromReason(reason: string): PhaseFailure {
     evidence: { legacy_string_reason: true },
   };
 }
+
+// H-3 (chain-runner-battle-harden phase 3, 2026-05-14). Classify a non-zero
+// child exit observed within the post-spawn 5s window. Sniffs the dispatch
+// log first so rate-limit / auth / binary-missing banners win over the
+// default. Falls back to worker_no_start_spawn_error keyed on the exit code.
+export interface ClassifyEarlyExitOptions {
+  exitCode: number | null;
+  signal?: string | null;
+  dispatchLogPath?: string | null;
+  elapsedMs?: number;
+}
+
+export function classifyEarlyExit(
+  lock: LockFile,
+  opts: ClassifyEarlyExitOptions,
+): PhaseFailure {
+  const evidence: Record<string, unknown> = {
+    phase_id: lock.phase_id,
+    session_id: lock.session_id,
+    trigger: 'early_exit',
+    exit_code: opts.exitCode,
+    signal: opts.signal ?? null,
+  };
+  if (typeof opts.elapsedMs === 'number') {
+    evidence['elapsed_ms'] = opts.elapsedMs;
+  }
+  if (opts.dispatchLogPath) {
+    evidence['dispatch_log'] = opts.dispatchLogPath;
+  }
+  const sniffed = sniffLogForClass(opts.dispatchLogPath ?? null);
+  evidence['log_sampled'] = sniffed.log_sampled;
+  if (sniffed.match) {
+    evidence['matched_text'] = sniffed.match.matched_text;
+    return {
+      class: sniffed.match.class,
+      reason: sniffed.match.reason,
+      detected_at: isoNow(),
+      evidence,
+    };
+  }
+  return {
+    class: 'worker_no_start_spawn_error',
+    reason: `worker exited early code=${opts.exitCode ?? 'null'}${
+      opts.signal ? ` signal=${opts.signal}` : ''
+    }`,
+    detected_at: isoNow(),
+    evidence,
+  };
+}
