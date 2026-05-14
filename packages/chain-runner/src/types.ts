@@ -16,10 +16,33 @@ export interface PhaseDefinition {
   [k: string]: unknown;
 }
 
+// H-9 (chain-runner-battle-harden phase 4, 2026-05-14). Per-failure-class
+// retry policy. `action` tells the wake script what to do when retries are
+// exhausted (or zero); `backoff_sec` is the delay schedule between retries.
+// The class-aware policy lets a rate-limit pause cleanly without burning
+// retries, while a spawn-error still backs off and retries 3x.
+export type RetryPolicyAction =
+  | 'pause_until_reset' // rate-limit — pause chain, wait for reset
+  | 'pause_until_operator' // auth / binary missing — needs interactive fix
+  | 'adjudicate' // hung-post-success — operator review
+  | 'alert' // runtime-exceeded — alert + leave failed
+  | 'block' // generic — promote to blocked
+  | 'retry'; // retry with backoff_sec schedule
+
+export interface RetryPolicyEntry {
+  max_attempts: number;
+  /** Backoff delays in seconds. Length should be >= max_attempts when retrying. */
+  backoff_sec?: number[];
+  /** Action to take when retries are exhausted or when max_attempts === 0. */
+  action?: RetryPolicyAction;
+}
+
 export interface ChainDefaults {
   max_retries?: number;
   max_minutes?: number;
   heartbeat_interval_sec?: number;
+  /** H-9: per-FailureClass retry policy. Missing classes inherit DEFAULT_RETRY_POLICY. */
+  retry_policy?: Partial<Record<FailureClass, RetryPolicyEntry>>;
 }
 
 // Operator-decision flags surfaced as chain_config in the spec YAML. Loader
@@ -78,6 +101,18 @@ export interface PhaseState {
   session_id: string | null;
   error: string | null;
   failure?: PhaseFailure | null;
+  /**
+   * H-9 (chain-runner-battle-harden phase 4, 2026-05-14). FailureClass of the
+   * most recent failure, copied off `failure.class` for cheap policy lookup
+   * without rehydrating PhaseFailure. Null until the phase has ever failed.
+   */
+  last_failure_class?: FailureClass | null;
+  /**
+   * H-9. When set, computeNextPhase returns BACKOFF instead of phase_id until
+   * the wallclock passes this ISO timestamp. Populated by markFailed when the
+   * retry policy for the class has a `backoff_sec` schedule.
+   */
+  backoff_until?: string | null;
 }
 
 export interface StateFile {
@@ -85,6 +120,15 @@ export interface StateFile {
   started_at: string;
   last_wake: string | null;
   paused: boolean;
+  /**
+   * H-4b / D-4 (chain-runner-battle-harden phase 4, 2026-05-14). When the
+   * preflight detects a rate-limit and parses the reset time, this ISO
+   * timestamp is written into state.json so wake-script shims can auto-resume
+   * the chain once now >= paused_until.
+   */
+  paused_until?: string | null;
+  /** Why the chain was paused (set alongside `paused`). */
+  paused_reason?: string | null;
   budget_consumed_pct: number;
   budget_cap_pct: number;
   phase_status: Record<string, PhaseState>;

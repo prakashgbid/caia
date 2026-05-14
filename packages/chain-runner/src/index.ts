@@ -10,6 +10,13 @@ export * from './time.js';
 export * from './bootstrap.js';
 export * from './watchdog.js';
 export * from './classify.js';
+export * from './preflight.js';
+export {
+  DEFAULT_RETRY_POLICY,
+  backoffSecForAttempt,
+  resolveRetryPolicy,
+  validateRetryPolicyEntry,
+} from './retry-policy.js';
 export {
   mergeOrFail,
   viewPR,
