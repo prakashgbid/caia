@@ -186,13 +186,54 @@ export function buildProgram(): Command {
   attachCommonOptions(program.command('mark-failed'))
     .argument('<phase-id>')
     .argument('[reason...]')
-    .description('Transition a phase to failed and clear the lock')
-    .action((phaseId: string, reason: string[], opts: BaseOptions) => {
-      const ctx = ctxFromOpts(opts);
-      const r = reason.length > 0 ? reason.join(' ') : 'no_reason';
-      markFailed(ctx, phaseId, r);
-      clearLock(ctx);
-    });
+    .option(
+      '--class <class>',
+      'FailureClass (e.g. worker_no_start_rate_limit, worker_hung_post_success); default `unknown`',
+    )
+    .option(
+      '--evidence <kv>',
+      'one or more key=value evidence pairs (repeatable, comma-separated)',
+      (val: string, acc: string[]) => acc.concat(val),
+      [] as string[],
+    )
+    .description(
+      'Transition a phase to failed and clear the lock. Legacy string reason still accepted (becomes class=unknown).',
+    )
+    .action(
+      (
+        phaseId: string,
+        reason: string[],
+        cmdOpts: { class?: string; evidence?: string[] },
+        cmd: Command,
+      ) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions;
+        const ctx = ctxFromOpts(opts);
+        const r = reason.length > 0 ? reason.join(' ') : 'no_reason';
+        if (cmdOpts.class) {
+          const evidence: Record<string, unknown> = {
+            source: 'cli_mark_failed',
+          };
+          for (const kv of cmdOpts.evidence ?? []) {
+            for (const piece of kv.split(',')) {
+              const eq = piece.indexOf('=');
+              if (eq > 0) {
+                evidence[piece.slice(0, eq).trim()] = piece.slice(eq + 1).trim();
+              }
+            }
+          }
+          markFailed(ctx, phaseId, {
+            class: cmdOpts.class as never,
+            reason: r,
+            detected_at: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+            evidence,
+          });
+        } else {
+          // Back-compat shim — string reason, classifier coerces to unknown.
+          markFailed(ctx, phaseId, r);
+        }
+        clearLock(ctx);
+      },
+    );
 
   attachCommonOptions(program.command('heartbeat'))
     .argument('<session-id>')
@@ -213,31 +254,50 @@ export function buildProgram(): Command {
     });
 
   attachCommonOptions(program.command('check-lock-staleness'))
+    .option(
+      '--dispatch-log <path>',
+      "path to the worker's dispatch log; classifier sniffs it for rate-limit / auth / spawn signals",
+    )
     .description('Clear stale lock if heartbeat or runtime cap exceeded')
-    .action((opts: BaseOptions) => {
-      const ctx = ctxFromOpts(opts);
-      const r = checkLockStaleness(ctx);
-      switch (r.kind) {
-        case 'no_lock':
-          process.stdout.write('NO_LOCK\n');
-          break;
-        case 'live':
-          process.stdout.write(
-            `LOCK_LIVE phase=${r.phaseId} hb_age=${Math.floor(r.hbAgeSec)}s run=${Math.floor(r.runSec)}s cap=${r.capSec}s\n`,
-          );
-          break;
-        case 'cleared': {
-          const detail =
-            r.reason === 'timeout'
-              ? `run=${Math.floor(r.ageSec)}s cap=${r.capSec ?? '?'}s`
-              : `age=${Math.floor(r.ageSec)}s`;
-          process.stdout.write(
-            `STALE_LOCK_CLEARED phase=${r.phaseId} reason=${r.reason} ${detail}\n`,
-          );
-          break;
+    .action(
+      (cmdOpts: { dispatchLog?: string }, cmd: Command) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions;
+        const ctx = ctxFromOpts(opts);
+        const r = checkLockStaleness(ctx, {
+          dispatchLogPath: cmdOpts.dispatchLog ?? null,
+        });
+        switch (r.kind) {
+          case 'no_lock':
+            process.stdout.write('NO_LOCK\n');
+            break;
+          case 'live':
+            process.stdout.write(
+              `LOCK_LIVE phase=${r.phaseId} hb_age=${Math.floor(r.hbAgeSec)}s run=${Math.floor(r.runSec)}s cap=${r.capSec}s\n`,
+            );
+            break;
+          case 'cleared': {
+            const detail =
+              r.reason === 'timeout'
+                ? `run=${Math.floor(r.ageSec)}s cap=${r.capSec ?? '?'}s`
+                : `age=${Math.floor(r.ageSec)}s`;
+            process.stdout.write(
+              `STALE_LOCK_CLEARED phase=${r.phaseId} reason=${r.reason} class=${r.failure.class} ${detail}\n`,
+            );
+            break;
+          }
+          case 'auto_adjudicated':
+            process.stdout.write(
+              `PHASE_AUTO_ADJUDICATED phase=${r.phaseId} class=${r.failure.class} age=${Math.floor(r.ageSec)}s\n`,
+            );
+            // Auto-adjudication is a success-shaped transition; refresh
+            // SESSION_HANDOFF so the operator sees the new state.
+            fireHandoffRefresh({
+              triggeredBy: `chain-phase-auto-adjudicated-${opts.chainId}-${r.phaseId}`,
+            });
+            break;
         }
-      }
-    });
+      },
+    );
 
   attachCommonOptions(program.command('pause'))
     .description('Suppress further dispatch until resume')

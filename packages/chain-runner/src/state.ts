@@ -4,7 +4,14 @@ import { appendAudit } from './audit.js';
 import { ensureChainDir } from './paths.js';
 import { isoNow } from './time.js';
 import { loadChainSpec } from './spec.js';
-import type { ChainPaths, ChainSpec, PhaseState, StateFile } from './types.js';
+import { failureFromReason } from './classify.js';
+import type {
+  ChainPaths,
+  ChainSpec,
+  PhaseFailure,
+  PhaseState,
+  StateFile,
+} from './types.js';
 
 export const SCHEMA_VERSION = 1;
 export const DEFAULT_BUDGET_CAP_PCT = 25;
@@ -33,6 +40,7 @@ export function buildInitialState(spec: ChainSpec): StateFile {
       completed_at: null,
       session_id: null,
       error: null,
+      failure: null,
     };
   }
   return {
@@ -182,20 +190,56 @@ export function markDone(ctx: StateContext, phaseId: string): void {
   });
 }
 
-export function markFailed(
+// Mark a phase done via the D-1 auto-adjudication path. Used when the
+// classifier emits worker_hung_post_success AND chain_config has
+// auto_resolve_hung_post_success=true AND the artifact validates the
+// declared success_criteria. The audit event is distinct from a normal
+// phase_done so operators can audit auto-recoveries vs first-class success.
+export function markAutoAdjudicated(
   ctx: StateContext,
   phaseId: string,
-  reason: string,
+  failure: PhaseFailure,
+  verification: Record<string, unknown>,
 ): void {
   const state = loadState(ctx);
   const ps = ensurePhaseEntry(state, phaseId);
+  ps.status = 'done';
+  ps.completed_at = isoNow();
+  ps.failure = failure;
+  saveState(ctx, state);
+  appendAudit(ctx.paths.auditFile, 'phase_auto_adjudicated', {
+    phase_id: Number(phaseId),
+    class: failure.class,
+    reason: failure.reason,
+    verification,
+  });
+}
+
+// Back-compat shim: legacy callers pass a string reason; new callers pass a
+// structured PhaseFailure. The shim wraps the string under class=unknown so
+// existing wake scripts + the `caia-chain mark-failed <id> <reason>` CLI
+// keep working through one release. The structured form is preferred.
+export function markFailed(
+  ctx: StateContext,
+  phaseId: string,
+  failureOrReason: PhaseFailure | string,
+): void {
+  const failure: PhaseFailure =
+    typeof failureOrReason === 'string'
+      ? failureFromReason(failureOrReason)
+      : failureOrReason;
+  const state = loadState(ctx);
+  const ps = ensurePhaseEntry(state, phaseId);
   ps.status = 'failed';
-  ps.error = reason.slice(0, 500);
+  ps.error = failure.reason.slice(0, 500);
+  ps.failure = failure;
   saveState(ctx, state);
   appendAudit(ctx.paths.auditFile, 'phase_failed', {
     phase_id: Number(phaseId),
-    reason: reason.slice(0, 500),
+    class: failure.class,
+    reason: failure.reason.slice(0, 500),
     attempt: ps.attempts,
+    evidence: failure.evidence,
   });
 }
 
