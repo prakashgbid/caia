@@ -21,7 +21,7 @@ import { normaliseAll, normaliseOne, sha256OfMessages } from './normaliser.js';
 import { applyPiiMask, DEFAULT_REDACT_PATTERNS } from './pii-mask.js';
 import { scoreAll, scoreOne } from './quality.js';
 import { createReportsWalker } from './reports-walker.js';
-import { createDefaultDistiller, noopDistiller } from './distiller.js';
+import { createDistiller, noopDistiller } from './distiller.js';
 import type {
   ClaudeDistiller,
   CorpusManifest,
@@ -57,7 +57,10 @@ export class ApprenticeCorpusAggregator {
     this.claudeDistiller =
       input.claudeDistiller
       ?? (this.cfg.distillEnabled
-        ? createDefaultDistiller({ binaryPath: this.cfg.claudeBinaryPath })
+        ? createDistiller({
+            backend: process.env['DISTILL_BACKEND'],
+            claudeBinaryPath: this.cfg.claudeBinaryPath
+          })
         : noopDistiller);
   }
 
