@@ -41,6 +41,14 @@ import {
   recordStallDetected,
 } from './watchdog.js';
 import { appendAudit } from './audit.js';
+import {
+  emitAlert,
+  type AlertChannel,
+  type AlertSeverity,
+  type AlertEvent,
+} from './alerting.js';
+import { diagnoseStall } from './cascade.js';
+import { chainPaths } from './paths.js';
 import { doctorExitCode, formatDoctorReport, runDoctor } from './doctor.js';
 import { fireHandoffRefresh } from './handoff-refresh.js';
 import {
@@ -585,7 +593,7 @@ export function buildProgram(): Command {
 
   attachCommonOptions(program.command('check-stall'))
     .description(
-      'Self-healing watchdog: detect cron stall and (optionally) re-register the scheduled task.',
+      'Self-healing watchdog: detect cron stall and (optionally) re-register the scheduled task. H-5: also escalates NONE_ELIGIBLE stalls via --alert-on-streak.',
     )
     .option(
       '--wake-interval-sec <n>',
@@ -596,6 +604,10 @@ export function buildProgram(): Command {
     .option('--inbox <path>', 'path to INBOX.md to append alert')
     .option('--reregister-cmd <cmd>', 'shell command to re-register the scheduled task on stall')
     .option('--no-alert', 'suppress INBOX append even when --inbox is given')
+    .option(
+      '--alert-on-streak <n>',
+      'H-5: if state.none_eligible_streak >= n, emit a chain_stalled alert (channels honor chain_config.alert_channels; default [handoff,inbox,notification,audit]) and return STREAK_ALERT_FIRED. Use 2 for the 30-min escalation default.',
+    )
     .action(
       (
         cmdOpts: {
@@ -604,12 +616,61 @@ export function buildProgram(): Command {
           inbox?: string;
           reregisterCmd?: string;
           alert?: boolean;
+          alertOnStreak?: string;
         },
         cmd: Command,
       ) => {
         const opts = cmd.optsWithGlobals() as BaseOptions & typeof cmdOpts;
         const ctx = ctxFromOpts(opts);
         const state = loadState(ctx);
+
+        // H-5: NONE_ELIGIBLE streak escalation. Decoupled from the cron-stall
+        // path — both can fire in the same tick, but they describe different
+        // failure modes. The streak is owned by computeNextPhase; check-stall
+        // just READS it and decides whether to escalate.
+        const streakThreshold = cmdOpts.alertOnStreak
+          ? Number(cmdOpts.alertOnStreak)
+          : null;
+        let streakFired = false;
+        if (streakThreshold !== null && Number.isFinite(streakThreshold)) {
+          const streak = state.none_eligible_streak ?? 0;
+          if (streak >= streakThreshold) {
+            const diag = diagnoseStall(ctx.spec, state);
+            const configChannels = ctx.spec.chain_config?.alert_channels;
+            const alertEvent: AlertEvent = {
+              type: 'chain_stalled',
+              severity: 'high',
+              title: `chain_stalled — ${opts.chainId} (streak=${streak})`,
+              detail: diag.diagnosis,
+              chain: opts.chainId,
+              evidence: {
+                streak,
+                threshold: streakThreshold,
+                next_pending_id: diag.nextPending?.id ?? null,
+                next_pending_name: diag.nextPending?.name ?? null,
+                blocker_id: diag.blocker?.id ?? null,
+                blocker_status: diag.blockerState?.status ?? null,
+                blocker_class:
+                  diag.blockerState?.last_failure_class ??
+                  diag.blockerState?.failure?.class ??
+                  null,
+                blocker_attempts: diag.blockerState?.attempts ?? null,
+                suggested: diag.suggested,
+              },
+            };
+            const emitOpts: Parameters<typeof emitAlert>[2] = {
+              auditFile: ctx.paths.auditFile,
+            };
+            if (cmdOpts.inbox) emitOpts.inboxPath = cmdOpts.inbox;
+            if (configChannels) emitOpts.configChannels = configChannels;
+            const r = emitAlert(undefined, alertEvent, emitOpts);
+            streakFired = r.fired.length > 0;
+            process.stdout.write(
+              `STREAK_ALERT streak=${streak} threshold=${streakThreshold} fired=${r.fired.join(',') || 'none'} deduped=${r.deduped}\n`,
+            );
+          }
+        }
+
         const result = detectStall(state, {
           wakeIntervalSec: Number(cmdOpts.wakeIntervalSec ?? '900'),
           multiplier: Number(cmdOpts.multiplier ?? '2'),
@@ -618,6 +679,10 @@ export function buildProgram(): Command {
           process.stdout.write(
             `HEALTHY age_sec=${Math.floor(result.ageSec)} threshold_sec=${result.thresholdSec}\n`,
           );
+          // Streak alert is its own exit signal; cron-healthy and streak-fired
+          // can coexist (a chain that's waking every 15 min but stalling on
+          // NONE_ELIGIBLE).
+          if (streakFired) process.exit(5);
           return;
         }
         const inboxPath =
@@ -638,6 +703,174 @@ export function buildProgram(): Command {
           `STALL_DETECTED age_sec=${Math.floor(result.ageSec)} threshold_sec=${result.thresholdSec} reason=${result.reason}${reregOutput}\n`,
         );
         process.exit(4);
+      },
+    );
+
+  // H-10 (phase 5, 2026-05-14). emit-alert — generic CLI entry point to the
+  // alerting backbone. Used by:
+  //   - autonomy directive — workers running into operator-only carve-outs
+  //     (`caia-chain emit-alert --type operator_action_required ...`)
+  //   - shell wake scripts that want the unified dedupe/handoff/inbox/notify
+  //     fan-out instead of the legacy wake_emit_alert bash helper
+  //   - external watchdogs (chain-watchdog/watchdog.js) escalating cron stalls
+  //
+  // chain-id is REQUIRED (load-bearing for the fingerprint dedupe). --phases
+  // is OPTIONAL — when given, the alert is also appended to the chain's
+  // audit.jsonl via the audit channel; when omitted, the audit channel is
+  // suppressed and the chain dir is derived from `chainPaths(chainId)` so the
+  // dedupe key still works.
+  program
+    .command('emit-alert')
+    .description(
+      'Emit an alert through the unified backbone (handoff + inbox + notification + audit). Required for the autonomy directive `OPERATOR_ACTION_REQUIRED` flow.',
+    )
+    .requiredOption('--chain-id <id>', 'chain identifier (load-bearing for dedupe fingerprint)')
+    .requiredOption(
+      '--type <type>',
+      'alert type (chain_stalled | chain_rate_limited | chain_auth_failed | operator_action_required | chain_preflight_failed | chain_doctor_degraded | cron_stall_detected | <custom>)',
+    )
+    .requiredOption('--severity <level>', 'low | medium | high | critical')
+    .requiredOption('--detail <text>', 'short human-readable detail string')
+    .option('--phases <path>', 'phases YAML — when given, the audit channel logs onto chain audit.jsonl')
+    .option('--title <text>', 'optional alert title (defaults to "<type> — <chain-id>")')
+    .option(
+      '--channels <csv>',
+      'override channels: csv of handoff|inbox|notification|audit',
+    )
+    .option('--force', 'bypass the 6h dedupe (use sparingly)')
+    .option(
+      '--evidence <kv>',
+      'key=value evidence pairs (repeatable)',
+      (val: string, acc: string[]) => acc.concat(val),
+      [] as string[],
+    )
+    .action(
+      (cmdOpts: {
+        chainId: string;
+        type: string;
+        severity: string;
+        detail: string;
+        phases?: string;
+        title?: string;
+        channels?: string;
+        force?: boolean;
+        evidence?: string[];
+      }) => {
+        const severity = cmdOpts.severity as AlertSeverity;
+        const evidence: Record<string, unknown> = {};
+        for (const kv of cmdOpts.evidence ?? []) {
+          for (const piece of kv.split(',')) {
+            const eq = piece.indexOf('=');
+            if (eq > 0) {
+              evidence[piece.slice(0, eq).trim()] = piece.slice(eq + 1).trim();
+            }
+          }
+        }
+        const event: AlertEvent = {
+          type: cmdOpts.type,
+          severity,
+          title: cmdOpts.title ?? `${cmdOpts.type} — ${cmdOpts.chainId}`,
+          detail: cmdOpts.detail,
+          chain: cmdOpts.chainId,
+          evidence,
+          ...(cmdOpts.force ? { force: true } : {}),
+        };
+        const channels = cmdOpts.channels
+          ? (cmdOpts.channels
+              .split(',')
+              .map((c) => c.trim())
+              .filter(Boolean) as AlertChannel[])
+          : undefined;
+
+        // Audit file: derive from phases YAML if available (canonical context),
+        // else from chainPaths so we still get an audit trail per chain.
+        let auditFile: string | undefined;
+        let configChannels: string[] | undefined;
+        if (cmdOpts.phases) {
+          try {
+            const ctx = loadContext(cmdOpts.chainId, cmdOpts.phases);
+            auditFile = ctx.paths.auditFile;
+            configChannels = ctx.spec.chain_config?.alert_channels;
+          } catch {
+            // Fall through; audit-channel will be suppressed if no path.
+          }
+        }
+        if (!auditFile) {
+          try {
+            auditFile = chainPaths(cmdOpts.chainId).auditFile;
+          } catch {
+            // chain-id failed validation; emitAlert will throw later if needed.
+          }
+        }
+
+        const emitOpts: Parameters<typeof emitAlert>[2] = {};
+        if (auditFile) emitOpts.auditFile = auditFile;
+        if (configChannels) emitOpts.configChannels = configChannels;
+        const r = emitAlert(channels, event, emitOpts);
+        process.stdout.write(
+          `ALERT_EMIT type=${event.type} chain=${event.chain} fired=${r.fired.join(',') || 'none'} suppressed=${r.suppressed.join(',') || 'none'} deduped=${r.deduped} fp=${r.fingerprint}\n`,
+        );
+        if (r.deduped) process.exit(8); // distinct exit so callers can detect dedupe
+      },
+    );
+
+  // H-5 / H-17. stall-root-cause — read-only inspection that walks the
+  // dependency graph from the first non-`done` phase and reports the
+  // upstream blocker + a suggested adjudication command. Used by operators
+  // running `caia-chain stall-root-cause --chain-id ...` after seeing a
+  // chain_stalled alert.
+  attachCommonOptions(program.command('stall-root-cause'))
+    .description(
+      'Walk the dependency graph from the first non-done phase and print the upstream blocker plus a suggested adjudication command.',
+    )
+    .option('--json', 'emit JSON instead of text')
+    .action(
+      (cmdOpts: { json?: boolean }, cmd: Command) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions & typeof cmdOpts;
+        const ctx = ctxFromOpts(opts);
+        const state = loadState(ctx);
+        const diag = diagnoseStall(ctx.spec, state);
+        if (cmdOpts.json) {
+          process.stdout.write(
+            JSON.stringify(
+              {
+                chain_id: opts.chainId,
+                next_pending: diag.nextPending
+                  ? { id: diag.nextPending.id, name: diag.nextPending.name }
+                  : null,
+                blocker: diag.blocker
+                  ? { id: diag.blocker.id, name: diag.blocker.name }
+                  : null,
+                blocker_state: diag.blockerState
+                  ? {
+                      status: diag.blockerState.status,
+                      attempts: diag.blockerState.attempts,
+                      class:
+                        diag.blockerState.last_failure_class ??
+                        diag.blockerState.failure?.class ??
+                        null,
+                      reason:
+                        diag.blockerState.failure?.reason ??
+                        diag.blockerState.error ??
+                        null,
+                    }
+                  : null,
+                diagnosis: diag.diagnosis,
+                suggested: diag.suggested,
+                none_eligible_streak: state.none_eligible_streak ?? 0,
+              },
+              null,
+              2,
+            ) + '\n',
+          );
+        } else {
+          process.stdout.write(`STALL_ROOT_CAUSE chain=${opts.chainId}\n`);
+          process.stdout.write(`  diagnosis: ${diag.diagnosis}\n`);
+          process.stdout.write(`  suggested: ${diag.suggested}\n`);
+          process.stdout.write(
+            `  none_eligible_streak: ${state.none_eligible_streak ?? 0}\n`,
+          );
+        }
       },
     );
 

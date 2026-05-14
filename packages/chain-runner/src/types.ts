@@ -134,6 +134,15 @@ export interface StateFile {
   phase_status: Record<string, PhaseState>;
   current_phase: number | null;
   all_done: boolean;
+  /**
+   * H-5 (chain-runner-battle-harden phase 5, 2026-05-14). Count of consecutive
+   * wakes that produced `none_eligible` from computeNextPhase. Used by
+   * `caia-chain check-stall --alert-on-streak <n>` to escalate silent chain
+   * stalls (the 8-hour 2026-05-14 incident pattern). Resets to 0 on any
+   * non-`none_eligible` result. Optional in the schema so older state.json
+   * files load without a migration; first save promotes it to 0.
+   */
+  none_eligible_streak?: number;
 }
 
 export interface LockFile {

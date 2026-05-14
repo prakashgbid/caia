@@ -11,11 +11,9 @@
 // This is the second of four safeguards against the RCA failure mode
 // where SKILL.md is on disk but no cron is firing.
 
-import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { dirname } from 'node:path';
 import { appendAudit } from './audit.js';
-import { isoNow } from './time.js';
+import { emitAlert } from './alerting.js';
 import type { StateContext } from './state.js';
 import type { StateFile } from './types.js';
 
@@ -90,33 +88,32 @@ export function recordStallDetected(
     threshold_sec: result.thresholdSec,
     reason: result.reason,
   });
-  if (opts.inboxPath) {
-    appendInboxAlert(opts.inboxPath, ctx, result, opts.chainId);
-  }
-}
-
-function appendInboxAlert(
-  inboxPath: string,
-  ctx: StateContext,
-  result: StallCheckResult,
-  chainId?: string,
-): void {
-  mkdirSync(dirname(inboxPath), { recursive: true });
-  const header = existsSync(inboxPath) ? '' : '# INBOX\n\n';
-  const chain = chainId ?? ctx.paths.baseDir;
-  const ageStr =
-    Number.isFinite(result.ageSec) && result.ageSec >= 0
-      ? `${Math.floor(result.ageSec)}s`
-      : 'n/a';
-  const block =
-    `${header}## [${isoNow()}] cron_stall_detected — ${chain}\n` +
-    `- chain dir: ${ctx.paths.baseDir}\n` +
-    `- last_wake: ${result.lastWake ?? 'never'}\n` +
-    `- age: ${ageStr}\n` +
-    `- threshold: ${result.thresholdSec}s\n` +
-    `- reason: ${result.reason}\n` +
-    `- action: re-register scheduled task and verify with caia-chain verify-bootstrap\n\n`;
-  appendFileSync(inboxPath, block);
+  // H-10 (phase 5, 2026-05-14). Route the inbox-style alert through the
+  // unified alerting backbone. The default channel set for
+  // cron_stall_detected is [handoff, inbox, audit] (D-3 keeps notification
+  // off for cron-stall to avoid pager fatigue on the 30-minute watchdog
+  // tick); per-event channel override is supported via opts.channels but the
+  // legacy call sites all rely on the default.
+  const chainId = opts.chainId ?? ctx.paths.baseDir;
+  emitAlert(undefined, {
+    type: 'cron_stall_detected',
+    severity: 'medium',
+    title: `cron_stall_detected — ${chainId}`,
+    detail: `last_wake=${result.lastWake ?? 'never'} age=${Math.floor(result.ageSec)}s threshold=${result.thresholdSec}s reason=${result.reason}`,
+    chain: chainId,
+    evidence: {
+      chain_dir: ctx.paths.baseDir,
+      last_wake: result.lastWake,
+      age_sec: Math.floor(result.ageSec),
+      threshold_sec: result.thresholdSec,
+      reason: result.reason,
+      action:
+        'investigate scheduled-task registry; re-register via mcp__scheduled-tasks__create_scheduled_task and verify with `caia-chain verify-bootstrap`',
+    },
+  }, {
+    auditFile: ctx.paths.auditFile,
+    ...(opts.inboxPath ? { inboxPath: opts.inboxPath } : {}),
+  });
 }
 
 export interface ReRegisterAttempt {

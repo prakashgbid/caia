@@ -59,6 +59,11 @@ export function buildInitialState(spec: ChainSpec): StateFile {
     phase_status: phaseStatus,
     current_phase: null,
     all_done: false,
+    // H-5 (phase 5, 2026-05-14). Live count of consecutive NONE_ELIGIBLE
+    // wakes. Incremented inside computeNextPhase whenever it returns
+    // none_eligible, reset to 0 on any other result kind. Used by
+    // check-stall --alert-on-streak to escalate silent stalls.
+    none_eligible_streak: 0,
   };
 }
 
@@ -112,12 +117,39 @@ export type NextPhaseResult =
         | 'none_eligible';
     };
 
-export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhaseResult {
-  if (state.paused) return { kind: 'paused' };
-  if (state.budget_consumed_pct >= state.budget_cap_pct) {
-    return { kind: 'budget_exhausted' };
+// H-5 (phase 5, 2026-05-14). After computeNextPhase decides the outcome, this
+// helper updates state.none_eligible_streak — increment on `none_eligible`,
+// reset to 0 on every other result kind (including `paused`, `all_done`, and
+// `backoff`, all of which are well-defined non-stalled states). Saves only
+// when the value actually changes, so happy-path wakes don't churn state.json.
+function _applyNoneEligibleStreak(
+  ctx: StateContext,
+  state: StateFile,
+  result: NextPhaseResult,
+): NextPhaseResult {
+  const current = state.none_eligible_streak ?? 0;
+  const next = result.kind === 'none_eligible' ? current + 1 : 0;
+  if (next !== current) {
+    state.none_eligible_streak = next;
+    saveState(ctx, state);
+  } else if (state.none_eligible_streak === undefined) {
+    // Promote the optional field once so older state files migrate forward.
+    state.none_eligible_streak = next;
+    saveState(ctx, state);
   }
-  if (state.all_done) return { kind: 'all_done' };
+  return result;
+}
+
+export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhaseResult {
+  if (state.paused) {
+    return _applyNoneEligibleStreak(ctx, state, { kind: 'paused' });
+  }
+  if (state.budget_consumed_pct >= state.budget_cap_pct) {
+    return _applyNoneEligibleStreak(ctx, state, { kind: 'budget_exhausted' });
+  }
+  if (state.all_done) {
+    return _applyNoneEligibleStreak(ctx, state, { kind: 'all_done' });
+  }
 
   const nowMs = Date.now();
   let mutated = false;
@@ -179,21 +211,21 @@ export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhase
           const bt = new Date(ps.backoff_until).getTime();
           if (Number.isFinite(bt) && bt > nowMs) {
             if (mutated) saveState(ctx, state);
-            return {
+            return _applyNoneEligibleStreak(ctx, state, {
               kind: 'backoff',
               id: p.id,
               seconds: Math.max(0, Math.ceil((bt - nowMs) / 1000)),
               until: ps.backoff_until,
-            };
+            });
           }
         }
       }
       if (mutated) saveState(ctx, state);
-      return { kind: 'phase_id', id: p.id };
+      return _applyNoneEligibleStreak(ctx, state, { kind: 'phase_id', id: p.id });
     }
     if (ps.status === 'in_progress') {
       if (mutated) saveState(ctx, state);
-      return { kind: 'in_progress', id: p.id };
+      return _applyNoneEligibleStreak(ctx, state, { kind: 'in_progress', id: p.id });
     }
   }
 
@@ -205,10 +237,16 @@ export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhase
     state.all_done = true;
     saveState(ctx, state);
     appendAudit(ctx.paths.auditFile, 'all_done', {});
-    return { kind: 'all_done' };
+    return _applyNoneEligibleStreak(ctx, state, { kind: 'all_done' });
   }
   if (mutated) saveState(ctx, state);
-  return { kind: 'none_eligible' };
+  // H-5: emit a structured audit entry on every none_eligible result so
+  // operators have first-class telemetry of stalls (not just inferred from
+  // wake-script logs). The stall-root-cause CLI consumes this.
+  appendAudit(ctx.paths.auditFile, 'none_eligible', {
+    streak_before: state.none_eligible_streak ?? 0,
+  });
+  return _applyNoneEligibleStreak(ctx, state, { kind: 'none_eligible' });
 }
 
 // H-2 (chain-runner-battle-harden phase 3, 2026-05-14). markInProgress emits

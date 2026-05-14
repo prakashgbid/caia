@@ -89,12 +89,25 @@ export function makeFixture(label = 'cr-test'): FixtureBundle {
   const specPath = join(root, 'phases.yaml');
   writeFileSync(specPath, FIXTURE_SPEC);
   process.env['CAIA_CHAIN_HOME'] = chainHome;
+  // H-10: redirect the alerting backbone defaults into the tmpdir so tests
+  // don't write to the user's real INBOX.md / active_alerts.jsonl / dedupe
+  // state. CAIA_DISABLE_NOTIFICATIONS=1 also skips osascript so test runs
+  // don't fire OS notifications. Each fixture gets its own dedupe file so
+  // tests are independent.
+  process.env['CAIA_ALERT_INBOX_PATH'] = join(root, 'INBOX.md');
+  process.env['CAIA_ALERT_HANDOFF_JSONL_PATH'] = join(root, 'active_alerts.jsonl');
+  process.env['CAIA_ALERT_DEDUPE_PATH'] = join(root, '.alert-dedupe.json');
+  process.env['CAIA_DISABLE_NOTIFICATIONS'] = '1';
   return {
     chainHome,
     chainId: `cr-${label}-${process.pid}`,
     specPath,
     cleanup: () => {
       delete process.env['CAIA_CHAIN_HOME'];
+      delete process.env['CAIA_ALERT_INBOX_PATH'];
+      delete process.env['CAIA_ALERT_HANDOFF_JSONL_PATH'];
+      delete process.env['CAIA_ALERT_DEDUPE_PATH'];
+      delete process.env['CAIA_DISABLE_NOTIFICATIONS'];
       try {
         rmSync(root, { recursive: true, force: true });
       } catch {
