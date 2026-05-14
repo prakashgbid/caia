@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { makeFixture, type FixtureBundle } from './fixtures.js';
 import {
+  SCHEMA_VERSION,
   buildInitialState,
   computeNextPhase,
   ensurePhaseEntry,
@@ -271,7 +272,10 @@ describe('P11_atomic_write_crash', () => {
       const fs = require('node:fs') as typeof import('node:fs');
       if (fs.existsSync(ctx.paths.stateFile)) fs.unlinkSync(ctx.paths.stateFile);
       const recovered = initState(ctx);
-      expect(recovered.schema_version).toBe(1);
+      // H-14 (phase 9, 2026-05-14): SCHEMA_VERSION bumped to 2. The schema
+      // version of a freshly-initialized state always matches the source
+      // constant, so the assertion is pinned to that value.
+      expect(recovered.schema_version).toBe(SCHEMA_VERSION);
       const r = nextLabel();
       expect(r.kind).toBe('phase_id');
     });
