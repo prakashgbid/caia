@@ -42,19 +42,11 @@ if [[ ! -d "$PKG_DIR/dist" ]]; then
 fi
 
 # Native binaries in the pnpm store are built against Node 22 (NODE_MODULE_VERSION 127).
-# Prefer node@22 by default so the retrainer process doesn't ABI-fail under newer
-# Homebrew node. CAIA_NODE_BIN overrides.
-if [[ -n "${CAIA_NODE_BIN:-}" ]]; then
-  NODE_BIN="$CAIA_NODE_BIN"
-elif [[ -x /opt/homebrew/opt/node@22/bin/node ]]; then
-  NODE_BIN="/opt/homebrew/opt/node@22/bin/node"
-else
-  NODE_BIN="$(command -v node 2>/dev/null || true)"
-fi
-if [[ -z "$NODE_BIN" ]]; then
-  echo "node binary not found on PATH; set CAIA_NODE_BIN" >&2
-  exit 1
-fi
+# The shared guard rejects installation when the resolved node major doesn't match
+# CAIA_EXPECTED_NODE_MAJOR (default 22). See scripts/lib/check-node-version.sh.
+# shellcheck source=/dev/null
+source "$(cd "$(dirname "$0")/../../.." && pwd)/scripts/lib/check-node-version.sh"
+NODE_BIN="$(check_node_version)"
 
 PATH_DEFAULT="${CAIA_PATH:-/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin}"
 

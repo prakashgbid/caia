@@ -17,6 +17,109 @@ import { existsSync, readFileSync } from 'node:fs';
 import { isoNow } from './time.js';
 import type { StateContext } from './state.js';
 
+/**
+ * Default healthz endpoints checked during verify-bootstrap.
+ *
+ * Background: 2026-05-13 mentor-event-bus went dark for ~3 days because the
+ * native better-sqlite3 binary (compiled for Node 22) was loaded by node@26
+ * after a brew upgrade, and the server crashed silently on startup. The
+ * chain runner had no signal to detect this. These endpoints are the
+ * pre-flight signal — if either is unhealthy, bootstrap fails (exit 3)
+ * instead of silently dispatching a chain into a broken environment.
+ */
+export const DEFAULT_HEALTHZ_ENDPOINTS: readonly HealthzEndpoint[] = [
+  { name: 'mentor', url: 'http://127.0.0.1:5180/v1/healthz' },
+  { name: 'router', url: 'http://127.0.0.1:7411/healthz' },
+];
+
+export interface HealthzEndpoint {
+  name: string;
+  url: string;
+}
+
+export interface HealthzCheckResult {
+  name: string;
+  url: string;
+  ok: boolean;
+  status: number | null;
+  error: string | null;
+  elapsedMs: number;
+}
+
+/** Inject a fetch impl in tests; defaults to global fetch. */
+export type FetchLike = (
+  url: string,
+  init?: { signal?: AbortSignal },
+) => Promise<{ status: number; ok: boolean }>;
+
+export async function checkHealthz(
+  endpoint: HealthzEndpoint,
+  opts: { timeoutMs?: number; fetchImpl?: FetchLike } = {},
+): Promise<HealthzCheckResult> {
+  const timeoutMs = opts.timeoutMs ?? 2_000;
+  const fetchImpl = (opts.fetchImpl ?? (globalThis.fetch as FetchLike)) as
+    | FetchLike
+    | undefined;
+  const start = Date.now();
+  if (!fetchImpl) {
+    return {
+      name: endpoint.name,
+      url: endpoint.url,
+      ok: false,
+      status: null,
+      error: 'no_fetch_impl',
+      elapsedMs: 0,
+    };
+  }
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const res = await fetchImpl(endpoint.url, { signal: ac.signal });
+    return {
+      name: endpoint.name,
+      url: endpoint.url,
+      ok: res.ok,
+      status: res.status,
+      error: res.ok ? null : `http_${res.status}`,
+      elapsedMs: Date.now() - start,
+    };
+  } catch (err) {
+    const msg =
+      err instanceof Error
+        ? err.name === 'AbortError'
+          ? `timeout_${timeoutMs}ms`
+          : err.message
+        : String(err);
+    return {
+      name: endpoint.name,
+      url: endpoint.url,
+      ok: false,
+      status: null,
+      error: msg,
+      elapsedMs: Date.now() - start,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function checkHealthzAll(
+  endpoints: readonly HealthzEndpoint[] = DEFAULT_HEALTHZ_ENDPOINTS,
+  opts: { timeoutMs?: number; fetchImpl?: FetchLike } = {},
+): Promise<HealthzCheckResult[]> {
+  return Promise.all(endpoints.map((e) => checkHealthz(e, opts)));
+}
+
+export function summarizeHealthz(results: HealthzCheckResult[]): string {
+  return results
+    .map((r) =>
+      r.ok
+        ? `${r.name}=OK(${r.status} ${r.elapsedMs}ms)`
+        : `${r.name}=FAIL(${r.error ?? 'unknown'})`,
+    )
+    .join(' ');
+}
+
 export interface RetryOptions {
   /** Per-attempt delays in milliseconds. Default [5_000, 15_000, 45_000]. */
   backoffMs?: number[];

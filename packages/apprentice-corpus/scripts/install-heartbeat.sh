@@ -18,18 +18,11 @@ if [[ ! -f "$PLIST_SRC" ]]; then
   exit 1
 fi
 
-# Native module ABI (see install-apprentice-retrainer.sh for context).
-if [[ -n "${CAIA_NODE_BIN:-}" ]]; then
-  NODE_BIN="$CAIA_NODE_BIN"
-elif [[ -x /opt/homebrew/opt/node@22/bin/node ]]; then
-  NODE_BIN="/opt/homebrew/opt/node@22/bin/node"
-else
-  NODE_BIN="$(command -v node 2>/dev/null || true)"
-fi
-if [[ -z "$NODE_BIN" ]]; then
-  echo "node binary not found; set CAIA_NODE_BIN" >&2
-  exit 1
-fi
+# Refuse to install if node major version doesn't match expected (default 22).
+# Native modules (better-sqlite3) require the binary to match the runtime.
+# shellcheck source=/dev/null
+source "$(cd "$(dirname "$0")/../../.." && pwd)/scripts/lib/check-node-version.sh"
+NODE_BIN="$(check_node_version)"
 
 mkdir -p "$LOG_DIR"
 

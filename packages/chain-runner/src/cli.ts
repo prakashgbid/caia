@@ -27,9 +27,12 @@ import { dispatchPhase } from './runner.js';
 import { findPhase } from './spec.js';
 import {
   DEFAULT_BACKOFF_MS,
+  DEFAULT_HEALTHZ_ENDPOINTS,
+  checkHealthzAll,
   preflightAuditDetails,
   preflightSummary,
   retryWithBackoff,
+  summarizeHealthz,
   verifyBootstrap,
 } from './bootstrap.js';
 import {
@@ -38,6 +41,7 @@ import {
   recordStallDetected,
 } from './watchdog.js';
 import { appendAudit } from './audit.js';
+import { doctorExitCode, formatDoctorReport, runDoctor } from './doctor.js';
 import { spawnSync } from 'node:child_process';
 
 interface BaseOptions {
@@ -311,7 +315,7 @@ export function buildProgram(): Command {
 
   attachCommonOptions(program.command('verify-bootstrap'))
     .description(
-      'Block until a wake event lands in audit.jsonl or timeout. Use after registering a scheduled task to prove cron is firing.',
+      'Block until a wake event lands in audit.jsonl or timeout. Use after registering a scheduled task to prove cron is firing. Also pre-flights healthz of mentor + router; exits 3 if either is unhealthy.',
     )
     .option(
       '--wake-interval-sec <n>',
@@ -327,17 +331,58 @@ export function buildProgram(): Command {
       'how often to poll audit.jsonl (seconds)',
       '10',
     )
+    .option('--skip-healthz', 'skip mentor/router healthz pre-flight (CI / tests)')
+    .option(
+      '--healthz-timeout-ms <n>',
+      'per-endpoint healthz timeout (ms)',
+      '2000',
+    )
     .action(
       async (
         cmdOpts: {
           wakeIntervalSec?: string;
           maxWaitSec?: string;
           pollIntervalSec?: string;
+          skipHealthz?: boolean;
+          healthzTimeoutMs?: string;
         },
         cmd: Command,
       ) => {
         const opts = cmd.optsWithGlobals() as BaseOptions & typeof cmdOpts;
         const ctx = ctxFromOpts(opts);
+
+        // Healthz pre-flight: refuse to declare bootstrap healthy if either
+        // the mentor event-bus or the local-llm-router is dark. See
+        // src/bootstrap.ts:DEFAULT_HEALTHZ_ENDPOINTS for rationale.
+        if (!cmdOpts.skipHealthz) {
+          const timeoutMs = Number(cmdOpts.healthzTimeoutMs ?? '2000');
+          const results = await checkHealthzAll(DEFAULT_HEALTHZ_ENDPOINTS, {
+            timeoutMs,
+          });
+          const summary = summarizeHealthz(results);
+          process.stdout.write(`HEALTHZ ${summary}\n`);
+          appendAudit(ctx.paths.auditFile, 'preflight_healthz', {
+            ok: results.every((r) => r.ok),
+            results: results.map((r) => ({
+              name: r.name,
+              url: r.url,
+              ok: r.ok,
+              status: r.status,
+              error: r.error,
+              elapsed_ms: r.elapsedMs,
+            })),
+            stamped_at: new Date().toISOString(),
+          });
+          const failures = results.filter((r) => !r.ok);
+          if (failures.length > 0) {
+            const names = failures.map((r) => r.name).join(',');
+            process.stderr.write(
+              `HEALTHZ_FAIL endpoints=${names} — refusing to declare bootstrap healthy. See \`caia-chain doctor\` for diagnostics.\n`,
+            );
+            process.exit(3);
+          }
+        }
+
         const wakeInterval = Number(cmdOpts.wakeIntervalSec ?? '900');
         const maxWait = Number(cmdOpts.maxWaitSec ?? String(wakeInterval * 2));
         const pollInterval = Number(cmdOpts.pollIntervalSec ?? '10');
@@ -410,6 +455,29 @@ export function buildProgram(): Command {
         process.exit(4);
       },
     );
+
+  program
+    .command('doctor')
+    .description(
+      'On-demand health snapshot: node version, mentor/router healthz, launchd plist state for known labels, last_wake for each chain.',
+    )
+    .option(
+      '--healthz-timeout-ms <n>',
+      'per-endpoint healthz timeout (ms)',
+      '2000',
+    )
+    .option('--json', 'emit machine-readable JSON instead of the text table')
+    .action(async (cmdOpts: { healthzTimeoutMs?: string; json?: boolean }) => {
+      const report = await runDoctor({
+        healthzTimeoutMs: Number(cmdOpts.healthzTimeoutMs ?? '2000'),
+      });
+      if (cmdOpts.json) {
+        process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+      } else {
+        process.stdout.write(`${formatDoctorReport(report)}\n`);
+      }
+      process.exit(doctorExitCode(report));
+    });
 
   program
     .command('retry-cmd')

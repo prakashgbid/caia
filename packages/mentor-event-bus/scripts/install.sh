@@ -59,25 +59,14 @@ if [[ ! -d "${MEMORY_DIR}" ]]; then
     exit 2
 fi
 
-# Resolve node binary path.
+# Refuse to install if node major version doesn't match expected (default 22).
 # The native better-sqlite3 binary in this repo's pnpm store is built against
-# Node 22 (NODE_MODULE_VERSION 127). Prefer node@22 when available so the
-# LaunchAgent doesn't ABI-fail under newer Homebrew node. CAIA_NODE_BIN overrides.
-if [[ -n "${CAIA_NODE_BIN:-}" && -x "${CAIA_NODE_BIN}" ]]; then
-    NODE_BIN="${CAIA_NODE_BIN}"
-elif [[ -x /opt/homebrew/opt/node@22/bin/node ]]; then
-    NODE_BIN="/opt/homebrew/opt/node@22/bin/node"
-elif [[ -x /opt/homebrew/bin/node ]]; then
-    NODE_BIN="/opt/homebrew/bin/node"
-elif [[ -x /usr/local/bin/node ]]; then
-    NODE_BIN="/usr/local/bin/node"
-else
-    NODE_BIN="$(command -v node || true)"
-    if [[ -z "${NODE_BIN}" ]]; then
-        echo "ERROR: node not found." >&2
-        exit 2
-    fi
-fi
+# Node 22 (NODE_MODULE_VERSION 127); loading it under a different major
+# silently crashes the mentor-server at require() time (3-day outage on
+# 2026-05-13). See scripts/lib/check-node-version.sh.
+# shellcheck source=/dev/null
+source "${REPO_ROOT}/scripts/lib/check-node-version.sh"
+NODE_BIN="$(check_node_version)"
 
 # ─── Secret provisioning ────────────────────────────────────────────────────
 mkdir -p "$(dirname "${SECRET_PATH}")"

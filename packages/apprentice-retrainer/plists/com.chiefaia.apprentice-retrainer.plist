@@ -38,6 +38,8 @@
         <string>CURRENT_HOME</string>
         <key>PATH</key>
         <string>CURRENT_PATH</string>
+        <key>CAIA_NODE_BIN</key>
+        <string>CURRENT_NODE_BIN</string>
     </dict>
 
     <key>StartCalendarInterval</key>
