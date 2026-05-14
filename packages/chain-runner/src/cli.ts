@@ -50,6 +50,7 @@ import {
 import { diagnoseStall } from './cascade.js';
 import { chainPaths } from './paths.js';
 import { doctorExitCode, formatDoctorReport, runDoctor } from './doctor.js';
+import { formatReapReport, reapOrphans } from './reap.js';
 import { fireHandoffRefresh } from './handoff-refresh.js';
 import {
   DEFAULT_PROMPT as PREFLIGHT_DEFAULT_PROMPT,
@@ -874,6 +875,47 @@ export function buildProgram(): Command {
       },
     );
 
+  // H-6 (chain-runner-battle-harden phase 6, 2026-05-14). reap-orphans walks
+  // the process tree, finds claude --print workers whose owning phase has
+  // since transitioned out of `in_progress`, and (unless --dry-run) terminates
+  // them. Wake scripts call this at the top of each wake — cheap (ps + state
+  // read).
+  program
+    .command('reap-orphans')
+    .description(
+      'Find claude/bash workers whose owning phase is no longer in_progress and (unless --dry-run) reap them. Returns JSON when --json is set.',
+    )
+    .option('--dry-run', 'list orphans but do not signal them')
+    .option('--chain-id <id>', 'restrict reap to a single chain')
+    .option('--json', 'emit machine-readable JSON')
+    .option(
+      '--term-grace-ms <n>',
+      'grace period between SIGTERM and SIGKILL (ms); default 10000',
+    )
+    .action(
+      async (cmdOpts: {
+        dryRun?: boolean;
+        chainId?: string;
+        json?: boolean;
+        termGraceMs?: string;
+      }) => {
+        const reapOpts: Parameters<typeof reapOrphans>[0] = {
+          dryRun: cmdOpts.dryRun ?? false,
+        };
+        if (cmdOpts.chainId) reapOpts.chainId = cmdOpts.chainId;
+        if (cmdOpts.termGraceMs) reapOpts.termGraceMs = Number(cmdOpts.termGraceMs);
+        const report = await reapOrphans(reapOpts);
+        if (cmdOpts.json) {
+          process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+        } else {
+          process.stdout.write(`${formatReapReport(report)}\n`);
+        }
+        // Exit 0 even when orphans were found; the report is the signal. Wake
+        // scripts treat a non-zero exit as "reap infra broke" rather than
+        // "orphans existed".
+      },
+    );
+
   program
     .command('doctor')
     .description(
@@ -885,17 +927,28 @@ export function buildProgram(): Command {
       '2000',
     )
     .option('--json', 'emit machine-readable JSON instead of the text table')
-    .action(async (cmdOpts: { healthzTimeoutMs?: string; json?: boolean }) => {
-      const report = await runDoctor({
-        healthzTimeoutMs: Number(cmdOpts.healthzTimeoutMs ?? '2000'),
-      });
-      if (cmdOpts.json) {
-        process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-      } else {
-        process.stdout.write(`${formatDoctorReport(report)}\n`);
-      }
-      process.exit(doctorExitCode(report));
-    });
+    .option('--legacy-only', 'emit only V1 sections (node/healthz/plists/chains)')
+    .option('--skip-auth', 'skip auth preflight (faster — does not spawn claude)')
+    .action(
+      async (cmdOpts: {
+        healthzTimeoutMs?: string;
+        json?: boolean;
+        legacyOnly?: boolean;
+        skipAuth?: boolean;
+      }) => {
+        const report = await runDoctor({
+          healthzTimeoutMs: Number(cmdOpts.healthzTimeoutMs ?? '2000'),
+          legacyOnly: cmdOpts.legacyOnly ?? false,
+          skipAuth: cmdOpts.skipAuth ?? false,
+        });
+        if (cmdOpts.json) {
+          process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+        } else {
+          process.stdout.write(`${formatDoctorReport(report)}\n`);
+        }
+        process.exit(doctorExitCode(report));
+      },
+    );
 
   program
     .command('retry-cmd')
