@@ -11,6 +11,8 @@ export * from './bootstrap.js';
 export * from './watchdog.js';
 export * from './classify.js';
 export * from './preflight.js';
+export * from './alerting.js';
+export * from './cascade.js';
 export {
   DEFAULT_RETRY_POLICY,
   backoffSecForAttempt,
