@@ -18,11 +18,33 @@ export interface ParsedMarkdown {
   body: string;
 }
 
+/**
+ * Operator-voice directive prefixes — basenames matching these patterns
+ * are classified as `directive` so the quality rubric's +0.2
+ * operator-voice bonus applies. These prefixes name handoff/landing/
+ * phase records that the operator writes in the same voice as explicit
+ * `_directive.md` files. Pre-2026-05-14 the matcher only recognised
+ * `*directive*` / `feedback_*`, so phase-handoff records (`_phaseN_*`,
+ * `apprentice_*`, `b15_*`, `t25_*`, `r_*`) fell through to `other` and
+ * lost the bonus despite being the highest-signal operator content in
+ * the corpus.
+ */
+const DIRECTIVE_PREFIXES: ReadonlyArray<string> = Object.freeze([
+  '_phase',
+  'apprentice_',
+  'b15_',
+  't25_',
+  'r_'
+]);
+
 /** Classify a memory file by basename. */
 export function classifyMemoryFile(basename: string): string {
   const name = basename.toLowerCase();
 
   if (name.endsWith('_directive.md') || name.includes('directive')) return 'directive';
+  for (const prefix of DIRECTIVE_PREFIXES) {
+    if (name.startsWith(prefix)) return 'directive';
+  }
   if (name.startsWith('feedback_')) return 'feedback';
   if (name.startsWith('proposal_') || name.includes('proposals/')) return 'proposal';
   if (name.includes('registry')) return 'registry';

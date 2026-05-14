@@ -5,6 +5,11 @@
  *
  *   length-band:   0.30 if response length is comfortably inside the
  *                  band [minLen, maxLen]; tapers off at the edges.
+ *                  Distilled rows (`meta.distilled === true`) score
+ *                  against a narrower 150-1500-char band — distillation
+ *                  produces focused Q/A pairs an order of magnitude
+ *                  shorter than the raw memory documents the global
+ *                  band is sized for.
  *   structure:     0.20 if the response has bullets / headers / multi-
  *                  paragraph structure.
  *   operator-voice:0.20 if source is `directive` or `feedback` from
@@ -23,6 +28,23 @@ export interface QualityOptions {
   maxSampleLengthChars: number;
 }
 
+/**
+ * Per-source length-band for distilled Q/A pairs. The global band is
+ * sized for raw memory artifacts (typical 1-15 KB markdown docs);
+ * distilled output is intentionally shorter (typical 200-700 chars).
+ * Scoring distilled rows against the global band drives `lengthScore`
+ * toward zero and forces every distilled sample below the 0.4 quality
+ * gate. The smoke-verification report (2026-05-14) measured mean
+ * `lengthScore = 0.015` on 5 hand-scored distilled samples for exactly
+ * this reason. Recalibration band derived from observed lengths in
+ * `dropped.jsonl` reason `distill-still-low-quality`: min 215, max 719,
+ * mean ~400. The 150-1500 band is bracketed at ~0.7x of min and ~2x of
+ * max so the sweet spot (lo + (hi-lo)*0.4 = 690) lands at the upper end
+ * of the observed distribution.
+ */
+export const DISTILLED_MIN_LEN = 150;
+export const DISTILLED_MAX_LEN = 1500;
+
 const FILLER_PATTERNS: ReadonlyArray<RegExp> = Object.freeze([
   /\bum+\b/gi,
   /\buh+\b/gi,
@@ -36,19 +58,21 @@ export function scoreOne(pair: InstructionPair, opts: QualityOptions): number {
   const response = pair.messages.find((m) => m.role === 'assistant')?.content ?? '';
   const len = response.length;
 
+  // Per-source length-band: distilled rows score against the narrower
+  // 150-1500 band; everything else against the configured global band.
+  const isDistilled = pair.meta.distilled === true;
+  const lo = isDistilled ? DISTILLED_MIN_LEN : opts.minSampleLengthChars;
+  const hi = isDistilled ? DISTILLED_MAX_LEN : opts.maxSampleLengthChars;
+
   // Length floor — too-short samples are unusable; no other component
   // can rescue them. Returning 0 here makes the score-zero contract
   // explicit and matches the normaliser's drop behaviour.
-  if (len < opts.minSampleLengthChars) return 0;
+  if (len < lo) return 0;
 
   // Length band — full credit at midpoint, taper off at edges
   let lengthScore: number;
-  const lo = opts.minSampleLengthChars;
-  const hi = opts.maxSampleLengthChars;
   const sweet = lo + (hi - lo) * 0.4; // sweet spot is in the lower-middle of the band
-  if (len < lo) {
-    lengthScore = 0;
-  } else if (len <= sweet) {
+  if (len <= sweet) {
     lengthScore = 0.3 * ((len - lo) / Math.max(1, sweet - lo));
   } else if (len <= hi) {
     // taper from 0.3 down to 0.15 as we approach hi
