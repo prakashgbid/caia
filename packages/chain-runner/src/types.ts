@@ -238,6 +238,16 @@ export interface LockFile {
   session_id: string;
   started_at: string;
   heartbeat: string;
+  /**
+   * H-24 (chain-runner-battle-harden phase 11, 2026-05-14). SHA-256 of the
+   * canonical-JSON encoding of the rest of the lock fields. Verified on
+   * load — a mismatch indicates the lockfile was truncated, manually edited,
+   * or corrupted by a concurrent writer (which H-22's flock makes
+   * impossible, but we belt-and-suspenders the check anyway). Optional in
+   * the schema so locks written by older binaries still load — load just
+   * skips the verification when the field is absent.
+   */
+  checksum?: string;
 }
 
 export interface AuditEvent {
