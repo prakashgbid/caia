@@ -197,7 +197,7 @@ export function buildApp(opts: ServerOptions = {}): Hono {
     // Runs BEFORE classification so injected context can also flow into the
     // classifier's view of the request. Best-effort: any failure short-circuits
     // back to the un-augmented path without surfacing the error to the caller.
-    let ragDecision: Awaited<ReturnType<typeof runRag>> | null = null;
+    let ragDecision: Awaited<ReturnType<typeof runRag>> | null;
     let augmentedPrompt = userMsg;
     try {
       ragDecision = await runRag(userMsg, { ollamaBaseUrl });
