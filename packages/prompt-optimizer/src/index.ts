@@ -6,6 +6,7 @@
 //
 // Phase 5 of the Local-AI-First build chain.
 
+import { emitOptimizerEvent, newOptimizerRunId } from './mentor-emit.js';
 import { stage1Prepass } from './stage1.js';
 import { stage2Summarize } from './stage2.js';
 import {
@@ -53,6 +54,7 @@ const DEFAULT_BUDGET = {
 export async function optimize(input: OptimizerInput): Promise<OptimizerResult> {
   const startedAt = Date.now();
   const budget = { ...DEFAULT_BUDGET, ...(input.budget ?? {}) };
+  const runId = newOptimizerRunId();
 
   // ─── Stage 1: prepass on every input blob ────────────────────────
 
@@ -101,8 +103,38 @@ export async function optimize(input: OptimizerInput): Promise<OptimizerResult> 
   stage1Metrics.ratio =
     stage1Metrics.tokensIn > 0 ? stage1Metrics.tokensOut / stage1Metrics.tokensIn : 1;
 
+  emitOptimizerEvent('PromptOptimizerStage', {
+    runId,
+    stageNumber: 1,
+    transform: 'stage1-prepass',
+    tokensIn: stage1Metrics.tokensIn,
+    tokensOut: stage1Metrics.tokensOut,
+    durationMs: stage1Metrics.wallMs,
+    noop: stage1Metrics.tokensIn === stage1Metrics.tokensOut,
+  });
+
   // Cheap short-prompt bail-out: under the skip threshold, skip Stage 2/3.
   if (promptTokensRaw < budget.skipStagesUnderTokens) {
+    // Emit explicit skip events so dashboards can distinguish "stage ran but
+    // was a no-op" from "stage didn't run".
+    emitOptimizerEvent('PromptOptimizerStage', {
+      runId,
+      stageNumber: 2,
+      transform: 'stage2-summarize-skipped',
+      tokensIn: 0,
+      tokensOut: 0,
+      durationMs: 0,
+      noop: true,
+    });
+    emitOptimizerEvent('PromptOptimizerStage', {
+      runId,
+      stageNumber: 3,
+      transform: 'stage3-prune-skipped',
+      tokensIn: 0,
+      tokensOut: 0,
+      durationMs: 0,
+      noop: true,
+    });
     const totalWallMs = Date.now() - startedAt;
     return {
       optimizedPrompt: stage1Out,
@@ -164,6 +196,16 @@ export async function optimize(input: OptimizerInput): Promise<OptimizerResult> 
     error: stage2.error,
   };
 
+  emitOptimizerEvent('PromptOptimizerStage', {
+    runId,
+    stageNumber: 2,
+    transform: 'stage2-summarize',
+    tokensIn: stage2Metrics.tokensIn,
+    tokensOut: stage2Metrics.tokensOut,
+    durationMs: stage2Metrics.wallMs,
+    noop: stage2Metrics.tokensIn === stage2Metrics.tokensOut,
+  });
+
   // ─── Stage 3: question-aware prune over assembled prompt ─────────
 
   const segments: PromptSegment[] = [];
@@ -217,6 +259,17 @@ export async function optimize(input: OptimizerInput): Promise<OptimizerResult> 
     skipped: stage3.backend === 'skipped',
     error: stage3.error,
   };
+
+  emitOptimizerEvent('PromptOptimizerStage', {
+    runId,
+    stageNumber: 3,
+    transform:
+      stage3.backend === 'skipped' ? 'stage3-prune-skipped' : 'stage3-prune',
+    tokensIn: stage3Metrics.tokensIn,
+    tokensOut: stage3Metrics.tokensOut,
+    durationMs: stage3Metrics.wallMs,
+    noop: stage3Metrics.tokensIn === stage3Metrics.tokensOut,
+  });
 
   const metrics: OptimizerMetrics = {
     promptTokensRaw,
