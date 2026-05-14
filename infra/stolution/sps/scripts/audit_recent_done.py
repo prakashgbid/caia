@@ -39,11 +39,16 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import json
 import os
+import socket
 import sqlite3
 import sys
 import time
+import urllib.error
+import urllib.request
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -57,6 +62,100 @@ SYNTHETIC_NODE_PREFIXES    = ('test::',)  # methodology §4 Class D — exclude
 
 DEFAULT_DB    = Path.home() / '.sps' / 'sps.db'
 DEFAULT_INBOX = Path.home() / 'Documents' / 'projects' / 'agent-memory' / 'INBOX.md'
+
+# Mentor event-bus HTTP defaults (override via env CAIA_MENTOR_EVENT_BUS_URL).
+DEFAULT_MENTOR_BASE_URL = 'http://127.0.0.1:5180'
+MENTOR_EMIT_TIMEOUT_SEC = 2.0
+
+
+# ---- Mentor event-bus emit (fire-and-forget) --------------------------------
+
+def _load_event_bus_secret() -> str | None:
+    """Resolve the shared HMAC secret used by the mentor-event-bus HTTP API.
+
+    Mirrors packages/mentor-event-bus/src/auth.ts loadSecret(): prefer
+    CAIA_EVENT_BUS_SECRET_PATH (file), fall back to CAIA_EVENT_BUS_SECRET.
+    Returns None when not configured — emits become no-ops in that case so
+    the audit-cron remains functional on hosts without mentor provisioning.
+    """
+    path = os.environ.get('CAIA_EVENT_BUS_SECRET_PATH')
+    if path:
+        try:
+            raw = Path(path).read_text(encoding='utf-8').strip()
+            if len(raw) >= 32:
+                return raw
+        except OSError:
+            pass
+    env_secret = os.environ.get('CAIA_EVENT_BUS_SECRET')
+    if env_secret and len(env_secret) >= 32:
+        return env_secret
+    return None
+
+
+def _emit_mentor_event(event_type: str,
+                       payload: dict[str, Any],
+                       *,
+                       correlation_id: str | None = None,
+                       process_name: str = 'audit_recent_done',
+                       base_url_override: str | None = None,
+                       secret_override: str | None = None) -> bool:
+    """Fire-and-forget HTTP POST of a single mentor event.
+
+    Returns True iff the event was successfully ingested (HTTP 2xx).
+    Returns False for any failure path — but NEVER raises. The audit-cron
+    must keep running even when the event-bus is down.
+
+    Auth matches packages/mentor-event-bus/src/auth.ts:
+        X-Caia-Timestamp: <ms-since-epoch>
+        X-Caia-Signature: hex(hmac-sha256(secret, "<ts>:<body>"))
+    """
+    try:
+        secret = secret_override if secret_override is not None else _load_event_bus_secret()
+        if secret is None:
+            return False
+        base_url = (base_url_override
+                    or os.environ.get('CAIA_MENTOR_EVENT_BUS_URL')
+                    or DEFAULT_MENTOR_BASE_URL)
+        now_ms = int(time.time() * 1000)
+        emitted_at = datetime.fromtimestamp(now_ms / 1000.0, tz=timezone.utc) \
+            .strftime('%Y-%m-%dT%H:%M:%SZ')
+        event = {
+            'id': f'ev_{now_ms:x}_{uuid.uuid4().hex[:16]}',
+            'event_type': event_type,
+            'schema_version': 1,
+            'correlation_id': correlation_id,
+            'parent_event_id': None,
+            'emitted_at': emitted_at,
+            'hostname': socket.gethostname(),
+            'process_name': process_name,
+            'payload_json': json.dumps(payload, default=str),
+            'validation_failed': 0,
+        }
+        body = json.dumps({'events': [event]})
+        body_bytes = body.encode('utf-8')
+        ts = str(now_ms)
+        sig = hmac.new(
+            secret.encode('utf-8'),
+            f'{ts}:{body}'.encode('utf-8'),
+            hashlib.sha256,
+        ).hexdigest()
+        req = urllib.request.Request(
+            url=base_url.rstrip('/') + '/v1/events',
+            data=body_bytes,
+            method='POST',
+            headers={
+                'content-type': 'application/json; charset=utf-8',
+                'content-length': str(len(body_bytes)),
+                'x-caia-timestamp': ts,
+                'x-caia-signature': sig,
+            },
+        )
+        with urllib.request.urlopen(req, timeout=MENTOR_EMIT_TIMEOUT_SEC) as resp:
+            return 200 <= resp.status < 300
+    except (urllib.error.URLError, OSError, socket.timeout, ValueError):
+        return False
+    except Exception:  # noqa: BLE001 — emit MUST be silent on any failure
+        return False
 
 # ---- Bucket helpers ---------------------------------------------------------
 
@@ -397,6 +496,42 @@ def run_audit(db_path: Path,
                 except OSError as exc:
                     return {'ok': False, 'inbox_error': str(exc), **payload,
                             'flip': flip, 'per_node_scores': per_node_scores}
+
+            # Emit one mentor event per low-scoring finding so the apprentice
+            # corpus / dashboards can see audit results in real time. Schema:
+            # DoDViolation already exists in mentor-event-bus and fits the
+            # shape "this node failed the methodology rubric".
+            for entry in per_node_scores:
+                if entry['score'] <= 2:
+                    _emit_mentor_event(
+                        'DoDViolation',
+                        {
+                            'taskId': str(entry['node_id']),
+                            'rule': f"audit-rubric:score<=2:{entry['score']}",
+                            'description': (
+                                f"node={entry['item_code']} "
+                                f"score={entry['score']} reason={entry['reason']}"
+                            )[:500],
+                        },
+                        correlation_id=audit_run_id,
+                    )
+            # And one summary event per audit run (per phase prompt). We piggy-
+            # back the existing HallucinationFlagged schema: the audit run is
+            # the "source" and the description carries the aggregate counts.
+            _emit_mentor_event(
+                'HallucinationFlagged',
+                {
+                    'description': (
+                        f"audit_run={audit_run_id} bucket={bucket_start}/{bucket_end} "
+                        f"audited={nodes_audited} passing={nodes_passing} "
+                        f"score_le_2={nodes_score_le_2} "
+                        f"reliability_pct={reliability_pct} "
+                        f"breached={1 if breached else 0} flip={flip}"
+                    )[:500],
+                    'source': 'audit_recent_done',
+                },
+                correlation_id=audit_run_id,
+            )
 
         return {
             'ok': True, 'flip': flip,
