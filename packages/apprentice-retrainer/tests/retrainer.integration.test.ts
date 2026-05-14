@@ -15,7 +15,8 @@ import {
   createFakeEvalHarness,
   createFakeServing,
   createFakeTrainer,
-  createInMemoryFs
+  createInMemoryFs,
+  passingManifest
 } from './helpers/fakes.js';
 
 describe('ApprenticeRetrainer integration — 5-cycle weekly cadence', () => {
@@ -47,6 +48,10 @@ describe('ApprenticeRetrainer integration — 5-cycle weekly cadence', () => {
         2
       )
     );
+
+    // Manifests with passing quality so cycles 2 + 5 clear the APP.2 gate.
+    fs.put('/c/2026-05-13/manifest.json', passingManifest({ totals: { final: 700 } }));
+    fs.put('/c/2026-05-20/manifest.json', passingManifest({ totals: { final: 1500 } }));
 
     // Scripts: cycle 2 (aged → good train), cycle 5 (aged → good train).
     const aggregator = createFakeCorpusAggregator([

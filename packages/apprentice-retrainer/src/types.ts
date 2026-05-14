@@ -109,6 +109,7 @@ export type RetrainerOutcome =
   | 'trained-and-rejected'
   | 'trained-and-canary-promoted'
   | 'canary-held-prompting-operator'
+  | 'gated-pending-quality'
   | 'failed';
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -121,6 +122,7 @@ export type RetrainerRunResult =
   | { kind: 'trained-and-rejected'; adapterPath: string; reason: string; evalReport?: EvalAdapterReport }
   | { kind: 'trained-and-canary-promoted'; adapterPath: string; canaryPercent: number; evalReport?: EvalAdapterReport }
   | { kind: 'canary-held-prompting-operator'; canary: RegistryEntry; daysHeld: number }
+  | { kind: 'gated-pending-quality'; avg: number; count: number; reason: string }
   | { kind: 'failed'; error: { message: string; kind: string } };
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -148,6 +150,8 @@ export interface ApprenticeRetrainerConfig {
   digestPath?: string;
   /** Default: ~/Documents/projects/apprentice/retrainer.lock */
   lockfilePath?: string;
+  /** Default: ~/.chiefaia/apprentice-retrainer/audit.jsonl */
+  auditPath?: string;
 
   /** Default: 500 — minimum new pairs to trigger retrain. */
   retrainThreshold?: number;
@@ -159,6 +163,10 @@ export interface ApprenticeRetrainerConfig {
   defaultCanaryPercent?: number;
   /** Default: 3 — days a canary must hold before operator-prompt. */
   canaryHoldDays?: number;
+  /** Default: 0.55 — minimum corpus quality average (weighted bin midpoint) below which the retrainer gates. */
+  qualityFloorAvg?: number;
+  /** Default: 300 — minimum corpus.totals.final below which the retrainer gates. */
+  qualityFloorCount?: number;
 
   // — injected pipelines (Option E) —
   corpusAggregator?: CorpusAggregator;

@@ -19,6 +19,17 @@ export {
   shouldRetrainGivenDelta
 } from './decision.js';
 export type { Decision, PostTrainDecision, DecisionInput, PostTrainDecisionInput } from './decision.js';
+export {
+  appendAuditRow,
+  averageQualityFromHistogram,
+  decideQualityGate
+} from './quality-gate.js';
+export type {
+  AuditAppendOptions,
+  CorpusManifestLike,
+  QualityGateDecision,
+  QualityGateInput
+} from './quality-gate.js';
 
 export type {
   ApprenticeRetrainerConfig,
