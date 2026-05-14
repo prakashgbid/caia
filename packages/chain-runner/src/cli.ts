@@ -1,7 +1,10 @@
 import { Command } from 'commander';
 import { existsSync, unlinkSync } from 'node:fs';
 import {
+  adjudicate,
   computeNextPhase,
+  evaluateNextPhase,
+  forceFail,
   initState,
   loadContext,
   loadState,
@@ -9,12 +12,15 @@ import {
   markFailed,
   markInProgress,
   pause,
+  promoteFailedToBlocked,
+  reArm,
   recordWake,
   resume,
   saveState,
   setBudget,
   tryLoadState,
 } from './state.js';
+import type { PhaseStatus } from './types.js';
 import {
   HEARTBEAT_GRACE_SEC,
   acquireLock,
@@ -147,11 +153,20 @@ export function buildProgram(): Command {
     });
 
   attachCommonOptions(program.command('next-phase'))
-    .description('Print the id of the next dispatchable phase')
-    .action((opts: BaseOptions) => {
+    .description(
+      'Print the id of the next dispatchable phase. H-21: --read-only skips the failed→blocked promotion (use `promote-blocked` first for the explicit two-step contract).',
+    )
+    .option(
+      '--read-only',
+      'evaluate without mutating state.json (no promote, no streak update, no audit emit). Equivalent to evaluateNextPhase(state, spec).',
+    )
+    .action((cmdOpts: { readOnly?: boolean }, cmd: Command) => {
+      const opts = cmd.optsWithGlobals() as BaseOptions;
       const ctx = ctxFromOpts(opts);
       const state = loadState(ctx);
-      const result = computeNextPhase(ctx, state);
+      const result = cmdOpts.readOnly
+        ? evaluateNextPhase(state, ctx.spec)
+        : computeNextPhase(ctx, state);
       switch (result.kind) {
         case 'paused':
           process.stdout.write('PAUSED\n');
@@ -178,6 +193,27 @@ export function buildProgram(): Command {
         case 'phase_id':
           process.stdout.write(`${result.id}\n`);
           break;
+      }
+    });
+
+  // H-21 (chain-runner-battle-harden phase 7, 2026-05-14). promote-blocked is
+  // the explicit mutation half of the next-phase decision: walks every failed
+  // phase, applies the H-9 retry policy, and flips to `blocked` (with a
+  // phase_blocked audit event) when retries are exhausted or the policy
+  // action is terminal. Wake scripts call this between check-lock-staleness
+  // and next-phase so the read-only next-phase no longer needs to mutate.
+  attachCommonOptions(program.command('promote-blocked'))
+    .description(
+      'Promote every failed phase whose retry policy is exhausted to `blocked`. Wake-script step between check-lock-staleness and next-phase.',
+    )
+    .action((opts: BaseOptions) => {
+      const ctx = ctxFromOpts(opts);
+      const state = loadState(ctx);
+      const promoted = promoteFailedToBlocked(ctx, state);
+      if (promoted.length === 0) {
+        process.stdout.write('PROMOTE_BLOCKED none\n');
+      } else {
+        process.stdout.write(`PROMOTE_BLOCKED ${promoted.join(',')}\n`);
       }
     });
 
@@ -254,6 +290,126 @@ export function buildProgram(): Command {
           markFailed(ctx, phaseId, r);
         }
         clearLock(ctx);
+      },
+    );
+
+  // H-8 (chain-runner-battle-harden phase 7, 2026-05-14). Adjudication verbs.
+  // Replace operator hand-edits of state.json with sanctioned, audited
+  // transitions. See state.ts:adjudicate / reArm / forceFail for semantics.
+  //
+  // Reason is REQUIRED non-empty. Backups land in <chain-dir>/.backups/.
+  // Every transition emits a structured audit event and fires the
+  // SESSION_HANDOFF refresh hook.
+  attachCommonOptions(program.command('adjudicate'))
+    .argument('<phase-id>')
+    .requiredOption(
+      '--to <state>',
+      'target state: pending | in_progress | failed | blocked | done',
+    )
+    .requiredOption('--reason <text>', 'operator-supplied reason (required, non-empty)')
+    .option(
+      '--evidence <kv>',
+      'key=value evidence pair (repeatable, e.g. --evidence pr=https://...)',
+      (val: string, acc: string[]) => acc.concat(val),
+      [] as string[],
+    )
+    .option(
+      '--strict',
+      'refuse adjudicate --to done when no pr/artifact/verification evidence supplied',
+    )
+    .description(
+      'Adjudicate a phase to an arbitrary state. Writes a state.json backup, validates the transition, emits a phase_adjudicated audit event, and refreshes SESSION_HANDOFF.',
+    )
+    .action(
+      (
+        phaseId: string,
+        cmdOpts: {
+          to: string;
+          reason: string;
+          evidence?: string[];
+          strict?: boolean;
+        },
+        cmd: Command,
+      ) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions;
+        const ctx = ctxFromOpts(opts);
+        const evidence: Record<string, unknown> = {};
+        for (const kv of cmdOpts.evidence ?? []) {
+          // Use only the first '=' so URLs (which contain '=') survive intact.
+          const eq = kv.indexOf('=');
+          if (eq > 0) {
+            evidence[kv.slice(0, eq).trim()] = kv.slice(eq + 1).trim();
+          }
+        }
+        const adjudicateOpts: Parameters<typeof adjudicate>[4] = {
+          evidence,
+        };
+        if (cmdOpts.strict) adjudicateOpts.strict = true;
+        try {
+          const r = adjudicate(
+            ctx,
+            phaseId,
+            cmdOpts.to as PhaseStatus,
+            cmdOpts.reason,
+            adjudicateOpts,
+          );
+          process.stdout.write(
+            `ADJUDICATED phase=${phaseId} from=${r.from} to=${r.to} backup=${r.backup}\n`,
+          );
+        } catch (err) {
+          fail((err as Error).message);
+        }
+      },
+    );
+
+  attachCommonOptions(program.command('re-arm'))
+    .argument('<phase-id>')
+    .requiredOption('--reason <text>', 'operator-supplied reason (required, non-empty)')
+    .option('--reset-attempts', 'set ps.attempts back to 0 alongside the status flip')
+    .option('--force', 'lift the blocked-only guard (allow re-arm from non-blocked states)')
+    .description(
+      'Lift a phase from `blocked` back to `pending`. Writes a state.json backup, emits phase_rearmed, refreshes SESSION_HANDOFF.',
+    )
+    .action(
+      (
+        phaseId: string,
+        cmdOpts: { reason: string; resetAttempts?: boolean; force?: boolean },
+        cmd: Command,
+      ) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions;
+        const ctx = ctxFromOpts(opts);
+        const reArmOpts: Parameters<typeof reArm>[3] = {};
+        if (cmdOpts.resetAttempts) reArmOpts.resetAttempts = true;
+        if (cmdOpts.force) reArmOpts.force = true;
+        try {
+          const r = reArm(ctx, phaseId, cmdOpts.reason, reArmOpts);
+          process.stdout.write(
+            `REARMED phase=${phaseId} from=${r.from} attempts=${r.attemptsBefore}->${r.attemptsAfter} backup=${r.backup}\n`,
+          );
+        } catch (err) {
+          fail((err as Error).message);
+        }
+      },
+    );
+
+  attachCommonOptions(program.command('force-fail'))
+    .argument('<phase-id>')
+    .requiredOption('--reason <text>', 'operator-supplied reason (required, non-empty)')
+    .description(
+      'Operator-mark a phase as failed (class=unknown, source=operator_force_fail). Writes a backup, emits phase_force_failed, refreshes SESSION_HANDOFF.',
+    )
+    .action(
+      (phaseId: string, cmdOpts: { reason: string }, cmd: Command) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions;
+        const ctx = ctxFromOpts(opts);
+        try {
+          const r = forceFail(ctx, phaseId, cmdOpts.reason);
+          process.stdout.write(
+            `FORCE_FAILED phase=${phaseId} from=${r.from} backup=${r.backup}\n`,
+          );
+        } catch (err) {
+          fail((err as Error).message);
+        }
       },
     );
 
