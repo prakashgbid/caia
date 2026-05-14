@@ -26,6 +26,23 @@ function genSessionId(phaseId: number): string {
   return `phase${phaseId}-${ts}-${process.pid}`;
 }
 
+// H-1 extension (chain-runner-battle-harden phase 2, 2026-05-14):
+// inject the standing autonomy directive into every spawned prompt so
+// future chains don't need to duplicate it in every YAML phase. Operator
+// hard rule 2026-05-14: spawned workers decide-and-act, never ask-and-wait.
+//
+// The directive is concise on purpose — long preambles waste worker
+// context. The operator-only carve-out list is the lowest-cardinality
+// part because the worker needs it to know which decisions to defer.
+const AUTONOMY_DIRECTIVE = `## Autonomy directive (standing rule, 2026-05-14)
+You are a spawned worker — operate fully autonomously. Decide-and-act, do NOT ask-and-wait.
+- Do thorough analysis first, make the best informed call, execute, then inform via the phase report.
+- Banned phrases: "Would you like / Should I / Want me to / Your call / Path A or B?" — kill the draft, decide, ship.
+- The ONLY operator-only actions you may defer are: interactive auth/login (gh / claude logout-login), account or billing changes, physical hardware. Flag those into the phase report with \`OPERATOR_ACTION_REQUIRED: <description>\` AND call \`caia-chain emit-alert --type operator_action_required --severity high\` (alerting backbone lands in phase 5; until then, append to ~/.caia/chain-watchdog/INBOX.md).
+- Apply standing rules unprompted: subscription-only billing, bypassPermissions for nested spawns, worktree isolation, true-zero before new PR, gate-mark-done.sh before mark-done.
+- For everything else: pick a path, execute, document the decision in the phase report.
+`;
+
 export function buildPromptFile(
   ctx: StateContext,
   phaseId: number,
@@ -42,6 +59,7 @@ Operate fully autonomously:
 - DO NOT return for clarification. Make best informed decisions and document them.
 - Stay within budget: max ${maxMinutes} minutes wall-clock.
 
+${AUTONOMY_DIRECTIVE}
 Your task starts below:
 ---
 `;

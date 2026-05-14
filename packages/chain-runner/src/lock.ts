@@ -5,10 +5,12 @@ import { isoNow, parseIso } from './time.js';
 import {
   ensurePhaseEntry,
   loadState,
+  markAutoAdjudicated,
   markFailed,
   type StateContext,
 } from './state.js';
-import type { LockFile } from './types.js';
+import { checkArtifact, classifyStaleLock } from './classify.js';
+import type { LockFile, PhaseFailure } from './types.js';
 
 export const HEARTBEAT_GRACE_SEC = 3600; // 60 min
 
@@ -78,9 +80,29 @@ export type StalenessResult =
       reason: 'heartbeat' | 'timeout';
       ageSec: number;
       capSec?: number;
+      failure: PhaseFailure;
+    }
+  | {
+      kind: 'auto_adjudicated';
+      phaseId: number;
+      reason: 'heartbeat';
+      ageSec: number;
+      failure: PhaseFailure;
     };
 
-export function checkLockStaleness(ctx: StateContext): StalenessResult {
+export interface CheckLockStalenessOptions {
+  /** Optional dispatch log path to sniff for rate-limit / auth / spawn signals. */
+  dispatchLogPath?: string | null;
+}
+
+function isAutoResolveEnabled(ctx: StateContext): boolean {
+  return ctx.spec.chain_config?.auto_resolve_hung_post_success === true;
+}
+
+export function checkLockStaleness(
+  ctx: StateContext,
+  opts: CheckLockStalenessOptions = {},
+): StalenessResult {
   const lock = loadLock(ctx);
   if (!lock) return { kind: 'no_lock' };
 
@@ -94,36 +116,78 @@ export function checkLockStaleness(ctx: StateContext): StalenessResult {
   const capSec = (ps.max_minutes ?? 45) * 60;
 
   if (ageSec > HEARTBEAT_GRACE_SEC) {
-    markFailed(
-      ctx,
-      String(lock.phase_id),
-      `stale_lock heartbeat_age_sec=${Math.floor(ageSec)}`,
-    );
+    const failure = classifyStaleLock(ctx, lock, {
+      trigger: 'heartbeat',
+      hb_age_sec: ageSec,
+      run_sec: runSec,
+      cap_sec: capSec,
+      dispatchLogPath: opts.dispatchLogPath ?? null,
+    });
+    // D-1 auto-adjudicate: if the classifier observed worker_hung_post_success
+    // AND the chain opted in via chain_config.auto_resolve_hung_post_success,
+    // and the artifact already validates success_criteria, mark the phase
+    // done and emit phase_auto_adjudicated instead of phase_failed.
+    if (
+      failure.class === 'worker_hung_post_success' &&
+      isAutoResolveEnabled(ctx)
+    ) {
+      const art = checkArtifact(ctx, lock.phase_id);
+      const grepOk = art.grep_matched !== false;
+      if (art.exists && art.meets_min_bytes && grepOk) {
+        markAutoAdjudicated(ctx, String(lock.phase_id), failure, {
+          artifact_path: art.path,
+          artifact_size_bytes: art.size_bytes,
+          grep_matched: art.grep_matched,
+          hb_age_sec: Math.floor(ageSec),
+        });
+        clearLock(ctx);
+        appendAudit(ctx.paths.auditFile, 'lock_cleared', {
+          phase_id: lock.phase_id,
+          reason: 'heartbeat',
+          age_sec: Math.floor(ageSec),
+          disposition: 'auto_adjudicated',
+        });
+        return {
+          kind: 'auto_adjudicated',
+          phaseId: lock.phase_id,
+          reason: 'heartbeat',
+          ageSec,
+          failure,
+        };
+      }
+    }
+    markFailed(ctx, String(lock.phase_id), failure);
     clearLock(ctx);
     appendAudit(ctx.paths.auditFile, 'lock_cleared', {
       phase_id: lock.phase_id,
       reason: 'heartbeat',
       age_sec: Math.floor(ageSec),
+      class: failure.class,
     });
     return {
       kind: 'cleared',
       phaseId: lock.phase_id,
       reason: 'heartbeat',
       ageSec,
+      failure,
     };
   }
   if (runSec > capSec) {
-    markFailed(
-      ctx,
-      String(lock.phase_id),
-      `runtime_exceeded run_sec=${Math.floor(runSec)} cap_sec=${capSec}`,
-    );
+    const failure = classifyStaleLock(ctx, lock, {
+      trigger: 'timeout',
+      hb_age_sec: ageSec,
+      run_sec: runSec,
+      cap_sec: capSec,
+      dispatchLogPath: opts.dispatchLogPath ?? null,
+    });
+    markFailed(ctx, String(lock.phase_id), failure);
     clearLock(ctx);
     appendAudit(ctx.paths.auditFile, 'lock_cleared', {
       phase_id: lock.phase_id,
       reason: 'timeout',
       run_sec: Math.floor(runSec),
       cap_sec: capSec,
+      class: failure.class,
     });
     return {
       kind: 'cleared',
@@ -131,6 +195,7 @@ export function checkLockStaleness(ctx: StateContext): StalenessResult {
       reason: 'timeout',
       ageSec: runSec,
       capSec,
+      failure,
     };
   }
   return {

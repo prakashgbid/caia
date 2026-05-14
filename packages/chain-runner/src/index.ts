@@ -9,6 +9,7 @@ export * from './runner.js';
 export * from './time.js';
 export * from './bootstrap.js';
 export * from './watchdog.js';
+export * from './classify.js';
 export {
   mergeOrFail,
   viewPR,

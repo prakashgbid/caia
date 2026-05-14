@@ -22,9 +22,50 @@ export interface ChainDefaults {
   heartbeat_interval_sec?: number;
 }
 
+// Operator-decision flags surfaced as chain_config in the spec YAML. Loader
+// passes them through verbatim; only the keys consumed by runtime today are
+// declared here, but [k: string]: unknown keeps future opt-in flags painless.
+export interface ChainConfig {
+  auto_resolve_hung_post_success?: boolean;
+  max_concurrent?: number;
+  alert_channels?: string[];
+  none_eligible_alert_threshold?: number;
+  account_quota_reset_aware?: boolean;
+  acceptance_enforce_default?: 'warn' | 'strict';
+  [k: string]: unknown;
+}
+
 export interface ChainSpec {
   defaults?: ChainDefaults;
+  chain_config?: ChainConfig;
   phases: PhaseDefinition[];
+}
+
+// H-1 (phase 2 of chain-runner-battle-harden, 2026-05-14): typed failure
+// classification. Replaces the single `stale_lock` string reason with a
+// closed enum captured at detection time. Maps to gap-analysis §1.1 F-01..F-15.
+export type FailureClass =
+  | 'worker_no_start_rate_limit'
+  | 'worker_no_start_auth_failure'
+  | 'worker_no_start_binary_missing'
+  | 'worker_no_start_spawn_error'
+  | 'worker_no_start_bad_args'
+  | 'worker_hung_post_success'
+  | 'worker_hung_mid_work'
+  | 'worker_crashed'
+  | 'mark_done_failed'
+  | 'artifact_missing'
+  | 'artifact_malformed'
+  | 'pr_unmerged_at_done'
+  | 'acceptance_failed'
+  | 'runtime_exceeded'
+  | 'unknown';
+
+export interface PhaseFailure {
+  class: FailureClass;
+  reason: string;
+  detected_at: string;
+  evidence: Record<string, unknown>;
 }
 
 export interface PhaseState {
@@ -36,6 +77,7 @@ export interface PhaseState {
   completed_at: string | null;
   session_id: string | null;
   error: string | null;
+  failure?: PhaseFailure | null;
 }
 
 export interface StateFile {
