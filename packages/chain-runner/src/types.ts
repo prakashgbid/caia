@@ -13,6 +13,15 @@ export interface PhaseDefinition {
   max_minutes?: number;
   prompt_template?: string;
   success_criteria?: Record<string, unknown>;
+  /**
+   * H-11 (chain-runner-battle-harden phase 8, 2026-05-14). Per-phase override
+   * for the staleness grace window (seconds). When omitted the phase inherits
+   * `defaults.heartbeat_grace_sec` from the spec, which itself falls back to
+   * the `DEFAULT_HEARTBEAT_GRACE_SEC = 1800` constant in state.ts.
+   * Legit-slow phases (Phase 11 of self-hosting chains often take >30 min) can
+   * widen the window; impatient detection phases can narrow it.
+   */
+  heartbeat_grace_sec?: number;
   [k: string]: unknown;
 }
 
@@ -41,6 +50,12 @@ export interface ChainDefaults {
   max_retries?: number;
   max_minutes?: number;
   heartbeat_interval_sec?: number;
+  /**
+   * H-11 (chain-runner-battle-harden phase 8, 2026-05-14). Chain-wide
+   * heartbeat staleness grace (seconds). Per-phase overrides win; this is
+   * the second-tier fallback. Omitted → DEFAULT_HEARTBEAT_GRACE_SEC (1800).
+   */
+  heartbeat_grace_sec?: number;
   /** H-9: per-FailureClass retry policy. Missing classes inherit DEFAULT_RETRY_POLICY. */
   retry_policy?: Partial<Record<FailureClass, RetryPolicyEntry>>;
 }
@@ -113,6 +128,15 @@ export interface PhaseState {
    * retry policy for the class has a `backoff_sec` schedule.
    */
   backoff_until?: string | null;
+  /**
+   * H-11 (chain-runner-battle-harden phase 8, 2026-05-14). Resolved at
+   * buildInitialState from (phase override → chain default → 1800s) and
+   * frozen into state so checkLockStaleness reads the per-phase grace
+   * without re-walking the spec. Optional in the schema so older state
+   * files load without a migration; lock.checkLockStaleness falls back to
+   * DEFAULT_HEARTBEAT_GRACE_SEC when undefined.
+   */
+  heartbeat_grace_sec?: number;
 }
 
 export interface StateFile {

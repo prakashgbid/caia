@@ -95,6 +95,25 @@ You are a spawned worker — operate fully autonomously. Decide-and-act, do NOT 
 - For everything else: pick a path, execute, document the decision in the phase report.
 `;
 
+// H-12 (chain-runner-battle-harden phase 8, 2026-05-14). Worker-level
+// heartbeat instruction. The bash wrapper still fires its own background
+// subshell heartbeat — this is belt-and-suspenders. If the subshell dies
+// (parent shell exits, signal-handler bug, host suspend/resume) the worker
+// itself still reports liveness between tool turns, and the staleness path
+// won't kill it spuriously. Cadence numbers are filled in below from the
+// chain spec so legit-slow phases can stretch the interval to match their
+// per-phase `heartbeat_grace_sec`.
+const HEARTBEAT_INSTRUCTION_TEMPLATE = (
+  cadenceSec: number,
+  cadenceMin: number,
+): string => `## Worker-level heartbeat (H-12, 2026-05-14)
+The chain runner now expects you to emit a liveness heartbeat between tool turns. The bash dispatcher also fires one in the background — your in-prompt heartbeats are the belt-and-suspenders that survive if the background subshell dies.
+
+Cadence: invoke \`caia-chain heartbeat <session>\` **once every 5 tool calls, or every ${cadenceMin} minutes of wall-clock work, whichever comes first** (recommended interval: ~${cadenceSec}s). \`<session>\` is the session id passed to this prompt's dispatch. The call is cheap (single state.json write) and idempotent.
+
+If you skip heartbeats and the worker stalls past the phase's \`heartbeat_grace_sec\` window, the next wake will classify the lock as stale and the phase will fail. Heartbeating loudly is the cheapest insurance against a false-stale.
+`;
+
 export function buildPromptFile(
   ctx: StateContext,
   phaseId: number,
@@ -103,6 +122,14 @@ export function buildPromptFile(
   const phase = findPhase(ctx.spec, phaseId);
   const maxMinutes =
     phase.max_minutes ?? ctx.spec.defaults?.max_minutes ?? 45;
+  // H-12. Cadence advice in the prompt header. Resolution order matches
+  // buildInitialState's H-11 grace resolution one step removed:
+  //   chain defaults.heartbeat_interval_sec → 600s (10 min) fallback.
+  // Per-phase override of cadence is not currently supported; the
+  // single-knob design keeps the prompt readable and the worker's
+  // mental model simple.
+  const cadenceSec = ctx.spec.defaults?.heartbeat_interval_sec ?? 600;
+  const cadenceMin = Math.max(1, Math.round(cadenceSec / 60));
   const header = `# PHASE ${phaseId} OF ${totalPhases} — autonomous run
 
 You are running phase ${phaseId} of the chain. The orchestrator dispatched you with all context.
@@ -111,6 +138,7 @@ Operate fully autonomously:
 - DO NOT return for clarification. Make best informed decisions and document them.
 - Stay within budget: max ${maxMinutes} minutes wall-clock.
 
+${HEARTBEAT_INSTRUCTION_TEMPLATE(cadenceSec, cadenceMin)}
 ${AUTONOMY_DIRECTIVE}
 Your task starts below:
 ---

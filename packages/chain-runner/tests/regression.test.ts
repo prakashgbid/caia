@@ -33,7 +33,7 @@ import type { LockFile } from '../src/types.js';
 //   P01_fresh_init                  — fresh state returns phase 1 in 5 boot orders
 //   P02_next_phase_advancement      — mark-done N advances to N+1 for N in {1..5}
 //   P03_lock_live                   — lock present, age < 60min, returns IN_PROGRESS
-//   P04_stale_heartbeat             — heartbeat older than 60min triggers staleness recovery
+//   P04_stale_heartbeat             — heartbeat older than the per-phase grace (default 30min after H-11) triggers staleness recovery
 //   P05_runtime_timeout             — runtime > max_minutes triggers staleness recovery
 //   P06_retries_exhausted           — phase failed > max_retries → blocked, skipped
 //   P07_paused                      — paused state suppresses dispatch
@@ -115,15 +115,20 @@ describe('P03_lock_live', () => {
 });
 
 describe('P04_stale_heartbeat', () => {
-  // Heartbeats older than 60min ago should trigger staleness clearing.
+  // H-11 (phase 8, 2026-05-14). The default grace is now 1800s (30 min);
+  // ages used here [1, 2, 4, 12, 25]h all comfortably exceed it. The 4h case
+  // is retained as an above-old-default-3600s anchor so this suite still
+  // proves we haven't regressed into a >1h-grace surprise. The 1h case is
+  // the tight-margin probe just past the new 30-min default.
+  const ageHours = [1, 2, 4, 12, 25];
   for (let i = 1; i <= 5; i++) {
-    it(`case ${i}: heartbeat aged ${[2, 3, 6, 12, 25][i - 1]}h → cleared`, () => {
+    it(`case ${i}: heartbeat aged ${ageHours[i - 1]}h → cleared`, () => {
       freshInit();
       markInProgress(ctx, '1', `sess-stale-${i}`);
       acquireLock(ctx, 1, `sess-stale-${i}`);
       const lock = loadLock(ctx);
       expect(lock).not.toBeNull();
-      const hoursAgo = [2, 3, 6, 12, 25][i - 1] ?? 2;
+      const hoursAgo = ageHours[i - 1] ?? 2;
       const past = new Date(Date.now() - hoursAgo * 3600 * 1000)
         .toISOString()
         .replace(/\.\d{3}Z$/, 'Z');
@@ -379,7 +384,10 @@ describe('regression coverage gates', () => {
     expect(s.phase_status['13']).toBeDefined();
   });
 
-  it('HEARTBEAT_GRACE_SEC is 60 minutes', () => {
-    expect(HEARTBEAT_GRACE_SEC).toBe(3600);
+  it('HEARTBEAT_GRACE_SEC fallback constant is 30 minutes (H-11 default)', () => {
+    // H-11 (phase 8, 2026-05-14). The exported constant is now only the
+    // legacy fallback for unmigrated PhaseStates. New chains resolve grace
+    // from phase override → chain default → DEFAULT_HEARTBEAT_GRACE_SEC.
+    expect(HEARTBEAT_GRACE_SEC).toBe(1800);
   });
 });

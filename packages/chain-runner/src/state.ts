@@ -26,6 +26,15 @@ import type {
 export const SCHEMA_VERSION = 1;
 export const DEFAULT_BUDGET_CAP_PCT = 25;
 
+// H-11 (chain-runner-battle-harden phase 8, 2026-05-14). Default heartbeat
+// staleness grace in seconds. Reduced from the pre-H-11 60-minute constant
+// to 30 minutes: observed worker wakes fire every 15 min, so two missed
+// heartbeats is sufficient evidence of a hung worker. Phases can widen the
+// window via `phases[].heartbeat_grace_sec`; chains can widen via
+// `defaults.heartbeat_grace_sec`. lock.ts:HEARTBEAT_GRACE_SEC remains as the
+// final fallback for unmigrated state files.
+export const DEFAULT_HEARTBEAT_GRACE_SEC = 1800;
+
 export interface StateContext {
   paths: ChainPaths;
   spec: ChainSpec;
@@ -53,6 +62,14 @@ export function buildInitialState(spec: ChainSpec): StateFile {
       failure: null,
       last_failure_class: null,
       backoff_until: null,
+      // H-11 (phase 8, 2026-05-14). Resolution order:
+      //   phase override → chain default → DEFAULT_HEARTBEAT_GRACE_SEC.
+      // Resolved once at init so checkLockStaleness can read it off
+      // PhaseState without re-walking the spec on every staleness check.
+      heartbeat_grace_sec:
+        p.heartbeat_grace_sec ??
+        defaults.heartbeat_grace_sec ??
+        DEFAULT_HEARTBEAT_GRACE_SEC,
     };
   }
   return {
