@@ -276,7 +276,12 @@ export function buildProgram(): Command {
           }
           throw err;
         }
-        clearLock(ctx);
+        // H-23: pass session_id so we don't accidentally clear a fresh lock
+        // owned by another worker. The phase's session_id was loaded
+        // alongside the phase_state above (via markDone's read).
+        const sessionForClear =
+          loadState(ctx).phase_status[phaseId]?.session_id ?? null;
+        clearLock(ctx, sessionForClear);
         // Event-triggered SESSION_HANDOFF.md refresh closes the staleness gap
         // between hourly cron ticks (red-flag-remediation phase 5, 2026-05-14).
         fireHandoffRefresh({
@@ -335,7 +340,11 @@ export function buildProgram(): Command {
           // Back-compat shim — string reason, classifier coerces to unknown.
           markFailed(ctx, phaseId, r);
         }
-        clearLock(ctx);
+        // H-23: pass session_id so a stray mark-failed doesn't blow away a
+        // fresh lock that a different worker installed in the meantime.
+        const sessionForClear =
+          loadState(ctx).phase_status[phaseId]?.session_id ?? null;
+        clearLock(ctx, sessionForClear);
       },
     );
 
@@ -528,6 +537,13 @@ export function buildProgram(): Command {
             fireHandoffRefresh({
               triggeredBy: `chain-phase-auto-adjudicated-${opts.chainId}-${r.phaseId}`,
             });
+            break;
+          // H-25: sleep/wake detection skipped this clear; the next wake
+          // re-evaluates with a refreshed last_wake baseline.
+          case 'sleep_wake_deferred':
+            process.stdout.write(
+              `SLEEP_WAKE_DEFERRED phase=${r.phaseId} hb_age=${Math.floor(r.hbAgeSec)}s last_wake_age=${Math.floor(r.lastWakeAgeSec)}s\n`,
+            );
             break;
         }
       },

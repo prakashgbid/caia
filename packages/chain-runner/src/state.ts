@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { atomicWriteJson } from './atomic.js';
 import { appendAudit } from './audit.js';
 import { ensureChainDir } from './paths.js';
+import { withStateFlock, type FlockHolder } from './state-flock.js';
 import { isoNow } from './time.js';
 import { loadChainSpec } from './spec.js';
 import { failureFromReason } from './classify.js';
@@ -155,7 +156,27 @@ export function tryLoadState(ctx: StateContext): StateFile | null {
 }
 
 export function saveState(ctx: StateContext, state: StateFile): void {
-  atomicWriteJson(ctx.paths.stateFile, state);
+  // H-22 (chain-runner-battle-harden phase 11, 2026-05-14). When the
+  // CAIA_STATE_FLOCK env-flag is set, serialize this write through the
+  // sidecar lockfile so two concurrent saveState calls don't race. When
+  // the flag is unset, withStateFlock just calls the closure directly so
+  // the path stays zero-cost for chains that haven't opted in.
+  withStateFlock(
+    ctx.paths.stateFile,
+    () => atomicWriteJson(ctx.paths.stateFile, state),
+    {
+      tag: 'saveState',
+      onStaleSteal: (holder: FlockHolder | null, reason) => {
+        appendAudit(ctx.paths.auditFile, 'state_flock_stolen', {
+          reason,
+          held_by_pid: holder?.pid ?? null,
+          held_by_tag: holder?.tag ?? null,
+          held_by_iso: holder?.iso ?? null,
+          stealer_pid: process.pid,
+        });
+      },
+    },
+  );
 }
 
 export function initState(ctx: StateContext): StateFile {

@@ -283,7 +283,10 @@ export async function dispatchPhase(
   });
   // Worker never ran substantively (it exited within 5s, no heartbeat).
   markFailed(ctx, String(phaseId), failure, { ranSubstantively: false });
-  clearLock(ctx);
+  // H-23 (phase 11, 2026-05-14). Pass session id so we don't clear a fresh
+  // lock that another wake installed in the (unlikely but possible) gap
+  // between this dispatch's exit and now.
+  clearLock(ctx, sessionId);
   appendAudit(ctx.paths.auditFile, 'dispatch_early_exit_failed', {
     phase_id: phaseId,
     session_id: sessionId,
