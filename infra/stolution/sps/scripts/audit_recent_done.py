@@ -41,18 +41,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import hmac
+import http.client
 import json
 import os
 import socket
 import sqlite3
 import sys
 import time
-import urllib.error
-import urllib.request
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 # ---- Constants --------------------------------------------------------------
 
@@ -105,6 +105,11 @@ def _emit_mentor_event(event_type: str,
     Returns False for any failure path — but NEVER raises. The audit-cron
     must keep running even when the event-bus is down.
 
+    Implementation note: uses `http.client` rather than `urllib.request`
+    so the call surface cannot be coerced into reading a `file://` URL
+    even if `CAIA_MENTOR_EVENT_BUS_URL` is somehow poisoned. The scheme
+    is also explicitly allowlisted below.
+
     Auth matches packages/mentor-event-bus/src/auth.ts:
         X-Caia-Timestamp: <ms-since-epoch>
         X-Caia-Signature: hex(hmac-sha256(secret, "<ts>:<body>"))
@@ -116,6 +121,12 @@ def _emit_mentor_event(event_type: str,
         base_url = (base_url_override
                     or os.environ.get('CAIA_MENTOR_EVENT_BUS_URL')
                     or DEFAULT_MENTOR_BASE_URL)
+        parts = urlsplit(base_url)
+        if parts.scheme not in ('http', 'https'):
+            return False
+        if not parts.hostname:
+            return False
+
         now_ms = int(time.time() * 1000)
         emitted_at = datetime.fromtimestamp(now_ms / 1000.0, tz=timezone.utc) \
             .strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -139,20 +150,27 @@ def _emit_mentor_event(event_type: str,
             f'{ts}:{body}'.encode('utf-8'),
             hashlib.sha256,
         ).hexdigest()
-        req = urllib.request.Request(
-            url=base_url.rstrip('/') + '/v1/events',
-            data=body_bytes,
-            method='POST',
-            headers={
-                'content-type': 'application/json; charset=utf-8',
-                'content-length': str(len(body_bytes)),
-                'x-caia-timestamp': ts,
-                'x-caia-signature': sig,
-            },
-        )
-        with urllib.request.urlopen(req, timeout=MENTOR_EMIT_TIMEOUT_SEC) as resp:
+        port = parts.port or (443 if parts.scheme == 'https' else 80)
+        path_q = (parts.path.rstrip('/') if parts.path else '') + '/v1/events'
+        headers = {
+            'content-type': 'application/json; charset=utf-8',
+            'content-length': str(len(body_bytes)),
+            'x-caia-timestamp': ts,
+            'x-caia-signature': sig,
+        }
+        conn_cls = (http.client.HTTPSConnection
+                    if parts.scheme == 'https'
+                    else http.client.HTTPConnection)
+        conn = conn_cls(parts.hostname, port, timeout=MENTOR_EMIT_TIMEOUT_SEC)
+        try:
+            conn.request('POST', path_q, body=body_bytes, headers=headers)
+            resp = conn.getresponse()
+            # Drain the body so the connection can be cleanly closed.
+            resp.read()
             return 200 <= resp.status < 300
-    except (urllib.error.URLError, OSError, socket.timeout, ValueError):
+        finally:
+            conn.close()
+    except (OSError, socket.timeout, ValueError, http.client.HTTPException):
         return False
     except Exception:  # noqa: BLE001 — emit MUST be silent on any failure
         return False
