@@ -12,7 +12,13 @@ import {
 import { checkArtifact, classifyStaleLock } from './classify.js';
 import type { LockFile, PhaseFailure } from './types.js';
 
-export const HEARTBEAT_GRACE_SEC = 3600; // 60 min
+// H-11 (chain-runner-battle-harden phase 8, 2026-05-14). Legacy fallback used
+// when a PhaseState predates the per-phase `heartbeat_grace_sec` field (i.e.
+// an older state.json loaded after upgrade). New state files resolve the
+// effective grace at buildInitialState — phase override → chain default →
+// DEFAULT_HEARTBEAT_GRACE_SEC (1800s). The CLI `state` command also reads
+// this constant for the at-a-glance "stale" marker on the lock summary line.
+export const HEARTBEAT_GRACE_SEC = 1800; // 30 min
 
 // H-2 (chain-runner-battle-harden phase 3, 2026-05-14). A worker is counted
 // as having run "substantively" if any of these are true at staleness-detect
@@ -150,7 +156,11 @@ export function checkLockStaleness(
   const ranSubstantively =
     hbFired || logBytes > SUBSTANTIVE_LOG_BYTES || art.exists;
 
-  if (ageSec > HEARTBEAT_GRACE_SEC) {
+  // H-11 (phase 8, 2026-05-14). Per-phase grace lives on PhaseState; fall
+  // back to the exported constant only when the state file predates the
+  // field (older chain dirs loaded after upgrade).
+  const graceSec = ps.heartbeat_grace_sec ?? HEARTBEAT_GRACE_SEC;
+  if (ageSec > graceSec) {
     const failure = classifyStaleLock(ctx, lock, {
       trigger: 'heartbeat',
       hb_age_sec: ageSec,
