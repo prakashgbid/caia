@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { closeSync, mkdtempSync, openSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { acquireLock, clearLock } from './lock.js';
+import { acquireLock, clearLock, stampWorkerPid } from './lock.js';
 import { appendAudit } from './audit.js';
 import { classifyEarlyExit } from './classify.js';
 import { findPhase } from './spec.js';
@@ -173,7 +173,9 @@ export async function dispatchPhase(
   const promptFile = buildPromptFile(ctx, phaseId, ctx.spec.phases.length);
 
   markInProgress(ctx, String(phaseId), sessionId);
-  acquireLock(ctx, phaseId, sessionId);
+  // H-30 (phase 11, 2026-05-14). Stamp the prompt-file path on the lock so
+  // clearLock can rm-rf the parent tmpdir when the phase ends.
+  acquireLock(ctx, phaseId, sessionId, { promptFile });
 
   if (!dispatch?.command) {
     return { phaseId, sessionId, promptFile, pid: null };
@@ -222,6 +224,9 @@ export async function dispatchPhase(
   });
   child.unref();
   const pid = child.pid ?? null;
+  // H-42 (phase 11, 2026-05-14). Stamp the worker PID on the lock now that
+  // spawn returned so `caia-chain stop --phase` can SIGTERM the right process.
+  stampWorkerPid(ctx, sessionId, pid);
 
   appendAudit(ctx.paths.auditFile, 'dispatch_spawned', {
     phase_id: phaseId,

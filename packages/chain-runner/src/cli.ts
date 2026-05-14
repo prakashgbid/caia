@@ -1321,6 +1321,119 @@ export function buildProgram(): Command {
       },
     );
 
+  // H-42 (chain-runner-battle-harden phase 11, 2026-05-14). Graceful stop
+  // verb. Sends SIGTERM to the lock's worker_pid (if recorded), waits up to
+  // --grace-ms before SIGKILL, marks the phase failed with class=unknown
+  // (source=operator_stop), and clears the lock. Operator-driven; never
+  // invoked by the wake scripts.
+  attachCommonOptions(program.command('stop'))
+    .description(
+      'Graceful operator stop: SIGTERM the worker_pid recorded on the lock (then SIGKILL after grace), mark the phase failed (source=operator_stop), clear the lock. Use --phase to gate.',
+    )
+    .option('--phase <id>', 'expected phase id; refuse if mismatch')
+    .option('--grace-ms <n>', 'milliseconds between SIGTERM and SIGKILL', '5000')
+    .option('--reason <text>', 'reason recorded in failure.evidence', 'operator_stop')
+    .option('--no-kill', 'send SIGTERM only; do not escalate to SIGKILL')
+    .action(
+      async (
+        cmdOpts: {
+          phase?: string;
+          graceMs?: string;
+          reason?: string;
+          kill?: boolean;
+        },
+        cmd: Command,
+      ) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions;
+        const ctx = ctxFromOpts(opts);
+        const lock = loadLock(ctx);
+        if (!lock) {
+          process.stdout.write('NO_LOCK\n');
+          return;
+        }
+        if (cmdOpts.phase && Number(cmdOpts.phase) !== lock.phase_id) {
+          fail(
+            `STOP_REFUSED phase mismatch: --phase=${cmdOpts.phase} but lock phase_id=${lock.phase_id}`,
+            2,
+          );
+        }
+        const pid = lock.worker_pid ?? null;
+        const graceMs = Number(cmdOpts.graceMs ?? '5000');
+        let signaled = false;
+        if (pid && pid > 0) {
+          try {
+            process.kill(pid, 'SIGTERM');
+            signaled = true;
+            appendAudit(ctx.paths.auditFile, 'operator_stop_signaled', {
+              phase_id: lock.phase_id,
+              pid,
+              signal: 'SIGTERM',
+            });
+          } catch (err) {
+            appendAudit(ctx.paths.auditFile, 'operator_stop_signal_failed', {
+              phase_id: lock.phase_id,
+              pid,
+              signal: 'SIGTERM',
+              error: (err as Error).message,
+            });
+          }
+          if (signaled && cmdOpts.kill !== false) {
+            // Wait up to graceMs for the worker to exit, then SIGKILL.
+            const deadline = Date.now() + graceMs;
+            while (Date.now() < deadline) {
+              try {
+                process.kill(pid, 0);
+              } catch {
+                // ESRCH — worker exited cleanly
+                signaled = false;
+                break;
+              }
+              await new Promise((r) => setTimeout(r, 100));
+            }
+            if (signaled) {
+              try {
+                process.kill(pid, 'SIGKILL');
+                appendAudit(ctx.paths.auditFile, 'operator_stop_signaled', {
+                  phase_id: lock.phase_id,
+                  pid,
+                  signal: 'SIGKILL',
+                });
+              } catch (err) {
+                appendAudit(ctx.paths.auditFile, 'operator_stop_signal_failed', {
+                  phase_id: lock.phase_id,
+                  pid,
+                  signal: 'SIGKILL',
+                  error: (err as Error).message,
+                });
+              }
+            }
+          }
+        } else {
+          appendAudit(ctx.paths.auditFile, 'operator_stop_no_pid', {
+            phase_id: lock.phase_id,
+            session_id: lock.session_id,
+          });
+        }
+        // Mark the phase failed via the structured failure path so the audit
+        // event carries the operator_stop evidence + class.
+        const reason = cmdOpts.reason ?? 'operator_stop';
+        markFailed(ctx, String(lock.phase_id), {
+          class: 'unknown',
+          reason: reason.slice(0, 500),
+          detected_at: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+          evidence: {
+            source: 'operator_stop',
+            pid,
+            signal: pid ? 'SIGTERM' : null,
+          },
+        }, { ranSubstantively: true });
+        clearLock(ctx);
+        process.stdout.write(
+          `OPERATOR_STOP phase=${lock.phase_id} pid=${pid ?? 'none'} reason=${reason}\n`,
+        );
+      },
+    );
+
   // Provide a save passthrough (used by some tests)
   attachCommonOptions(program.command('save-state-from-stdin'))
     .description('Read a JSON state from stdin and persist it (test helper)')

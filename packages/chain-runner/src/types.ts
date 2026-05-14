@@ -248,6 +248,22 @@ export interface LockFile {
    * skips the verification when the field is absent.
    */
   checksum?: string;
+  /**
+   * H-30 (chain-runner-battle-harden phase 11, 2026-05-14). Prompt file
+   * written by buildPromptFile and consumed by the spawned worker. Recorded
+   * here so clearLock can rm-rf the parent tmpdir without the caller having
+   * to plumb the path through markDone / markFailed. Optional — older locks
+   * predate the field; clearLock skips the cleanup when absent.
+   */
+  prompt_file?: string | null;
+  /**
+   * H-42 (chain-runner-battle-harden phase 11, 2026-05-14). Worker PID, set
+   * after spawn so `caia-chain stop --phase <id>` can SIGTERM the right
+   * process without having to re-walk pgrep. Optional — early-exit dispatches
+   * never get a PID stamped, and locks acquired without spawn (cli `dispatch`
+   * with no --spawn) leave it null.
+   */
+  worker_pid?: number | null;
 }
 
 export interface AuditEvent {
