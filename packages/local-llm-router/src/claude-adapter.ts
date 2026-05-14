@@ -33,8 +33,10 @@
 // goes through; only the savings are reduced.
 
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { stage1Prepass, estimateTokens } from '@chiefaia/prompt-optimizer';
+import { emitMentorEvent, newClaudeRequestId } from './mentor-emit.js';
 import type {
   LLMRequest,
   LLMResponse,
@@ -260,6 +262,8 @@ export class ClaudeAdapter {
    */
   async generate(model: string, request: LLMRequest): Promise<LLMResponse> {
     const start = Date.now();
+    const startIso = new Date(start).toISOString();
+    const claudeRequestId = newClaudeRequestId();
 
     // Run Stage 1 prepass + Headroom sidecar. Failure-mode for the
     // compression pipeline is best-effort: any error inside degrades to
@@ -268,6 +272,130 @@ export class ClaudeAdapter {
       request,
     );
 
+    // --- Emit ClaudeRequest (pre-call) ---------------------------------
+    // systemPromptHash is sha256(systemPrompt).slice(0,16). The schema also
+    // accepts an empty system prompt — keep the hash deterministic.
+    const systemPromptHash = createHash('sha256')
+      .update(request.systemPrompt ?? '')
+      .digest('hex')
+      .slice(0, 16);
+    emitMentorEvent('ClaudeRequest', {
+      requestId: claudeRequestId,
+      model,
+      systemPromptHash,
+      messageCount: 1,
+      estimatedInputTokens: estimateTokens(promptForBinary),
+      maxTokens: request.maxTokens,
+      cachingEnabled: false,
+      thinkingEnabled: false,
+      caller: 'local-llm-router',
+    });
+
+    // emitClaudeOutcome fires ClaudeResponse + ClaudeDuration; called on
+    // both success and error paths (single source of truth so we can't
+    // accidentally drop a pair).
+    const emitClaudeOutcome = (
+      outcome:
+        | {
+            ok: true;
+            tokenCount: number;
+            inputTokens?: number;
+            outputTokens?: number;
+            finishReason: 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use';
+          }
+        | {
+            ok: false;
+            errorCode: string;
+            httpStatus?: number;
+          },
+    ): void => {
+      const endMs = Date.now();
+      const endIso = new Date(endMs).toISOString();
+      if (outcome.ok) {
+        const respPayload: Record<string, unknown> = {
+          requestId: claudeRequestId,
+          tokenCount: outcome.tokenCount,
+          finishReason: outcome.finishReason,
+        };
+        if (outcome.inputTokens !== undefined) respPayload['inputTokens'] = outcome.inputTokens;
+        if (outcome.outputTokens !== undefined) respPayload['outputTokens'] = outcome.outputTokens;
+        emitMentorEvent('ClaudeResponse', respPayload);
+      } else {
+        const respPayload: Record<string, unknown> = {
+          requestId: claudeRequestId,
+          tokenCount: 0,
+          finishReason: 'error',
+          errorCode: outcome.errorCode,
+        };
+        if (outcome.httpStatus !== undefined) respPayload['httpStatus'] = outcome.httpStatus;
+        emitMentorEvent('ClaudeResponse', respPayload);
+      }
+      emitMentorEvent('ClaudeDuration', {
+        requestId: claudeRequestId,
+        startTs: startIso,
+        endTs: endIso,
+        wallMs: endMs - start,
+        ok: outcome.ok,
+      });
+    };
+
+    let outcomeEmitted = false;
+    const ensureErrorOutcomeEmitted = (errorCode: string, httpStatus?: number): void => {
+      if (outcomeEmitted) return;
+      outcomeEmitted = true;
+      emitClaudeOutcome(
+        httpStatus !== undefined
+          ? { ok: false, errorCode, httpStatus }
+          : { ok: false, errorCode },
+      );
+    };
+
+    let resp: LLMResponse;
+    try {
+      resp = await this.runBinary({
+        model,
+        request,
+        promptForBinary,
+        optimizerMetrics,
+        start,
+      });
+      const ftokens = resp.usage?.completionTokens ?? 0;
+      const ptokens = resp.usage?.promptTokens ?? 0;
+      outcomeEmitted = true;
+      emitClaudeOutcome({
+        ok: true,
+        tokenCount: ftokens + ptokens,
+        inputTokens: ptokens,
+        outputTokens: ftokens,
+        finishReason: 'end_turn',
+      });
+      return resp;
+    } catch (err) {
+      if (err instanceof ClaudeRateLimitedError) {
+        ensureErrorOutcomeEmitted('rate_limited', 429);
+      } else if (err instanceof ClaudeBinaryError) {
+        ensureErrorOutcomeEmitted(
+          err.exitCode !== null ? `binary_exit_${err.exitCode}` : 'binary_error',
+        );
+      } else {
+        ensureErrorOutcomeEmitted('unknown');
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Spawn the `claude` binary and return the parsed response. Pure adapter
+   * logic — emit hooks are attached by the public `generate()` wrapper.
+   */
+  private async runBinary(opts: {
+    model: string;
+    request: LLMRequest;
+    promptForBinary: string;
+    optimizerMetrics: RouterOptimizerMetrics | null;
+    start: number;
+  }): Promise<LLMResponse> {
+    const { model, request, promptForBinary, optimizerMetrics, start } = opts;
     const args = ['--print', '--output-format', 'json', '--model', model];
     if (request.systemPrompt) {
       args.push('--append-system-prompt', request.systemPrompt);
@@ -437,6 +565,17 @@ export class ClaudeAdapter {
     optimizerMetrics: RouterOptimizerMetrics | null;
   }> {
     if (this.optimizerDisabled) {
+      // Still emit a single passthrough Compression event so downstream
+      // observability sees that compression ran (no-op) for every Claude
+      // call. inputChars === outputChars; ratio = 1.
+      emitMentorEvent('Compression', {
+        stage: 'router.prompt',
+        inputChars: request.prompt.length,
+        outputChars: request.prompt.length,
+        ratio: 1,
+        method: 'passthrough',
+        durationMs: 0,
+      });
       return { promptForBinary: request.prompt, optimizerMetrics: null };
     }
 
@@ -450,6 +589,7 @@ export class ClaudeAdapter {
     // compression by default, so any in-turn duplication (dedupe of
     // repeated blocks, ANSI stripping, long file-read folding, base64
     // truncation) has to happen before Headroom sees the messages.
+    const stage1StartMs = Date.now();
     let stage1Text: string;
     let protectedSpans: number;
     try {
@@ -461,10 +601,22 @@ export class ClaudeAdapter {
       stage1Text = rawPrompt;
       protectedSpans = 0;
     }
+    const stage1DurationMs = Date.now() - stage1StartMs;
+    const stage1InputChars = rawPrompt.length;
+    const stage1OutputChars = stage1Text.length;
+    emitMentorEvent('Compression', {
+      stage: 'router.prompt.stage1',
+      inputChars: stage1InputChars,
+      outputChars: stage1OutputChars,
+      ratio: stage1InputChars > 0 ? stage1OutputChars / stage1InputChars : 1,
+      method: 'dedupe',
+      durationMs: stage1DurationMs,
+    });
 
     // ─── Stage 2: Headroom sidecar ────────────────────────────────────
     const messages: HeadroomMessage[] = [{ role: 'user', content: stage1Text }];
 
+    const stage2StartMs = Date.now();
     // eslint-disable-next-line no-useless-assignment
     let sidecarOut: HeadroomSidecarResponse | null = null;
     try {
@@ -486,6 +638,14 @@ export class ClaudeAdapter {
         headroom_ratio: 0,
       };
       this.emitOptimizerMetrics(fallback);
+      emitMentorEvent('Compression', {
+        stage: 'router.prompt.headroom',
+        inputChars: stage1OutputChars,
+        outputChars: stage1OutputChars,
+        ratio: 1,
+        method: 'passthrough',
+        durationMs: Date.now() - stage2StartMs,
+      });
       return { promptForBinary: stage1Text, optimizerMetrics: fallback };
     }
 
@@ -510,6 +670,18 @@ export class ClaudeAdapter {
       headroom_ratio: sidecarOut.compression_ratio,
     };
     this.emitOptimizerMetrics(metrics);
+
+    emitMentorEvent('Compression', {
+      stage: 'router.prompt.headroom',
+      inputChars: stage1OutputChars,
+      outputChars: finalPrompt.length,
+      ratio:
+        stage1OutputChars > 0 ? finalPrompt.length / stage1OutputChars : 1,
+      method: 'headroom',
+      durationMs: Date.now() - stage2StartMs,
+      modelUsed: this.headroomModel,
+    });
+
     return { promptForBinary: finalPrompt, optimizerMetrics: metrics };
   }
 

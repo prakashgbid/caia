@@ -32,12 +32,31 @@ import {
 } from './otel.js';
 import { getRoute } from './routing-config.js';
 import { resolveApprenticeOverride } from './apprentice-override.js';
+import { emitMentorEvent, newDecisionId } from './mentor-emit.js';
 import type {
   LLMProvider,
   LLMRequest,
   LLMResponse,
   RouterOptions,
 } from './types.js';
+
+type DisplacementClass =
+  | 'local'
+  | 'apprentice-canary'
+  | 'claude'
+  | 'cached'
+  | 'fallback';
+
+type RouterEventProvider = 'ollama' | 'apprentice' | 'claude' | 'cache' | 'other';
+
+function providerForEvent(
+  llmProvider: LLMProvider,
+  apprenticeSlot: 'production' | 'canary' | null,
+): RouterEventProvider {
+  if (llmProvider === 'claude') return 'claude';
+  if (apprenticeSlot !== null) return 'apprentice';
+  return 'ollama';
+}
 
 // Singleton adapters -- created lazily so tests can import without side effects.
 let _ollama: OllamaAdapter | null = null;
@@ -137,6 +156,9 @@ export async function route(
       [CAIA_ATTR.ROUTER_VERSION]: '0.2.0',
     },
     async (ctx) => {
+      const decisionId = newDecisionId();
+      const routeStartMs = Date.now();
+
       // --- Cache short-circuit -------------------------------------
       if (options.cacheLookup) {
         const cached = await options.cacheLookup(taskType, prompt);
@@ -148,6 +170,14 @@ export async function route(
             [CAIA_ATTR.CACHE_HIT]: true,
           });
           ctx.recordSuccess(responseAttrs(cached));
+          emitMentorEvent('RouterDecision', {
+            decisionId,
+            modelChosen: cached.model,
+            provider: 'cache',
+            displacementClass: 'cached',
+            latencyMs: Date.now() - routeStartMs,
+            caiaTaskType: taskType,
+          });
           return cached;
         }
       }
@@ -251,6 +281,34 @@ export async function route(
           result.provider === 'local' ? 'local' : 'claude';
       }
       ctx.recordSuccess(successAttrs);
+
+      // --- Emit RouterDecision (fire-and-forget) -------------------
+      let displacementClass: DisplacementClass;
+      if (usedFallback) {
+        displacementClass = 'fallback';
+      } else if (result.provider === 'claude') {
+        displacementClass = 'claude';
+      } else if (apprenticeSlot !== null) {
+        displacementClass = 'apprentice-canary';
+      } else {
+        displacementClass = 'local';
+      }
+      const routerEventProvider = providerForEvent(result.provider, apprenticeSlot);
+      const payload: Record<string, unknown> = {
+        decisionId,
+        modelChosen: result.model,
+        provider: routerEventProvider,
+        displacementClass,
+        latencyMs: Date.now() - routeStartMs,
+        caiaTaskType: taskType,
+      };
+      if (usedFallback && fallbackFrom !== null) {
+        payload['reason'] =
+          `fallback from ${fallbackFrom}${fallbackReason ? ': ' + fallbackReason : ''}`
+            .slice(0, 200);
+      }
+      emitMentorEvent('RouterDecision', payload);
+
       return result;
     },
   );
