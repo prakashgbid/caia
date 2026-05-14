@@ -1,10 +1,17 @@
-import { existsSync, readFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+} from 'node:fs';
+import { join } from 'node:path';
 import { atomicWriteJson } from './atomic.js';
 import { appendAudit } from './audit.js';
 import { ensureChainDir } from './paths.js';
 import { isoNow } from './time.js';
 import { loadChainSpec } from './spec.js';
 import { failureFromReason } from './classify.js';
+import { fireHandoffRefresh } from './handoff-refresh.js';
 import { resolveRetryPolicy } from './retry-policy.js';
 import type {
   ChainPaths,
@@ -12,6 +19,7 @@ import type {
   FailureClass,
   PhaseFailure,
   PhaseState,
+  PhaseStatus,
   StateFile,
 } from './types.js';
 
@@ -140,20 +148,27 @@ function _applyNoneEligibleStreak(
   return result;
 }
 
-export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhaseResult {
-  if (state.paused) {
-    return _applyNoneEligibleStreak(ctx, state, { kind: 'paused' });
-  }
+// H-21 (chain-runner-battle-harden phase 7, 2026-05-14). evaluateNextPhase is
+// the PURE half of the next-phase decision: no mutation, no audit emit, no
+// state.json writes. Safe to call from `next-phase --read-only` and from tests
+// that want to probe the decision without side-effects.
+//
+// A phase in `failed` that would be promoted to `blocked` by the retry policy
+// is skipped here (treated as not-dispatchable) — the actual promotion lives
+// in `promoteFailedToBlocked` and is called explicitly by wake scripts before
+// next-phase.
+export function evaluateNextPhase(
+  state: StateFile,
+  spec: ChainSpec,
+): NextPhaseResult {
+  if (state.paused) return { kind: 'paused' };
   if (state.budget_consumed_pct >= state.budget_cap_pct) {
-    return _applyNoneEligibleStreak(ctx, state, { kind: 'budget_exhausted' });
+    return { kind: 'budget_exhausted' };
   }
-  if (state.all_done) {
-    return _applyNoneEligibleStreak(ctx, state, { kind: 'all_done' });
-  }
+  if (state.all_done) return { kind: 'all_done' };
 
   const nowMs = Date.now();
-  let mutated = false;
-  for (const p of ctx.spec.phases) {
+  for (const p of spec.phases) {
     const pid = String(p.id);
     const ps = state.phase_status[pid];
     if (!ps) continue;
@@ -166,22 +181,13 @@ export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhase
     if (!depsMet) continue;
 
     if (ps.status === 'pending' || ps.status === 'failed') {
-      // H-9: class-aware retry decision. Falls back to max_retries when the
-      // phase has no recorded failure class (legacy state files, fresh
-      // phases, or a `pending`-from-init). When the failure came in via the
-      // legacy string-reason CLI shim (evidence.legacy_string_reason=true,
-      // class=unknown), we honor the *legacy* ps.max_retries bound instead
-      // of the H-9 default policy to keep the pre-H-9 regression suite
-      // green; typed failures (with --class on mark-failed or via the
-      // classifier) get class-aware policy.
       if (ps.status === 'failed') {
         const cls = ps.last_failure_class ?? ps.failure?.class ?? null;
         const isLegacyShim =
           ps.failure?.evidence?.['legacy_string_reason'] === true;
         const policy =
-          cls && !isLegacyShim ? resolveRetryPolicy(ctx.spec, cls) : null;
+          cls && !isLegacyShim ? resolveRetryPolicy(spec, cls) : null;
         const policyMax = policy?.max_attempts ?? ps.max_retries;
-        // pause_until_* / adjudicate / alert / block all imply no more retries.
         const policyTerminal =
           policy?.action === 'pause_until_reset' ||
           policy?.action === 'pause_until_operator' ||
@@ -190,63 +196,117 @@ export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhase
           policy?.action === 'block';
         const retriesExhausted = ps.attempts >= policyMax;
         if (policyTerminal || retriesExhausted) {
-          ps.status = 'blocked';
-          mutated = true;
-          appendAudit(ctx.paths.auditFile, 'phase_blocked', {
-            phase_id: p.id,
-            reason: policyTerminal
-              ? `policy_action_${policy?.action ?? 'unknown'}`
-              : 'retries_exhausted',
-            class: cls,
-            policy_action: policy?.action ?? null,
-            attempts: ps.attempts,
-            policy_max_attempts: policyMax,
-          });
+          // Read-only view of "this phase is on the failed→blocked path";
+          // promoteFailedToBlocked is where the mutation happens.
           continue;
         }
-        // Backoff active: return BACKOFF for this phase so wake script
-        // noops without consuming a retry. Surface only if the backoff
-        // timestamp is in the future.
         if (ps.backoff_until) {
           const bt = new Date(ps.backoff_until).getTime();
           if (Number.isFinite(bt) && bt > nowMs) {
-            if (mutated) saveState(ctx, state);
-            return _applyNoneEligibleStreak(ctx, state, {
+            return {
               kind: 'backoff',
               id: p.id,
               seconds: Math.max(0, Math.ceil((bt - nowMs) / 1000)),
               until: ps.backoff_until,
-            });
+            };
           }
         }
       }
-      if (mutated) saveState(ctx, state);
-      return _applyNoneEligibleStreak(ctx, state, { kind: 'phase_id', id: p.id });
+      return { kind: 'phase_id', id: p.id };
     }
     if (ps.status === 'in_progress') {
-      if (mutated) saveState(ctx, state);
-      return _applyNoneEligibleStreak(ctx, state, { kind: 'in_progress', id: p.id });
+      return { kind: 'in_progress', id: p.id };
     }
   }
 
-  // Nothing dispatchable found — promote to all_done if all are done.
-  const allDone = ctx.spec.phases.every(
+  // Nothing dispatchable — pure check for all_done.
+  const allDone = spec.phases.every(
     (p) => state.phase_status[String(p.id)]?.status === 'done',
   );
-  if (allDone) {
+  if (allDone) return { kind: 'all_done' };
+  return { kind: 'none_eligible' };
+}
+
+// H-21. promoteFailedToBlocked is the IMPURE half: walks every `failed` phase,
+// applies the H-9 retry policy, and flips the phase to `blocked` (with a
+// phase_blocked audit event) when retries are exhausted or the policy action
+// is terminal. Returns the list of promoted phase ids so callers can audit
+// the per-tick delta.
+//
+// Wake-script call order (H-21 contract):
+//   wake-observed → check-lock-staleness → promote-blocked → next-phase
+//
+// `promote-blocked` runs this on disk-backed state and persists; `next-phase`
+// then becomes a (mostly) read-only operation backed by `evaluateNextPhase`.
+export function promoteFailedToBlocked(
+  ctx: StateContext,
+  state: StateFile,
+): number[] {
+  const promoted: number[] = [];
+  for (const p of ctx.spec.phases) {
+    const pid = String(p.id);
+    const ps = state.phase_status[pid];
+    if (!ps) continue;
+    if (ps.status !== 'failed') continue;
+
+    const cls = ps.last_failure_class ?? ps.failure?.class ?? null;
+    const isLegacyShim =
+      ps.failure?.evidence?.['legacy_string_reason'] === true;
+    const policy =
+      cls && !isLegacyShim ? resolveRetryPolicy(ctx.spec, cls) : null;
+    const policyMax = policy?.max_attempts ?? ps.max_retries;
+    const policyTerminal =
+      policy?.action === 'pause_until_reset' ||
+      policy?.action === 'pause_until_operator' ||
+      policy?.action === 'adjudicate' ||
+      policy?.action === 'alert' ||
+      policy?.action === 'block';
+    const retriesExhausted = ps.attempts >= policyMax;
+    if (policyTerminal || retriesExhausted) {
+      ps.status = 'blocked';
+      promoted.push(p.id);
+      appendAudit(ctx.paths.auditFile, 'phase_blocked', {
+        phase_id: p.id,
+        reason: policyTerminal
+          ? `policy_action_${policy?.action ?? 'unknown'}`
+          : 'retries_exhausted',
+        class: cls,
+        policy_action: policy?.action ?? null,
+        attempts: ps.attempts,
+        policy_max_attempts: policyMax,
+      });
+    }
+  }
+  if (promoted.length > 0) saveState(ctx, state);
+  return promoted;
+}
+
+// computeNextPhase keeps the pre-H-21 contract for back-compat: it runs the
+// promotion + the all_done bookkeeping + the none_eligible streak + audit
+// emit, then returns the evaluation result. Wake scripts that call
+// `next-phase` continue to work unchanged.
+//
+// Callers wanting the read-only flavor (the H-21 split) should use
+// `evaluateNextPhase(state, spec)` directly.
+export function computeNextPhase(ctx: StateContext, state: StateFile): NextPhaseResult {
+  promoteFailedToBlocked(ctx, state);
+  const result = evaluateNextPhase(state, ctx.spec);
+
+  // all_done promotion: pure evaluator says all_done but state hasn't been
+  // stamped yet. Stamp + audit.
+  if (result.kind === 'all_done' && !state.all_done) {
     state.all_done = true;
     saveState(ctx, state);
     appendAudit(ctx.paths.auditFile, 'all_done', {});
-    return _applyNoneEligibleStreak(ctx, state, { kind: 'all_done' });
   }
-  if (mutated) saveState(ctx, state);
-  // H-5: emit a structured audit entry on every none_eligible result so
-  // operators have first-class telemetry of stalls (not just inferred from
-  // wake-script logs). The stall-root-cause CLI consumes this.
-  appendAudit(ctx.paths.auditFile, 'none_eligible', {
-    streak_before: state.none_eligible_streak ?? 0,
-  });
-  return _applyNoneEligibleStreak(ctx, state, { kind: 'none_eligible' });
+
+  // H-5: emit none_eligible audit + streak bookkeeping.
+  if (result.kind === 'none_eligible') {
+    appendAudit(ctx.paths.auditFile, 'none_eligible', {
+      streak_before: state.none_eligible_streak ?? 0,
+    });
+  }
+  return _applyNoneEligibleStreak(ctx, state, result);
 }
 
 // H-2 (chain-runner-battle-harden phase 3, 2026-05-14). markInProgress emits
@@ -508,4 +568,236 @@ export function recordWake(ctx: StateContext): void {
   state.last_wake = isoNow();
   saveState(ctx, state);
   appendAudit(ctx.paths.auditFile, 'wake', {});
+}
+
+// H-8 (chain-runner-battle-harden phase 7, 2026-05-14). Adjudication helpers
+// replace operator hand-edits of state.json with sanctioned, audited verbs.
+//
+// Pattern motivated by the 2026-05-14T07:13:59Z incident: phase 3 of
+// redflag-remediation was hand-flipped from `blocked` → `done` via a
+// state.json edit + a state.json.bak-pre-mark-done-2026-05-14 sidecar. That
+// path leaves no audit event and no validation. The adjudicate / re-arm /
+// force-fail trio replaces it: every operator intervention now writes a
+// timestamped backup, validates the transition, emits a structured audit
+// event, and fires the SESSION_HANDOFF refresh hook so other agents see the
+// new state immediately.
+//
+// Backup placement: `<chain-dir>/.backups/state.json.bak.<suffix>.<isoNow>`.
+// H-13 (phase 9) will fold this into a shared backup helper; for now each
+// helper writes directly here so the audit log entries already carry a
+// `backup` field pointing at the right path.
+
+/** Allowed target states for `adjudicate`. */
+const ADJUDICATE_VALID_TARGETS: ReadonlyArray<PhaseStatus> = [
+  'pending',
+  'in_progress',
+  'failed',
+  'blocked',
+  'done',
+];
+
+function requireNonEmptyReason(reason: string | undefined | null): string {
+  const trimmed = (reason ?? '').trim();
+  if (trimmed.length === 0) {
+    throw new Error('reason is required and must be non-empty');
+  }
+  return trimmed;
+}
+
+function backupsDir(ctx: StateContext): string {
+  return join(ctx.paths.baseDir, '.backups');
+}
+
+// Writes a timestamped snapshot of state.json under .backups/ before any
+// adjudication-class mutation. Returns the absolute backup path so the audit
+// event can record where the pre-edit state went. Idempotent if the state
+// file is missing (returns empty string — caller still mutates fresh state).
+export function writeStateBackup(ctx: StateContext, suffix: string): string {
+  if (!existsSync(ctx.paths.stateFile)) return '';
+  const dir = backupsDir(ctx);
+  mkdirSync(dir, { recursive: true });
+  const iso = isoNow().replace(/:/g, '-');
+  const filename = `state.json.bak.${suffix}.${iso}`;
+  const fullPath = join(dir, filename);
+  copyFileSync(ctx.paths.stateFile, fullPath);
+  return fullPath;
+}
+
+export interface AdjudicateOptions {
+  /**
+   * Structured evidence (PR URL, artifact path, doctor report, etc.) that
+   * documents the operator's decision. Persisted into the
+   * `phase_adjudicated` audit event verbatim.
+   */
+  evidence?: Record<string, unknown>;
+  /**
+   * When true, refuse `adjudicate --to done` if the phase's
+   * `success_criteria` cannot be verified from evidence. The full
+   * success-criteria validator lands in a later phase; for now strict-mode
+   * just requires SOME evidence (pr / artifact / verification) to be
+   * present so a `--strict --to done` adjudication can't be totally bare.
+   */
+  strict?: boolean;
+}
+
+export function adjudicate(
+  ctx: StateContext,
+  phaseId: string,
+  toState: PhaseStatus,
+  reason: string,
+  opts: AdjudicateOptions = {},
+): { backup: string; from: PhaseStatus; to: PhaseStatus } {
+  const cleanReason = requireNonEmptyReason(reason);
+  if (!ADJUDICATE_VALID_TARGETS.includes(toState)) {
+    throw new Error(
+      `invalid target state '${toState}': expected one of ${ADJUDICATE_VALID_TARGETS.join(', ')}`,
+    );
+  }
+  const state = loadState(ctx);
+  const ps = ensurePhaseEntry(state, phaseId);
+  const fromState = ps.status;
+  if (opts.strict && toState === 'done') {
+    const ev = opts.evidence ?? {};
+    const hasArtifact =
+      typeof ev['pr'] === 'string' ||
+      typeof ev['artifact'] === 'string' ||
+      typeof ev['verification'] === 'string' ||
+      typeof ev['session_id'] === 'string';
+    if (!hasArtifact) {
+      throw new Error(
+        `strict adjudicate --to done refused: no pr/artifact/verification evidence supplied`,
+      );
+    }
+  }
+  const backup = writeStateBackup(ctx, `pre-adjudicate-${phaseId}-to-${toState}`);
+
+  ps.status = toState;
+  if (toState === 'done') {
+    ps.completed_at = isoNow();
+    ps.error = null;
+    ps.backoff_until = null;
+  } else if (toState === 'pending') {
+    ps.error = null;
+    ps.failure = null;
+    ps.last_failure_class = null;
+    ps.backoff_until = null;
+    ps.session_id = null;
+    ps.started_at = null;
+    ps.completed_at = null;
+  } else if (toState === 'blocked') {
+    ps.error = ps.error ?? cleanReason.slice(0, 500);
+  }
+  // If we just adjudicated the in-progress phase out of in_progress, clear
+  // current_phase too (it would otherwise lie to status callers).
+  if (
+    state.current_phase === Number(phaseId) &&
+    toState !== 'in_progress'
+  ) {
+    state.current_phase = null;
+  }
+  saveState(ctx, state);
+  appendAudit(ctx.paths.auditFile, 'phase_adjudicated', {
+    phase_id: Number(phaseId),
+    from: fromState,
+    to: toState,
+    reason: cleanReason.slice(0, 500),
+    evidence: opts.evidence ?? {},
+    strict: opts.strict ?? false,
+    backup,
+  });
+  fireHandoffRefresh({
+    triggeredBy: `chain-phase-adjudicated-${phaseId}-to-${toState}`,
+  });
+  return { backup, from: fromState, to: toState };
+}
+
+export interface ReArmOptions {
+  /** When true, set ps.attempts back to 0 alongside the status flip. */
+  resetAttempts?: boolean;
+  /** Lift the blocked-only guard. Used when re-arming an in_progress / failed phase. */
+  force?: boolean;
+}
+
+export function reArm(
+  ctx: StateContext,
+  phaseId: string,
+  reason: string,
+  opts: ReArmOptions = {},
+): { backup: string; from: PhaseStatus; attemptsBefore: number; attemptsAfter: number } {
+  const cleanReason = requireNonEmptyReason(reason);
+  const state = loadState(ctx);
+  const ps = ensurePhaseEntry(state, phaseId);
+  const fromState = ps.status;
+  if (fromState !== 'blocked' && !opts.force) {
+    throw new Error(
+      `re-arm refused: phase ${phaseId} is '${fromState}', not 'blocked' (pass force=true to override)`,
+    );
+  }
+  const backup = writeStateBackup(ctx, `pre-rearm-${phaseId}`);
+  const attemptsBefore = ps.attempts;
+  ps.status = 'pending';
+  ps.error = null;
+  ps.backoff_until = null;
+  if (opts.resetAttempts) {
+    ps.attempts = 0;
+  }
+  saveState(ctx, state);
+  appendAudit(ctx.paths.auditFile, 'phase_rearmed', {
+    phase_id: Number(phaseId),
+    from: fromState,
+    reset_attempts: opts.resetAttempts ?? false,
+    attempts_before: attemptsBefore,
+    attempts_after: ps.attempts,
+    reason: cleanReason.slice(0, 500),
+    backup,
+  });
+  fireHandoffRefresh({
+    triggeredBy: `chain-phase-rearmed-${phaseId}`,
+  });
+  return {
+    backup,
+    from: fromState,
+    attemptsBefore,
+    attemptsAfter: ps.attempts,
+  };
+}
+
+export function forceFail(
+  ctx: StateContext,
+  phaseId: string,
+  reason: string,
+): { backup: string; from: PhaseStatus } {
+  const cleanReason = requireNonEmptyReason(reason);
+  const state = loadState(ctx);
+  const ps = ensurePhaseEntry(state, phaseId);
+  const fromState = ps.status;
+  const backup = writeStateBackup(ctx, `pre-force-fail-${phaseId}`);
+  ps.status = 'failed';
+  ps.error = cleanReason.slice(0, 500);
+  const detectedAt = new Date()
+    .toISOString()
+    .replace(/\.\d{3}Z$/, 'Z');
+  const failure: PhaseFailure = {
+    class: 'unknown',
+    reason: cleanReason.slice(0, 500),
+    detected_at: detectedAt,
+    evidence: { source: 'operator_force_fail' },
+  };
+  ps.failure = failure;
+  ps.last_failure_class = 'unknown';
+  ps.backoff_until = null;
+  if (state.current_phase === Number(phaseId)) {
+    state.current_phase = null;
+  }
+  saveState(ctx, state);
+  appendAudit(ctx.paths.auditFile, 'phase_force_failed', {
+    phase_id: Number(phaseId),
+    from: fromState,
+    reason: cleanReason.slice(0, 500),
+    backup,
+  });
+  fireHandoffRefresh({
+    triggeredBy: `chain-phase-force-failed-${phaseId}`,
+  });
+  return { backup, from: fromState };
 }
