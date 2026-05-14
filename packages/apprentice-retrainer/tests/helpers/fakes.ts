@@ -316,6 +316,45 @@ export function createFakeServing(
   return fake as unknown as ApprenticeServing & { fakeState: FakeServingState };
 }
 
+/**
+ * Build a corpus-manifest JSON body that PASSES the APP.2 quality gate
+ * (avg >= 0.55, count >= 300). Override `totals.final` / `qualityHistogram`
+ * to exercise the failing branch.
+ */
+export function passingManifest(
+  overrides: { totals?: { final?: number }; qualityHistogram?: Record<string, number> } = {}
+): string {
+  const totalsFinal = overrides.totals?.final ?? 600;
+  const histogram = overrides.qualityHistogram ?? {
+    '0.0-0.2': 0,
+    '0.2-0.4': 0,
+    '0.4-0.6': 200,
+    '0.6-0.8': 300,
+    '0.8-1.0': 100
+  };
+  return JSON.stringify({
+    version: 1,
+    generatedAt: '2026-05-13T00:00:00.000Z',
+    outputDir: '/c/2026-05-13',
+    elapsedMs: 1234,
+    totals: {
+      rawArtifacts: totalsFinal,
+      afterDedup: totalsFinal,
+      afterPII: totalsFinal,
+      afterQuality: totalsFinal,
+      distilled: 0,
+      dropped: 0,
+      final: totalsFinal
+    },
+    perSource: {},
+    redactedSpansHistogram: {},
+    qualityHistogram: histogram,
+    configSha256: 'cfg-sha',
+    warnings: [],
+    holdout: []
+  });
+}
+
 export function createFakeClock(start = '2026-05-06T02:00:00.000Z'): {
   clock: () => Date;
   advance(ms: number): void;

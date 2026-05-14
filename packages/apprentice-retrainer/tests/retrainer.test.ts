@@ -6,7 +6,8 @@ import {
   createFakeEvalHarness,
   createFakeServing,
   createFakeTrainer,
-  createInMemoryFs
+  createInMemoryFs,
+  passingManifest
 } from './helpers/fakes.js';
 
 describe('ApprenticeRetrainer.run() — orchestration', () => {
@@ -59,6 +60,7 @@ describe('ApprenticeRetrainer.run() — orchestration', () => {
     const fs = createInMemoryFs();
     const fc = createFakeClock();
     fc.setNow('2026-05-06T02:00:00.000Z');
+    fs.put('/corpus/2026-05-06/manifest.json', passingManifest());
     const aggregator = createFakeCorpusAggregator([
       {
         manifestPath: '/corpus/2026-05-06/manifest.json',
@@ -104,6 +106,7 @@ describe('ApprenticeRetrainer.run() — orchestration', () => {
   it('rejects when eval winRate below gate', async () => {
     const fs = createInMemoryFs();
     const fc = createFakeClock();
+    fs.put('/m', passingManifest());
     const aggregator = createFakeCorpusAggregator([
       {
         manifestPath: '/m',
@@ -138,6 +141,7 @@ describe('ApprenticeRetrainer.run() — orchestration', () => {
   it('rejects-no-eval when evalHarness undefined', async () => {
     const fs = createInMemoryFs();
     const fc = createFakeClock();
+    fs.put('/m', passingManifest());
     const aggregator = createFakeCorpusAggregator([
       {
         manifestPath: '/m',
@@ -171,6 +175,7 @@ describe('ApprenticeRetrainer.run() — orchestration', () => {
   it('records failed outcome on training error', async () => {
     const fs = createInMemoryFs();
     const fc = createFakeClock();
+    fs.put('/m', passingManifest());
     const aggregator = createFakeCorpusAggregator([
       {
         manifestPath: '/m',

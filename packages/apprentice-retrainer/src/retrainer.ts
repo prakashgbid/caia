@@ -36,6 +36,11 @@ import {
   preTrainDecision,
   shouldRetrainGivenDelta
 } from './decision.js';
+import {
+  appendAuditRow,
+  decideQualityGate,
+  type CorpusManifestLike
+} from './quality-gate.js';
 
 export class ApprenticeRetrainer {
   private readonly cfg: ResolvedRetrainerConfig;
@@ -223,6 +228,13 @@ export class ApprenticeRetrainer {
       throw new CorpusFailedError((e as Error).message, { cause: (e as Error).name });
     }
 
+    // ── APP.2 quality gate ──
+    // Read the manifest the aggregator wrote and decide whether the corpus
+    // is good enough to burn an M3 training run on. A clean skip (`exit 0`
+    // at the CLI layer) — operator sees the gate fired, cron does not alarm.
+    const gateOutcome = this.evaluateQualityGate(aggregateResult.manifestPath);
+    if (gateOutcome !== null) return gateOutcome;
+
     // Delta gate — caller hasn't checked count yet at decision time.
     const isAged = state.lastSuccessfulTrain !== null
       ? this.cfg.clock().getTime() - new Date(state.lastSuccessfulTrain.at).getTime() >= this.cfg.retrainMaxAgeMs
@@ -333,6 +345,62 @@ export class ApprenticeRetrainer {
       at: this.cfg.clock().toISOString(),
       outcome: 'trained-and-rejected',
       body: renderBody(result, evalReport)
+    });
+    return result;
+  }
+
+  /**
+   * APP.2 — pre-train corpus-quality check.
+   *
+   * Returns a `gated-pending-quality` result if the corpus is under-qualified
+   * (avg histogram < floor OR final count < floor); otherwise null and the
+   * caller proceeds to training.
+   *
+   * Side-effects on the gated path: structured event written to stdout
+   * (machine-parseable for cron tail / launchd log capture) AND appended to
+   * the audit JSONL trail; state + digest record the outcome so the operator
+   * digest reflects the skip.
+   */
+  private evaluateQualityGate(manifestPath: string): RetrainerRunResult | null {
+    let manifest: CorpusManifestLike;
+    try {
+      manifest = JSON.parse(this.cfg.fs.readFile(manifestPath)) as CorpusManifestLike;
+    } catch (e) {
+      // Unreadable / malformed manifest — surface as CorpusFailedError so it
+      // routes through the normal failure path rather than silently gating.
+      throw new CorpusFailedError(`failed to read manifest at ${manifestPath}: ${(e as Error).message}`);
+    }
+    const decision = decideQualityGate({
+      manifest,
+      qualityFloorAvg: this.cfg.qualityFloorAvg,
+      qualityFloorCount: this.cfg.qualityFloorCount
+    });
+    if (decision.pass) return null;
+
+    const at = this.cfg.clock().toISOString();
+    const event = {
+      event: 'gated-pending-quality',
+      avg: Number(decision.avg.toFixed(4)),
+      count: decision.count
+    };
+    process.stdout.write(JSON.stringify(event) + '\n');
+    appendAuditRow({
+      fs: this.cfg.fs,
+      auditPath: this.cfg.auditPath,
+      jsonRow: JSON.stringify({ at, ...event, reason: decision.reason })
+    });
+
+    const result: RetrainerRunResult = {
+      kind: 'gated-pending-quality',
+      avg: event.avg,
+      count: event.count,
+      reason: decision.reason
+    };
+    this.state.recordOutcome('gated-pending-quality', { note: decision.reason });
+    this.digest.appendEntry({
+      at,
+      outcome: 'gated-pending-quality',
+      body: renderBody(result)
     });
     return result;
   }

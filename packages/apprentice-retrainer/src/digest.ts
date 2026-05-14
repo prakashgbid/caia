@@ -74,6 +74,8 @@ function humanLabel(o: RetrainerOutcome): string {
       return 'trained + promoted to canary';
     case 'canary-held-prompting-operator':
       return 'CANARY HELD — operator action required';
+    case 'gated-pending-quality':
+      return 'gated (corpus below quality floor)';
     case 'failed':
       return 'FAILED';
   }
@@ -141,6 +143,16 @@ export function renderBody(result: RetrainerRunResult, evalReport?: EvalAdapterR
         `- Canary adapter: ${result.canary.adapterName}`,
         `- Canary model: ${result.canary.ollamaModelName ?? '(unset)'}`,
         `- Canary percent: ${result.canary.canaryPercent ?? '(unset)'}`
+      ].join('\n');
+    case 'gated-pending-quality':
+      return [
+        `Corpus below quality floor; training skipped.`,
+        ``,
+        `- Avg quality: ${result.avg.toFixed(3)}`,
+        `- Final count: ${result.count}`,
+        `- Reason: ${result.reason}`,
+        ``,
+        `Cron will retry on next scheduled tick. Gate auto-opens once corpus quality lifts.`
       ].join('\n');
     case 'failed':
       return [
