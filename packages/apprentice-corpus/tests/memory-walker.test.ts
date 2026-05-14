@@ -27,7 +27,16 @@ describe('classifyMemoryFile', () => {
     ['caia_agent_team.md', 'team'],
     ['orchestrator_handoff.md', 'team'],
     ['backlog_research.md', 'backlog'],
-    ['random_note.md', 'other']
+    ['random_note.md', 'other'],
+    // APP.1 — directive prefixes for operator-voice handoff/landing records.
+    ['_phase4_handoff_2026-05-12.md', 'directive'],
+    ['_phase1_design.md', 'directive'],
+    ['apprentice_phase1_leg2_reconciliation_2026-05-09.md', 'directive'],
+    ['apprentice_phase_2_design_2026-05-08.md', 'directive'],
+    ['b15_phase1_landed_2026-05-11.md', 'directive'],
+    ['b15_phase2_landed_2026-05-11.md', 'directive'],
+    ['t25_p6_lora_deploy_eval_2026-05-13.md', 'directive'],
+    ['r_001_some_note.md', 'directive']
   ])('classifies %s as %s', (basename, kind) => {
     expect(classifyMemoryFile(basename)).toBe(kind);
   });
