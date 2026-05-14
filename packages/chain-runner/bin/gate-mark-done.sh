@@ -16,6 +16,16 @@
 #
 # Standing rule (memory_2026-05-13): NO chain phase marks itself done with an
 # open PR for its branch.
+#
+# DEPRECATION (chain-runner-battle-harden phase 9, 2026-05-14, H-15).
+# The PR-merge guardrail is now FIRST-CLASS inside `caia-chain mark-done` via
+# the success_criteria.requires_merged_pr field and the acceptance.ts validator.
+# This bash helper is kept operational for phases that still call it directly,
+# and is removed in phase 11 (H-29). New phases should set:
+#   success_criteria:
+#     requires_merged_pr: true
+#     enforce: strict        # opt in if you want hard-refusal
+# in the chain YAML instead of calling this script.
 
 set -u
 

@@ -13,6 +13,17 @@ import { loadChainSpec } from './spec.js';
 import { failureFromReason } from './classify.js';
 import { fireHandoffRefresh } from './handoff-refresh.js';
 import { resolveRetryPolicy } from './retry-policy.js';
+import {
+  CURRENT_SCHEMA_VERSION,
+  migrateState,
+  needsMigration,
+} from './migrations.js';
+import {
+  validateAcceptance,
+  type AcceptanceResult,
+} from './acceptance.js';
+import { emitAlert } from './alerting.js';
+import type { AcceptanceContext } from './acceptance.js';
 import type {
   ChainPaths,
   ChainSpec,
@@ -23,7 +34,13 @@ import type {
   StateFile,
 } from './types.js';
 
-export const SCHEMA_VERSION = 1;
+// H-14 (phase 9, 2026-05-14). SCHEMA_VERSION bumped to 2 in tandem with the
+// migrations registry. v1→v2 adds the paused_at / paused_reason /
+// none_eligible_streak / per-phase last_failure_class+backoff_until normalizations
+// to the on-disk shape. The constant is re-exported here so existing callers
+// (regression tests, dispatcher scripts) keep importing it from state.ts; the
+// source-of-truth lives in migrations.ts:CURRENT_SCHEMA_VERSION.
+export const SCHEMA_VERSION = CURRENT_SCHEMA_VERSION;
 export const DEFAULT_BUDGET_CAP_PCT = 25;
 
 // H-11 (chain-runner-battle-harden phase 8, 2026-05-14). Default heartbeat
@@ -77,6 +94,7 @@ export function buildInitialState(spec: ChainSpec): StateFile {
     started_at: isoNow(),
     last_wake: null,
     paused: false,
+    paused_at: null,
     paused_until: null,
     paused_reason: null,
     budget_consumed_pct: 0,
@@ -97,13 +115,40 @@ export function loadState(ctx: StateContext): StateFile {
     return initState(ctx);
   }
   const raw = readFileSync(ctx.paths.stateFile, 'utf8');
-  return JSON.parse(raw) as StateFile;
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  // H-14 (phase 9, 2026-05-14). Run any pending schema migrations on every
+  // load. The check is O(1) (one numeric compare on schema_version); the
+  // migration itself is idempotent so the cost is bounded even if two
+  // processes load+save concurrently. When a migration applies, persist the
+  // migrated state immediately so subsequent loaders skip the work.
+  if (needsMigration(parsed)) {
+    const { state, report } = migrateState(parsed, { path: ctx.paths.stateFile });
+    atomicWriteJson(ctx.paths.stateFile, state);
+    appendAudit(ctx.paths.auditFile, 'state_migrated', {
+      from: report.from,
+      to: report.to,
+      applied: report.applied,
+      change_count: report.changes.length,
+      // Keep the diff bounded — first 20 changes are enough to debug, the
+      // full list lives in the source-of-truth migration module.
+      changes_preview: report.changes.slice(0, 20),
+    });
+    return state;
+  }
+  return parsed as unknown as StateFile;
 }
 
 export function tryLoadState(ctx: StateContext): StateFile | null {
   if (!existsSync(ctx.paths.stateFile)) return null;
   try {
-    return JSON.parse(readFileSync(ctx.paths.stateFile, 'utf8')) as StateFile;
+    const parsed = JSON.parse(readFileSync(ctx.paths.stateFile, 'utf8')) as Record<string, unknown>;
+    if (needsMigration(parsed)) {
+      const { state } = migrateState(parsed, { path: ctx.paths.stateFile });
+      // Persist + audit so tryLoadState callers don't repeatedly re-migrate.
+      atomicWriteJson(ctx.paths.stateFile, state);
+      return state;
+    }
+    return parsed as unknown as StateFile;
   } catch {
     return null;
   }
@@ -407,7 +452,112 @@ function inferRanSubstantivelyFromClass(cls: FailureClass): boolean {
   return true;
 }
 
-export function markDone(ctx: StateContext, phaseId: string): void {
+// H-15 (phase 9, 2026-05-14). Acceptance hook plumbing into markDone. The
+// validator runs INSIDE markDone, before the status flip, so a strict-mode
+// failure leaves the phase `in_progress` and the audit log records the
+// reason. The hook accepts ctx-shaped overrides so tests can inject a stub
+// gh viewer; production callers pass nothing and we resolve the chain base
+// dir + phase id from ctx.
+export interface MarkDoneOptions {
+  /**
+   * Override the acceptance context. Tests pass `ghPrViewer` + `dispatchLogPath`.
+   * When omitted, the validator resolves the dispatch log from
+   * `ctx.paths.baseDir + phaseId` and uses the real `gh` binary.
+   */
+  acceptance?: {
+    dispatchLogPath?: string;
+    ghPrViewer?: AcceptanceContext['ghPrViewer'];
+    ghTimeoutMs?: number;
+  };
+  /** Force-disable acceptance enforcement (used by adjudicate --to done). */
+  skipAcceptance?: boolean;
+}
+
+export class AcceptanceRefusedError extends Error {
+  readonly phaseId: string;
+  readonly result: AcceptanceResult;
+  constructor(phaseId: string, result: AcceptanceResult) {
+    super(`mark-done refused by strict acceptance: ${result.summary}`);
+    this.name = 'AcceptanceRefusedError';
+    this.phaseId = phaseId;
+    this.result = result;
+  }
+}
+
+export function markDone(
+  ctx: StateContext,
+  phaseId: string,
+  opts: MarkDoneOptions = {},
+): { acceptance?: AcceptanceResult } {
+  // H-15: validate success_criteria BEFORE any state mutation. A strict-mode
+  // failure means we never even increment attempts — the phase looks
+  // untouched to the next dispatch. A warn-mode failure proceeds with the
+  // mark-done but stamps `phase_acceptance_warn` + an alert so operators see
+  // the soft failure.
+  let acceptance: AcceptanceResult | undefined;
+  if (!opts.skipAcceptance) {
+    const phase = ctx.spec.phases.find((p) => p.id === Number(phaseId));
+    if (phase) {
+      const acceptanceCtx: AcceptanceContext = {
+        chainBaseDir: ctx.paths.baseDir,
+        phaseId: Number(phaseId),
+      };
+      if (opts.acceptance?.dispatchLogPath !== undefined) {
+        acceptanceCtx.dispatchLogPath = opts.acceptance.dispatchLogPath;
+      }
+      if (opts.acceptance?.ghPrViewer !== undefined) {
+        acceptanceCtx.ghPrViewer = opts.acceptance.ghPrViewer;
+      }
+      if (opts.acceptance?.ghTimeoutMs !== undefined) {
+        acceptanceCtx.ghTimeoutMs = opts.acceptance.ghTimeoutMs;
+      }
+      acceptance = validateAcceptance(phase, ctx.spec.chain_config, acceptanceCtx);
+      if (!acceptance.ok) {
+        const auditEvent =
+          acceptance.enforce === 'strict'
+            ? 'phase_acceptance_failed'
+            : 'phase_acceptance_warn';
+        appendAudit(ctx.paths.auditFile, auditEvent, {
+          phase_id: Number(phaseId),
+          enforce: acceptance.enforce,
+          summary: acceptance.summary,
+          checks: acceptance.checks,
+        });
+        // emitAlert is best-effort — wrapping in try/catch so a flaky
+        // dedupe-file write doesn't take down mark-done.
+        try {
+          emitAlert(
+            undefined,
+            {
+              type:
+                acceptance.enforce === 'strict'
+                  ? 'phase_acceptance_failed'
+                  : 'phase_acceptance_warn',
+              severity: acceptance.enforce === 'strict' ? 'high' : 'medium',
+              title: `acceptance ${acceptance.enforce} — phase ${phaseId}`,
+              detail: acceptance.summary,
+              chain: ctx.paths.baseDir.split('/').pop() ?? 'unknown',
+              evidence: { checks: acceptance.checks.map((c) => `${c.kind}:${c.ok ? 'ok' : c.reason}`) },
+            },
+            { auditFile: ctx.paths.auditFile },
+          );
+        } catch {
+          // tolerate emit-alert infra failures
+        }
+        if (acceptance.enforce === 'strict') {
+          throw new AcceptanceRefusedError(phaseId, acceptance);
+        }
+        // warn mode falls through and proceeds with mark-done.
+      } else {
+        appendAudit(ctx.paths.auditFile, 'phase_acceptance_ok', {
+          phase_id: Number(phaseId),
+          enforce: acceptance.enforce,
+          summary: acceptance.summary,
+        });
+      }
+    }
+  }
+
   const state = loadState(ctx);
   const ps = ensurePhaseEntry(state, phaseId);
   const sessionId = ps.session_id;
@@ -425,7 +575,9 @@ export function markDone(ctx: StateContext, phaseId: string): void {
   saveState(ctx, state2);
   appendAudit(ctx.paths.auditFile, 'phase_done', {
     phase_id: Number(phaseId),
+    ...(acceptance ? { acceptance_summary: acceptance.summary, acceptance_enforce: acceptance.enforce } : {}),
   });
+  return acceptance ? { acceptance } : {};
 }
 
 // Mark a phase done via the D-1 auto-adjudication path. Used when the
@@ -555,18 +707,24 @@ export interface PauseOptions {
 export function pause(ctx: StateContext, opts: PauseOptions = {}): void {
   const state = loadState(ctx);
   state.paused = true;
+  // H-14: stamp paused_at so audit consumers can compute a duration without
+  // grepping the audit log. Only stamp on the rising edge (paused: false→true)
+  // so a repeated pause() with a new --reason doesn't reset the clock.
+  if (!state.paused_at) state.paused_at = isoNow();
   if (opts.reason !== undefined) state.paused_reason = opts.reason;
   if (opts.pausedUntil !== undefined) state.paused_until = opts.pausedUntil;
   saveState(ctx, state);
   appendAudit(ctx.paths.auditFile, 'paused', {
     reason: opts.reason ?? null,
     paused_until: opts.pausedUntil ?? null,
+    paused_at: state.paused_at,
   });
 }
 
 export function resume(ctx: StateContext): void {
   const state = loadState(ctx);
   state.paused = false;
+  state.paused_at = null;
   state.paused_until = null;
   state.paused_reason = null;
   saveState(ctx, state);

@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { existsSync, unlinkSync } from 'node:fs';
 import {
+  AcceptanceRefusedError,
   adjudicate,
   computeNextPhase,
   evaluateNextPhase,
@@ -20,6 +21,7 @@ import {
   setBudget,
   tryLoadState,
 } from './state.js';
+import { takeStateBackup } from './backup.js';
 import type { PhaseStatus } from './types.js';
 import {
   HEARTBEAT_GRACE_SEC,
@@ -229,17 +231,47 @@ export function buildProgram(): Command {
 
   attachCommonOptions(program.command('mark-done'))
     .argument('<phase-id>')
-    .description('Transition a phase to done and clear the lock')
-    .action((phaseId: string, opts: BaseOptions) => {
-      const ctx = ctxFromOpts(opts);
-      markDone(ctx, phaseId);
-      clearLock(ctx);
-      // Event-triggered SESSION_HANDOFF.md refresh closes the staleness gap
-      // between hourly cron ticks (red-flag-remediation phase 5, 2026-05-14).
-      fireHandoffRefresh({
-        triggeredBy: `chain-phase-done-${opts.chainId}-${phaseId}`,
-      });
-    });
+    .option(
+      '--skip-acceptance',
+      'H-15: skip success_criteria enforcement (escape hatch for adjudication tooling)',
+    )
+    .description(
+      'Transition a phase to done and clear the lock. H-15: validates success_criteria per phase/chain enforce mode (default warn).',
+    )
+    .action(
+      (
+        phaseId: string,
+        cmdOpts: { skipAcceptance?: boolean },
+        cmd: Command,
+      ) => {
+        const opts = cmd.optsWithGlobals() as BaseOptions;
+        const ctx = ctxFromOpts(opts);
+        // H-13 (phase 9, 2026-05-14). Snapshot state.json before the mutation
+        // so a botched mark-done can be rolled back from .backups/.
+        takeStateBackup(ctx);
+        const markDoneOpts: Parameters<typeof markDone>[2] = {};
+        if (cmdOpts.skipAcceptance) markDoneOpts.skipAcceptance = true;
+        try {
+          markDone(ctx, phaseId, markDoneOpts);
+        } catch (err) {
+          if (err instanceof AcceptanceRefusedError) {
+            process.stderr.write(
+              `ACCEPTANCE_REFUSED phase=${phaseId} enforce=${err.result.enforce} summary=${err.result.summary}\n`,
+            );
+            // Distinct exit code (9) so wake scripts / wrappers can detect
+            // strict-mode refusal vs generic errors.
+            process.exit(9);
+          }
+          throw err;
+        }
+        clearLock(ctx);
+        // Event-triggered SESSION_HANDOFF.md refresh closes the staleness gap
+        // between hourly cron ticks (red-flag-remediation phase 5, 2026-05-14).
+        fireHandoffRefresh({
+          triggeredBy: `chain-phase-done-${opts.chainId}-${phaseId}`,
+        });
+      },
+    );
 
   attachCommonOptions(program.command('mark-failed'))
     .argument('<phase-id>')
@@ -266,6 +298,8 @@ export function buildProgram(): Command {
       ) => {
         const opts = cmd.optsWithGlobals() as BaseOptions;
         const ctx = ctxFromOpts(opts);
+        // H-13 backup-before-mutate.
+        takeStateBackup(ctx);
         const r = reason.length > 0 ? reason.join(' ') : 'no_reason';
         if (cmdOpts.class) {
           const evidence: Record<string, unknown> = {
@@ -333,6 +367,12 @@ export function buildProgram(): Command {
       ) => {
         const opts = cmd.optsWithGlobals() as BaseOptions;
         const ctx = ctxFromOpts(opts);
+        // H-13 (phase 9) rolling LRU snapshot in addition to the labeled
+        // adjudicate-suffix backup that state.ts:adjudicate writes via
+        // writeStateBackup. Both serve different purposes — the labeled
+        // one is referenced from the audit event; the rolling one is the
+        // generic safety net pruned to last 20.
+        takeStateBackup(ctx);
         const evidence: Record<string, unknown> = {};
         for (const kv of cmdOpts.evidence ?? []) {
           // Use only the first '=' so URLs (which contain '=') survive intact.
@@ -378,6 +418,8 @@ export function buildProgram(): Command {
       ) => {
         const opts = cmd.optsWithGlobals() as BaseOptions;
         const ctx = ctxFromOpts(opts);
+        // H-13: rolling backup alongside re-arm's labeled backup.
+        takeStateBackup(ctx);
         const reArmOpts: Parameters<typeof reArm>[3] = {};
         if (cmdOpts.resetAttempts) reArmOpts.resetAttempts = true;
         if (cmdOpts.force) reArmOpts.force = true;
@@ -402,6 +444,8 @@ export function buildProgram(): Command {
       (phaseId: string, cmdOpts: { reason: string }, cmd: Command) => {
         const opts = cmd.optsWithGlobals() as BaseOptions;
         const ctx = ctxFromOpts(opts);
+        // H-13: rolling backup alongside force-fail's labeled backup.
+        takeStateBackup(ctx);
         try {
           const r = forceFail(ctx, phaseId, cmdOpts.reason);
           process.stdout.write(
@@ -491,6 +535,8 @@ export function buildProgram(): Command {
       ) => {
         const opts = cmd.optsWithGlobals() as BaseOptions;
         const ctx = ctxFromOpts(opts);
+        // H-13 backup-before-mutate.
+        takeStateBackup(ctx);
         const pauseOpts: { reason?: string; pausedUntil?: string } = {};
         if (cmdOpts.reason !== undefined) pauseOpts.reason = cmdOpts.reason;
         if (cmdOpts.until !== undefined) pauseOpts.pausedUntil = cmdOpts.until;
@@ -504,6 +550,8 @@ export function buildProgram(): Command {
     .description('Re-enable dispatch')
     .action((opts: BaseOptions) => {
       const ctx = ctxFromOpts(opts);
+      // H-13 backup-before-mutate.
+      takeStateBackup(ctx);
       resume(ctx);
       process.stdout.write('RESUMED\n');
     });
@@ -513,6 +561,8 @@ export function buildProgram(): Command {
     .description('Set budget consumed percentage (0-100)')
     .action((pct: string, opts: BaseOptions) => {
       const ctx = ctxFromOpts(opts);
+      // H-13 backup-before-mutate.
+      takeStateBackup(ctx);
       setBudget(ctx, Number(pct));
     });
 
