@@ -105,6 +105,18 @@ export interface ChainHealth {
   stalled: boolean;
   paused: boolean;
   pausedUntil: string | null;
+  // H-17 (phase 10, 2026-05-14). State-only stall summary surfaced when
+  // `stalled` is true. Built from state.phase_status without the spec, so
+  // doctor doesn't need the chain's YAML path. Full dependency-graph walk
+  // is via `caia-chain stall-root-cause --chain-id <id> --phases <yaml>`;
+  // this field nudges the operator toward that command.
+  stallSummary?: {
+    blockerPhaseId: number | null;
+    blockerStatus: string | null;
+    blockerFailureClass: string | null;
+    blockerAttempts: number | null;
+    suggested: string;
+  };
 }
 
 export interface DiskCheck {
@@ -253,7 +265,7 @@ export function summariseChainHealth(
   const stalled =
     noneEligibleStreak >= NONE_ELIGIBLE_STALLED_STREAK ||
     (lockAgeSec !== null && lockAgeSec > LOCK_AGE_STALLED_SEC);
-  return {
+  const health: ChainHealth = {
     chainId,
     counts,
     lockAgeSec,
@@ -263,6 +275,61 @@ export function summariseChainHealth(
     stalled,
     paused: state?.paused ?? false,
     pausedUntil: state?.paused_until ?? null,
+  };
+  if (stalled && state?.phase_status) {
+    health.stallSummary = buildStallSummary(chainId, state.phase_status);
+  }
+  return health;
+}
+
+// H-17 (phase 10). State-only stall blocker hint. Picks the lowest-numbered
+// phase id whose status is `failed` or `blocked`; if none, falls back to the
+// lowest-numbered non-`done` phase (the candidate the wake script would try
+// next). The suggestion always points the operator at the full stall-root-
+// cause walker, which can consume the spec.
+function buildStallSummary(
+  chainId: string,
+  phaseStatus: Record<string, PhaseState>,
+): NonNullable<ChainHealth['stallSummary']> {
+  const phaseIds = Object.keys(phaseStatus)
+    .map((k) => Number(k))
+    .filter((n) => Number.isFinite(n))
+    .sort((a, b) => a - b);
+  let blocker: { id: number; ps: PhaseState } | null = null;
+  for (const id of phaseIds) {
+    const ps = phaseStatus[String(id)];
+    if (!ps) continue;
+    if (ps.status === 'blocked' || ps.status === 'failed') {
+      blocker = { id, ps };
+      break;
+    }
+  }
+  if (!blocker) {
+    for (const id of phaseIds) {
+      const ps = phaseStatus[String(id)];
+      if (ps && ps.status !== 'done') {
+        blocker = { id, ps };
+        break;
+      }
+    }
+  }
+  const suggested = `caia-chain stall-root-cause --chain-id ${chainId} --phases <YAML> --json`;
+  if (!blocker) {
+    return {
+      blockerPhaseId: null,
+      blockerStatus: null,
+      blockerFailureClass: null,
+      blockerAttempts: null,
+      suggested,
+    };
+  }
+  return {
+    blockerPhaseId: blocker.id,
+    blockerStatus: blocker.ps.status,
+    blockerFailureClass:
+      blocker.ps.last_failure_class ?? blocker.ps.failure?.class ?? null,
+    blockerAttempts: blocker.ps.attempts ?? null,
+    suggested,
   };
 }
 
@@ -612,6 +679,13 @@ export function formatDoctorReport(r: DoctorReport): string {
             7,
           )} ${c.lastPhaseDone ?? '-'}`,
         );
+        if (c.stallSummary) {
+          const s = c.stallSummary;
+          lines.push(
+            `      blocker: phase=${s.blockerPhaseId ?? '-'} status=${s.blockerStatus ?? '-'} class=${s.blockerFailureClass ?? '-'} attempts=${s.blockerAttempts ?? '-'}`,
+          );
+          lines.push(`      suggested: ${s.suggested}`);
+        }
       }
     }
   }

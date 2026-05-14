@@ -57,6 +57,13 @@ import {
 } from './alerting.js';
 import { diagnoseStall } from './cascade.js';
 import { chainPaths } from './paths.js';
+import {
+  aggregatePhaseStats,
+  calibratePhase,
+  renderCalibration,
+  renderJson as renderStatsJson,
+  renderMarkdown as renderStatsMarkdown,
+} from './stats.js';
 import { doctorExitCode, formatDoctorReport, runDoctor } from './doctor.js';
 import { formatReapReport, reapOrphans } from './reap.js';
 import { fireHandoffRefresh } from './handoff-refresh.js';
@@ -80,6 +87,11 @@ function ctxFromOpts(opts: BaseOptions) {
 function fail(msg: string, code = 2): never {
   process.stderr.write(`${msg}\n`);
   process.exit(code);
+}
+
+// Repeatable-option collector for commander (`--chain a --chain b` → ['a','b']).
+function collect(val: string, acc: string[]): string[] {
+  return acc.concat(val);
 }
 
 function attachCommonOptions(cmd: Command): Command {
@@ -1077,6 +1089,84 @@ export function buildProgram(): Command {
           process.stdout.write(
             `  none_eligible_streak: ${state.none_eligible_streak ?? 0}\n`,
           );
+        }
+      },
+    );
+
+  // H-18 (chain-runner-battle-harden phase 10, 2026-05-14). Aggregated per-phase
+  // runtime + failure-class stats. Walks audit.jsonl across every chain
+  // under ~/.caia/chain (or a subset via --chain). Output: markdown table
+  // (default) or JSON.
+  program
+    .command('stats')
+    .description(
+      'Aggregate per-phase runtime + failure-class stats across chains (walks ~/.caia/chain/*/audit.jsonl). Useful for calibration and post-mortem.',
+    )
+    .option('--chain <id>', 'restrict to a single chain id (repeatable)', collect, [] as string[])
+    .option('--phase <id>', 'restrict to a single phase id (numeric)')
+    .option('--since <iso>', 'drop events with ts < this ISO timestamp')
+    .option('--format <fmt>', 'markdown | json (default markdown)', 'markdown')
+    .action(
+      (cmdOpts: {
+        chain?: string[];
+        phase?: string;
+        since?: string;
+        format?: string;
+      }) => {
+        const aggOpts: Parameters<typeof aggregatePhaseStats>[0] = {};
+        if (cmdOpts.chain && cmdOpts.chain.length > 0) aggOpts.chains = cmdOpts.chain;
+        if (cmdOpts.since) aggOpts.sinceIso = cmdOpts.since;
+        const agg = aggregatePhaseStats(aggOpts);
+        if (cmdOpts.phase !== undefined) {
+          const wantId = Number(cmdOpts.phase);
+          agg.rows = agg.rows.filter((r) => r.phaseId === wantId);
+        }
+        const fmt = (cmdOpts.format ?? 'markdown').toLowerCase();
+        if (fmt === 'json') {
+          process.stdout.write(`${renderStatsJson(agg)}\n`);
+        } else {
+          process.stdout.write(`${renderStatsMarkdown(agg)}\n`);
+        }
+      },
+    );
+
+  // H-20 (phase 10). Calibration helper — recommends a max_minutes cap based
+  // on observed p95 across audit.jsonl. Read-only; the operator updates the
+  // YAML manually after reviewing the rationale.
+  program
+    .command('calibrate')
+    .argument('<phase-id>', 'numeric phase id to calibrate')
+    .description(
+      'Recommend a max_minutes cap for the given phase id based on observed p95 across audit.jsonl. Read-only.',
+    )
+    .option('--p <pct>', 'percentile (1-99); default 95', '95')
+    .option('--chain <id>', 'restrict to a single chain id')
+    .option(
+      '--multiplier <x>',
+      'multiplier applied to the p_sec → max_minutes recommendation; default 1.5',
+      '1.5',
+    )
+    .option('--format <fmt>', 'text | json (default text)', 'text')
+    .action(
+      (
+        phaseId: string,
+        cmdOpts: {
+          p?: string;
+          chain?: string;
+          multiplier?: string;
+          format?: string;
+        },
+      ) => {
+        const calOpts: Parameters<typeof calibratePhase>[1] = {};
+        if (cmdOpts.p !== undefined) calOpts.p = Number(cmdOpts.p);
+        if (cmdOpts.chain !== undefined) calOpts.chainId = cmdOpts.chain;
+        if (cmdOpts.multiplier !== undefined) calOpts.multiplier = Number(cmdOpts.multiplier);
+        const r = calibratePhase(Number(phaseId), calOpts);
+        const fmt = (cmdOpts.format ?? 'text').toLowerCase();
+        if (fmt === 'json') {
+          process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
+        } else {
+          process.stdout.write(`${renderCalibration(r)}\n`);
         }
       },
     );
