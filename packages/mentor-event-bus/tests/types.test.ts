@@ -3,8 +3,8 @@ import { EVENT_TYPES } from '../src/types';
 import { EVENT_SCHEMAS, assertEverySchemaPresent } from '../src/schemas';
 
 describe('event taxonomy', () => {
-  it('declares 22 event types', () => {
-    expect(EVENT_TYPES.length).toBe(22);
+  it('declares 30 event types (22 base + 8 A.10.4)', () => {
+    expect(EVENT_TYPES.length).toBe(30);
   });
 
   it('event type names are unique', () => {

@@ -130,8 +130,8 @@ describe('Client schema registration', () => {
     const c = makeClient();
     const db = c.unsafeGetDb();
     const rows = db.prepare('SELECT COUNT(*) AS n FROM schema_definitions').get() as { n: number };
-    // 22 event types, all registered at init time
-    expect(rows.n).toBe(22);
+    // 30 event types (22 base + 8 A.10.4), all registered at init time
+    expect(rows.n).toBe(30);
     c.close();
   });
 

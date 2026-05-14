@@ -54,7 +54,15 @@ export {
   type DecisionClassifierTripPayload,
   type ToolMisuseFlaggedPayload,
   type SubscriptionBucketSpikePayload,
-  type CapabilityBrokerOverridePayload
+  type CapabilityBrokerOverridePayload,
+  type RouterDecisionPayload,
+  type CompressionPayload,
+  type ClaudeRequestPayload,
+  type ClaudeResponsePayload,
+  type ClaudeDurationPayload,
+  type ChainPhasePayload,
+  type SpawnerOutcomePayload,
+  type PromptOptimizerStagePayload
 } from './types.js';
 
 export {

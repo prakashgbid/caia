@@ -149,6 +149,120 @@ export const CapabilityBrokerOverrideSchema = z.object({
   approver: z.string().min(1)
 });
 
+// ─── A.10.4 — router / claude-adapter / chain / spawner / optimizer ───────
+
+export const RouterDecisionSchema = z.object({
+  decisionId: z.string().min(1),
+  modelChosen: z.string().min(1),
+  provider: z.enum(['ollama', 'apprentice', 'claude', 'cache', 'other']),
+  displacementClass: z.enum([
+    'local',
+    'apprentice-canary',
+    'claude',
+    'cached',
+    'fallback'
+  ]),
+  latencyMs: z.number().nonnegative(),
+  caiaTaskType: z.string().optional(),
+  reason: z.string().optional(),
+  estimatedCostUsd: z.number().nonnegative().optional(),
+  baselineCostUsd: z.number().nonnegative().optional()
+});
+
+export const CompressionSchema = z.object({
+  stage: z.string().min(1),
+  inputChars: z.number().int().nonnegative(),
+  outputChars: z.number().int().nonnegative(),
+  ratio: z.number().nonnegative(),
+  method: z.enum(['passthrough', 'headroom', 'summarize', 'dedupe', 'other']),
+  durationMs: z.number().nonnegative().optional(),
+  modelUsed: z.string().optional()
+});
+
+export const ClaudeRequestSchema = z.object({
+  requestId: z.string().min(1),
+  model: z.string().min(1),
+  systemPromptHash: z.string().regex(/^[0-9a-f]{8,64}$/),
+  messageCount: z.number().int().nonnegative(),
+  estimatedInputTokens: z.number().int().nonnegative().optional(),
+  maxTokens: z.number().int().positive().optional(),
+  cachingEnabled: z.boolean().optional(),
+  thinkingEnabled: z.boolean().optional(),
+  caller: z.string().optional()
+});
+
+export const ClaudeResponseSchema = z.object({
+  requestId: z.string().min(1),
+  tokenCount: z.number().int().nonnegative(),
+  inputTokens: z.number().int().nonnegative().optional(),
+  outputTokens: z.number().int().nonnegative().optional(),
+  cacheReadInputTokens: z.number().int().nonnegative().optional(),
+  cacheCreationInputTokens: z.number().int().nonnegative().optional(),
+  finishReason: z.enum([
+    'end_turn',
+    'max_tokens',
+    'stop_sequence',
+    'tool_use',
+    'error'
+  ]),
+  errorCode: z.string().optional(),
+  httpStatus: z.number().int().min(100).max(599).optional()
+});
+
+export const ClaudeDurationSchema = z.object({
+  requestId: z.string().min(1),
+  startTs: z.string().datetime({ offset: true }),
+  endTs: z.string().datetime({ offset: true }),
+  wallMs: z.number().nonnegative(),
+  ok: z.boolean()
+});
+
+export const ChainPhaseSchema = z.object({
+  chainId: z.string().min(1),
+  phaseId: z.number().int().nonnegative(),
+  status: z.enum([
+    'pending',
+    'in_progress',
+    'done',
+    'failed',
+    'blocked',
+    'aborted'
+  ]),
+  sessionId: z.string().optional(),
+  attempt: z.number().int().nonnegative().optional(),
+  durationMs: z.number().nonnegative().optional(),
+  failureClass: z.string().optional(),
+  reason: z.string().optional()
+});
+
+export const SpawnerOutcomeSchema = z.object({
+  host: z.string().min(1),
+  taskId: z.string().min(1),
+  outcome: z.enum([
+    'completed',
+    'failed',
+    'aborted',
+    'timeout',
+    'pr-opened',
+    'pr-merged'
+  ]),
+  durationMs: z.number().nonnegative(),
+  exitCode: z.number().int().optional(),
+  worktreePath: z.string().optional(),
+  prNumber: z.number().int().positive().optional(),
+  reason: z.string().optional()
+});
+
+export const PromptOptimizerStageSchema = z.object({
+  runId: z.string().min(1),
+  stageNumber: z.number().int().positive(),
+  transform: z.string().min(1),
+  tokensIn: z.number().int().nonnegative(),
+  tokensOut: z.number().int().nonnegative(),
+  durationMs: z.number().nonnegative().optional(),
+  noop: z.boolean().optional()
+});
+
 // ─── Registry ─────────────────────────────────────────────────────────────
 
 export const EVENT_SCHEMAS: { [K in EventType]: z.ZodTypeAny } = {
@@ -173,7 +287,15 @@ export const EVENT_SCHEMAS: { [K in EventType]: z.ZodTypeAny } = {
   DecisionClassifierTrip: DecisionClassifierTripSchema,
   ToolMisuseFlagged: ToolMisuseFlaggedSchema,
   SubscriptionBucketSpike: SubscriptionBucketSpikeSchema,
-  CapabilityBrokerOverride: CapabilityBrokerOverrideSchema
+  CapabilityBrokerOverride: CapabilityBrokerOverrideSchema,
+  RouterDecision: RouterDecisionSchema,
+  Compression: CompressionSchema,
+  ClaudeRequest: ClaudeRequestSchema,
+  ClaudeResponse: ClaudeResponseSchema,
+  ClaudeDuration: ClaudeDurationSchema,
+  ChainPhase: ChainPhaseSchema,
+  SpawnerOutcome: SpawnerOutcomeSchema,
+  PromptOptimizerStage: PromptOptimizerStageSchema
 };
 
 /**
