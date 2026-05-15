@@ -28,16 +28,33 @@ GitHub: <repo>/post-merge-queue/queue.jsonl
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "pr_number": 451,
   "repo": "prakashgbid/caia",
   "merge_sha": "5c077f4...",
   "base_branch": "develop",
   "ts": "2026-05-15T00:00:00Z",
   "pr_title": "feat(observability): a.10.6 + a.10.9 router/optimizer/audit-cron emit-points",
-  "pr_author": "claude-spawned"
+  "pr_author": "claude-spawned",
+  "pr_body": "...PR body, truncated to 4 KB..."
 }
 ```
+
+`schema_version: 2` adds `pr_body` (4 KB max) so the deploy stub can scan
+for institutionalized deploy tags (e.g. `ROUTER-DAEMON-RELOAD-REQUIRED`)
+without an extra `gh pr view` round-trip. v1 rows still parse — body
+just resolves to empty.
+
+## Institutionalized deploy tags
+
+| Tag | Effect |
+|-----|--------|
+| `ROUTER-DAEMON-RELOAD-REQUIRED` | After merge, `launchctl kickstart -k com.chiefaia.local-llm-router` so the operator's Mac picks up the new binary. Also auto-fires when the PR title matches `local-llm-router` or `router-daemon`. |
+
+Add a tag in the PR body when an explicit deploy action must run that
+isn't obvious from the title (e.g. a config change in another package
+that nonetheless mandates a router restart). Tags are matched
+case-sensitively as substrings of `pr_body`.
 
 ## Install (one-shot, idempotent)
 
