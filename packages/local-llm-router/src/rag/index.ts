@@ -70,7 +70,6 @@ export function loadIndex(path: string = defaultIndexPath()): FileIndex | null {
     const raw = readFileSync(path, 'utf8');
     const parsed = JSON.parse(raw) as FileIndex;
     if (parsed.version !== 1 || !Array.isArray(parsed.entries)) {
-      // eslint-disable-next-line no-console
       console.error(`[rag] index at ${path} has unexpected shape (version=${parsed.version})`);
       return null;
     }
@@ -78,7 +77,6 @@ export function loadIndex(path: string = defaultIndexPath()): FileIndex | null {
     _cachedPath = path;
     return parsed;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error(`[rag] failed to parse index at ${path}: ${(e as Error).message}`);
     return null;
   }

@@ -46,7 +46,7 @@ export function injectFiles(input: InjectInput): InjectResult {
     if (entry === undefined) continue;
     const sim = input.similarities?.[i];
 
-    let body = '';
+    let body: string;
     try {
       if (existsSync(entry.path)) {
         // Cap the read at perFileBudget to keep memory bounded for huge files
