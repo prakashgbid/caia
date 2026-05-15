@@ -3,8 +3,9 @@
 #
 # Runs:
 #   1. python -m py_compile on every source module.
-#   2. com.caia.claude-spawner-agent.plist.template parses as XML.
-#   3. each module imports (spawner_argv → local_llm_router_client → claude_spawner_agent).
+#   2. launchd/com.caia.claude-spawner-agent.plist.template parses as XML.
+#   3. scripts/install.sh passes bash syntax check.
+#   4. each module imports (spawner_argv → local_llm_router_client → claude_spawner_agent).
 #
 # Used by .github/workflows/services-smoke.yml on every PR that touches
 # services/claude-spawner-agent/**.
@@ -25,13 +26,19 @@ for f in claude_spawner_agent.py local_llm_router_client.py spawner_argv.py; do
 done
 
 echo "==> plist template XML sanity"
-test -s com.caia.claude-spawner-agent.plist.template || {
-  echo "    ✗ plist template missing or empty"; exit 1; }
-python3 - <<'PY'
-import xml.etree.ElementTree as ET
-ET.parse("com.caia.claude-spawner-agent.plist.template")
+PLIST_TEMPLATE="launchd/com.caia.claude-spawner-agent.plist.template"
+test -s "$PLIST_TEMPLATE" || {
+  echo "    ✗ plist template missing or empty at $PLIST_TEMPLATE"; exit 1; }
+PLIST_TEMPLATE="$PLIST_TEMPLATE" python3 - <<'PY'
+import os, xml.etree.ElementTree as ET
+ET.parse(os.environ["PLIST_TEMPLATE"])
 print("    ✓ plist template parses as XML")
 PY
+
+echo "==> install.sh shell syntax"
+test -x scripts/install.sh || { echo "    ✗ scripts/install.sh missing or not executable"; exit 1; }
+bash -n scripts/install.sh
+echo "    ✓ scripts/install.sh parses"
 
 echo "==> import smoke"
 # claude_spawner_agent imports `from spawner_argv import build_claude_argv`

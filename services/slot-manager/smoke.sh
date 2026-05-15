@@ -37,7 +37,10 @@ print(f"    ✓ schema applies; tables: {tables}")
 PY
 
 echo "==> import smoke"
-TMP_DB=$(mktemp --suffix=.db)
+# mktemp portability: BSD/macOS mktemp doesn't support --suffix; both
+# Linux and BSD honor the trailing-X template form below.
+TMP_DB=$(mktemp -t slot-manager-smoke.XXXXXX)
+mv "$TMP_DB" "$TMP_DB.db"; TMP_DB="$TMP_DB.db"
 trap 'rm -f "$TMP_DB"' EXIT
 SCHEMA_PATH="$(pwd)/schema.sql" \
 SLOT_MANAGER_DB_PATH="$TMP_DB" \
