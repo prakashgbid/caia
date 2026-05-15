@@ -1,0 +1,60 @@
+---
+# Phase 2 — stuck-audit CronJob.
+# Hits POST /admin/audit/stuck-tasks every 5 min with move_to_stuck=true.
+# A "stuck" task is one in status='assigned' or 'running' whose
+# last_heartbeat_at is older than 10 min (SPS_STUCK_AGE_MIN).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sps-stuck-audit
+  namespace: caia-orchestrator
+  labels:
+    app: sps
+    component: stuck-audit
+    version: phase2
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 60
+      template:
+        metadata:
+          labels:
+            app: sps
+            component: stuck-audit
+        spec:
+          restartPolicy: OnFailure
+          priorityClassName: system-cluster-critical
+          tolerations:
+            - key: "node.kubernetes.io/disk-pressure"
+              operator: "Exists"
+              effect: "NoSchedule"
+            - key: "node.kubernetes.io/disk-pressure"
+              operator: "Exists"
+              effect: "NoExecute"
+          containers:
+            - name: stuck-audit
+              image: curlimages/curl:8.10.1
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  echo "[$(date -u +%FT%TZ)] sps-stuck-audit running"
+                  RESP=$(curl -sS -m 30 -X POST \
+                    -H 'Content-Type: application/json' \
+                    -d '{"max_age_min":10,"move_to_stuck":true}' \
+                    http://sps.caia-orchestrator.svc.cluster.local:8080/admin/audit/stuck-tasks)
+                  echo "$RESP"
+              resources:
+                requests:
+                  cpu: "10m"
+                  memory: "16Mi"
+                limits:
+                  cpu: "50m"
+                  memory: "64Mi"

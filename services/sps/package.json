@@ -1,0 +1,9 @@
+{
+  "name": "@caia/services-sps",
+  "version": "0.3.0",
+  "private": true,
+  "description": "SPS — Smart Parallelism Scheduler (Phase 2). Python/FastAPI service deployed to the K3s caia-orchestrator namespace. This directory is the canonical source; the K3s ConfigMap `sps-src` mounts main.py + schema.sql from here.",
+  "scripts": {
+    "smoke": "BASE=${BASE:-http://127.0.0.1:8080} bash smoke.sh"
+  }
+}

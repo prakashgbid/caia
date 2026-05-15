@@ -2,6 +2,7 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'configs/*'
+  - 'services/*'
   # Only concrete site templates are workspace members. Generic scaffold
   # templates (templates/site, templates/utility) contain unfilled placeholders
   # like {{SLUG}}/{{SITE_NAME}} and are meant to be cloned-and-renamed by the
