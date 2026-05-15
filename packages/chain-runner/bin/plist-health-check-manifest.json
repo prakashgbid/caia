@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "phase": "A2",
+  "generated_at": "2026-05-15",
+  "description": "Catalog of every LaunchAgent-managed CLI bin and how to invoke its --health-check. The post-merge deploy gate (A1) reads this manifest, kickstarts each plist, then invokes the bin with --health-check and asserts exit 0 + JSON {ok:true}.",
+  "contract": {
+    "flag": "--health-check",
+    "exit_code_ok": 0,
+    "max_runtime_seconds": 5,
+    "stdout_format": "single-line JSON",
+    "required_fields": ["ok", "git_sha", "pid", "timestamp"],
+    "optional_fields": ["label", "package", "version", "node", "python", "script"],
+    "env_vars_consumed": {
+      "CAIA_PLIST_LABEL": "echoed into payload.label",
+      "CAIA_GIT_SHA": "echoed into payload.git_sha"
+    },
+    "side_effects": "none — must NOT bind ports, open databases, write logs, or fork subprocesses"
+  },
+  "bins": [
+    {
+      "plist_label": "com.caia.chain-watchdog",
+      "monorepo": false,
+      "kind": "node",
+      "path": "/Users/macbook32/.caia/chain-watchdog/watchdog.js",
+      "argv": ["--health-check"],
+      "interpreter": "/opt/homebrew/opt/node@22/bin/node"
+    },
+    {
+      "plist_label": "com.caia.handoff-refresh-hourly",
+      "monorepo": false,
+      "kind": "bash",
+      "path": "/Users/macbook32/.caia/handoff/refresh_handoff.sh",
+      "argv": ["--health-check"],
+      "interpreter": "/bin/zsh"
+    },
+    {
+      "plist_label": "com.caia.hygiene-audit-daily",
+      "monorepo": false,
+      "kind": "bash",
+      "path": "/Users/macbook32/.caia/hygiene/audit.sh",
+      "argv": ["--health-check"],
+      "interpreter": "/bin/bash"
+    },
+    {
+      "plist_label": "com.caia.mentor.memory-watcher",
+      "monorepo": true,
+      "kind": "node-esm",
+      "path": "caia/packages/mentor-event-bus/dist/cli.js",
+      "argv": ["watch-memory", "--health-check"],
+      "interpreter": "/opt/homebrew/opt/node@22/bin/node"
+    },
+    {
+      "plist_label": "com.caia.mentor.server",
+      "monorepo": true,
+      "kind": "node-esm",
+      "path": "caia/packages/mentor-event-bus/dist/cli.js",
+      "argv": ["serve", "--health-check"],
+      "interpreter": "/opt/homebrew/opt/node@22/bin/node"
+    },
+    {
+      "plist_label": "com.caia.pr-drainer-hourly",
+      "monorepo": false,
+      "kind": "bash",
+      "path": "/Users/macbook32/.caia/pr-drainer/drain.sh",
+      "argv": ["--health-check"],
+      "interpreter": "/bin/bash"
+    },
+    {
+      "plist_label": "com.caia.redflag-wake",
+      "monorepo": false,
+      "kind": "bash",
+      "path": "/Users/macbook32/.caia/chain-watchdog/redflag_remediation_wake.sh",
+      "argv": ["--health-check"],
+      "interpreter": "/bin/bash"
+    },
+    {
+      "plist_label": "com.caia.stability-completion-wake",
+      "monorepo": false,
+      "kind": "bash",
+      "path": "/Users/macbook32/.caia/chain-watchdog/stability_completion_wake.sh",
+      "argv": ["--health-check"],
+      "interpreter": "/bin/bash"
+    },
+    {
+      "plist_label": "com.caia.tier25-wake",
+      "monorepo": false,
+      "kind": "bash",
+      "path": "/Users/macbook32/.caia/chain-watchdog/tier25_wake.sh",
+      "argv": ["--health-check"],
+      "interpreter": "/bin/bash"
+    },
+    {
+      "plist_label": "com.chiefaia.apprentice-corpus",
+      "monorepo": true,
+      "kind": "node-esm",
+      "path": "caia/packages/apprentice-corpus/dist/cli.js",
+      "argv": ["aggregate", "--health-check"],
+      "interpreter": "/opt/homebrew/opt/node@22/bin/node"
+    },
+    {
+      "plist_label": "com.chiefaia.apprentice-corpus-heartbeat",
+      "monorepo": true,
+      "kind": "node-mjs",
+      "path": "caia/packages/apprentice-corpus/scripts/heartbeat.mjs",
+      "argv": ["--health-check"],
+      "interpreter": "/opt/homebrew/opt/node@22/bin/node"
+    },
+    {
+      "plist_label": "com.chiefaia.apprentice-retrainer",
+      "monorepo": true,
+      "kind": "node-esm",
+      "path": "caia/packages/apprentice-retrainer/dist/cli.js",
+      "argv": ["run", "--health-check"],
+      "interpreter": "/opt/homebrew/opt/node@22/bin/node"
+    },
+    {
+      "plist_label": "com.chiefaia.local-llm-router",
+      "monorepo": true,
+      "kind": "node-cjs",
+      "path": "caia/packages/local-llm-router/dist/bin/router-daemon.js",
+      "argv": ["--health-check"],
+      "interpreter": "/opt/homebrew/opt/node@22/bin/node"
+    },
+    {
+      "plist_label": "com.chiefaia.sps-audit-recent-done-hourly",
+      "monorepo": false,
+      "kind": "python",
+      "path": "/Users/macbook32/.local/share/chiefaia/sps/audit_recent_done.py",
+      "argv": ["--health-check"],
+      "interpreter": "/usr/bin/env python3"
+    }
+  ]
+}
