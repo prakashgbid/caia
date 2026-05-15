@@ -601,6 +601,9 @@ importers:
 
   packages/apprentice-corpus:
     dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
@@ -620,6 +623,9 @@ importers:
       '@chiefaia/apprentice-corpus':
         specifier: workspace:*
         version: link:../apprentice-corpus
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -929,6 +935,9 @@ importers:
 
   packages/code-reviewer:
     dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
@@ -1001,6 +1010,9 @@ importers:
 
   packages/critic:
     dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
@@ -1783,6 +1795,10 @@ importers:
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/researcher:
+    dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -1799,6 +1815,9 @@ importers:
 
   packages/reviewer:
     dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
@@ -2210,6 +2229,10 @@ importers:
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/verifier:
+    dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
     devDependencies:
       '@types/node':
         specifier: ^20.0.0

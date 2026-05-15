@@ -18,13 +18,18 @@
  * parse the rate-limit message as a synthesis result.
  */
 
-import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import { spawnClaude } from '@chiefaia/claude-spawner';
+import type { spawn, spawnSync, SpawnSyncReturns } from 'node:child_process';
 
 import type { LlmClient, LlmCompletion } from './types.js';
 
 export interface DefaultLlmClientOptions {
   binaryPath: string;
-  /** Test seam — replaces `child_process.spawnSync`. */
+  /**
+   * Test seam — back-compat shim. New callers should use {@link spawnImpl}
+   * which matches `@chiefaia/claude-spawner`'s `spawnFn` shape. Setting
+   * `spawnFn` is a no-op now; the client routes through claude-spawner.
+   */
   spawnFn?: (
     cmd: string,
     args: readonly string[],
@@ -36,15 +41,14 @@ export interface DefaultLlmClientOptions {
       maxBuffer: number;
     }
   ) => SpawnSyncReturns<string>;
+  /**
+   * Test seam — replaces `node:child_process.spawn` used by
+   * `@chiefaia/claude-spawner`. Inject a fake child for testing.
+   */
+  spawnImpl?: typeof spawn;
 }
 
-const MAX_BUFFER = 50 * 1024 * 1024; // 50 MB — synthesis can be large
-
 export function createDefaultLlmClient(opts: DefaultLlmClientOptions): LlmClient {
-  const spawn: NonNullable<DefaultLlmClientOptions['spawnFn']> =
-    opts.spawnFn ??
-    ((cmd, args, sopts): SpawnSyncReturns<string> =>
-      spawnSync(cmd, args as readonly string[], sopts) as SpawnSyncReturns<string>);
   return {
     async complete(input: {
       prompt: string;
@@ -60,52 +64,49 @@ export function createDefaultLlmClient(opts: DefaultLlmClientOptions): LlmClient
       const localOutput = await trySmallPayloadLocalRouter(input);
       if (localOutput !== null) return localOutput;
 
-      const env = { ...process.env };
-      delete env['ANTHROPIC_API_KEY'];
-      const args: string[] = ['--print', '--output-format', 'json'];
-      if (input.model !== undefined && input.model.length > 0) {
-        args.push('--model', input.model);
+      const result = await spawnClaude({
+        prompt: input.prompt,
+        options: {
+          binaryPath: opts.binaryPath,
+          ...(input.model !== undefined && input.model.length > 0 ? { model: input.model } : {}),
+          timeoutMs: input.timeoutMs,
+          ...(opts.spawnImpl !== undefined ? { spawnFn: opts.spawnImpl } : {})
+        }
+      });
+      if (!result.ok) {
+        const diag = result.diagnostic ?? 'unknown failure';
+        // Preserve the legacy diagnostic shapes so consumers' regex
+        // checks for "spawn threw" / "claude spawn error" / "claude exited"
+        // still hit.
+        if (diag.startsWith('failed to spawn')) {
+          return {
+            text: '',
+            ok: false,
+            diagnostic: `spawn threw: ${diag.slice('failed to spawn '.length)}`
+          };
+        }
+        if (diag.startsWith('child process error')) {
+          return {
+            text: '',
+            ok: false,
+            diagnostic: `claude spawn error: ${diag.slice('child process error: '.length)}`
+          };
+        }
+        if (result.rc !== null && result.rc !== 0) {
+          const stderr = result.stderr.slice(0, 600);
+          const tail =
+            result.stdout.length > 0
+              ? `${stderr} | stdout: ${result.stdout.slice(0, 400)}`
+              : stderr;
+          return {
+            text: '',
+            ok: false,
+            diagnostic: `claude exited ${String(result.rc)}: ${tail}`
+          };
+        }
+        return { text: '', ok: false, diagnostic: diag };
       }
-      let result: SpawnSyncReturns<string>;
-      try {
-        result = spawn(opts.binaryPath, args, {
-          input: input.prompt,
-          encoding: 'utf-8',
-          timeout: input.timeoutMs,
-          env,
-          maxBuffer: MAX_BUFFER
-        });
-      } catch (e) {
-        return {
-          text: '',
-          ok: false,
-          diagnostic: `spawn threw: ${(e as Error).message}`
-        };
-      }
-      if (result.error !== null && result.error !== undefined) {
-        return {
-          text: '',
-          ok: false,
-          diagnostic: `claude spawn error: ${result.error.message}`
-        };
-      }
-      if (result.status !== 0) {
-        const stderr = (result.stderr ?? '').toString().slice(0, 600);
-        const stdout = (result.stdout ?? '').toString();
-        // Some failure modes (rate-limit) emit a JSON envelope on stdout
-        // even with non-zero exit. Surface both for the diagnostic.
-        const tail =
-          stdout.length > 0
-            ? `${stderr} | stdout: ${stdout.slice(0, 400)}`
-            : stderr;
-        return {
-          text: '',
-          ok: false,
-          diagnostic: `claude exited ${result.status}: ${tail}`
-        };
-      }
-      const stdout = (result.stdout ?? '').toString();
-      return parseEnvelope(stdout);
+      return parseEnvelope(result.stdout);
     }
   };
 }
