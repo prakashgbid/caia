@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>CAIA_NODE_BIN</key>
+		<string>/opt/homebrew/opt/node@22/bin/node</string>
+		<key>HOME</key>
+		<string>{{HOME}}</string>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+	<key>Label</key>
+	<string>{{LABEL}}</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>{{WAKE_SCRIPT}}</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>{{HOME}}/.caia/chain-watchdog/logs/{{LOG_SLUG}}_launchd.err.log</string>
+	<key>StandardOutPath</key>
+	<string>{{HOME}}/.caia/chain-watchdog/logs/{{LOG_SLUG}}_launchd.out.log</string>
+{{SCHEDULE_BLOCK}}
+</dict>
+</plist>
