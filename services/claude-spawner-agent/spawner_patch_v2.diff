@@ -1,0 +1,170 @@
+# Reference patch v2 for claude_spawner_agent.py
+#
+# Supersedes spawner_patch.diff (v1). v2 adds the LAI phase 7 change:
+# when the pre-spawn classifier routes a task to claude (local can't or
+# shouldn't handle it), the prompt is run through @chiefaia/prompt-optimizer
+# *before* the claude binary is invoked. The optimizer cuts prompt tokens
+# (Stage 1 prepass / Stage 2 tool-output summarize / Stage 3 token-importance
+# prune) and the spawn record captures pre/post token counts so we can
+# verify the savings show up downstream.
+#
+# v2 changes from v1:
+#   - Import `optimize_prompt` from local_llm_router_client (alongside
+#     existing classify_and_maybe_route + health imports).
+#   - In the /spawn handler, after the v1 classify-and-maybe-route gate
+#     falls through to claude (`local_response is None`), run the prompt
+#     through `optimize_prompt(task_spec_str, system_prompt=None,
+#     base_url=ROUTER_URL)` IF the router is healthy. The optimizer never
+#     raises — worst case it returns the original prompt with
+#     backend='noop', so the claude path stays unblocked.
+#   - The subprocess invocation receives the optimized prompt (stdin to
+#     `claude --print`) instead of the original `task_spec`.
+#   - Spawn record gains:
+#         optimizer_backend         'router-v1-optimize' | 'inline-stage1' | 'noop' | 'skipped'
+#         optimizer_pre_tokens      int — estimated tokens before optimize
+#         optimizer_post_tokens     int — estimated tokens after optimize
+#         optimizer_compression     float — post/pre (≤1.0 is win)
+#         optimizer_stages_run      list[str] — e.g. ['stage1','stage2','stage3']
+#         optimizer_wall_ms         int — wall-clock the optimizer took
+#         optimizer_error           str | None
+#     Existing fields are unchanged. A new env knob `OPTIMIZER_ENABLED`
+#     (default true) lets us disable the optimizer step independently of
+#     the router gate.
+#
+# DO NOT auto-apply — operator review required. This is a reference patch.
+# The real spawner is ~1800 lines; the hunks below show the intent and
+# exact lines to add against the v1-patched source tree. Apply by hand or
+# adapt as a code-review checklist.
+#
+# Apply (after v1 is already applied) with:
+#   cd <spawner-dir>
+#   patch -p0 < spawner_patch_v2.diff
+# Or, if applying fresh on top of unpatched upstream, apply v1 first then v2.
+#
+# Smoke test post-deploy:
+#   1. Restart spawner: systemctl --user restart claude-spawner-agent
+#   2. Send synthetic escalating /spawn (see deploy_v2.sh in same dir).
+#   3. Verify the spawn DB row has optimizer_* fields populated AND
+#      `model_used` is the claude binary (not local). pre_tokens should
+#      be > post_tokens (or equal, for the inline-stage1 fallback path).
+
+--- claude_spawner_agent.py
++++ claude_spawner_agent.py
+@@ -1,7 +1,7 @@
+ #!/usr/bin/env python3
+ import asyncio
+ import json
+ import os
+ import subprocess
+ import time
+ import uuid
+-from local_llm_router_client import classify_and_maybe_route, health
++from local_llm_router_client import classify_and_maybe_route, health, optimize_prompt
+@@ -10,8 +10,11 @@ CLAUDE_BINARY = os.environ.get("CLAUDE_BINARY", "/opt/homebrew/bin/claude")
+ ROUTER_URL = os.environ.get("LOCAL_LLM_ROUTER_URL", "http://100.68.247.58:7411")
+ ROUTER_GATE_ENABLED = os.environ.get("ROUTER_GATE_ENABLED", "true").lower() in ("1", "true", "yes")
++# LAI phase 7: optimizer pre-pass on escalation path. Independent of the
++# router gate so operators can disable it without losing local routing.
++OPTIMIZER_ENABLED = os.environ.get("OPTIMIZER_ENABLED", "true").lower() in ("1", "true", "yes")
++OPTIMIZER_TIMEOUT_S = float(os.environ.get("OPTIMIZER_TIMEOUT_S", "30.0"))
+
+@@ -120,6 +123,7 @@ async def handle_spawn(body: SpawnRequest) -> SpawnResponse:
+     """Spawn a claude subprocess for the given task."""
+     spawn_id = str(uuid.uuid4())
++    optimizer_meta: dict = {"optimizer_backend": "skipped"}
+
+     # ── L9/L10 pre-spawn classify-and-maybe-route gate ─────────────────
+     if ROUTER_GATE_ENABLED and health(ROUTER_URL):
+@@ -148,14 +152,49 @@ async def handle_spawn(body: SpawnRequest) -> SpawnResponse:
+                 output=local_response,
+                 model=route_meta.get("model"),
+             )
+-        # else: route_meta tells us why we're falling through to claude
+-        # (router unreachable, recommends-claude, local-execute-failed, ...)
+-        # The metadata is logged but spawn proceeds to claude as before.
++        # Falling through to claude. v2: run the prompt through the optimizer
++        # so the claude binary sees a tighter context. Optimizer is best-effort
++        # — on any error it returns the original prompt with backend='noop'.
++        # We still hit it even when the router is unhealthy, because
++        # optimize_prompt has its own pure-Python stage-1 fallback path.
++
++    # ── LAI phase 7 optimizer pre-pass ─────────────────────────────────
++    # Run regardless of router gate outcome, as long as the operator hasn't
++    # turned the optimizer off. The /v1/optimize endpoint (if deployed)
++    # returns full 3-stage results; otherwise we degrade to inline stage 1.
++    prompt_for_claude = body.task_spec
++    if OPTIMIZER_ENABLED:
++        try:
++            optimized, opt_meta = optimize_prompt(
++                body.task_spec,
++                system_prompt=getattr(body, "system_prompt", None),
++                base_url=ROUTER_URL,
++                timeout=OPTIMIZER_TIMEOUT_S,
++            )
++            prompt_for_claude = optimized
++            optimizer_meta = {
++                "optimizer_backend": opt_meta.get("backend"),
++                "optimizer_pre_tokens": opt_meta.get("pre_token_count"),
++                "optimizer_post_tokens": opt_meta.get("post_token_count"),
++                "optimizer_compression": opt_meta.get("compression_ratio"),
++                "optimizer_stages_run": opt_meta.get("stages_run"),
++                "optimizer_wall_ms": opt_meta.get("wall_ms"),
++                "optimizer_error": opt_meta.get("error"),
++            }
++        except Exception as e:
++            # optimize_prompt should never raise, but belt-and-suspenders:
++            # never let an optimizer bug kill a spawn.
++            optimizer_meta = {
++                "optimizer_backend": "noop",
++                "optimizer_error": f"{type(e).__name__}: {e}",
++            }
+
+     # ── Existing claude binary spawn (now feeding the optimized prompt) ─
+     proc = subprocess.Popen(
+         [CLAUDE_BINARY, "--print", "--output-format", "json"],
+         stdin=subprocess.PIPE,
+         stdout=subprocess.PIPE,
+         stderr=subprocess.PIPE,
+     )
+-    stdout, stderr = proc.communicate(input=body.task_spec.encode("utf-8"))
++    stdout, stderr = proc.communicate(input=prompt_for_claude.encode("utf-8"))
+@@ -180,6 +219,8 @@ async def handle_spawn(body: SpawnRequest) -> SpawnResponse:
+         "claude_invoked": True,
+         "ts_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+     }
++    # LAI phase 7: merge optimizer metrics into the spawn record.
++    record.update(optimizer_meta)
+     await write_spawn_record(record)
+     return SpawnResponse(
+         spawn_id=spawn_id,
+@@ -201,3 +242,29 @@ async def handle_spawn(body: SpawnRequest) -> SpawnResponse:
+         status="completed",
+         output=stdout.decode("utf-8", errors="replace"),
+         model="claude",
+     )
++
++
++# ────────────────────────────────────────────────────────────────────────
++# Notes on schema migration:
++#
++# The journal/spawner.db schema needs to gain the optimizer_* columns. Two
++# options the operator can pick from at deploy time:
++#
++#   (a) ALTER TABLE on first restart — add a startup hook that runs:
++#       ALTER TABLE spawn_records ADD COLUMN optimizer_backend TEXT;
++#       ALTER TABLE spawn_records ADD COLUMN optimizer_pre_tokens INTEGER;
++#       ALTER TABLE spawn_records ADD COLUMN optimizer_post_tokens INTEGER;
++#       ALTER TABLE spawn_records ADD COLUMN optimizer_compression REAL;
++#       ALTER TABLE spawn_records ADD COLUMN optimizer_stages_run TEXT;
++#       ALTER TABLE spawn_records ADD COLUMN optimizer_wall_ms INTEGER;
++#       ALTER TABLE spawn_records ADD COLUMN optimizer_error TEXT;
++#       (Each guarded by a "column already exists" check.)
++#
++#   (b) Stash the whole optimizer_meta blob into a single existing
++#       `extras_json TEXT` column if one exists, and parse downstream.
++#
++# The reference patch above uses `record.update(optimizer_meta)` which
++# accommodates either approach — the on-disk writer is responsible for
++# matching dict keys to columns. For stolution's spawner this maps via
++# the existing `journal_finalize()` helper; verify it accepts unknown
++# keys (it does today, as kwargs into a dict) before flipping the env knob.

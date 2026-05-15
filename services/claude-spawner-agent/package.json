@@ -1,0 +1,9 @@
+{
+  "name": "@caia/services-claude-spawner-agent",
+  "version": "0.5.0",
+  "private": true,
+  "description": "claude-spawner-agent — Host-Side Spawner Daemon (Phase 5). Python/FastAPI daemon installed on each M1/Mac host that hosts a claude-binary spawn capacity. Sibling to services/slot-manager/.",
+  "scripts": {
+    "smoke": "bash smoke.sh"
+  }
+}

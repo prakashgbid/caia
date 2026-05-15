@@ -1,0 +1,5 @@
+# claude-spawner-agent (Phase 5) — Python service dependencies
+# Pin minor versions; allow patch upgrades for security fixes.
+fastapi==0.115.*
+uvicorn[standard]==0.32.*
+httpx==0.28.*
