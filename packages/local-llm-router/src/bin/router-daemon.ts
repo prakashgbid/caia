@@ -10,8 +10,34 @@
 //                                          will become qwen2.5-coder-7b-caia-apprentice
 //                                          once the LoRA is trained)
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { serve } from '@hono/node-server';
 import { buildApp, DEFAULT_ROUTER_PORT } from '../server.js';
+
+// Phase A2 --health-check shortcut. The post-merge gate (A1) invokes
+// `<bin> --health-check` after `launchctl kickstart` and expects exit 0
+// in ≤5s with single-line JSON on stdout. Runs BEFORE the server binds
+// the port (which would fail if a previous instance is still listening).
+if (process.argv.includes('--health-check')) {
+  const pkg = JSON.parse(
+    readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'),
+  ) as { name: string; version: string };
+  process.stdout.write(
+    JSON.stringify({
+      ok: true,
+      label: process.env['CAIA_PLIST_LABEL'] ?? null,
+      package: pkg.name,
+      version: pkg.version,
+      git_sha: process.env['CAIA_GIT_SHA'] ?? 'unknown',
+      node: process.version,
+      pid: process.pid,
+      timestamp: new Date().toISOString(),
+    }) + '\n',
+  );
+  process.exit(0);
+}
 
 interface Args {
   port: number;

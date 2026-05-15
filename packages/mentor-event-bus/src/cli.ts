@@ -24,8 +24,10 @@
  * Override via $CAIA_EVENT_BUS_DB_PATH (also used by the LaunchAgent in PR-δ).
  */
 
+import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { Client } from './client.js';
 import { startServer } from './server.js';
@@ -34,6 +36,30 @@ import { openDatabase, queryEvents } from './sqlite.js';
 import { startMemoryWatcher } from './memory-watcher.js';
 import type { EmittedEvent } from './types.js';
 import type { OperatorCorrectionPayload } from './types.js';
+
+// Phase A2 --health-check shortcut. The post-merge gate (A1) invokes
+// `<bin> --health-check` after `launchctl kickstart` and expects exit 0
+// in ≤5s with single-line JSON on stdout. Runs before any side-effectful
+// init (server binding, sqlite open, memory-watcher loop).
+if (process.argv.includes('--health-check')) {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const pkg = JSON.parse(
+    readFileSync(join(here, '..', 'package.json'), 'utf8'),
+  ) as { name: string; version: string };
+  process.stdout.write(
+    JSON.stringify({
+      ok: true,
+      label: process.env['CAIA_PLIST_LABEL'] ?? null,
+      package: pkg.name,
+      version: pkg.version,
+      git_sha: process.env['CAIA_GIT_SHA'] ?? 'unknown',
+      node: process.version,
+      pid: process.pid,
+      timestamp: new Date().toISOString(),
+    }) + '\n',
+  );
+  process.exit(0);
+}
 
 const DEFAULT_DB_PATH = join(
   homedir(),

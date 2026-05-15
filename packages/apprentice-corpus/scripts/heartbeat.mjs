@@ -24,8 +24,32 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+
+// Phase A2 --health-check shortcut. The post-merge gate (A1) invokes
+// `<bin> --health-check` after `launchctl kickstart` and expects exit 0
+// in ≤5s with single-line JSON on stdout. Runs before any manifest I/O.
+if (process.argv.includes('--health-check')) {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const pkg = JSON.parse(
+    readFileSync(join(here, '..', 'package.json'), 'utf8'),
+  );
+  process.stdout.write(
+    JSON.stringify({
+      ok: true,
+      label: process.env['CAIA_PLIST_LABEL'] ?? null,
+      package: pkg.name,
+      version: pkg.version,
+      git_sha: process.env['CAIA_GIT_SHA'] ?? 'unknown',
+      node: process.version,
+      pid: process.pid,
+      timestamp: new Date().toISOString(),
+    }) + '\n',
+  );
+  process.exit(0);
+}
 
 function parseArgs(argv) {
   const out = {
