@@ -3,12 +3,13 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { atomicWriteJson } from './atomic.js';
 import { appendAudit } from './audit.js';
 import { isoNow, parseIso } from './time.js';
@@ -189,6 +190,34 @@ export function saveLock(ctx: StateContext, lock: LockFile): void {
   atomicWriteJson(ctx.paths.lockFile, withSum);
 }
 
+// H-30 (chain-runner-battle-harden phase 11, 2026-05-14). Prompt-file
+// cleanup. buildPromptFile creates a per-phase tmpdir
+// (caia_chain_phase_<id>_XXXXXX) and writes phase_<id>.txt into it; the
+// dir was never cleaned up. clearLock now reads the lock's prompt_file
+// field (when present) and rm-rf's the parent tmpdir on the way out.
+// Best-effort — failures are audited but do not block the unlink.
+function cleanupPromptDir(ctx: StateContext, promptFile: string | null | undefined): void {
+  if (!promptFile) return;
+  const parent = dirname(promptFile);
+  // Only delete if the directory looks like our tmpdir prefix — defensive
+  // guard so a stray prompt_file pointing somewhere weird doesn't blow up
+  // the user's filesystem.
+  if (!parent.includes('caia_chain_phase_')) return;
+  try {
+    rmSync(parent, { recursive: true, force: true });
+    appendAudit(ctx.paths.auditFile, 'prompt_dir_cleaned', {
+      prompt_file: promptFile,
+      parent,
+    });
+  } catch (err) {
+    appendAudit(ctx.paths.auditFile, 'prompt_dir_cleanup_failed', {
+      prompt_file: promptFile,
+      parent,
+      error: (err as Error).message,
+    });
+  }
+}
+
 // H-23 (chain-runner-battle-harden phase 11, 2026-05-14). Lock ownership
 // token check. Pre-H-23 clearLock unlinked the lockfile unconditionally — a
 // stale call from one session could blow away a fresh lock owned by a
@@ -213,9 +242,9 @@ export function clearLock(
   opts: ClearLockOptions = {},
 ): ClearLockResult {
   if (!existsSync(ctx.paths.lockFile)) return { kind: 'no_lock' };
-  if (!opts.force && sessionId !== undefined && sessionId !== null) {
-    const lock = loadLock(ctx);
-    if (lock && lock.session_id !== sessionId) {
+  const lock = loadLock(ctx);
+  if (!opts.force && sessionId !== undefined && sessionId !== null && lock) {
+    if (lock.session_id !== sessionId) {
       appendAudit(ctx.paths.auditFile, 'lock_clear_refused', {
         reason: 'session_mismatch',
         owner_session: lock.session_id,
@@ -224,21 +253,53 @@ export function clearLock(
       return { kind: 'mismatch', ownerSession: lock.session_id };
     }
   }
-  unlinkSync(ctx.paths.lockFile);
+  // H-30: clean up the prompt-file tmpdir before unlinking so cleanup happens
+  // regardless of which caller (mark-done / mark-failed / staleness) invoked
+  // clearLock. Best-effort; never blocks the unlink.
+  if (lock) cleanupPromptDir(ctx, lock.prompt_file);
+  if (existsSync(ctx.paths.lockFile)) {
+    unlinkSync(ctx.paths.lockFile);
+  }
   return { kind: 'cleared' };
+}
+
+export interface AcquireLockOptions {
+  /** H-30: prompt file to record on the lock for later cleanup. */
+  promptFile?: string;
+  /** H-42: worker PID to record on the lock so `caia-chain stop` can SIGTERM. */
+  workerPid?: number | null;
 }
 
 export function acquireLock(
   ctx: StateContext,
   phaseId: number,
   sessionId: string,
+  opts: AcquireLockOptions = {},
 ): void {
-  saveLock(ctx, {
+  const lock: LockFile = {
     phase_id: phaseId,
     session_id: sessionId,
     started_at: isoNow(),
     heartbeat: isoNow(),
-  });
+  };
+  if (opts.promptFile !== undefined) lock.prompt_file = opts.promptFile;
+  if (opts.workerPid !== undefined) lock.worker_pid = opts.workerPid;
+  saveLock(ctx, lock);
+}
+
+// H-42 helper: re-stamp the worker_pid field on an existing lock once the
+// spawn succeeds. dispatchPhase calls acquireLock BEFORE spawn (so the lock
+// exists for the worker to heartbeat against), then re-saves the lock with
+// the PID once spawn succeeds.
+export function stampWorkerPid(
+  ctx: StateContext,
+  sessionId: string,
+  pid: number | null,
+): void {
+  const lock = loadLock(ctx);
+  if (!lock || lock.session_id !== sessionId) return;
+  lock.worker_pid = pid;
+  saveLock(ctx, lock);
 }
 
 export type HeartbeatResult =
