@@ -21,13 +21,15 @@
 //   2. Diff `git diff --no-color origin/develop...HEAD` (or whatever
 //      base is configured via $REUSE_CHECK_BASE_REF) and pull added
 //      identifier definitions from `+` lines.
-//   3. For each added identifier (length >= 4, alphanumeric, not in
-//      its own package), look it up in the inventory and surface it.
+//   3. For each added identifier (length >= MIN_LENGTH, alphanumeric,
+//      not in its own package), look it up in the inventory and surface
+//      it. MIN_LENGTH defaults to 5 per the A4 spec ("avoid `get`,
+//      `set`, etc."); STOPWORDS catches the longer too-common names.
 //
 // Inputs (env):
 //   REUSE_CHECK_BASE_REF   ref to diff against (default: origin/develop)
 //   REUSE_CHECK_REPO_ROOT  repo root (default: parent of scripts/)
-//   REUSE_CHECK_MIN_LENGTH min identifier length to consider (default: 4)
+//   REUSE_CHECK_MIN_LENGTH min identifier length to consider (default: 5)
 //
 // Stdout: a markdown comment body (or empty string if no findings).
 // Stderr: diagnostic lines.
@@ -43,7 +45,7 @@ const REPO_ROOT = process.env.REUSE_CHECK_REPO_ROOT
   ? path.resolve(process.env.REUSE_CHECK_REPO_ROOT)
   : path.resolve(__dirname, '..');
 const BASE_REF = process.env.REUSE_CHECK_BASE_REF || 'origin/develop';
-const MIN_LENGTH = parseInt(process.env.REUSE_CHECK_MIN_LENGTH || '4', 10);
+const MIN_LENGTH = parseInt(process.env.REUSE_CHECK_MIN_LENGTH || '5', 10);
 
 // Identifiers everyone names something — never recommend a package
 // match for these. Keep small; the min-length filter handles most.
@@ -127,8 +129,24 @@ const LOCAL_DECL_PATTERNS = [
 
 // `export { foo, bar as baz, type Quux }` — capture identifier names
 // (the aliased form `as baz` is what the package exposes externally;
-// the un-aliased form is the original symbol).
-const RE_EXPORT_LIST = /^\s*export\s*\{\s*([^}]+)\s*\}/;
+// the un-aliased form is the original symbol). Multiline form is the
+// common case for re-exports from sibling files, so the regex spans
+// newlines via `[\s\S]` and `multiline` flag is not required.
+const RE_EXPORT_LIST = /export\s*\{\s*([\s\S]*?)\s*\}\s*(?:from\s+['"][^'"]+['"]\s*)?;?/g;
+
+function harvestExportListBody(body, ids) {
+  for (const raw of body.split(',')) {
+    // Strip `type` modifier and `default as` artefacts; honour `as alias`.
+    const cleaned = raw.trim().replace(/^type\s+/, '');
+    if (!cleaned) continue;
+    const asMatch = /^(\S+)\s+as\s+(\S+)$/.exec(cleaned);
+    if (asMatch) {
+      ids.add(asMatch[2]); // exposed name
+    } else {
+      ids.add(cleaned);
+    }
+  }
+}
 
 function extractExports(src) {
   const ids = new Set();
@@ -138,21 +156,12 @@ function extractExports(src) {
       const m = re.exec(line);
       if (m) ids.add(m[1]);
     }
-    const re = RE_EXPORT_LIST.exec(line);
-    if (re) {
-      const parts = re[1].split(',');
-      for (const raw of parts) {
-        // Strip `type` modifier and `default as` artefacts; honour `as alias`.
-        const cleaned = raw.trim().replace(/^type\s+/, '');
-        if (!cleaned) continue;
-        const asMatch = /^(\S+)\s+as\s+(\S+)$/.exec(cleaned);
-        if (asMatch) {
-          ids.add(asMatch[2]); // exposed name
-        } else {
-          ids.add(cleaned);
-        }
-      }
-    }
+  }
+  // Export-list bodies may span multiple lines, so scan the whole source.
+  let m;
+  RE_EXPORT_LIST.lastIndex = 0;
+  while ((m = RE_EXPORT_LIST.exec(src)) !== null) {
+    harvestExportListBody(m[1], ids);
   }
   return ids;
 }
