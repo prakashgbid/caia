@@ -53,6 +53,23 @@ async function getSearchMemoryHandler(): Promise<typeof SearchMemoryHandlerFn> {
 const ROUTER_VERSION = '0.3.0';
 const DEFAULT_PORT = 7411;
 
+// R-2 (2026-05-15): caller-supplied `model` on /v1/chat/completions is
+// rejected with 400 unless it matches one of these advisory hints. The
+// router still picks the actual model — these hints are recorded in the
+// `caia` block of the response but do NOT pin a provider/model. Allow-list
+// is closed by default so the audit/wire contract can't drift.
+export const ADVISORY_MODEL_HINTS = [
+  'auto',
+  'prefer-local',
+  'prefer-fast',
+  'prefer-cheap',
+  'prefer-quality',
+] as const;
+export type AdvisoryModelHint = typeof ADVISORY_MODEL_HINTS[number];
+function isAdvisoryHint(s: string): s is AdvisoryModelHint {
+  return (ADVISORY_MODEL_HINTS as readonly string[]).includes(s);
+}
+
 export interface ServerOptions {
   ollamaBaseUrl?: string;
   classifierModel?: string;
@@ -266,6 +283,10 @@ export function buildApp(opts: ServerOptions = {}): Hono {
   });
 
   // ─── /v1/chat/completions (OpenAI-compatible single-turn) ────────────
+  // R-2 (2026-05-15): model-override bypass guard. Caller-supplied `model`
+  // is popped off the body and validated against ADVISORY_MODEL_HINTS.
+  // A hard model NAME (anything not in the allow-list) is rejected with
+  // HTTP 400. The router decides the actual dispatched model.
   app.post('/v1/chat/completions', async (c: Context) => {
     let body: {
       model?: string;
@@ -275,6 +296,28 @@ export function buildApp(opts: ServerOptions = {}): Hono {
       caia_task_type?: string;  // CAIA extension — picks routing rule
     };
     try { body = await c.req.json(); } catch { return c.json({ error: 'invalid-json' }, 400); }
+
+    // R-2 — pop and validate caller's `model` field BEFORE any other work.
+    // Empty string + undefined both fall through (treated as "omitted").
+    const callerModel = body.model;
+    delete body.model;
+    let advisoryHint: AdvisoryModelHint | null = null;
+    if (callerModel !== undefined && callerModel !== '') {
+      if (isAdvisoryHint(callerModel)) {
+        advisoryHint = callerModel;
+      } else {
+        return c.json({
+          error: 'model-pinning-not-allowed',
+          message:
+            `Caller-supplied 'model' is not allowed: '${callerModel}'. ` +
+            `The router decides which model to dispatch (see /v1/route). ` +
+            `If you want to nudge the router, pass one of the advisory hints.`,
+          allowed_hints: [...ADVISORY_MODEL_HINTS],
+          rejected_value: callerModel,
+        }, 400);
+      }
+    }
+
     const messages = body.messages ?? [];
     if (messages.length === 0) return c.json({ error: 'messages-required' }, 400);
 
@@ -328,6 +371,10 @@ export function buildApp(opts: ServerOptions = {}): Hono {
         caia: {
           provider: llmRes.provider,
           duration_ms: llmRes.durationMs,
+          // R-2 — surface the validated advisory hint (or null) so callers
+          // can confirm their hint was accepted. Routing decision itself
+          // is unchanged in this PR; hint is observability-only for now.
+          advisory_hint: advisoryHint,
           rag: ragDecision === null ? { injected: false, reason: 'middleware-error' } : {
             injected: ragDecision.injected,
             reason: ragDecision.reason,
