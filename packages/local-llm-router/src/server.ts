@@ -23,7 +23,10 @@ import { optimize } from '@chiefaia/prompt-optimizer';
 import { route as routerRoute } from './router.js';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { classify, type IntentResult as _IntentResultRef } from './classifier.js';
-import { classifyV2 } from './classifier-v2.js';
+import { classifyV2, loadRoutingRules } from './classifier-v2.js';
+// GB-12 (2026-05-15) — tier-model resolver, lives in router-policy.ts so the
+// merge surface with sps-router-critical-fixes R-2 is the single import line.
+import { resolveTierModel } from './router-policy.js';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { OllamaAdapter as _OllamaAdapterRef2 } from './ollama-adapter.js';
 import { llmMetrics } from './llm-metrics.js';
@@ -247,11 +250,18 @@ export function buildApp(opts: ServerOptions = {}): Hono {
     if (rule === undefined) {
       // No rule → ask the classifier
       const intent = await classify(prompt, { model: classifierModel, ollamaBaseUrl });
+      // GB-12 (2026-05-15) — resolve the tier's ollama tag + CPU timeout from
+      // routing-rules.yaml's tier_models block. Returns nulls for unconfigured
+      // tiers (forward-compat with tiers that have no batch-host backend).
+      const tier = resolveTierModel(loadRoutingRules(), intent.recommended_tier, intent.intent);
       return c.json({
         task_type: taskType, has_routing_rule: false,
         recommended_tier: intent.recommended_tier,
         intent: intent.intent, confidence: intent.confidence,
         reasoning: intent.reasoning,
+        tier_model: tier.model,
+        tier_timeout_ms: tier.timeout_ms,
+        tier_intent_override: tier.intent_override,
       });
     }
     return c.json({
