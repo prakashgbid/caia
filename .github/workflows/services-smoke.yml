@@ -1,0 +1,80 @@
+name: services-smoke
+
+# Path-filtered smoke workflow for python services under services/.
+# Runs on PRs that touch services/slot-manager/** or services/claude-spawner-agent/**.
+# Filed by integration-remediation §B Phase B2 (AR-3 invariant — services/, not packages/).
+
+on:
+  pull_request:
+    paths:
+      - 'services/slot-manager/**'
+      - 'services/claude-spawner-agent/**'
+      - '.github/workflows/services-smoke.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'services/slot-manager/**'
+      - 'services/claude-spawner-agent/**'
+      - '.github/workflows/services-smoke.yml'
+
+concurrency:
+  group: services-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      slot_manager: ${{ steps.filter.outputs.slot_manager }}
+      claude_spawner_agent: ${{ steps.filter.outputs.claude_spawner_agent }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            slot_manager:
+              - 'services/slot-manager/**'
+              - '.github/workflows/services-smoke.yml'
+            claude_spawner_agent:
+              - 'services/claude-spawner-agent/**'
+              - '.github/workflows/services-smoke.yml'
+
+  slot-manager-smoke:
+    name: slot-manager · smoke
+    needs: detect-changes
+    if: needs.detect-changes.outputs.slot_manager == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: services/slot-manager/requirements.txt
+      - name: Install deps
+        working-directory: services/slot-manager
+        run: pip install -r requirements.txt
+      - name: Smoke
+        working-directory: services/slot-manager
+        run: bash smoke.sh
+
+  claude-spawner-agent-smoke:
+    name: claude-spawner-agent · smoke
+    needs: detect-changes
+    if: needs.detect-changes.outputs.claude_spawner_agent == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: services/claude-spawner-agent/requirements.txt
+      - name: Install deps
+        working-directory: services/claude-spawner-agent
+        run: pip install -r requirements.txt
+      - name: Smoke
+        working-directory: services/claude-spawner-agent
+        run: bash smoke.sh
