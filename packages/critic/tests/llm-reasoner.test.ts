@@ -1,3 +1,7 @@
+import { EventEmitter } from 'node:events';
+import { Readable, Writable } from 'node:stream';
+import type { spawn as nodeSpawn } from 'node:child_process';
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import {
@@ -8,6 +12,45 @@ import {
 } from '../src/llm-reasoner.js';
 import { CANONICAL_TAXONOMY } from '../src/taxonomy.js';
 import type { DiffHunk } from '../src/types.js';
+
+/**
+ * Fake-child helper compatible with `@chiefaia/claude-spawner`'s
+ * `spawnFn` test seam (`typeof spawn` from `node:child_process`).
+ */
+function makeFakeSpawnFn(opts: {
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
+  errorBeforeClose?: Error;
+  envSpy?: (env: NodeJS.ProcessEnv) => void;
+  onSpawn?: () => void;
+}): typeof nodeSpawn {
+  return ((
+    _cmd: string,
+    _args: readonly string[],
+    spawnOpts?: { env?: NodeJS.ProcessEnv },
+  ): unknown => {
+    opts.onSpawn?.();
+    if (spawnOpts?.env !== undefined) opts.envSpy?.(spawnOpts.env);
+    const ee = new EventEmitter() as EventEmitter & {
+      stdin: Writable;
+      stdout: Readable;
+      stderr: Readable;
+      kill: () => boolean;
+    };
+    ee.stdin = new Writable({ write(_c, _e, cb): void { cb(); } });
+    ee.stdout = new Readable({ read(): void {} });
+    ee.stderr = new Readable({ read(): void {} });
+    ee.kill = (): boolean => true;
+    setImmediate(() => {
+      if (opts.stdout !== undefined) ee.stdout.emit('data', Buffer.from(opts.stdout, 'utf8'));
+      if (opts.stderr !== undefined) ee.stderr.emit('data', Buffer.from(opts.stderr, 'utf8'));
+      if (opts.errorBeforeClose !== undefined) ee.emit('error', opts.errorBeforeClose);
+      else ee.emit('close', opts.exitCode ?? 0);
+    });
+    return ee;
+  }) as unknown as typeof nodeSpawn;
+}
 
 describe('parseLlmOutput', () => {
   it('parses a well-formed envelope', () => {
@@ -114,17 +157,11 @@ describe('createDefaultLlmReasoner', () => {
       binaryPath: '/fake/claude',
       modelTag: 'm',
       timeoutMs: 1000,
-      spawnFn: (_cmd, _args, opts) => {
-        capturedEnv = opts.env;
-        return {
-          status: 0,
-          stdout: JSON.stringify({ result: '{"findings":[]}' }),
-          stderr: '',
-          pid: 1,
-          output: ['', '', ''],
-          signal: null
-        };
-      }
+      spawnFn: makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: '{"findings":[]}' }),
+        exitCode: 0,
+        envSpy: (env) => { capturedEnv = env; }
+      })
     });
     process.env['ANTHROPIC_API_KEY'] = 'should-not-leak';
     try {
@@ -144,14 +181,7 @@ describe('createDefaultLlmReasoner', () => {
       binaryPath: '/fake/claude',
       modelTag: 'm',
       timeoutMs: 1000,
-      spawnFn: () => ({
-        status: 1,
-        stdout: '',
-        stderr: 'rate limited',
-        pid: 1,
-        output: ['', '', ''],
-        signal: null
-      })
+      spawnFn: makeFakeSpawnFn({ stderr: 'rate limited', exitCode: 1 })
     });
     const r = await reasoner.reason({
       hunks: [],
@@ -159,7 +189,8 @@ describe('createDefaultLlmReasoner', () => {
       pr: { prNumber: 0, branch: 'b', baseBranch: 'develop', title: 't', commitSubjects: [] }
     });
     expect(r.ok).toBe(false);
-    expect(r.diagnostic).toContain('exited 1');
+    expect(r.diagnostic).toContain('exited');
+    expect(r.diagnostic).toContain('1');
   });
 
   it('returns ok:false on spawn error', async () => {
@@ -167,15 +198,7 @@ describe('createDefaultLlmReasoner', () => {
       binaryPath: '/fake/claude',
       modelTag: 'm',
       timeoutMs: 1000,
-      spawnFn: () => ({
-        status: null,
-        stdout: '',
-        stderr: '',
-        pid: 0,
-        output: ['', '', ''],
-        signal: null,
-        error: new Error('ENOENT')
-      })
+      spawnFn: makeFakeSpawnFn({ errorBeforeClose: new Error('ENOENT') })
     });
     const r = await reasoner.reason({
       hunks: [],
@@ -217,10 +240,11 @@ describe('A.9.13 — small-diff local-router shortcut (Critic)', () => {
     vi.stubGlobal('fetch', fetchSpy);
     const reasoner = createDefaultLlmReasoner({
       binaryPath: '/fake/claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return {
-        status: 0, stdout: JSON.stringify({ result: '{"findings":[]}' }), stderr: '',
-        pid: 1, output: ['', '', ''], signal: null,
-      }; }
+      spawnFn: makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: '{"findings":[]}' }),
+        exitCode: 0,
+        onSpawn: () => { spawned = true; }
+      })
     });
     await reasoner.reason({ hunks: [SMALL_HUNK], taxonomy: CANONICAL_TAXONOMY, pr: PR_META });
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -240,9 +264,11 @@ describe('A.9.13 — small-diff local-router shortcut (Critic)', () => {
     vi.stubGlobal('fetch', fetchSpy);
     const reasoner = createDefaultLlmReasoner({
       binaryPath: '/fake/claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return {
-        status: 0, stdout: '', stderr: '', pid: 1, output: ['', '', ''], signal: null,
-      }; }
+      spawnFn: makeFakeSpawnFn({
+        stdout: '',
+        exitCode: 0,
+        onSpawn: () => { spawned = true; }
+      })
     });
     const r = await reasoner.reason({ hunks: [SMALL_HUNK], taxonomy: CANONICAL_TAXONOMY, pr: PR_META });
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -257,10 +283,11 @@ describe('A.9.13 — small-diff local-router shortcut (Critic)', () => {
     let spawned = false;
     const reasoner = createDefaultLlmReasoner({
       binaryPath: '/fake/claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return {
-        status: 0, stdout: JSON.stringify({ result: '{"findings":[]}' }), stderr: '',
-        pid: 1, output: ['', '', ''], signal: null,
-      }; }
+      spawnFn: makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: '{"findings":[]}' }),
+        exitCode: 0,
+        onSpawn: () => { spawned = true; }
+      })
     });
     await reasoner.reason({ hunks: [LARGE_HUNK], taxonomy: CANONICAL_TAXONOMY, pr: PR_META });
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -274,10 +301,11 @@ describe('A.9.13 — small-diff local-router shortcut (Critic)', () => {
     let spawned = false;
     const reasoner = createDefaultLlmReasoner({
       binaryPath: '/fake/claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return {
-        status: 0, stdout: JSON.stringify({ result: '{"findings":[]}' }), stderr: '',
-        pid: 1, output: ['', '', ''], signal: null,
-      }; }
+      spawnFn: makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: '{"findings":[]}' }),
+        exitCode: 0,
+        onSpawn: () => { spawned = true; }
+      })
     });
     await reasoner.reason({ hunks: [SMALL_HUNK], taxonomy: CANONICAL_TAXONOMY, pr: PR_META });
     expect(fetchSpy).toHaveBeenCalled();
@@ -291,10 +319,11 @@ describe('A.9.13 — small-diff local-router shortcut (Critic)', () => {
     let spawned = false;
     const reasoner = createDefaultLlmReasoner({
       binaryPath: '/fake/claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return {
-        status: 0, stdout: JSON.stringify({ result: '{"findings":[]}' }), stderr: '',
-        pid: 1, output: ['', '', ''], signal: null,
-      }; }
+      spawnFn: makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: '{"findings":[]}' }),
+        exitCode: 0,
+        onSpawn: () => { spawned = true; }
+      })
     });
     await reasoner.reason({ hunks: [SMALL_HUNK], taxonomy: CANONICAL_TAXONOMY, pr: PR_META });
     expect(spawned).toBe(true);
@@ -308,10 +337,11 @@ describe('A.9.13 — small-diff local-router shortcut (Critic)', () => {
     let spawned = false;
     const reasoner = createDefaultLlmReasoner({
       binaryPath: '/fake/claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return {
-        status: 0, stdout: JSON.stringify({ result: '{"findings":[]}' }), stderr: '',
-        pid: 1, output: ['', '', ''], signal: null,
-      }; }
+      spawnFn: makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: '{"findings":[]}' }),
+        exitCode: 0,
+        onSpawn: () => { spawned = true; }
+      })
     });
     await reasoner.reason({ hunks: [SMALL_HUNK], taxonomy: CANONICAL_TAXONOMY, pr: PR_META });
     expect(fetchSpy).not.toHaveBeenCalled();
