@@ -1,1 +1,2 @@
 {"schema_version":1,"pr_number":452,"repo":"prakashgbid/caia","merge_sha":"196778b6087f2c2fd424b638f736c94df5a33918","base_branch":"develop","ts":"2026-05-15T00:20:54Z","pr_title":"feat(post-merge): INT.1.A1 — Guardrail #7 deployment signal pipeline","pr_author":"prakashgbid"}
+{"schema_version":1,"pr_number":453,"repo":"prakashgbid/caia","merge_sha":"e1161e72a80d08549bed90f11b0d39bb53d0d98d","base_branch":"develop","ts":"2026-05-15T01:01:56Z","pr_title":"feat(reuse-advisory): int.1.a4 guardrail #9 reuse-completeness reviewer","pr_author":"prakashgbid"}
