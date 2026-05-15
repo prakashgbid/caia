@@ -20,7 +20,7 @@
  * outcome, and the failure reason (if any).
  */
 
-import { spawn } from 'node:child_process';
+import { spawnClaude } from '@chiefaia/claude-spawner';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -68,48 +68,32 @@ export type RunChildFn = (args: {
 }) => Promise<RunChildResult>;
 
 /**
- * Default child runner — uses node:child_process.spawn with stdin pipe.
- * Times out via SIGTERM at deadline.
+ * Default child runner — delegates to `@chiefaia/claude-spawner`'s
+ * `spawnClaude`. The agent-level `runChild` test seam is preserved so
+ * existing tests can inject a mock without depending on claude-spawner
+ * internals; this default impl just adapts the shapes.
  */
-const defaultRunChild: RunChildFn = ({ binary, argv, cwd, prompt, env, timeoutMs }) => {
-  return new Promise((resolve) => {
-    const child = spawn(binary, argv, {
+const defaultRunChild: RunChildFn = async ({ binary, argv, cwd, prompt, env, timeoutMs }) => {
+  // The agent already strips ANTHROPIC_API_KEY in buildEnvWithoutApiKey,
+  // but spawnClaude scrubs again unconditionally — defence in depth.
+  const result = await spawnClaude({
+    prompt,
+    options: {
+      binaryPath: binary,
+      overrideArgs: argv,
       cwd,
-      env,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-    let stdoutBuf = '';
-    let stderrBuf = '';
-    let timedOut = false;
-    const t = setTimeout(() => {
-      timedOut = true;
-      try {
-        child.kill('SIGTERM');
-      } catch {
-        // ignore
-      }
-    }, timeoutMs);
-
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (d) => {
-      stdoutBuf += d;
-    });
-    child.stderr.on('data', (d) => {
-      stderrBuf += d;
-    });
-    child.on('close', (code) => {
-      clearTimeout(t);
-      resolve({
-        rc: code ?? -1,
-        stdout: stdoutBuf,
-        stderr: stderrBuf,
-        timedOut
-      });
-    });
-    child.stdin.write(prompt);
-    child.stdin.end();
+      // Pass the agent-built env through; claude-spawner will scrub the
+      // canonical auth-token vars regardless of what we hand it.
+      extraEnv: env,
+      timeoutMs
+    }
   });
+  return {
+    rc: result.rc ?? -1,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    timedOut: result.timedOut
+  };
 };
 
 function lastJsonLine(stdout: string): string | null {
