@@ -74,6 +74,8 @@ import {
   preflightDispatch,
 } from './preflight.js';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 interface BaseOptions {
   chainId: string;
@@ -98,6 +100,62 @@ function attachCommonOptions(cmd: Command): Command {
   return cmd
     .requiredOption('--chain-id <id>', 'chain identifier (folder under ~/.caia/chain/)')
     .requiredOption('--phases <path>', 'path to phases YAML spec');
+}
+
+// Walks up from `start` until pnpm-workspace.yaml is found. Used to anchor
+// the consumption-probe outputs without requiring the caller to be in the
+// repo root.
+function findCaiaRepoRoot(start: string): string | null {
+  let dir = resolve(start);
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
+    const parent = resolve(dir, '..');
+    if (parent === dir) return null;
+    dir = parent;
+  }
+  return null;
+}
+
+function runConsumptionStatus(opts: { pkg?: string; repoRoot?: string; json?: boolean }): void {
+  const repoRoot = opts.repoRoot ?? findCaiaRepoRoot(process.cwd());
+  if (!repoRoot) {
+    fail('consumption-status: could not locate caia repo root (no pnpm-workspace.yaml found)');
+  }
+  if (opts.pkg) {
+    // Per-package detail comes from the probe script directly so we
+    // re-classify with the freshest signals (importers, plists, audit).
+    const probe = join(repoRoot, 'packages/chain-runner/bin/consumption-probe.js');
+    if (!existsSync(probe)) {
+      fail(`consumption-status: consumption-probe.js missing at ${probe}`);
+    }
+    const r = spawnSync(process.execPath, [probe, '--pkg', opts.pkg], {
+      cwd: repoRoot,
+      stdio: ['ignore', 'pipe', 'inherit'],
+    });
+    if (r.status !== 0) process.exit(r.status ?? 1);
+    process.stdout.write(r.stdout?.toString('utf8') ?? '');
+    return;
+  }
+  // Default: render the autogen DORMANT_PACKAGES.md (or the JSON of the
+  // latest probe report if --json is passed).
+  const dormantMd = join(repoRoot, 'docs/DORMANT_PACKAGES.md');
+  if (!existsSync(dormantMd)) {
+    process.stderr.write(
+      `consumption-status: ${dormantMd} not found — run the consumption-probe daily job (com.caia.consumption-probe-daily) first.\n`,
+    );
+    process.exit(2);
+  }
+  if (opts.json) {
+    const probe = join(repoRoot, 'packages/chain-runner/bin/consumption-probe.js');
+    const r = spawnSync(process.execPath, [probe, '--json'], {
+      cwd: repoRoot,
+      stdio: ['ignore', 'pipe', 'inherit'],
+    });
+    if (r.status !== 0) process.exit(r.status ?? 1);
+    process.stdout.write(r.stdout?.toString('utf8') ?? '');
+    return;
+  }
+  process.stdout.write(readFileSync(dormantMd, 'utf8'));
 }
 
 export function buildProgram(): Command {
@@ -1513,6 +1571,21 @@ export function buildProgram(): Command {
       }
       const raw = Buffer.concat(chunks).toString('utf8');
       saveState(ctx, JSON.parse(raw));
+    });
+
+  // Guardrail #8 — surfaces the latest consumption-probe output. Reads the
+  // autogen DORMANT_PACKAGES.md (and per-package detail via --pkg) so the
+  // operator can ask "what's dormant?" without re-running the daily probe.
+  // No --chain-id/--phases requirement: the verb is repo-scoped, not chain-
+  // scoped, so attachCommonOptions is intentionally not applied.
+  program
+    .command('consumption-status')
+    .description('Print the current dormant-packages summary (Guardrail #8 probe output)')
+    .option('--pkg <name>', 'show detail for a single package (slug or @scope/name)')
+    .option('--repo-root <path>', 'override repo root (default: walks up from cwd to find pnpm-workspace.yaml)')
+    .option('--json', 'emit raw JSON instead of formatted text')
+    .action((opts: { pkg?: string; repoRoot?: string; json?: boolean }) => {
+      runConsumptionStatus(opts);
     });
 
   return program;

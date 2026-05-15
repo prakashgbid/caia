@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.caia.consumption-probe-daily</string>
+
+    <!-- Guardrail #8 — the "no dead code" daily probe.
+         Scans every caia/packages/* for in-repo importers, plist-backed
+         CLI bins, and recent invocations in the chain-runner audit jsonl.
+         Writes:
+           - docs/DORMANT_PACKAGES.md  (autogen, sorted by days-silent)
+           - reports/consumption_probe_<YYYY-MM-DD>.md
+           - INBOX entries on drift (LIVE-yesterday → DORMANT-today, etc.)
+         See: caia/packages/chain-runner/bin/consumption-probe.js -->
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-c</string>
+      <string>/opt/homebrew/opt/node@22/bin/node /Users/macbook32/Documents/projects/caia/packages/chain-runner/bin/consumption-probe.js</string>
+    </array>
+
+    <!-- Daily at 03:30 local. Ahead of hygiene-audit (03:00) so the audit's
+         next pass sees the freshest dormant list. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+      <key>Hour</key>
+      <integer>3</integer>
+      <key>Minute</key>
+      <integer>30</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macbook32/Documents/projects/caia</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/macbook32</string>
+      <key>PATH</key>
+      <string>/opt/homebrew/opt/node@22/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+      <key>CAIA_NODE_BIN</key>
+      <string>/opt/homebrew/opt/node@22/bin/node</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/consumption-probe-daily.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/consumption-probe-daily.err</string>
+  </dict>
+</plist>
