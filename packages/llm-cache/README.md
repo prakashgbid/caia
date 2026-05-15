@@ -62,6 +62,53 @@ Published research (Portkey, Spheron 2026, arxiv 2402.01173) puts the realistic 
 
 TTL-based. Default 30 days. Call `cache.sweep()` periodically (or never — expired entries are skipped on lookup either way; sweep just reclaims disk).
 
+## L6 cascade-tier preset
+
+The local-LLM-first cascade ladder (`local_llm_first_canonical_2026-05-11.md`) defines tier **L6 — semantic cache**: before invoking a classifier or model, return the cached answer for any near-duplicate prompt seen in the last 24 hours. The operator-spec values are:
+
+| param | value |
+|--|--|
+| threshold | 0.92 |
+| ttl | 24 h |
+| embedder | `nomic-embed-text` (Ollama) |
+
+Use `createL6Cache` to get a `PromptCache` wired with those defaults:
+
+```ts
+import { createL6Cache } from '@chiefaia/llm-cache';
+
+const cache = createL6Cache({
+  dbPath: '~/.caia/cache/l6.db',
+  // Optional: override Ollama base URL or model
+  // nomic: { baseUrl: 'http://127.0.0.1:11434', model: 'nomic-embed-text' },
+});
+
+const hit = await cache.lookup({
+  namespace: 'classify',
+  model: 'qwen2.5-coder:7b',
+  prompt,
+});
+if (hit) return hit.value;
+```
+
+Wiring this into the router's cascade decision path is intentionally **out of scope** for this package — wiring lives in `@chiefaia/local-llm-router` so the cache stays router-agnostic and reusable.
+
+## Nomic embedder
+
+`createNomicEmbedder` returns an `EmbeddingFn` backed by Ollama's `/api/embeddings`. It's the embedder used by `createL6Cache` by default; use it standalone for any other `PromptCache` config:
+
+```ts
+import { PromptCache, createNomicEmbedder } from '@chiefaia/llm-cache';
+
+const cache = new PromptCache({
+  dbPath: '.cache.db',
+  embed: createNomicEmbedder(),
+  semantic: { threshold: 0.95 },
+});
+```
+
+Throws `NomicEmbedError` on non-2xx responses or empty vectors so callers can degrade cleanly when Ollama isn't running.
+
 ## API surface
 
 ```ts
@@ -81,6 +128,18 @@ function withCache<TOptions>(
   modelByTaskType: (taskType: string) => string,
   options?: WrapOptions,
 ): RouteFn<TOptions>;
+
+// L6 cascade-tier preset — 0.92 threshold, 24h TTL, nomic-embed-text embedder
+function createL6Cache(opts: L6CacheOptions): PromptCache;
+const L6_THRESHOLD: number;       // 0.92
+const L6_TTL_MS: number;          // 24h
+const L6_MAX_ROWS_SCANNED: number; // 5_000
+
+// Standalone Ollama-backed embedder
+function createNomicEmbedder(opts?: NomicEmbedderOptions): EmbeddingFn;
+class NomicEmbedError extends Error {
+  status?: number;
+}
 ```
 
 `WrapOptions.onResolve` is the metrics seam — wire it to the orchestrator's Prometheus registry in LAI-006.

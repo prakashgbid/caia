@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/llm-cache",
-  "version": "0.1.0",
-  "description": "Two-tier prompt cache (exact + semantic) for the local LLM router. Sqlite-backed, embedder-pluggable.",
+  "version": "0.2.0",
+  "description": "Two-tier prompt cache (exact + semantic) for the local LLM router. Sqlite-backed, embedder-pluggable. Ships an L6 cascade-tier preset (24h TTL, 0.92 cosine threshold) backed by nomic-embed-text via Ollama.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
