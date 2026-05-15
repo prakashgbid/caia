@@ -14,11 +14,12 @@ working branch, and (optionally) auto-PRs the result.
 | `local_llm_router_client.py`                   | HTTP client for the optional local LLM router gate                         |
 | `spawner_argv.py`                              | Pure `argv` builder for the `claude` CLI (testable; no I/O)                |
 | `spawner_patch_v2.diff`                        | Reference patch (v2 router gate) — kept for audit traceability             |
-| `com.caia.claude-spawner-agent.plist.template` | macOS launchd plist template (placeholders substituted at install time)    |
+| `launchd/com.caia.claude-spawner-agent.plist.template` | macOS launchd plist template (placeholders substituted at install time) |
+| `scripts/install.sh`                           | Renders the plist from the template + bootout/bootstrap (Guardrail-7 hook) |
 | `requirements.txt`                             | Python dependencies (pinned to minor)                                      |
-| `smoke.sh`                                     | Smoke test: syntax + plist-xml-parse + import                              |
+| `smoke.sh`                                     | Smoke test: syntax + plist-xml-parse + install.sh syntax + import          |
 | `package.json`                                 | `pnpm -F @caia/services-claude-spawner-agent run smoke` wrapper            |
-| `m1-deployment-bundle/`                        | Placeholder — see `m1-deployment-bundle/README.md` for OPERATOR action     |
+| `m1-deployment-bundle/`                        | M1-host install bundle (install_m1_spawner.sh + concrete plist + assets)   |
 
 ## Runtime contract
 
@@ -53,16 +54,25 @@ They are migrated together in B2.
 
 ## Installation on an M1 host
 
-See `m1-deployment-bundle/README.md`. Manual steps until the bundle is staged:
+Preferred (caia checkout, in-repo installer — the Guardrail 7 post-merge gate
+calls this exact script):
 
 ```bash
 git clone https://github.com/prakashgbid/caia.git ~/caia
-cd ~/caia/services/claude-spawner-agent
-python3 -m venv ~/.caia/spawner-venv
-source ~/.caia/spawner-venv/bin/activate
-pip install -r requirements.txt
+bash ~/caia/services/claude-spawner-agent/scripts/install.sh
+# Override defaults via env vars; see the script's header for the full list.
+```
 
-# Render plist (substitute placeholders — see the .template's comment block):
+Alternative (M1-bundle-only — used when the M1 host has no caia checkout, e.g.
+during the initial bring-up before the post-merge gate is wired). See
+`m1-deployment-bundle/install_m1_spawner.sh` — it pulls the bundle from M3
+over SSH and installs into `$HOME/.caia/spawner/`.
+
+Manual fallback (rarely needed; both installers above wrap this):
+
+```bash
+python3 -m venv ~/.caia/spawner-venv
+~/.caia/spawner-venv/bin/pip install -r ~/caia/services/claude-spawner-agent/requirements.txt
 sed -e "s|CLAUDE_SPAWNER_VENV|$HOME/.caia/spawner-venv|g" \
     -e "s|CLAUDE_SPAWNER_REPO|$HOME/caia|g" \
     -e "s|CLAUDE_SPAWNER_LOG_DIR|$HOME/Documents/conductor-logs|g" \
@@ -70,10 +80,9 @@ sed -e "s|CLAUDE_SPAWNER_VENV|$HOME/.caia/spawner-venv|g" \
     -e "s|CLAUDE_BINARY|/opt/homebrew/bin/claude|g" \
     -e "s|ALLOWED_ROOT|$HOME/Documents/projects|g" \
     -e "s|NODE_BIN_PATH|/opt/homebrew/bin|g" \
-  com.caia.claude-spawner-agent.plist.template \
+  ~/caia/services/claude-spawner-agent/launchd/com.caia.claude-spawner-agent.plist.template \
   > ~/Library/LaunchAgents/com.caia.claude-spawner-agent.plist
-
-launchctl load ~/Library/LaunchAgents/com.caia.claude-spawner-agent.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.caia.claude-spawner-agent.plist
 ```
 
 ## CI

@@ -1,0 +1,7 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pyyaml==6.0.2
+httpx==0.27.2
+# Py3.9 backport for the 'str | None' PEP 604 union syntax used in claude_spawner_agent.py
+# Required on M1 (system Python 3.9.6); harmless on Python 3.10+.
+eval_type_backport==0.2.0

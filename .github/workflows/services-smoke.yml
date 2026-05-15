@@ -1,0 +1,106 @@
+name: services/{slot-manager,claude-spawner-agent} smoke
+
+# B2 follow-up (2026-05-15): the slot-manager + claude-spawner-agent source
+# migrated from M3/stolution into caia/services/{slot-manager,
+# claude-spawner-agent}/ in PR #470. The smoke.sh files in each service
+# directory reference this workflow by name but the workflow itself was
+# deferred to this follow-up PR. It runs both services' bash smoke.sh on
+# every PR that touches either service directory.
+#
+# Why two services in one workflow: they are siblings (slot-manager
+# dispatches to claude-spawner-agent), small, and have parallel-shaped
+# smoke tests. Splitting into per-service workflows would duplicate ~80%
+# of YAML for zero isolation benefit (each runs in its own job, sees only
+# its own files).
+#
+# Gating: informational (continue-on-error). The 5-task DAG smoke that
+# proves wire-level slot-manager ↔ spawner integration moves to the K3s
+# post-merge deploy (Guardrail 7 / Phase B5) — the local smoke here is
+# the per-service "this thing parses, imports, and schema-applies" baseline.
+
+on:
+  pull_request:
+    paths:
+      - 'services/slot-manager/**'
+      - 'services/claude-spawner-agent/**'
+      - '.github/workflows/services-smoke.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'services/slot-manager/**'
+      - 'services/claude-spawner-agent/**'
+      - '.github/workflows/services-smoke.yml'
+
+concurrency:
+  group: services-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: ${{ matrix.service }} smoke (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [slot-manager, claude-spawner-agent]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect path-touch (skip if irrelevant)
+        id: touched
+        run: |
+          # Path filter at the workflow level already scopes this run; but in
+          # a matrix the other service's smoke shouldn't fail when only one
+          # was touched. Probe `git diff` against the PR base ref.
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$BASE_SHA" ]; then
+            echo "touched=true" >> "$GITHUB_OUTPUT"
+            echo "no base ref (push event) — running smoke"
+            exit 0
+          fi
+          git fetch --depth=1 origin "$BASE_SHA" 2>/dev/null || true
+          if git diff --name-only "$BASE_SHA"...HEAD | grep -qE "^services/${{ matrix.service }}/|^\.github/workflows/services-smoke\.yml$"; then
+            echo "touched=true" >> "$GITHUB_OUTPUT"
+            echo "services/${{ matrix.service }}/ touched — running smoke"
+          else
+            echo "touched=false" >> "$GITHUB_OUTPUT"
+            echo "services/${{ matrix.service }}/ not touched — skipping smoke"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.touched.outputs.touched == 'true'
+        with:
+          python-version: '3.11'
+
+      - name: Install service deps
+        if: steps.touched.outputs.touched == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: pip install --quiet -r requirements.txt
+
+      - name: Run smoke.sh
+        id: smoke
+        if: steps.touched.outputs.touched == 'true'
+        continue-on-error: true
+        working-directory: services/${{ matrix.service }}
+        run: |
+          chmod +x smoke.sh
+          set -o pipefail
+          bash smoke.sh 2>&1 | tee /tmp/smoke.out
+
+      - name: Summarise smoke result
+        if: always() && steps.touched.outputs.touched == 'true'
+        run: |
+          echo "## ${{ matrix.service }} smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f /tmp/smoke.out ]; then
+            if grep -qE 'smoke: PASS' /tmp/smoke.out; then
+              echo "✓ PASS" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              tail -20 /tmp/smoke.out >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "(no output captured)" >> "$GITHUB_STEP_SUMMARY"
+          fi

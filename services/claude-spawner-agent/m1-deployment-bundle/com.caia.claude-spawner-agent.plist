@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  M1 claude-spawner-agent launchd plist
+  Generated 2026-05-14T23:58Z by the M3 chain-runner session.
+  Install location on M1: ~/Library/LaunchAgents/com.caia.claude-spawner-agent.plist
+
+  Paths intentionally target ~/.caia/spawner/ (NOT ~/Documents/projects/ —
+  per operator's M1 probe, that directory tree does not exist on M1).
+
+  KEYCHAIN INHERITANCE: this plist MUST be loaded via `launchctl bootstrap gui/$(id -u) ...`
+  (gui/ domain, NOT user/ or system/). Only the gui/ domain inherits the user's
+  GUI-session keychain access, which is what lets the claude subprocess read
+  the `Claude Code-credentials-*` keychain entries.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.claude-spawner-agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/MAC/.caia/spawner/venv/bin/python</string>
+        <string>/Users/MAC/.caia/spawner/claude_spawner_agent.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/MAC/.caia/spawner</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/Users/MAC/.local/bin</string>
+        <key>PORT</key>
+        <string>8090</string>
+        <key>HOST_NAME</key>
+        <string>mac-m1</string>
+        <key>CLAUDE_BINARY</key>
+        <string>/Users/MAC/.local/bin/claude</string>
+        <key>SLOT_MANAGER_URL</key>
+        <string>http://10.43.173.170:8081</string>
+        <key>SELF_SPAWNER_URL</key>
+        <string>http://100.90.12.37:8090</string>
+        <key>AUTO_REGISTER</key>
+        <string>0</string>
+        <key>LOG_LEVEL</key>
+        <string>INFO</string>
+        <key>HOME</key>
+        <string>/Users/MAC</string>
+        <key>ALLOWED_ROOT</key>
+        <string>/Users/MAC</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/MAC/Library/Logs/claude-spawner-agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/MAC/Library/Logs/claude-spawner-agent.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
