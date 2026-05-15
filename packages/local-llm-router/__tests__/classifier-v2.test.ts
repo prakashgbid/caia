@@ -148,6 +148,32 @@ intents:
       const b = loadRoutingRules();
       expect(a).toBe(b);
     });
+
+    // A.9.7 — the taxonomy expansion must show up in the loaded rules,
+    // with at least one keyword each so the prepass can fire.
+    it('A.9.7 — contains architecture-review and research-summary intents', () => {
+      const rules = loadRoutingRules();
+      const ar = rules.intents.find(r => r.name === 'architecture-review');
+      const rs = rules.intents.find(r => r.name === 'research-summary');
+      expect(ar).toBeDefined();
+      expect(rs).toBeDefined();
+      expect((ar?.keywords.length ?? 0) >= 5).toBe(true);
+      expect((rs?.keywords.length ?? 0) >= 5).toBe(true);
+      expect(ar?.default_tier).toBe('local-32b');
+      expect(rs?.default_tier).toBe('local-14b');
+    });
+
+    it('A.9.7 — prose-rewrite + memory-search have expanded keyword coverage', () => {
+      const rules = loadRoutingRules();
+      const pr = rules.intents.find(r => r.name === 'prose-rewrite');
+      const ms = rules.intents.find(r => r.name === 'memory-search');
+      // Floor was 6 before A.9.7; expansion adds ≥4 each.
+      expect((pr?.keywords.length ?? 0) >= 10).toBe(true);
+      expect((ms?.keywords.length ?? 0) >= 12).toBe(true);
+      // Specific keywords that didn't exist before A.9.7.
+      expect(pr?.keywords).toContain('tighten this paragraph');
+      expect(ms?.keywords).toContain('what did we decide about');
+    });
   });
 
   describe('nextTier', () => {

@@ -356,6 +356,41 @@ export const ROUTING_RULES: RoutingRule[] = [
     estimatedCostLocal: '$0.00',
     estimatedCostClaude: '$2.00',
   },
+
+  // ─── A.9.7 (2026-05-14) — taxonomy expansion ────────────────────────────
+  // Two NEW task types so the router's typed dispatch matches the
+  // classifier-v2 YAML. prose-rewrite + memory-search were already in
+  // the YAML — the existing unknown-task default (qwen2.5-coder:7b)
+  // is already correct for them, no new entry needed. The two NEW ones
+  // (architecture-review, research-summary) deserve explicit rules so
+  // callers using them as caia_task_type skip the unknown-task default
+  // and get the right model + cost.
+  {
+    taskType: 'architecture-review',
+    description:
+      'Critique / review an existing architecture or ADR (distinct from ' +
+      '`architecture-decision` which produces a NEW design). qwen3:14b is ' +
+      'strong enough for the critique; Claude is the cascade fallback.',
+    localModel: 'qwen3:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: true,
+    maxTokens: 4000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$1.00',
+  },
+  {
+    taskType: 'research-summary',
+    description:
+      'Condense a single research artifact (paper, whitepaper, report) ' +
+      'into actionable bullets. Distinct from `research-synthesis` which ' +
+      'merges across many sources. Comfortably 14B-class.',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 3000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.30',
+  },
 ];
 
 export function getRoute(taskType: string): RoutingRule {

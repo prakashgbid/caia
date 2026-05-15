@@ -34,6 +34,13 @@ export type Intent =
   | 'hard-code'
   | 'refactor-complex'
   | 'architecture'
+  // A.9.7 — new intents (2026-05-14). Decoupled from the design-
+  // oriented `architecture` and `research-synthesis` labels because
+  // *review* and *summary* are distinct shapes: `architecture-review`
+  // critiques an existing design, `research-summary` condenses
+  // existing research into actionable bullets (not synthesizes new).
+  | 'architecture-review'
+  | 'research-summary'
   | 'reason-over-context'
   | 'new-design'
   | 'architect'
@@ -60,6 +67,8 @@ export const INTENT_VALUES: ReadonlyArray<Intent> = [
   'memory-search', 'small-code-edit', 'code-explain', 'doc-update', 'extract',
   'error-recovery', 'medium-code', 'doc-write', 'spec-check', 'review-prose',
   'code-review', 'test-gen', 'schema-design', 'hard-code', 'refactor-complex', 'architecture',
+  // A.9.7 (2026-05-14).
+  'architecture-review', 'research-summary',
   'reason-over-context', 'new-design', 'architect', 'research-synthesis',
   'batch-summarize', 'corpus-distill', 'long-context-reason',
   'embedding-generate', 'unknown',

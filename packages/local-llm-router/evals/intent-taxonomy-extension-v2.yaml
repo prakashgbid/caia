@@ -1,0 +1,183 @@
+# A.9.7 — intent-taxonomy extension v2.
+# Companion to canonical-suite-v2.yaml. Lives separately so a re-run of the
+# canonical bench is unaffected; this file is the *taxonomy expansion*
+# acceptance check called out in gap-analysis item A.9.7.
+#
+# Each new (or augmented) intent gets ≥5 example prompts, paired with the
+# expected_intent label the keyword pre-pass should emit. The runner
+# (`scripts/run_intent_taxonomy_v2.py` — phase 2 of this chain) treats
+# each row as a constraint: the v2 classifier MUST tag this intent at
+# confidence ≥ rule.min_confidence with source='keyword-prepass' OR via
+# the LLM path. Misses count against the canonical displacement bar
+# (≥ 64.3 % per the gap-analysis risk register).
+#
+# Editing rules:
+#   - Keep two-space indentation. The hand-rolled YAML loader in
+#     classifier-v2.ts handles this shape; tests assert this loads.
+#   - Five rows per intent is the floor. Add more freely; cap at ten per
+#     intent for keyword diversity without bloating the runner.
+#   - Prompts must be in natural caller voice, not bench-y. The eval is
+#     meaningless if every prompt starts with "summarize this paper".
+
+version: 2
+created: 2026-05-14
+gap_analysis_ref: A.9.7
+canonical_displacement_floor: 0.643  # MUST stay ≥ 64.3 % on canonical-suite-v2.yaml
+total_prompts: 24
+
+intents:
+
+  # ───────────────────────────── prose-rewrite ─────────────────────────────
+  # Augmented in routing-rules.yaml — tightening/polishing keywords added.
+  - name: prose-rewrite
+    default_tier: local-7b
+    prompts:
+      - id: pr-ext-001
+        prompt: |
+          Tighten this paragraph from our README — keep the meaning, cut
+          the filler, one sentence shorter:
+
+          "CAIA is, broadly speaking, a system that, when you really get
+          down to it, is meant to help with the coordination of agents
+          across a wide variety of contexts and use cases."
+      - id: pr-ext-002
+        prompt: |
+          Polish this sentence so it reads better in a status update:
+          "We have managed to land the changes that were related to the
+          observability stuff that we had been working on."
+      - id: pr-ext-003
+        prompt: |
+          Make this clearer for a reader who's never seen the codebase:
+          "The router is the thing that does the routing for the LLM
+          calls based on the rules in the routing-config thing."
+      - id: pr-ext-004
+        prompt: |
+          Sharpen this prose — drop hedges, no "I think", active voice:
+          "I think it might be a good idea to consider possibly maybe
+          merging the PR sometime soon if that works for everyone."
+      - id: pr-ext-005
+        prompt: |
+          Copy-edit this paragraph for a release-notes section. Keep
+          technical detail; just remove repetition and fix flow:
+
+          "We added a new endpoint. The endpoint is for budget. The
+          budget endpoint returns the current state of the budget."
+      - id: pr-ext-006
+        prompt: |
+          Revise this paragraph to be one sentence:
+          "Our local-LLM displacement is currently sitting at around
+          sixty four percent. We hope to push it higher. Higher is good."
+
+  # ──────────────────────────── architecture-review ────────────────────────────
+  # NEW (2026-05-14).
+  - name: architecture-review
+    default_tier: local-32b
+    prompts:
+      - id: ar-ext-001
+        prompt: |
+          Review this ADR for issues — call out anything that looks
+          load-bearing on assumptions we haven't validated, plus any
+          missing failure modes:
+
+          ADR-0042: We will use a single Redis cluster for both session
+          state and the rate-limit token bucket. Both workloads peak at
+          different times of day so contention is acceptable.
+      - id: ar-ext-002
+        prompt: |
+          Critique this design — what are the top 3 risks?
+
+          The MCP shim spawns a new headroom sidecar per request, reads
+          the model's response, compresses it, and returns. No process
+          pool, no warmup, ~25 s cold start on the first call.
+      - id: ar-ext-003
+        prompt: |
+          Find the issues in this design before we commit to it:
+
+          The chain runner writes state.json after every transition with
+          fsync, holds the file lock for the duration of the transition,
+          and re-reads on every wake.
+      - id: ar-ext-004
+        prompt: |
+          Audit this architecture sketch — does it actually solve the
+          stated problem (avoid burning the Max-20x subscription on a
+          runaway loop)?
+
+          Add a counter in process memory; reject the 61st call per
+          hour. Reset on daemon restart.
+      - id: ar-ext-005
+        prompt: |
+          Architecture review of the new caveman compression module —
+          does the protected-region approach actually prevent us from
+          mangling code fences inside Claude responses? What edge cases
+          would break it?
+      - id: ar-ext-006
+        prompt: |
+          Identify gaps in this design — what observability are we
+          missing for a future operator-on-call to triage a stuck
+          dispatch?
+
+  # ──────────────────────────── research-summary ────────────────────────────
+  # NEW (2026-05-14).
+  - name: research-summary
+    default_tier: local-14b
+    prompts:
+      - id: rs-ext-001
+        prompt: |
+          Summarize this paper for an engineering-onboarding doc — what
+          is LLMLingua-2, what's the result, and what's the headline
+          number we'd actually quote? Three bullets max.
+      - id: rs-ext-002
+        prompt: |
+          TL;DR this Anthropic prompt-caching whitepaper. I want the
+          activation cost, the hit-rate threshold where it pays off, and
+          the 5-minute TTL caveat.
+      - id: rs-ext-003
+        prompt: |
+          What are the key findings of this paper on speculative
+          decoding? Specifically: does it preserve sampling quality, and
+          what's the throughput uplift on a 7B model?
+      - id: rs-ext-004
+        prompt: |
+          Summarize this study on Ollama vs MLX serving cost. The body
+          is 18 KB but I just need: which is cheaper at 1k req/day on
+          M3, and what's the latency delta.
+      - id: rs-ext-005
+        prompt: |
+          Condense this research note on Headroom's compression ratios
+          into actionable bullets — what should we set as our floor
+          ratio if we want ≥97 % semantic preservation?
+      - id: rs-ext-006
+        prompt: |
+          Research summary — what does this whitepaper say about
+          structured-output decoding overhead vs raw generation? One
+          paragraph.
+
+  # ───────────────────────────── memory-search ─────────────────────────────
+  # Augmented in routing-rules.yaml — librarian/MCP-shape keywords added.
+  - name: memory-search
+    default_tier: local-7b
+    prompts:
+      - id: ms-ext-001
+        prompt: |
+          What did we decide about the Claude billing path — API-key
+          fallback allowed or not? Check agent-memory.
+      - id: ms-ext-002
+        prompt: |
+          Find the note about why we use 127.0.0.1 explicitly instead
+          of localhost for the Ollama URL. I remember writing it down.
+      - id: ms-ext-003
+        prompt: |
+          Do we have a memory on the apprentice phase 4 (PR #451) emit
+          shape? I need it to compose with the part-2 work.
+      - id: ms-ext-004
+        prompt: |
+          Lookup in agent-memory: prior decision on the heartbeat grace
+          window for the chain runner.
+      - id: ms-ext-005
+        prompt: |
+          Search caia memory for any guidance on running multiple chains
+          concurrently — is there a cap, and is it enforced?
+      - id: ms-ext-006
+        prompt: |
+          Recall — what's the launchd label naming convention we
+          standardized on for the apprentice phase plists?

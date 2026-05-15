@@ -105,6 +105,17 @@ intents:
       - rewrite this paragraph
       - rewrite this sentence
       - reword this
+      # A.9.7 (2026-05-14) — broaden coverage so plain "tighten this"
+      # / "make this clearer" prose-edit prompts no longer fall through.
+      - tighten this paragraph
+      - tighten this up
+      - polish this paragraph
+      - polish this sentence
+      - make this clearer
+      - make this more concise
+      - sharpen this prose
+      - copy-edit this paragraph
+      - revise this paragraph
 
   - name: format
     default_tier: local-7b
@@ -169,6 +180,17 @@ intents:
       - search memory for
       - recall
       - lookup memory
+      # A.9.7 (2026-05-14) — coverage for librarian/mentor MCP shape:
+      # callers phrase memory-lookup as "what did we decide" / "find
+      # the note about X" / "do we have memory on X".
+      - what did we decide
+      - what did we decide about
+      - find the note about
+      - do we have a memory on
+      - check agent-memory for
+      - lookup in agent-memory
+      - search caia memory
+      - prior decision on
 
   - name: small-code-edit
     default_tier: local-7b
@@ -352,6 +374,29 @@ intents:
       - service boundaries
       - draw the data flow
 
+  # A.9.7 (2026-05-14) — `architecture-review` is distinct from
+  # `architecture`: the former *critiques an existing design* (cheap, can
+  # often stay local-32b with the cascade promoting on low confidence),
+  # the latter *proposes a new one*. Without this split, "review this
+  # ADR" / "look at this design and find the issues" fell through to
+  # claude because the keyword for `architecture` is about NEW design.
+  - name: architecture-review
+    default_tier: local-32b
+    min_confidence: 0.45
+    keywords:
+      - review this adr
+      - review the adr
+      - review this design
+      - review the design doc
+      - review this architecture
+      - architecture review
+      - critique this design
+      - find issues in this design
+      - identify gaps in this design
+      - audit this architecture
+      - assess this design
+      - design review
+
   - name: reason-over-context
     default_tier: claude
     min_confidence: 0.0
@@ -387,6 +432,29 @@ intents:
       - cross-document synthesis
       - synthesize across
       - distil the key points
+
+  # A.9.7 (2026-05-14) — `research-summary` is distinct from
+  # `research-synthesis`: the former condenses ONE research artifact
+  # into actionable bullets (small enough for local-14b), the latter
+  # combines across many (needs stolution-batch long context). Without
+  # this split, "summarize this paper" / "TL;DR this report" mis-routed
+  # to claude because it didn't match doc-summarize's keyword set.
+  - name: research-summary
+    default_tier: local-14b
+    min_confidence: 0.5
+    keywords:
+      - summarize this research
+      - summarize this paper
+      - summarize this report
+      - summarize this study
+      - summarize this whitepaper
+      - tl;dr this paper
+      - tl;dr this report
+      - research summary
+      - key findings of this paper
+      - main conclusions of this paper
+      - what does this paper say
+      - condense this research
 
   - name: batch-summarize
     default_tier: stolution-batch

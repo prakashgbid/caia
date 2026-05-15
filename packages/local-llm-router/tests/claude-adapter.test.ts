@@ -528,4 +528,73 @@ describe('ClaudeAdapter (binary spawn)', () => {
       );
     });
   });
+
+  // ─── A.9.5 — per-hour Claude-call budget guard ───────────────────────
+  describe('A.9.5 — claude per-hour budget guard', () => {
+    it('rejects the (cap+1)th call with ClaudeBudgetExceededError BEFORE spawning the binary', async () => {
+      const { ClaudeCallBudget } = await import('../src/claude-call-budget.js');
+      const { ClaudeBudgetExceededError } = await import('../src/claude-adapter.js');
+      const budget = new ClaudeCallBudget({ cap: 1 });
+      const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({ spawnFn: fn, optimizerDisabled: true, budget });
+
+      // 1st call: ok
+      await adapter.generate('claude-sonnet-4-6', { taskType: 't', prompt: 'p' });
+      expect(invocations.length).toBe(1);
+
+      // 2nd call: rejected, no spawn
+      await expect(
+        adapter.generate('claude-sonnet-4-6', { taskType: 't', prompt: 'p' }),
+      ).rejects.toBeInstanceOf(ClaudeBudgetExceededError);
+      expect(invocations.length).toBe(1);
+    });
+
+    it('disabled budget (cap=0) never rejects', async () => {
+      const { ClaudeCallBudget } = await import('../src/claude-call-budget.js');
+      const budget = new ClaudeCallBudget({ cap: 0 });
+      const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({ spawnFn: fn, optimizerDisabled: true, budget });
+      for (let i = 0; i < 5; i++) {
+        await adapter.generate('claude-sonnet-4-6', { taskType: 't', prompt: 'p' });
+      }
+      expect(invocations.length).toBe(5);
+    });
+  });
+
+  // ─── A.9.9 — output-side caveman compression ────────────────────────
+  describe('A.9.9 — output-side caveman compression', () => {
+    const VERBOSE_RESPONSE_JSON = JSON.stringify({
+      type: 'result',
+      is_error: false,
+      result:
+        "Here's the answer you asked for:\n\nThe fix is at line 42.\n\nLet me know if you need anything else!",
+      usage: { input_tokens: 100, output_tokens: 50 },
+    });
+
+    it('strips the preamble + recap from the response by default', async () => {
+      const { fn } = makeFakeSpawn({ stdout: VERBOSE_RESPONSE_JSON });
+      const adapter = new ClaudeAdapter({ spawnFn: fn, optimizerDisabled: true });
+      const out = await adapter.generate('claude-sonnet-4-6', { taskType: 't', prompt: 'p' });
+      expect(out.response).toBe('The fix is at line 42.');
+    });
+
+    it('passes the response through unchanged when CAVEMAN_COMPRESS_OUTPUT_DISABLE=1', async () => {
+      const orig = process.env['CAVEMAN_COMPRESS_OUTPUT_DISABLE'];
+      process.env['CAVEMAN_COMPRESS_OUTPUT_DISABLE'] = '1';
+      // Need fresh module so the singleton picks up env.
+      vi.resetModules();
+      try {
+        const mod = await import('../src/claude-adapter.js');
+        const { fn } = makeFakeSpawn({ stdout: VERBOSE_RESPONSE_JSON });
+        const adapter = new mod.ClaudeAdapter({ spawnFn: fn, optimizerDisabled: true });
+        const out = await adapter.generate('claude-sonnet-4-6', { taskType: 't', prompt: 'p' });
+        expect(out.response).toContain("Here's the answer");
+        expect(out.response).toContain('Let me know');
+      } finally {
+        if (orig === undefined) delete process.env['CAVEMAN_COMPRESS_OUTPUT_DISABLE'];
+        else process.env['CAVEMAN_COMPRESS_OUTPUT_DISABLE'] = orig;
+        vi.resetModules();
+      }
+    });
+  });
 });
