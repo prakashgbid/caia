@@ -2247,6 +2247,10 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
+  services/claude-spawner-agent: {}
+
+  services/slot-manager: {}
+
   services/sps: {}
 
   templates/site-pokerzeno:
