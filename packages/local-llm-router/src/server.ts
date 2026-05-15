@@ -35,7 +35,20 @@ import {
   claudeCallBudget,
 } from './claude-call-budget.js';
 import { dashboardHtml } from './dashboard.js';
-import { searchMemoryHandler } from './search-memory.js';
+// Lazy-loaded inside the /v1/search-memory handler so the daemon boots
+// even when the @chiefaia/librarian / @chiefaia/mentor-retrieval ESM
+// modules aren't reachable from the CJS-compiled local-llm-router (the
+// pre-existing exports-mismatch surfaced when the daemon was kickstarted
+// after #460 landed; see ROUTER-DAEMON-RELOAD-REQUIRED in #462).
+import type { searchMemoryHandler as SearchMemoryHandlerFn } from './search-memory.js';
+let _searchMemoryHandler: typeof SearchMemoryHandlerFn | null = null;
+async function getSearchMemoryHandler(): Promise<typeof SearchMemoryHandlerFn> {
+  if (_searchMemoryHandler === null) {
+    const mod = await import('./search-memory.js');
+    _searchMemoryHandler = mod.searchMemoryHandler;
+  }
+  return _searchMemoryHandler;
+}
 
 const ROUTER_VERSION = '0.3.0';
 const DEFAULT_PORT = 7411;
@@ -167,7 +180,8 @@ export function buildApp(opts: ServerOptions = {}): Hono {
       : 5;
     const source = body.source ?? 'both';
     try {
-      const result = await searchMemoryHandler({ query, k, source, ollamaBaseUrl });
+      const handler = await getSearchMemoryHandler();
+      const result = await handler({ query, k, source, ollamaBaseUrl });
       return c.json(result);
     } catch (e) {
       return c.json({ error: 'search-memory-failed', message: (e as Error).message }, 502);
