@@ -1,0 +1,87 @@
+---
+# Phase 2 — daily backup CronJob.
+# Snapshots /home/s903/apps/sps/data/sps.db to
+# /home/s903/apps/sps/backups/sps-YYYY-MM-DD.db every day at 04:00 UTC,
+# then prunes anything older than the most recent 7 snapshots.
+#
+# Uses sqlite3 .backup (online, WAL-safe, no locking) via an Alpine image
+# with sqlite preinstalled. Both source and destination are mounted from
+# the host so SPS keeps writing without contention.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sps-daily-backup
+  namespace: caia-orchestrator
+  labels:
+    app: sps
+    component: daily-backup
+    version: phase2
+spec:
+  schedule: "0 4 * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app: sps
+            component: daily-backup
+        spec:
+          restartPolicy: OnFailure
+          priorityClassName: system-cluster-critical
+          tolerations:
+            - key: "node.kubernetes.io/disk-pressure"
+              operator: "Exists"
+              effect: "NoSchedule"
+            - key: "node.kubernetes.io/disk-pressure"
+              operator: "Exists"
+              effect: "NoExecute"
+          containers:
+            - name: daily-backup
+              image: alpine:3.20
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  apk add --no-cache sqlite >/dev/null
+                  STAMP=$(date -u +%F)
+                  SRC=/data/sps.db
+                  OUT_DIR=/backups
+                  OUT=${OUT_DIR}/sps-${STAMP}.db
+                  mkdir -p "${OUT_DIR}"
+                  echo "[$(date -u +%FT%TZ)] backup ${SRC} -> ${OUT}"
+                  sqlite3 "${SRC}" ".backup '${OUT}'"
+                  ls -lh "${OUT}"
+                  # Prune: keep last 7 daily snapshots
+                  cd "${OUT_DIR}"
+                  ls -1tr sps-*.db 2>/dev/null | head -n -7 | xargs -r rm -v
+                  echo "[$(date -u +%FT%TZ)] retention check complete"
+                  ls -1 "${OUT_DIR}" | wc -l | awk '{print "total snapshots:", $1}'
+              resources:
+                requests:
+                  cpu: "20m"
+                  memory: "32Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "128Mi"
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+                  readOnly: false
+                - name: backups
+                  mountPath: /backups
+          volumes:
+            - name: data
+              hostPath:
+                path: /home/s903/apps/sps/data
+                type: DirectoryOrCreate
+            - name: backups
+              hostPath:
+                path: /home/s903/apps/sps/backups
+                type: DirectoryOrCreate

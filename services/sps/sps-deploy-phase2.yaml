@@ -1,0 +1,153 @@
+---
+# SPS Phase 2 deployment manifest.
+# Identical to Phase 1 except SPS_PHASE: "2", version label, and a few new envs:
+#   - SPS_STUCK_AGE_MIN     (default 10) — heartbeat-age threshold for stuck-audit
+#   - SPS_MAX_RETRIES       (default 3)  — retry budget per node
+#   - SPS_RETRY_BACKOFF_*_S (defaults 30/120/600) — exponential backoff steps
+# ConfigMap `sps-src` carries the Phase 2 main.py + schema.sql + requirements.txt.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sps
+  namespace: caia-orchestrator
+  labels:
+    app: sps
+    version: phase2
+  annotations:
+    cowork.phase2/notes: |
+      Phase 2 (deployed 2026-05-09): added /metrics (Prometheus), retries
+      with exponential backoff, dead-letter queue + admin endpoint, bucket
+      aliases (M1→M1-cowork, stolution→first-stolution-*), stuck-task
+      audit, hardened backlog parser. Two new CronJobs land alongside:
+      sps-stuck-audit (every 5 min) and sps-daily-backup (04:00 UTC).
+      See agent-memory/sps_phase2_live_2026-05-09.md.
+    cowork.phase0/storage-note: |
+      hostPath /home/s903/apps/sps/data instead of PVC due to DiskPressure.
+      Carry-forward from Phase 0; revisit when the node clears the threshold.
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: sps
+  template:
+    metadata:
+      labels:
+        app: sps
+        version: phase2
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path:   "/metrics"
+        prometheus.io/port:   "8080"
+    spec:
+      priorityClassName: system-cluster-critical
+      restartPolicy: Always
+      tolerations:
+        - key: "node.kubernetes.io/disk-pressure"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node.kubernetes.io/disk-pressure"
+          operator: "Exists"
+          effect: "NoExecute"
+      containers:
+        - name: sps
+          image: python:3.11-slim
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "[init] installing python deps..."
+              pip install --no-cache-dir --quiet --root-user-action=ignore -r /app/src/requirements.txt
+              echo "[init] starting SPS Phase 2..."
+              cd /app/src
+              exec python -u -m uvicorn main:app --host 0.0.0.0 --port 8080
+          workingDir: /app/src
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PIP_DISABLE_PIP_VERSION_CHECK
+              value: "1"
+            - name: SPS_DB_PATH
+              value: "/data/sps.db"
+            - name: SPS_SCHEMA_PATH
+              value: "/app/src/schema.sql"
+            - name: SPS_PHASE
+              value: "2"
+            - name: SPS_LOG_LEVEL
+              value: "INFO"
+            - name: SPS_SLOT_MANAGER_URL
+              value: "http://slot-manager.caia-orchestrator.svc.cluster.local:8081"
+            - name: SPS_STUCK_AGE_MIN
+              value: "10"
+            - name: SPS_MAX_RETRIES
+              value: "3"
+            - name: SPS_RETRY_BACKOFF_1_S
+              value: "30"
+            - name: SPS_RETRY_BACKOFF_2_S
+              value: "120"
+            - name: SPS_RETRY_BACKOFF_3_S
+              value: "600"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: src
+              mountPath: /app/src
+            - name: data
+              mountPath: /data
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 5
+            failureThreshold: 60
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            failureThreshold: 5
+            timeoutSeconds: 5
+      volumes:
+        - name: src
+          configMap:
+            name: sps-src
+            defaultMode: 0444
+        - name: data
+          hostPath:
+            path: /home/s903/apps/sps/data
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sps
+  namespace: caia-orchestrator
+  labels:
+    app: sps
+    version: phase2
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path:   "/metrics"
+    prometheus.io/port:   "8080"
+spec:
+  type: ClusterIP
+  selector:
+    app: sps
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
