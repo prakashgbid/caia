@@ -1,13 +1,18 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { tagProtectedSpans } from '../src/stage1.js';
 import {
   DEFAULT_SEGMENT_WEIGHTS,
+  __resetRouter404Memo,
   pruneSegment,
   scoreHeuristic,
   stage3Prune,
   type PromptSegment,
 } from '../src/stage3.js';
+
+beforeEach(() => {
+  __resetRouter404Memo();
+});
 
 describe('stage3 — scoreHeuristic', () => {
   it('scores query-term hits higher than unrelated words', () => {
@@ -210,5 +215,101 @@ describe('stage3 — router backend with fallback', () => {
     // surface as an error to the caller.
     expect(out.error).toBeUndefined();
     expect(out.tokensOut).toBeLessThan(out.tokensIn);
+  });
+});
+
+describe('stage3 — A.9.4 router 404 memoization', () => {
+  it('memoizes the 404 outcome per routerBaseUrl so the second call skips the roundtrip', async () => {
+    const segments: PromptSegment[] = [
+      {
+        kind: 'tool-output',
+        text: 'verbose '.repeat(100) + 'keyword',
+        weight: 1,
+      },
+      { kind: 'user-question', text: 'keyword', weight: 0 },
+    ];
+
+    const fetchImpl = vi.fn(async () => {
+      return new Response('', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const optsA = {
+      targetRatio: 0.5,
+      minTokensToPrune: 10,
+      fetchImpl,
+      routerBaseUrl: 'http://127.0.0.1:7411',
+    };
+
+    const first = await stage3Prune(segments, 'keyword', optsA);
+    expect(first.backend).toBe('heuristic');
+    expect((fetchImpl as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(1);
+
+    const second = await stage3Prune(segments, 'keyword', optsA);
+    expect(second.backend).toBe('heuristic');
+    // Memoized — fetch should NOT have been called again.
+    expect((fetchImpl as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(1);
+  });
+
+  it('does not cross-contaminate memoization between routerBaseUrls', async () => {
+    const segments: PromptSegment[] = [
+      {
+        kind: 'tool-output',
+        text: 'verbose '.repeat(100) + 'keyword',
+        weight: 1,
+      },
+      { kind: 'user-question', text: 'keyword', weight: 0 },
+    ];
+
+    const fetchImpl = vi.fn(async () => {
+      return new Response('', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    await stage3Prune(segments, 'keyword', {
+      targetRatio: 0.5,
+      minTokensToPrune: 10,
+      fetchImpl,
+      routerBaseUrl: 'http://127.0.0.1:7411',
+    });
+    expect((fetchImpl as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(1);
+
+    // Different baseUrl — should probe again.
+    await stage3Prune(segments, 'keyword', {
+      targetRatio: 0.5,
+      minTokensToPrune: 10,
+      fetchImpl,
+      routerBaseUrl: 'http://127.0.0.1:7412',
+    });
+    expect((fetchImpl as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(2);
+  });
+
+  it('does not memoize on non-404 errors (transient failures should be retried)', async () => {
+    const segments: PromptSegment[] = [
+      {
+        kind: 'tool-output',
+        text: 'verbose '.repeat(100) + 'keyword',
+        weight: 1,
+      },
+      { kind: 'user-question', text: 'keyword', weight: 0 },
+    ];
+
+    const fetchImpl = vi.fn(async () => {
+      return new Response('', { status: 500 });
+    }) as unknown as typeof fetch;
+
+    const optsA = {
+      targetRatio: 0.5,
+      minTokensToPrune: 10,
+      fetchImpl,
+      routerBaseUrl: 'http://127.0.0.1:7411',
+    };
+
+    const first = await stage3Prune(segments, 'keyword', optsA);
+    expect(first.backend).toBe('heuristic');
+    expect(first.error).toContain('router-status-500');
+
+    const second = await stage3Prune(segments, 'keyword', optsA);
+    expect(second.backend).toBe('heuristic');
+    // 5xx must NOT be memoized — should probe again on the next call.
+    expect((fetchImpl as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(2);
   });
 });
