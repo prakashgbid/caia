@@ -23,6 +23,7 @@ import {
   ClaudeRateLimitedError,
 } from './claude-adapter.js';
 import { OllamaAdapter } from './ollama-adapter.js';
+import { screenForInjection } from './adversarial-prefilter.js';
 import {
   CAIA_ATTR,
   GEN_AI,
@@ -111,9 +112,20 @@ export async function route(
     temperature: 0.2,
   };
 
+  // RR-1 fast mitigation (2026-05-15): adversarial pre-screen runs before
+  // the route decision so a 7B local model never sees instruction-override,
+  // role-play escape, prompt-leak, or JSON-hijack attempts. On match we
+  // force-escalate to claude and stamp the emitted RouterDecision with
+  // reason=adversarial-rejected for the dashboard. Always-claude when
+  // `forceLocal` is NOT set; if the caller explicitly passes forceLocal,
+  // we still escalate (security overrides convenience).
+  const adversarial = screenForInjection(prompt);
+
   // Determine which provider wins
   let preferredProvider: LLMProvider;
-  if (options.forceLocal) {
+  if (adversarial.blocked) {
+    preferredProvider = 'claude';
+  } else if (options.forceLocal) {
     preferredProvider = 'local';
   } else if (options.forceClaude) {
     preferredProvider = 'claude';
@@ -311,11 +323,19 @@ export async function route(
       }
       const routerEventProvider = providerForEvent(result.provider, apprenticeSlot);
       const finalLatencyMs = Date.now() - routeStartMs;
-      const escalationReason =
-        usedFallback && fallbackFrom !== null
-          ? `fallback from ${fallbackFrom}${fallbackReason ? ': ' + fallbackReason : ''}`
-              .slice(0, 200)
-          : null;
+      let escalationReason: string | null = null;
+      if (adversarial.blocked) {
+        // RR-1: adversarial reason takes priority over fallback for the
+        // dashboard. The matched pattern name rides along so the eval can
+        // attribute false-positives to specific rules.
+        const matchedSuffix = adversarial.matched
+          ? `:${adversarial.matched}`
+          : '';
+        escalationReason =
+          `adversarial-rejected:${adversarial.reason ?? 'unknown'}${matchedSuffix}`.slice(0, 200);
+      } else if (usedFallback && fallbackFrom !== null) {
+        escalationReason = `fallback from ${fallbackFrom}${fallbackReason ? ': ' + fallbackReason : ''}`.slice(0, 200);
+      }
       const payload: Record<string, unknown> = {
         decisionId,
         modelChosen: result.model,
@@ -325,6 +345,10 @@ export async function route(
         caiaTaskType: taskType,
       };
       if (escalationReason !== null) payload['reason'] = escalationReason;
+      if (adversarial.blocked) {
+        payload['adversarialBlocked'] = true;
+        if (adversarial.matched) payload['adversarialMatched'] = adversarial.matched;
+      }
       emitMentorEvent('RouterDecision', payload);
 
       // A.9.1.1 — record llmMetrics at every dispatch decision (local,
