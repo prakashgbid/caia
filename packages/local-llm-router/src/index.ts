@@ -20,6 +20,10 @@ export type {
 } from './classifier-v2.js';
 export { OllamaAdapter } from './ollama-adapter.js';
 export {
+  sanitizeUserInput,
+  buildClassifierUserMessage,
+} from './prompt-template.js';
+export {
   ClaudeAdapter,
   ClaudeBinaryError,
   ClaudeRateLimitedError,

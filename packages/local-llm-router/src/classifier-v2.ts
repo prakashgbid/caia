@@ -25,6 +25,7 @@ import {
   type Intent,
   type RecommendedTier,
 } from './classifier.js';
+import { buildClassifierUserMessage } from './prompt-template.js';
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -480,7 +481,11 @@ export async function classifyV2(
   const baseUrl = opts.ollamaBaseUrl ?? process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434';
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  const userPrompt = `Task spec:\n"""\n${taskSpec}\n"""\n\nClassify this task. Output only the JSON.`;
+  // R-3 fix: route through the byte-stable, sanitising prompt template
+  // (see src/prompt-template.ts). CLASSIFIER_V2_SYSTEM_PROMPT is the
+  // byte-stable preamble; buildClassifierUserMessage() owns the user
+  // envelope (prefix + sanitised input + suffix).
+  const userPrompt = buildClassifierUserMessage(taskSpec);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
