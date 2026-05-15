@@ -36,6 +36,8 @@
     "access": "public"
   },
   "dependencies": {
+    "@chiefaia/librarian": "workspace:*",
+    "@chiefaia/mentor-retrieval": "workspace:*",
     "@chiefaia/prompt-optimizer": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/exporter-trace-otlp-http": "^0.215.0",

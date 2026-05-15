@@ -1404,6 +1404,12 @@ importers:
 
   packages/local-llm-router:
     dependencies:
+      '@chiefaia/librarian':
+        specifier: workspace:*
+        version: link:../librarian
+      '@chiefaia/mentor-retrieval':
+        specifier: workspace:*
+        version: link:../mentor-retrieval
       '@chiefaia/prompt-optimizer':
         specifier: workspace:*
         version: link:../prompt-optimizer

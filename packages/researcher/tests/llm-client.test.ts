@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   createDefaultLlmClient,
   parseEnvelope,
@@ -161,5 +161,90 @@ describe('createDefaultLlmClient', () => {
       '--model',
       'claude-sonnet-4-6'
     ]);
+  });
+});
+
+describe('A.9.13 — small-payload local-router shortcut (researcher)', () => {
+  beforeEach(() => {
+    delete process.env['CAIA_REVIEW_LOCAL_FIRST'];
+    delete process.env['CAIA_RESEARCH_LOCAL_BYTES_MAX'];
+    delete process.env['CAIA_RESEARCH_LOCAL_MODEL'];
+    delete process.env['CAIA_RESEARCH_LOCAL_TIMEOUT_MS'];
+    delete process.env['ROUTER_BASE_URL'];
+    vi.unstubAllGlobals();
+  });
+
+  it('default: env unset → does not call the router', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    let spawned = false;
+    const client = createDefaultLlmClient({
+      binaryPath: 'claude',
+      spawnFn: ((_c, _a, _o) => { spawned = true; return {
+        pid: 1, output: [null, '', ''], stdout: JSON.stringify({ result: 'ok' }),
+        stderr: '', status: 0, signal: null,
+      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>; }),
+    });
+    const r = await client.complete({ prompt: 'small q', timeoutMs: 1000 });
+    expect(r.ok).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(spawned).toBe(true);
+  });
+
+  it('routes small prompt to the router when env flag is on', async () => {
+    process.env['CAIA_REVIEW_LOCAL_FIRST'] = '1';
+    const fetchSpy = vi.fn(async () => ({
+      ok: true, status: 200,
+      json: async () => ({ choices: [{ message: { content: 'local synth result' } }] }),
+    }));
+    vi.stubGlobal('fetch', fetchSpy);
+    let spawned = false;
+    const client = createDefaultLlmClient({
+      binaryPath: 'claude',
+      spawnFn: ((_c, _a, _o) => { spawned = true; return {
+        pid: 1, output: [null, '', ''], stdout: '', stderr: '', status: 0, signal: null,
+      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>; }),
+    });
+    const r = await client.complete({ prompt: 'tiny', timeoutMs: 1000 });
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(spawned).toBe(false);
+    expect(r.ok).toBe(true);
+    expect(r.text).toBe('local synth result');
+  });
+
+  it('falls through to claude on large payload', async () => {
+    process.env['CAIA_REVIEW_LOCAL_FIRST'] = '1';
+    process.env['CAIA_RESEARCH_LOCAL_BYTES_MAX'] = '10';
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    let spawned = false;
+    const client = createDefaultLlmClient({
+      binaryPath: 'claude',
+      spawnFn: ((_c, _a, _o) => { spawned = true; return {
+        pid: 1, output: [null, '', ''], stdout: JSON.stringify({ result: 'claude' }),
+        stderr: '', status: 0, signal: null,
+      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>; }),
+    });
+    await client.complete({ prompt: 'this prompt is more than 10 bytes', timeoutMs: 1000 });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(spawned).toBe(true);
+  });
+
+  it('falls through to claude on router failure', async () => {
+    process.env['CAIA_REVIEW_LOCAL_FIRST'] = '1';
+    const fetchSpy = vi.fn(async () => ({ ok: false, status: 502, json: async () => ({}) }));
+    vi.stubGlobal('fetch', fetchSpy);
+    let spawned = false;
+    const client = createDefaultLlmClient({
+      binaryPath: 'claude',
+      spawnFn: ((_c, _a, _o) => { spawned = true; return {
+        pid: 1, output: [null, '', ''], stdout: JSON.stringify({ result: 'claude-fallback' }),
+        stderr: '', status: 0, signal: null,
+      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>; }),
+    });
+    const r = await client.complete({ prompt: 'small', timeoutMs: 1000 });
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(spawned).toBe(true);
+    expect(r.text).toBe('claude-fallback');
   });
 });

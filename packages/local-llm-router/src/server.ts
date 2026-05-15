@@ -3,10 +3,12 @@
 // Endpoints:
 //   GET  /healthz                  → { ok, ollama, models }
 //   GET  /metrics                  → Prometheus exposition (LLM call totals, savings)
+//   GET  /dashboard                → live displacement dashboard HTML (A.9.8)
 //   GET  /v1/budget/claude         → JSON snapshot of the per-hour Claude budget guard (A.9.5)
 //   POST /v1/intent                → classify a task spec into Intent JSON (v1)
 //   POST /v1/intent/v2             → classifier v2 — cascade-aware, taxonomy from YAML
 //   POST /v1/route                 → return route decision without executing
+//   POST /v1/search-memory         → semantic memory search (A.9.12 backing endpoint)
 //   POST /v1/chat/completions      → OpenAI-compatible chat (single-turn)
 //   POST /v1/embeddings            → OpenAI-compatible embeddings
 //   POST /v1/optimize              → 3-stage prompt optimizer (LAI phase 8)
@@ -32,6 +34,8 @@ import {
   ClaudeBudgetExceededError,
   claudeCallBudget,
 } from './claude-call-budget.js';
+import { dashboardHtml } from './dashboard.js';
+import { searchMemoryHandler } from './search-memory.js';
 
 const ROUTER_VERSION = '0.3.0';
 const DEFAULT_PORT = 7411;
@@ -138,6 +142,36 @@ export function buildApp(opts: ServerOptions = {}): Hono {
     lines.push(`# TYPE llm_router_uptime_seconds gauge`);
     lines.push(`llm_router_uptime_seconds ${Math.floor(process.uptime())}`);
     return c.text(lines.join('\n') + '\n', 200, { 'Content-Type': 'text/plain; version=0.0.4' });
+  });
+
+  // ─── /dashboard — A.9.8 live displacement dashboard ─────────────────
+  // Single-page HTML that polls /metrics every 5s and renders the
+  // displacement %, escalation rate, per-model usage, and top-3 routing
+  // classes by volume. Auth = Tailscale ACL (same as the rest of the
+  // daemon).
+  app.get('/dashboard', (c: Context) => {
+    return c.html(dashboardHtml());
+  });
+
+  // ─── /v1/search-memory — A.9.12 semantic memory search ───────────────
+  // Backs the local_search_memory MCP tool (and the librarian/mentor
+  // CLI shims after the migration). Returns top-k cosine-similar
+  // memory entries from the librarian + mentor indexes.
+  app.post('/v1/search-memory', async (c: Context) => {
+    let body: { query?: string; k?: number; source?: 'librarian' | 'mentor' | 'both' };
+    try { body = await c.req.json(); } catch { return c.json({ error: 'invalid-json' }, 400); }
+    const query = (body.query ?? '').trim();
+    if (query === '') return c.json({ error: 'query-required' }, 400);
+    const k = typeof body.k === 'number' && Number.isFinite(body.k) && body.k > 0
+      ? Math.min(50, Math.floor(body.k))
+      : 5;
+    const source = body.source ?? 'both';
+    try {
+      const result = await searchMemoryHandler({ query, k, source, ollamaBaseUrl });
+      return c.json(result);
+    } catch (e) {
+      return c.json({ error: 'search-memory-failed', message: (e as Error).message }, 502);
+    }
   });
 
   // ─── /v1/budget/claude — A.9.5 budget snapshot ───────────────────────

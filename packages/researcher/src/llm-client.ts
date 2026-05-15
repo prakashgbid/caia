@@ -51,6 +51,15 @@ export function createDefaultLlmClient(opts: DefaultLlmClientOptions): LlmClient
       timeoutMs: number;
       model?: string;
     }): Promise<LlmCompletion> {
+      // A.9.13 — small-payload research questions route to the local
+      // router first; fall through to claude on any failure. Off by
+      // default (CAIA_REVIEW_LOCAL_FIRST=1 to enable). Researcher has
+      // no diff hunks so we gate on prompt byte size — default 16 KB
+      // (override via CAIA_RESEARCH_LOCAL_BYTES_MAX). Larger prompts
+      // (e.g. multi-source synthesis) still escalate to claude.
+      const localOutput = await trySmallPayloadLocalRouter(input);
+      if (localOutput !== null) return localOutput;
+
       const env = { ...process.env };
       delete env['ANTHROPIC_API_KEY'];
       const args: string[] = ['--print', '--output-format', 'json'];
@@ -143,6 +152,68 @@ export function parseEnvelope(stdout: string): LlmCompletion {
     return { text: '', ok: false, diagnostic: 'envelope.result not a string' };
   }
   return { text: env.result, ok: true };
+}
+
+/**
+ * A.9.13 — Try the local router for small research prompts. Returns
+ * null on any failure so the caller falls through to the claude binary
+ * subprocess. NEVER throws.
+ */
+async function trySmallPayloadLocalRouter(input: {
+  prompt: string;
+  timeoutMs: number;
+  model?: string;
+}): Promise<LlmCompletion | null> {
+  if (process.env['CAIA_REVIEW_LOCAL_FIRST'] !== '1') return null;
+  const maxBytes = parseEnvInt(
+    process.env['CAIA_RESEARCH_LOCAL_BYTES_MAX'],
+    16 * 1024,
+  );
+  const bytes = Buffer.byteLength(input.prompt, 'utf-8');
+  if (bytes === 0 || bytes > maxBytes) return null;
+
+  const routerBaseUrl =
+    process.env['ROUTER_BASE_URL'] ?? 'http://127.0.0.1:7411';
+  const model =
+    process.env['CAIA_RESEARCH_LOCAL_MODEL'] ?? 'qwen2.5-coder:14b';
+  const timeoutMs = parseEnvInt(
+    process.env['CAIA_RESEARCH_LOCAL_TIMEOUT_MS'],
+    Math.min(input.timeoutMs, 60_000),
+  );
+  try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), timeoutMs);
+    try {
+      const r = await fetch(`${routerBaseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: input.prompt }],
+          temperature: 0.2,
+          caia_task_type: 'research-summary',
+        }),
+        signal: ac.signal,
+      });
+      if (!r.ok) return null;
+      const body = (await r.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const text = body.choices?.[0]?.message?.content ?? '';
+      if (text === '') return null;
+      return { text, ok: true };
+    } finally {
+      clearTimeout(t);
+    }
+  } catch {
+    return null;
+  }
+}
+
+function parseEnvInt(v: string | undefined, def: number): number {
+  if (v === undefined) return def;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : def;
 }
 
 /**

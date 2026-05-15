@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildPrompt,
   createDefaultLlmReviewer,
@@ -311,5 +311,90 @@ describe('noopLlmReviewer', () => {
     const out = await noopLlmReviewer.review(sampleInput);
     expect(out.ok).toBe(true);
     expect(out.findings).toHaveLength(0);
+  });
+});
+
+describe('A.9.13 — small-diff local-router shortcut (code-reviewer)', () => {
+  const LARGE_HUNK: DiffHunk = {
+    file: 'src/big.ts',
+    oldStart: 1,
+    newStart: 1,
+    header: '@@ -1,500 +1,500 @@',
+    body: Array.from({ length: 250 }, (_, i) => `+ line ${i}`).join('\n'),
+    status: 'modified',
+  };
+  const largeInput: LlmReviewInput = { ...sampleInput, hunks: [LARGE_HUNK] };
+
+  const okSpawn = () => ({
+    pid: 1, output: [],
+    stdout: JSON.stringify({ result: JSON.stringify({ findings: [] }) }),
+    stderr: '', status: 0, signal: null,
+  } as ReturnType<typeof import('node:child_process').spawnSync>);
+
+  beforeEach(() => {
+    delete process.env['CAIA_REVIEW_LOCAL_FIRST'];
+    delete process.env['CAIA_REVIEW_LOCAL_DIFF_LINES_MAX'];
+    delete process.env['CAIA_REVIEW_LOCAL_MODEL'];
+    delete process.env['CAIA_REVIEW_LOCAL_TIMEOUT_MS'];
+    delete process.env['ROUTER_BASE_URL'];
+    vi.unstubAllGlobals();
+  });
+
+  it('default: does NOT call the router (env flag unset)', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    let spawned = false;
+    const llm = createDefaultLlmReviewer({
+      binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
+      spawnFn: () => { spawned = true; return okSpawn(); },
+    });
+    await llm.review(sampleInput);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(spawned).toBe(true);
+  });
+
+  it('routes small diff to the router when CAIA_REVIEW_LOCAL_FIRST=1', async () => {
+    process.env['CAIA_REVIEW_LOCAL_FIRST'] = '1';
+    const fetchSpy = vi.fn(async () => ({
+      ok: true, status: 200,
+      json: async () => ({ choices: [{ message: { content: JSON.stringify({ findings: [] }) } }] }),
+    }));
+    vi.stubGlobal('fetch', fetchSpy);
+    let spawned = false;
+    const llm = createDefaultLlmReviewer({
+      binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
+      spawnFn: () => { spawned = true; return okSpawn(); },
+    });
+    await llm.review(sampleInput);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(spawned).toBe(false);
+  });
+
+  it('falls through to claude when diff > 200 lines', async () => {
+    process.env['CAIA_REVIEW_LOCAL_FIRST'] = '1';
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    let spawned = false;
+    const llm = createDefaultLlmReviewer({
+      binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
+      spawnFn: () => { spawned = true; return okSpawn(); },
+    });
+    await llm.review(largeInput);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(spawned).toBe(true);
+  });
+
+  it('falls through to claude when router 5xx', async () => {
+    process.env['CAIA_REVIEW_LOCAL_FIRST'] = '1';
+    const fetchSpy = vi.fn(async () => ({ ok: false, status: 502, json: async () => ({}) }));
+    vi.stubGlobal('fetch', fetchSpy);
+    let spawned = false;
+    const llm = createDefaultLlmReviewer({
+      binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
+      spawnFn: () => { spawned = true; return okSpawn(); },
+    });
+    await llm.review(sampleInput);
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(spawned).toBe(true);
   });
 });
