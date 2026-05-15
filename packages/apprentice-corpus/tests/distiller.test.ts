@@ -1,3 +1,7 @@
+import { EventEmitter } from 'node:events';
+import { Readable, Writable } from 'node:stream';
+import type { spawn as nodeSpawn } from 'node:child_process';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -11,6 +15,48 @@ import {
   parseInstructionJson
 } from '../src/distiller.js';
 import type { ClaudeDistiller, DistillOutput } from '../src/types.js';
+
+/** Fake-child compatible with `@chiefaia/claude-spawner`'s spawn seam. */
+function makeFakeSpawnFn(opts: {
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
+  errorBeforeClose?: Error;
+  stdinSpy?: (chunk: string) => void;
+  envSpy?: (env: NodeJS.ProcessEnv) => void;
+  onSpawn?: () => void;
+}): typeof nodeSpawn {
+  return ((
+    _cmd: string,
+    _args: readonly string[],
+    spawnOpts?: { env?: NodeJS.ProcessEnv },
+  ): unknown => {
+    opts.onSpawn?.();
+    if (spawnOpts?.env !== undefined) opts.envSpy?.(spawnOpts.env);
+    const ee = new EventEmitter() as EventEmitter & {
+      stdin: Writable;
+      stdout: Readable;
+      stderr: Readable;
+      kill: () => boolean;
+    };
+    ee.stdin = new Writable({
+      write(c: Buffer | string, _e, cb): void {
+        if (opts.stdinSpy) opts.stdinSpy(c.toString());
+        cb();
+      }
+    });
+    ee.stdout = new Readable({ read(): void {} });
+    ee.stderr = new Readable({ read(): void {} });
+    ee.kill = (): boolean => true;
+    setImmediate(() => {
+      if (opts.stdout !== undefined) ee.stdout.emit('data', Buffer.from(opts.stdout, 'utf8'));
+      if (opts.stderr !== undefined) ee.stderr.emit('data', Buffer.from(opts.stderr, 'utf8'));
+      if (opts.errorBeforeClose !== undefined) ee.emit('error', opts.errorBeforeClose);
+      else ee.emit('close', opts.exitCode ?? 0);
+    });
+    return ee;
+  }) as unknown as typeof nodeSpawn;
+}
 
 describe('parseDistillerOutput', () => {
   it('parses claude envelope + inner JSON', () => {
@@ -67,53 +113,50 @@ describe('parseInstructionJson', () => {
 
 describe('createDefaultDistiller (claude-binary backend)', () => {
   it('strips ANTHROPIC_API_KEY from spawn env', async () => {
-    const fakeSpawn = vi.fn().mockReturnValue({
-      status: 0,
+    let capturedEnv: NodeJS.ProcessEnv = {};
+    const fakeSpawn = makeFakeSpawnFn({
       stdout: JSON.stringify({ result: JSON.stringify({ instruction: 'q', response: 'a' }) }),
-      stderr: '',
-      error: null
+      exitCode: 0,
+      envSpy: (env) => { capturedEnv = env; }
     });
     const distiller = createDefaultDistiller({
       binaryPath: 'claude',
-      spawnFn: fakeSpawn as never
+      spawnImpl: fakeSpawn
     });
     process.env['ANTHROPIC_API_KEY'] = 'should-not-leak';
-    await distiller.distill({ source: 'memory', kind: 'directive', text: 'x' });
-    const callOpts = fakeSpawn.mock.calls[0]?.[2] as { env: Record<string, string | undefined> };
-    expect(callOpts.env['ANTHROPIC_API_KEY']).toBeUndefined();
+    try {
+      await distiller.distill({ source: 'memory', kind: 'directive', text: 'x' });
+    } finally {
+      delete process.env['ANTHROPIC_API_KEY'];
+    }
+    expect(capturedEnv['ANTHROPIC_API_KEY']).toBeUndefined();
   });
 
   it('throws on non-zero exit', async () => {
-    const fakeSpawn = vi.fn().mockReturnValue({
-      status: 1,
-      stdout: '',
-      stderr: 'rate limit',
-      error: null
-    });
+    const fakeSpawn = makeFakeSpawnFn({ stderr: 'rate limit', exitCode: 1 });
     const distiller = createDefaultDistiller({
       binaryPath: 'claude',
-      spawnFn: fakeSpawn as never
+      spawnImpl: fakeSpawn
     });
     await expect(
       distiller.distill({ source: 'memory', text: 'x' })
     ).rejects.toThrow(/exited 1/);
   });
 
-  it('passes prompt as input', async () => {
-    const fakeSpawn = vi.fn().mockReturnValue({
-      status: 0,
+  it('passes prompt as stdin', async () => {
+    let stdin = '';
+    const fakeSpawn = makeFakeSpawnFn({
       stdout: JSON.stringify({ result: JSON.stringify({ instruction: 'q', response: 'a' }) }),
-      stderr: '',
-      error: null
+      exitCode: 0,
+      stdinSpy: (chunk) => { stdin += chunk; }
     });
     const distiller = createDefaultDistiller({
       binaryPath: 'claude',
-      spawnFn: fakeSpawn as never
+      spawnImpl: fakeSpawn
     });
     await distiller.distill({ source: 'memory', kind: 'directive', text: 'BODY' });
-    const callOpts = fakeSpawn.mock.calls[0]?.[2] as { input: string };
-    expect(callOpts.input).toContain('BODY');
-    expect(callOpts.input).toContain('memory/directive');
+    expect(stdin).toContain('BODY');
+    expect(stdin).toContain('memory/directive');
   });
 });
 
@@ -249,36 +292,36 @@ describe('createLocalLlmRouterDistiller', () => {
 
 describe('createDistiller (backend selector)', () => {
   it('defaults to claude-binary when backend is undefined', async () => {
-    const fakeSpawn = vi.fn().mockReturnValue({
-      status: 0,
+    let spawned = 0;
+    const fakeSpawn = makeFakeSpawnFn({
       stdout: JSON.stringify({ result: JSON.stringify({ instruction: 'q', response: 'a' }) }),
-      stderr: '',
-      error: null
+      exitCode: 0,
+      onSpawn: () => { spawned++; }
     });
     const distiller = createDistiller({
       backend: undefined,
       claudeBinaryPath: 'claude',
-      spawnFn: fakeSpawn as never
+      spawnImpl: fakeSpawn
     });
     const out = await distiller.distill({ source: 'memory', text: 'X' });
     expect(out).toEqual({ instruction: 'q', response: 'a' });
-    expect(fakeSpawn).toHaveBeenCalledOnce();
+    expect(spawned).toBe(1);
   });
 
   it('uses claude-binary when backend="claude-binary"', async () => {
-    const fakeSpawn = vi.fn().mockReturnValue({
-      status: 0,
+    let spawned = 0;
+    const fakeSpawn = makeFakeSpawnFn({
       stdout: JSON.stringify({ result: JSON.stringify({ instruction: 'q', response: 'a' }) }),
-      stderr: '',
-      error: null
+      exitCode: 0,
+      onSpawn: () => { spawned++; }
     });
     const distiller = createDistiller({
       backend: 'claude-binary',
       claudeBinaryPath: 'claude',
-      spawnFn: fakeSpawn as never
+      spawnImpl: fakeSpawn
     });
     await distiller.distill({ source: 'memory', text: 'X' });
-    expect(fakeSpawn).toHaveBeenCalledOnce();
+    expect(spawned).toBe(1);
   });
 
   it('uses local-llm-router when backend="local-llm-router"', async () => {
@@ -295,55 +338,60 @@ describe('createDistiller (backend selector)', () => {
           { status: 200, headers: { 'content-type': 'application/json' } }
         )
       );
-    const fakeSpawn = vi.fn();
+    let spawned = 0;
+    const fakeSpawn = makeFakeSpawnFn({
+      stdout: JSON.stringify({ result: JSON.stringify({ instruction: 'never', response: 'used' }) }),
+      exitCode: 0,
+      onSpawn: () => { spawned++; }
+    });
     const distiller = createDistiller({
       backend: 'local-llm-router',
       claudeBinaryPath: 'claude',
       fetchFn,
-      spawnFn: fakeSpawn as never
+      spawnImpl: fakeSpawn
     });
     const out = await distiller.distill({ source: 'memory', text: 'X' });
     expect(out).toEqual({ instruction: 'q', response: 'a' });
     expect(fetchFn).toHaveBeenCalledTimes(2);
-    expect(fakeSpawn).not.toHaveBeenCalled();
+    expect(spawned).toBe(0);
   });
 
   it('falls back to claude-binary spawn when local-llm-router is unhealthy', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response('down', { status: 503 }));
-    const fakeSpawn = vi.fn().mockReturnValue({
-      status: 0,
+    let spawned = 0;
+    const fakeSpawn = makeFakeSpawnFn({
       stdout: JSON.stringify({
         result: JSON.stringify({ instruction: 'fb-q', response: 'fb-a' })
       }),
-      stderr: '',
-      error: null
+      exitCode: 0,
+      onSpawn: () => { spawned++; }
     });
     const distiller = createDistiller({
       backend: 'local-llm-router',
       claudeBinaryPath: 'claude',
       fetchFn,
-      spawnFn: fakeSpawn as never
+      spawnImpl: fakeSpawn
     });
     const out = await distiller.distill({ source: 'memory', text: 'X' });
     expect(out).toEqual({ instruction: 'fb-q', response: 'fb-a' });
-    expect(fakeSpawn).toHaveBeenCalledOnce();
+    expect(spawned).toBe(1);
   });
 
   it('falls back to claude-binary for unknown backend values', async () => {
-    const fakeSpawn = vi.fn().mockReturnValue({
-      status: 0,
+    let spawned = 0;
+    const fakeSpawn = makeFakeSpawnFn({
       stdout: JSON.stringify({ result: JSON.stringify({ instruction: 'q', response: 'a' }) }),
-      stderr: '',
-      error: null
+      exitCode: 0,
+      onSpawn: () => { spawned++; }
     });
     const distiller = createDistiller({
       backend: 'bogus-value',
       claudeBinaryPath: 'claude',
-      spawnFn: fakeSpawn as never
+      spawnImpl: fakeSpawn
     });
     await distiller.distill({ source: 'memory', text: 'X' });
-    expect(fakeSpawn).toHaveBeenCalledOnce();
+    expect(spawned).toBe(1);
   });
 });

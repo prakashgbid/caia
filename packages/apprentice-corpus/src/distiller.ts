@@ -20,7 +20,8 @@
  * itself must throw on every error path.
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawnClaude } from '@chiefaia/claude-spawner';
+import type { spawn, spawnSync } from 'node:child_process';
 
 import type {
   ClaudeDistiller,
@@ -31,8 +32,18 @@ import type {
 export interface DefaultDistillerOptions {
   binaryPath: string;
   timeoutMs?: number;
-  /** Test seam — replace `child_process.spawnSync`. */
+  /**
+   * Test seam — back-compat shim. New callers should use {@link spawnImpl}
+   * which matches `@chiefaia/claude-spawner`'s `spawnFn` shape. Setting
+   * `spawnFn` is a no-op now; the distiller routes through claude-spawner.
+   * Kept on the type so older external callers don't error on extra prop.
+   */
   spawnFn?: typeof spawnSync;
+  /**
+   * Test seam — replaces `node:child_process.spawn` used by
+   * `@chiefaia/claude-spawner`. Inject a fake child for testing.
+   */
+  spawnImpl?: typeof spawn;
   /** Optional model override. Default: claude-haiku-4-5 (cheap; distillation is not reasoning). */
   model?: string;
 }
@@ -77,7 +88,6 @@ function renderPrompt(input: DistillInput): string {
  * through to the keychain / OAuth subscription session.
  */
 export function createDefaultDistiller(opts: DefaultDistillerOptions): ClaudeDistiller {
-  const spawn = opts.spawnFn ?? spawnSync;
   const timeout = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const model = opts.model ?? DEFAULT_MODEL;
 
@@ -85,30 +95,35 @@ export function createDefaultDistiller(opts: DefaultDistillerOptions): ClaudeDis
     async distill(input: DistillInput): Promise<DistillOutput> {
       const prompt = renderPrompt(input);
 
-      const env = { ...process.env };
-      delete env['ANTHROPIC_API_KEY'];
-
-      const result = spawn(
-        opts.binaryPath,
-        ['--print', '--output-format', 'json', '--model', model],
-        {
-          input: prompt,
-          encoding: 'utf-8',
-          timeout,
-          env
+      // Delegate to `@chiefaia/claude-spawner` — env scrub + timeout +
+      // SUBSCRIPTION-ONLY constraint live there now.
+      const result = await spawnClaude({
+        prompt,
+        options: {
+          binaryPath: opts.binaryPath,
+          model,
+          timeoutMs: timeout,
+          ...(opts.spawnImpl !== undefined ? { spawnFn: opts.spawnImpl } : {})
         }
-      );
+      });
 
-      if (result.error !== null && result.error !== undefined) {
-        throw new Error(`distiller spawn failed: ${result.error.message}`);
+      if (!result.ok) {
+        const diag = result.diagnostic ?? 'unknown failure';
+        if (diag.startsWith('failed to spawn') || diag.startsWith('child process error')) {
+          throw new Error(
+            `distiller spawn failed: ${diag.replace(/^(failed to spawn|child process error): /, '')}`
+          );
+        }
+        // Preserve the legacy "distiller exited <code>: <stderr>" shape
+        // so corpus pipeline parsers don't have to change.
+        if (result.rc !== null) {
+          throw new Error(
+            `distiller exited ${String(result.rc)}: ${result.stderr.slice(0, 300)}`
+          );
+        }
+        throw new Error(`distiller failed: ${diag}`);
       }
-      if (result.status !== 0) {
-        throw new Error(
-          `distiller exited ${result.status}: ${(result.stderr ?? '').toString().slice(0, 300)}`
-        );
-      }
-      const stdout = (result.stdout ?? '').toString();
-      return parseDistillerOutput(stdout);
+      return parseDistillerOutput(result.stdout);
     }
   };
 }
@@ -312,8 +327,16 @@ export interface CreateDistillerOptions {
   routerUrl?: string;
   /** Optional router model override (default `qwen2.5-coder:7b`). */
   routerModel?: string;
-  /** Test seam — replace `spawnSync` for the claude-binary backend. */
+  /**
+   * Test seam — back-compat shim. New callers should use {@link spawnImpl}
+   * which matches `@chiefaia/claude-spawner`'s `spawnFn` shape.
+   */
   spawnFn?: typeof spawnSync;
+  /**
+   * Test seam — replaces `node:child_process.spawn` used by
+   * `@chiefaia/claude-spawner`. Forwarded to the claude-binary backend.
+   */
+  spawnImpl?: typeof spawn;
   /** Test seam — replace `fetch` for the local-llm-router backend. */
   fetchFn?: typeof fetch;
 }
@@ -329,7 +352,7 @@ export interface CreateDistillerOptions {
 export function createDistiller(opts: CreateDistillerOptions): ClaudeDistiller {
   const claudeBinary = createDefaultDistiller({
     binaryPath: opts.claudeBinaryPath,
-    ...(opts.spawnFn !== undefined ? { spawnFn: opts.spawnFn } : {})
+    ...(opts.spawnImpl !== undefined ? { spawnImpl: opts.spawnImpl } : {})
   });
   const backend = (opts.backend ?? 'claude-binary').toLowerCase();
   if (backend === 'local-llm-router') {
