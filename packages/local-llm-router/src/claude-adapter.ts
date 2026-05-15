@@ -36,12 +36,20 @@ import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process'
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { stage1Prepass, estimateTokens } from '@chiefaia/prompt-optimizer';
+import {
+  ClaudeBudgetExceededError,
+  claudeCallBudget,
+  type ClaudeCallBudget,
+} from './claude-call-budget.js';
+import { cavemanCompressOutput } from './caveman-output.js';
 import { emitMentorEvent, newClaudeRequestId } from './mentor-emit.js';
 import type {
   LLMRequest,
   LLMResponse,
   OptimizerMetrics as RouterOptimizerMetrics,
 } from './types.js';
+
+export { ClaudeBudgetExceededError } from './claude-call-budget.js';
 
 /** Default path to the `claude` binary. Overridable via env. */
 const DEFAULT_CLAUDE_BINARY = process.env['CLAUDE_BINARY_PATH'] ?? 'claude';
@@ -198,6 +206,14 @@ export interface ClaudeAdapterOptions {
   sidecarFn?: (
     req: HeadroomSidecarRequest,
   ) => Promise<HeadroomSidecarResponse>;
+  /**
+   * Per-hour Claude-call budget guard (A.9.5). Defaults to the module
+   * singleton `claudeCallBudget`, which reads its cap from env
+   * CLAUDE_CALLS_PER_HOUR_CAP (default 60). Pass an explicit
+   * `ClaudeCallBudget` (or one constructed with `cap: 0` to disable)
+   * for tests / one-off bulk runs.
+   */
+  budget?: ClaudeCallBudget;
 }
 
 /** Shape of the JSON object emitted by `claude --print --output-format json`. */
@@ -235,6 +251,7 @@ export class ClaudeAdapter {
   private readonly sidecarFn:
     | ((req: HeadroomSidecarRequest) => Promise<HeadroomSidecarResponse>)
     | null;
+  private readonly budget: ClaudeCallBudget;
 
   constructor(opts: ClaudeAdapterOptions = {}) {
     this.binaryPath = opts.binaryPath ?? DEFAULT_CLAUDE_BINARY;
@@ -249,6 +266,7 @@ export class ClaudeAdapter {
     this.headroomTimeoutMs = opts.headroomTimeoutMs ?? DEFAULT_HEADROOM_TIMEOUT_MS;
     this.headroomModel = opts.headroomModel ?? DEFAULT_HEADROOM_MODEL;
     this.sidecarFn = opts.sidecarFn ?? null;
+    this.budget = opts.budget ?? claudeCallBudget;
   }
 
   /**
@@ -261,6 +279,33 @@ export class ClaudeAdapter {
    * output, timeout). NEVER falls back to API-key billing.
    */
   async generate(model: string, request: LLMRequest): Promise<LLMResponse> {
+    // A.9.5 — per-hour Claude-call budget guard. Throws
+    // ClaudeBudgetExceededError when the cap is hit. Checked BEFORE we
+    // spawn any subprocess (compression or binary) so the failure-mode
+    // is cheap and visible. The cap is enforced before optimization so
+    // a runaway loop also stops paying compression cost.
+    try {
+      this.budget.consume();
+    } catch (err) {
+      if (err instanceof ClaudeBudgetExceededError) {
+        emitMentorEvent('ClaudeRequest', {
+          requestId: newClaudeRequestId(),
+          model,
+          systemPromptHash: '',
+          messageCount: 1,
+          estimatedInputTokens: estimateTokens(request.prompt),
+          maxTokens: request.maxTokens,
+          cachingEnabled: false,
+          thinkingEnabled: false,
+          caller: 'local-llm-router',
+          budgetRejected: true,
+          budgetCap: err.cap,
+          budgetCallsInLastHour: err.callsInLastHour,
+        });
+      }
+      throw err;
+    }
+
     const start = Date.now();
     const startIso = new Date(start).toISOString();
     const claudeRequestId = newClaudeRequestId();
@@ -532,9 +577,27 @@ export class ClaudeAdapter {
       });
     }
 
-    const text = typeof parsed.result === 'string' ? parsed.result : '';
+    const rawText = typeof parsed.result === 'string' ? parsed.result : '';
     const inputTokens = parsed.usage?.input_tokens ?? 0;
     const outputTokens = parsed.usage?.output_tokens ?? 0;
+
+    // A.9.9 — output-side caveman compression. Compress the response
+    // *bytes* downstream consumers see (prepend-to-next-turn, mentor
+    // event payload, dashboard). The model already produced the tokens
+    // so this saves no Anthropic cost — the win is on the consumer side
+    // (smaller prepend = cheaper next call; cheaper Headroom turn budget).
+    // Kill switch: CAVEMAN_COMPRESS_OUTPUT_DISABLE=1.
+    const compressionStart = Date.now();
+    const compression = cavemanCompressOutput(rawText);
+    const text = compression.text;
+    emitMentorEvent('Compression', {
+      stage: 'router.response',
+      inputChars: rawText.length,
+      outputChars: text.length,
+      ratio: rawText.length > 0 ? text.length / rawText.length : 1,
+      method: compression.method,
+      durationMs: Date.now() - compressionStart,
+    });
 
     const resp: LLMResponse = {
       response: text,

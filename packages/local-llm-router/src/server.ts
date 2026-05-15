@@ -3,6 +3,7 @@
 // Endpoints:
 //   GET  /healthz                  → { ok, ollama, models }
 //   GET  /metrics                  → Prometheus exposition (LLM call totals, savings)
+//   GET  /v1/budget/claude         → JSON snapshot of the per-hour Claude budget guard (A.9.5)
 //   POST /v1/intent                → classify a task spec into Intent JSON (v1)
 //   POST /v1/intent/v2             → classifier v2 — cascade-aware, taxonomy from YAML
 //   POST /v1/route                 → return route decision without executing
@@ -27,6 +28,10 @@ import { llmMetrics } from './llm-metrics.js';
 import { ROUTING_RULES } from './routing-config.js';
 import { ragEnabled, runRag } from './rag/middleware.js';
 import { defaultIndexPath, loadIndex } from './rag/index.js';
+import {
+  ClaudeBudgetExceededError,
+  claudeCallBudget,
+} from './claude-call-budget.js';
 
 const ROUTER_VERSION = '0.3.0';
 const DEFAULT_PORT = 7411;
@@ -89,22 +94,60 @@ export function buildApp(opts: ServerOptions = {}): Hono {
   // ─── /metrics (Prometheus exposition) ────────────────────────────────
   app.get('/metrics', (c: Context) => {
     const snap = llmMetrics.snapshot();
+    const budget = claudeCallBudget.snapshot();
     const lines: string[] = [];
     lines.push('# HELP llm_router_calls_total Total LLM calls dispatched, by provider+model.');
     lines.push('# TYPE llm_router_calls_total counter');
     lines.push(`llm_router_calls_total{provider="local"} ${snap.localCalls}`);
     lines.push(`llm_router_calls_total{provider="claude"} ${snap.claudeCalls}`);
     lines.push(`llm_router_calls_total{provider="cache"} ${snap.cacheHits}`);
+    lines.push('# HELP llm_router_local_share Fraction of calls served by local Ollama.');
+    lines.push('# TYPE llm_router_local_share gauge');
+    lines.push(`llm_router_local_share ${snap.localShare}`);
+    lines.push('# HELP llm_router_avg_duration_ms Mean dispatch duration across all calls (ms).');
+    lines.push('# TYPE llm_router_avg_duration_ms gauge');
+    lines.push(`llm_router_avg_duration_ms ${snap.avgDurationMs}`);
     lines.push('# HELP llm_router_estimated_cost_usd Estimated cost for routed calls (USD).');
     lines.push('# TYPE llm_router_estimated_cost_usd counter');
     lines.push(`llm_router_estimated_cost_usd ${snap.estimatedCostUsd}`);
     lines.push('# HELP llm_router_baseline_cost_usd Baseline (all-Claude) cost for the same calls (USD).');
     lines.push('# TYPE llm_router_baseline_cost_usd counter');
     lines.push(`llm_router_baseline_cost_usd ${snap.baselineCostUsd}`);
+    lines.push('# HELP llm_router_saved_usd Estimated dollars saved against the all-Claude baseline.');
+    lines.push('# TYPE llm_router_saved_usd counter');
+    lines.push(`llm_router_saved_usd ${snap.savedUsd}`);
+    lines.push('# HELP llm_router_claude_budget_cap Configured per-hour Claude budget cap (0 = disabled).');
+    lines.push('# TYPE llm_router_claude_budget_cap gauge');
+    lines.push(`llm_router_claude_budget_cap ${budget.cap}`);
+    lines.push('# HELP llm_router_claude_budget_calls_last_hour Claude calls in the last rolling hour.');
+    lines.push('# TYPE llm_router_claude_budget_calls_last_hour gauge');
+    lines.push(`llm_router_claude_budget_calls_last_hour ${budget.callsInLastHour}`);
+    // Per-task counters help the dashboard slice by task type without
+    // round-tripping through the JSON snapshot.
+    if (snap.perTask.length > 0) {
+      lines.push('# HELP llm_router_task_calls_total Per-task call counter.');
+      lines.push('# TYPE llm_router_task_calls_total counter');
+      for (const t of snap.perTask) {
+        const tn = quoteLabel(t.taskType);
+        lines.push(`llm_router_task_calls_total{task_type="${tn}",provider="local"} ${t.localCalls}`);
+        lines.push(`llm_router_task_calls_total{task_type="${tn}",provider="claude"} ${t.claudeCalls}`);
+        lines.push(`llm_router_task_calls_total{task_type="${tn}",provider="cache"} ${t.cacheHits}`);
+      }
+    }
     lines.push(`# HELP llm_router_uptime_seconds Process uptime in seconds.`);
     lines.push(`# TYPE llm_router_uptime_seconds gauge`);
     lines.push(`llm_router_uptime_seconds ${Math.floor(process.uptime())}`);
     return c.text(lines.join('\n') + '\n', 200, { 'Content-Type': 'text/plain; version=0.0.4' });
+  });
+
+  // ─── /v1/budget/claude — A.9.5 budget snapshot ───────────────────────
+  // Read-only JSON snapshot of the per-hour Claude budget guard. Used by
+  // operators + dashboard to see how close we are to the cap. The guard
+  // itself is enforced inside ClaudeAdapter.generate(); calls that hit
+  // the cap throw ClaudeBudgetExceededError which surfaces as a 429
+  // through the OpenAI-shape /v1/chat/completions handler below.
+  app.get('/v1/budget/claude', (c: Context) => {
+    return c.json(claudeCallBudget.snapshot());
   });
 
   // ─── /v1/intent ──────────────────────────────────────────────────────
@@ -247,6 +290,24 @@ export function buildApp(opts: ServerOptions = {}): Hono {
         },
       });
     } catch (e) {
+      // A.9.5 — surface Claude per-hour budget overflow as a 429 with a
+      // clear escalation message + Retry-After header so the caller can
+      // back off (or rotate via the spend-guard pump). Other failures
+      // remain 502.
+      if (e instanceof ClaudeBudgetExceededError) {
+        const retryAfterSec = Math.max(1, Math.ceil((e.resetAt - Date.now()) / 1000));
+        c.header('Retry-After', String(retryAfterSec));
+        return c.json({
+          error: 'claude-budget-exceeded',
+          message: e.message,
+          cap: e.cap,
+          calls_in_last_hour: e.callsInLastHour,
+          reset_at_unix_ms: e.resetAt,
+          escalation:
+            'Raise CLAUDE_CALLS_PER_HOUR_CAP (or set 0 to disable) on the daemon, ' +
+            'or wait for the rolling hour to clear. See A.9.5.',
+        }, 429);
+      }
       return c.json({ error: 'route-failed', message: (e as Error).message }, 502);
     }
   });
@@ -335,3 +396,9 @@ export function buildApp(opts: ServerOptions = {}): Hono {
 }
 
 export const DEFAULT_ROUTER_PORT = DEFAULT_PORT;
+
+// Escape a label value for Prometheus exposition (per the text-format
+// spec: backslash, double-quote and newline must be escaped).
+function quoteLabel(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+}

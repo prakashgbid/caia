@@ -30,9 +30,14 @@ import {
   withSpan,
   type RouteDecision,
 } from './otel.js';
-import { getRoute } from './routing-config.js';
+import { getRoute, type RoutingRule } from './routing-config.js';
 import { resolveApprenticeOverride } from './apprentice-override.js';
 import { emitMentorEvent, newDecisionId } from './mentor-emit.js';
+import {
+  llmMetrics,
+  perCallCostFromRuleString,
+  type LlmMetricsProvider,
+} from './llm-metrics.js';
 import type {
   LLMProvider,
   LLMRequest,
@@ -170,13 +175,24 @@ export async function route(
             [CAIA_ATTR.CACHE_HIT]: true,
           });
           ctx.recordSuccess(responseAttrs(cached));
+          const cacheLatencyMs = Date.now() - routeStartMs;
           emitMentorEvent('RouterDecision', {
             decisionId,
             modelChosen: cached.model,
             provider: 'cache',
             displacementClass: 'cached',
-            latencyMs: Date.now() - routeStartMs,
+            latencyMs: cacheLatencyMs,
             caiaTaskType: taskType,
+          });
+          // A.9.1.1 — cache hits are pure savings against the
+          // would-have-been claude baseline.
+          recordLlmMetric({
+            taskType,
+            rule,
+            response: cached,
+            cacheHitKind: 'exact',
+            displacementClass: 'cached',
+            durationMs: cacheLatencyMs,
           });
           return cached;
         }
@@ -294,24 +310,90 @@ export async function route(
         displacementClass = 'local';
       }
       const routerEventProvider = providerForEvent(result.provider, apprenticeSlot);
+      const finalLatencyMs = Date.now() - routeStartMs;
+      const escalationReason =
+        usedFallback && fallbackFrom !== null
+          ? `fallback from ${fallbackFrom}${fallbackReason ? ': ' + fallbackReason : ''}`
+              .slice(0, 200)
+          : null;
       const payload: Record<string, unknown> = {
         decisionId,
         modelChosen: result.model,
         provider: routerEventProvider,
         displacementClass,
-        latencyMs: Date.now() - routeStartMs,
+        latencyMs: finalLatencyMs,
         caiaTaskType: taskType,
       };
-      if (usedFallback && fallbackFrom !== null) {
-        payload['reason'] =
-          `fallback from ${fallbackFrom}${fallbackReason ? ': ' + fallbackReason : ''}`
-            .slice(0, 200);
-      }
+      if (escalationReason !== null) payload['reason'] = escalationReason;
       emitMentorEvent('RouterDecision', payload);
+
+      // A.9.1.1 — record llmMetrics at every dispatch decision (local,
+      // claude, fallback) so /metrics and the displacement dashboard
+      // see the real share. Fail-soft: any throw inside the recorder
+      // is swallowed so the dispatch isn't broken by telemetry.
+      recordLlmMetric({
+        taskType,
+        rule,
+        response: result,
+        displacementClass,
+        durationMs: finalLatencyMs,
+        ...(escalationReason !== null ? { escalationReason } : {}),
+      });
 
       return result;
     },
   );
+}
+
+// A.9.1.1 — central recorder. Wraps llmMetrics.record() so the router
+// can call it from cache + dispatch + fallback paths without repeating
+// the bookkeeping. Cost columns come from the routing rule (per-1000
+// strings). Failures are swallowed — telemetry must never break dispatch.
+function recordLlmMetric(args: {
+  taskType: string;
+  rule: RoutingRule;
+  response: LLMResponse;
+  displacementClass: DisplacementClass;
+  durationMs: number;
+  cacheHitKind?: 'exact' | 'semantic';
+  escalationReason?: string;
+}): void {
+  try {
+    const provider: LlmMetricsProvider =
+      args.response.provider === 'local' ? 'local' : 'claude';
+    // Baseline = what the call WOULD have cost if it had gone to Claude.
+    // estimated = what it actually cost (0 for local + cache; claude per-call
+    // estimate otherwise).
+    const baselinePerCallUsd = perCallCostFromRuleString(
+      args.rule.estimatedCostClaude,
+    );
+    let estimatedCostUsd: number;
+    if (args.cacheHitKind !== undefined) {
+      estimatedCostUsd = 0;
+    } else if (provider === 'local') {
+      estimatedCostUsd = perCallCostFromRuleString(args.rule.estimatedCostLocal);
+    } else {
+      estimatedCostUsd = baselinePerCallUsd;
+    }
+    const record: Parameters<typeof llmMetrics.record>[0] = {
+      taskType: args.taskType,
+      provider,
+      model: args.response.model,
+      durationMs: args.durationMs,
+      estimatedCostUsd,
+      baselineCostUsd: baselinePerCallUsd,
+      timestamp: Date.now(),
+    };
+    const usage = args.response.usage;
+    if (usage?.promptTokens !== undefined) record.promptTokens = usage.promptTokens;
+    if (usage?.completionTokens !== undefined) {
+      record.completionTokens = usage.completionTokens;
+    }
+    if (args.cacheHitKind !== undefined) record.cacheHitKind = args.cacheHitKind;
+    llmMetrics.record(record);
+  } catch {
+    /* telemetry must never break dispatch */
+  }
 }
 
 function responseAttrs(
