@@ -32,7 +32,7 @@ import {
   withSpan,
   type RouteDecision,
 } from './otel.js';
-import { getRoute, type RoutingRule } from './routing-config.js';
+import { getRoute, ROUTING_RULES, type RoutingRule } from './routing-config.js';
 import { resolveApprenticeOverride } from './apprentice-override.js';
 import { emitMentorEvent, newDecisionId } from './mentor-emit.js';
 import {
@@ -158,6 +158,26 @@ export async function route(
   const initialModel = preferredProvider === 'local'
     ? localModelForRequest
     : rule.claudeModel ?? 'claude-sonnet-4-6';
+
+  // B1 (2026-05-15) — structured dispatch log. Before this, only the
+  // RouterDecision telemetry recorded WHICH model was chosen; nothing
+  // surfaced WHY. The silent-tier-collapse audit found that the dispatcher
+  // was serving 7b for intents whose cascade design said 14b/32b, but the
+  // metrics couldn't distinguish "rule-says-7b" from "rule-missing-default-7b".
+  // The structured log makes the decision path observable in real time so
+  // a follow-up regression is visible in `tail -f` without restarting.
+  // Format is single-line key=value for cheap grep / jq pipelines.
+  emitDispatchLog({
+    taskType,
+    rule,
+    preferredProvider,
+    chosenModel: initialModel,
+    adversarialBlocked: adversarial.blocked,
+    adversarialMatched: adversarial.matched ?? null,
+    forceLocal: options.forceLocal === true,
+    forceClaude: options.forceClaude === true,
+    apprenticeSlot,
+  });
 
   return withSpan(
     `llm.route ${taskType}`,
@@ -474,6 +494,68 @@ function responseAttrs(
   }
   return attrs;
 }
+
+// B1 (2026-05-15) — structured dispatch log. Single-line key=value emit so
+// `tail -f stderr | grep '\[router\] dispatch'` shows intent=X chose model=Y
+// reason=Z without restart. Reason is one of:
+//   - adversarial-rejected         (RR-1 prefilter forced claude)
+//   - force-local / force-claude   (caller override)
+//   - rule-local / rule-claude     (routing-config decision)
+//   - rule-default-local           (unknown task type → 7b default — the
+//                                   silent-tier-collapse smoking gun, kept
+//                                   warn-level so it's visible by default)
+function emitDispatchLog(args: {
+  taskType: string;
+  rule: RoutingRule;
+  preferredProvider: LLMProvider;
+  chosenModel: string;
+  adversarialBlocked: boolean;
+  adversarialMatched: string | null;
+  forceLocal: boolean;
+  forceClaude: boolean;
+  apprenticeSlot: 'production' | 'canary' | null;
+}): void {
+  try {
+    const hasExplicitRule = ROUTING_RULES_INDEX.has(args.taskType);
+    let reason: string;
+    if (args.adversarialBlocked) {
+      reason = args.adversarialMatched
+        ? `adversarial-rejected:${args.adversarialMatched}`
+        : 'adversarial-rejected';
+    } else if (args.forceLocal) {
+      reason = 'force-local';
+    } else if (args.forceClaude) {
+      reason = 'force-claude';
+    } else if (!hasExplicitRule) {
+      reason = 'rule-default-local';
+    } else if (args.preferredProvider === 'local') {
+      reason = args.rule.useLocal ? 'rule-local' : 'rule-local-override';
+    } else {
+      reason = args.rule.useLocal ? 'rule-claude-override' : 'rule-claude';
+    }
+    const apprentice = args.apprenticeSlot
+      ? ` apprentice=${args.apprenticeSlot}`
+      : '';
+    const ruleStatus = hasExplicitRule ? 'registered' : 'unregistered';
+    // intent= is the taxonomy key (== taskType when the caller routes by
+    // classifier-v2 intent name). model= is what the dispatcher will hand
+    // to ollama/claude. reason= is one of the labels above.
+    console.warn(
+      `[router] dispatch intent=${args.taskType} model=${args.chosenModel} ` +
+        `provider=${args.preferredProvider} reason=${reason} ` +
+        `rule=${ruleStatus} useLocal=${args.rule.useLocal}${apprentice}`,
+    );
+  } catch {
+    /* logging must never break dispatch */
+  }
+}
+
+// Static index over ROUTING_RULES so the dispatch log can detect whether a
+// taskType has an explicit rule without re-scanning the array on every call.
+// Built at module load; routing-config is a static const.
+const ROUTING_RULES_INDEX: Set<string> = new Set(
+  ROUTING_RULES.map((r) => r.taskType),
+);
 
 async function dispatchLocal(
   model: string,

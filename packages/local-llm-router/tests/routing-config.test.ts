@@ -1,8 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, it, expect } from 'vitest';
 import {
   getRoute,
   ROUTING_RULES,
   COST_ANALYSIS,
+  TIER_EXPECTATIONS,
+  verifyTierRouting,
 } from '../src/routing-config.js';
 import { getModel } from '../src/model-catalog.js';
 
@@ -130,6 +135,134 @@ describe('routing-config', () => {
     });
   });
 
+  describe('B1 silent tier-collapse fix (2026-05-15)', () => {
+    // Minimal YAML loader scoped to the intent/default_tier pairs we need.
+    // Mirrors the parser in classifier-v2 but trimmed to the two fields the
+    // verifyTierRouting() contract cares about.
+    function loadIntentsFromYaml(): { name: string; default_tier: string }[] {
+      const yamlPath = resolve(
+        new URL('.', import.meta.url).pathname,
+        '..',
+        'config',
+        'routing-rules.yaml',
+      );
+      const text = readFileSync(yamlPath, 'utf8');
+      const intents: { name: string; default_tier: string }[] = [];
+      let cur: { name?: string; default_tier?: string } = {};
+      for (const line of text.split('\n')) {
+        const mName = line.match(/^\s*-\s*name:\s*(.+)$/);
+        if (mName) {
+          if (cur.name && cur.default_tier) {
+            intents.push({ name: cur.name, default_tier: cur.default_tier });
+          }
+          cur = { name: mName[1].trim() };
+          continue;
+        }
+        const mTier = line.match(/^\s*default_tier:\s*(.+)$/);
+        if (mTier && cur.name) cur.default_tier = mTier[1].trim();
+      }
+      if (cur.name && cur.default_tier) {
+        intents.push({ name: cur.name, default_tier: cur.default_tier });
+      }
+      return intents;
+    }
+
+    it('every classifier-v2 intent is registered as a routing-config taskType', () => {
+      const intents = loadIntentsFromYaml();
+      // Sanity: YAML parsed something (drift guard).
+      expect(intents.length).toBeGreaterThan(20);
+      const missing = intents
+        .filter((i) => i.name !== 'unknown') // `unknown` is the fall-through, not a real intent
+        .filter((i) => ROUTING_RULES.find((r) => r.taskType === i.name) === undefined);
+      expect(
+        missing,
+        `classifier-v2 intents missing routing-config rules (silent tier-collapse risk): ` +
+          missing.map((m) => `${m.name} (tier=${m.default_tier})`).join(', '),
+      ).toEqual([]);
+    });
+
+    it('verifyTierRouting() returns no violations for the current taxonomy', () => {
+      const intents = loadIntentsFromYaml().filter((i) => i.name !== 'unknown');
+      const violations = verifyTierRouting(intents);
+      // Format the failure message so a regression names the exact intent
+      // and the model it silently collapsed to.
+      expect(
+        violations,
+        violations.length === 0
+          ? 'ok'
+          : 'tier-routing violations:\n' +
+              violations
+                .map(
+                  (v) =>
+                    `  - ${v.intent} (tier=${v.expectedTier}, reason=${v.reason}): ` +
+                    `expected ${v.expectedModel}/${v.expectedUseLocal ? 'local' : 'claude'}, ` +
+                    `got ${v.actualModel ?? '<no-rule>'}/${
+                      v.actualUseLocal === undefined ? '?' : v.actualUseLocal ? 'local' : 'claude'
+                    }`,
+                )
+                .join('\n'),
+      ).toEqual([]);
+    });
+
+    it('per-tier asserts: every local-14b intent serves 14b (no silent collapse to 7b)', () => {
+      const intents = loadIntentsFromYaml();
+      const fourteenB = intents.filter((i) => i.default_tier === 'local-14b');
+      // Sanity: there are some local-14b intents in the taxonomy.
+      expect(fourteenB.length).toBeGreaterThan(0);
+      for (const intent of fourteenB) {
+        const rule = ROUTING_RULES.find((r) => r.taskType === intent.name);
+        expect(
+          rule,
+          `local-14b intent "${intent.name}" has no routing-config rule — ` +
+            `getRoute() will fall through to qwen2.5-coder:7b (silent tier-collapse)`,
+        ).toBeDefined();
+        expect(
+          rule?.localModel,
+          `local-14b intent "${intent.name}" routes to ${rule?.localModel} ` +
+            `instead of qwen2.5-coder:14b (silent tier-collapse)`,
+        ).toBe('qwen2.5-coder:14b');
+      }
+    });
+
+    it('per-tier asserts: every local-32b intent serves a 14B-class model (32b doesn\'t fit on M1 Pro)', () => {
+      const intents = loadIntentsFromYaml();
+      const thirtyTwoB = intents.filter((i) => i.default_tier === 'local-32b');
+      expect(thirtyTwoB.length).toBeGreaterThan(0);
+      // 14B-class models accepted for local-32b fallback. qwen3:14b is a
+      // deliberate generalist choice for `architecture-review`; the cascade
+      // tier (local-32b) is preserved by the model size class even though
+      // the tag differs from TIER_EXPECTATIONS['local-32b'].
+      const fourteenBFallbacks = new Set([
+        'qwen2.5-coder:14b',
+        'qwen3:14b',
+        'phi4',
+      ]);
+      for (const intent of thirtyTwoB) {
+        const rule = ROUTING_RULES.find((r) => r.taskType === intent.name);
+        expect(rule, `local-32b intent "${intent.name}" missing rule`).toBeDefined();
+        expect(
+          fourteenBFallbacks.has(rule!.localModel),
+          `local-32b intent "${intent.name}" routes to ${rule!.localModel} — ` +
+            `expected a 14B-class fallback (32B doesn't fit on M1 Pro 16GB)`,
+        ).toBe(true);
+        expect(rule?.useLocal).toBe(true);
+        expect(rule?.claudeModel).toBeDefined();
+      }
+    });
+
+    it('TIER_EXPECTATIONS covers every tier the classifier-v2 YAML uses', () => {
+      const intents = loadIntentsFromYaml();
+      const tiers = new Set(intents.map((i) => i.default_tier));
+      for (const tier of tiers) {
+        expect(
+          TIER_EXPECTATIONS[tier],
+          `classifier-v2 tier "${tier}" has no TIER_EXPECTATIONS entry — ` +
+            `verifyTierRouting() will silently skip it`,
+        ).toBeDefined();
+      }
+    });
+  });
+
   describe('local-share invariants (LAI-005)', () => {
     it('at least 70% of rules route to local by default', () => {
       const total = ROUTING_RULES.length;
@@ -142,10 +275,16 @@ describe('routing-config', () => {
     });
 
     it('every local-default rule has a Claude fallback for resilience', () => {
+      // Embedding rules have no Claude analogue (we never call Anthropic for
+      // text-embedding generation); every other local-first rule does.
+      // `embedding-generate` is the B1 classifier-v2 intent alias for the
+      // pre-existing `embedding-generation` taskType.
+      const noClaudeAnalogue = new Set([
+        'embedding-generation',
+        'embedding-generate',
+      ]);
       for (const rule of ROUTING_RULES) {
-        if (rule.useLocal && rule.taskType !== 'embedding-generation') {
-          // Embedding has no Claude analogue (we never call Anthropic for
-          // text-embedding generation); every other local-first rule does.
+        if (rule.useLocal && !noClaudeAnalogue.has(rule.taskType)) {
           expect(
             rule.claudeModel,
             `local-first rule "${rule.taskType}" missing Claude fallback`,
