@@ -35,6 +35,7 @@ const TEST_RULES: RoutingRules = {
     { name: 'embedding-generate', default_tier: 'stolution-batch', min_confidence: 0.5, keywords: ['vectorize'] },
     { name: 'unknown', default_tier: 'claude', min_confidence: 0.0, keywords: [] },
   ],
+  tier_models: {},
 };
 
 describe('classifier-v2', () => {

@@ -39,6 +39,31 @@ tier_order:
   - stolution-batch
   - claude
 
+# GB-12 (2026-05-15): per-tier model + timeout mapping.
+# Previously the tier→model relationship lived in code comments only; the runtime
+# had no way to pick which ollama tag to dispatch to per intent. This block
+# externalises it so the router daemon can resolve {tier, intent} → {model, timeout_ms}
+# without a code change for tag rotations.
+#
+# `timeout_ms` is the per-request CPU latency budget — set deliberately high for
+# stolution-batch (5 min) because the host is CPU-bound and would otherwise time
+# out on legitimately long completions; it also protects against accidental
+# interactive routing falling onto this tier (no caller waiting 5 min in a UI).
+#
+# `default_model` is used when no `per_intent` override applies.
+# `per_intent` maps an intent name → ollama tag served by that tier.
+tier_models:
+  stolution-batch:
+    timeout_ms: 300000
+    default_model: llama3.3:70b
+    per_intent:
+      batch-summarize: qwen2.5-coder:14b
+      corpus-distill: qwen2.5-coder:14b
+      long-context-reason: qwen2.5-coder:32b
+      research-synthesis: llama3.3:70b
+      complex-review: llama3.3:70b
+      embedding-generate: nomic-embed-text
+
 # Intent taxonomy. The `keywords` field powers the lightweight rule-based prepass
 # in classifier-v2 — if a task spec contains ≥1 keyword for exactly one intent, we
 # skip the LLM call entirely and emit that intent at confidence 0.92.
@@ -47,7 +72,7 @@ tier_order:
 #   local-7b        → qwen2.5:7b-instruct (general) / qwen2.5-coder:7b (code)
 #   local-14b       → qwen2.5-coder:14b
 #   local-32b       → qwen2.5-coder:32b / qwen2.5:32b-instruct
-#   stolution-batch → llama3.3:70b (long-context, CPU-OK batch tier on stolution)
+#   stolution-batch → see `tier_models` block above for per-intent mapping (GB-12)
 #   claude          → cloud escalation
 intents:
   - name: classify
@@ -492,6 +517,22 @@ intents:
       - embedding
       - vectorize
       - generate embeddings
+
+  # GB-12 (2026-05-15): distinct from `code-review` (local-14b first-pass) and
+  # `architecture-review` (local-32b design critique). `complex-review` is a
+  # batched deep multi-file review that benefits from llama3.3:70b's long
+  # context on the stolution-batch tier — caller is willing to wait minutes.
+  - name: complex-review
+    default_tier: stolution-batch
+    min_confidence: 0.5
+    keywords:
+      - full repo review
+      - whole-codebase review
+      - deep multi-file review
+      - thorough code review
+      - exhaustive review
+      - cross-module review
+      - batched review of
 
   - name: unknown
     default_tier: claude
