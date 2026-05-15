@@ -27,6 +27,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@chiefaia/hmac-auth": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {
