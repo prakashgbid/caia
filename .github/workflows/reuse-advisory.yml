@@ -1,0 +1,123 @@
+# INT.1.A4 — Reuse-completeness reviewer (Guardrail #9, DoD v2)
+#
+# Advisory (non-blocking) PR step. Runs `scripts/reuse-check.js` on the
+# PR diff and posts a PR comment listing newly-added identifiers that
+# already appear in a `@chiefaia/*` package's public surface. This
+# workflow MUST NEVER fail the build — every step ends with `exit 0`
+# (or `continue-on-error: true`) so the required-checks set is
+# unaffected.
+#
+# Reference: master_execution_schedule_2026-05-14.md §Tier 2 (INT.1.A4)
+# and definition_of_done_v2_2026-05-14.md Guardrail #9.
+
+name: reuse-advisory
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [develop, main]
+
+# One run per PR is enough — collapse synchronize storms.
+concurrency:
+  group: reuse-advisory-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  advise:
+    name: reuse-advisory (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Drafts are loud enough; skip them. Re-runs on `ready_for_review`.
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need both branches' tips to diff. The base ref is fetched
+          # explicitly in the next step (cheaper than fetch-depth:0).
+          fetch-depth: 0
+
+      - name: Fetch base ref
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -e
+          git fetch --no-tags --depth=200 origin "$BASE_REF":"refs/remotes/origin/$BASE_REF"
+          git log -1 "origin/$BASE_REF" --oneline || true
+
+      - name: Run reuse-check
+        id: check
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        # `continue-on-error` is belt-and-suspenders — the script itself
+        # already swallows errors and exits 0. We add it anyway so that
+        # if Node ever goes missing on the runner the job still ends
+        # green (advisory, never blocking).
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p /tmp/reuse-check
+          node scripts/reuse-check.js \
+            > /tmp/reuse-check/comment.md \
+            2> /tmp/reuse-check/diag.log
+          rc=$?
+          echo "rc=$rc"
+          echo "--- diag ---"
+          cat /tmp/reuse-check/diag.log || true
+          echo "--- /diag ---"
+          if [ -s /tmp/reuse-check/comment.md ]; then
+            echo "has_findings=true" >> "$GITHUB_OUTPUT"
+            head -c 500 /tmp/reuse-check/comment.md
+          else
+            echo "has_findings=false" >> "$GITHUB_OUTPUT"
+            echo "no findings"
+          fi
+          # Always succeed — advisory step.
+          exit 0
+
+      - name: Upsert PR comment
+        if: steps.check.outputs.has_findings == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        # Find an existing comment by marker; update if found, create
+        # otherwise. Never fail the build.
+        continue-on-error: true
+        run: |
+          set +e
+          MARKER='<!-- reuse-check:advisory -->'
+          # Look for an existing advisory comment by this bot.
+          EXISTING_ID=$(gh api \
+            "repos/${REPO}/issues/${PR_NUMBER}/comments?per_page=100" \
+            --jq "[.[] | select(.body | contains(\"${MARKER}\"))][0].id" 2>/dev/null)
+          if [ -n "$EXISTING_ID" ] && [ "$EXISTING_ID" != "null" ]; then
+            echo "Updating existing comment $EXISTING_ID"
+            gh api -X PATCH \
+              "repos/${REPO}/issues/comments/${EXISTING_ID}" \
+              -f body="$(cat /tmp/reuse-check/comment.md)" >/dev/null
+          else
+            echo "Creating new comment"
+            gh pr comment "$PR_NUMBER" --body-file /tmp/reuse-check/comment.md
+          fi
+          exit 0
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Reuse-completeness review (advisory)"
+            echo ""
+            if [ "${{ steps.check.outputs.has_findings }}" = "true" ]; then
+              echo "Findings posted as a PR comment. This step is **non-blocking**."
+              echo ""
+              echo '```markdown'
+              cat /tmp/reuse-check/comment.md 2>/dev/null || true
+              echo '```'
+            else
+              echo "No reuse opportunities found."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
