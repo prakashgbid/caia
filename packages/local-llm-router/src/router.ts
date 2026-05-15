@@ -24,6 +24,7 @@ import {
 } from './claude-adapter.js';
 import { OllamaAdapter } from './ollama-adapter.js';
 import { screenForInjection } from './adversarial-prefilter.js';
+import { shouldEscalate as cascadeShouldEscalate } from './cascade-escalation.js';
 import {
   CAIA_ATTR,
   GEN_AI,
@@ -239,6 +240,37 @@ export async function route(
             result = await dispatchClaude(rule.claudeModel, request);
           } else {
             throw localErr;
+          }
+        }
+
+        // R-1 (2026-05-15): cascade fall-through. The local model returned
+        // without throwing, but the response itself may signal that the
+        // call should have gone to claude — empty/short output, explicit
+        // needs_escalation flag, JSON-parse failure on JSON-shaped output,
+        // or canonical refusal openers. Re-dispatch to claude when a
+        // claudeModel is configured, fallback is enabled, and the caller
+        // didn't force-pin to local. forceLocal callers accept the local
+        // result regardless of confidence (caller opted out of cascade).
+        if (
+          !usedFallback &&
+          fallbackEnabled &&
+          rule.claudeModel &&
+          !options.forceLocal
+        ) {
+          const cascade = cascadeShouldEscalate(result);
+          if (cascade.shouldEscalate) {
+            const triggerLabel = cascade.trigger ?? 'unknown';
+            const reasonLabel = cascade.reason ?? 'unknown';
+            usedFallback = true;
+            fallbackFrom = 'local';
+            fallbackReason = `cascade-escalation:${triggerLabel}:${reasonLabel}`.slice(0, 200);
+            console.warn(
+              `[local-llm-router] Local model "${rule.localModel}" returned ` +
+                `low-confidence output for task "${taskType}" ` +
+                `(trigger=${triggerLabel}, reason=${reasonLabel}); ` +
+                `escalating to Claude binary (${rule.claudeModel}).`,
+            );
+            result = await dispatchClaude(rule.claudeModel, request);
           }
         }
       } else {
