@@ -74,6 +74,10 @@ import {
   preflightDispatch,
 } from './preflight.js';
 import { spawnSync } from 'node:child_process';
+import {
+  DEFAULT_RETENTION_DAYS as INBOX_RETENTION_DEFAULT,
+  pruneInbox,
+} from './inbox-retention.js';
 
 interface BaseOptions {
   chainId: string;
@@ -1317,6 +1321,55 @@ export function buildProgram(): Command {
           if (lastStderr) process.stderr.write(lastStderr);
           process.stderr.write(`RETRY_EXHAUSTED ${(err as Error).message}\n`);
           process.exit(lastCode ?? 5);
+        }
+      },
+    );
+
+  // H-40 (chain-runner-battle-harden phase 11, 2026-05-14). prune-inbox —
+  // archive H2 alert blocks older than `--days` from the chain-watchdog
+  // INBOX.md into per-month files under `<archive-dir>/<yyyy-mm>.md`. The
+  // watchdog shim (bin/watchdog.js) wakes once per UTC day and invokes this
+  // verb so the live INBOX stays scannable. Operator can also run it
+  // ad-hoc; the verb is idempotent.
+  program
+    .command('prune-inbox')
+    .description(
+      'Archive alerts older than --days from a chain-watchdog INBOX.md into <archive-dir>/<yyyy-mm>.md (default 7d retention).',
+    )
+    .requiredOption('--inbox <path>', 'path to INBOX.md')
+    .option(
+      '--days <n>',
+      `retention window in days (default ${INBOX_RETENTION_DEFAULT})`,
+      String(INBOX_RETENTION_DEFAULT),
+    )
+    .option(
+      '--archive-dir <path>',
+      'archive output directory (default <dirname(inbox)>/INBOX_archive)',
+    )
+    .option('--json', 'emit machine-readable JSON instead of the text summary')
+    .action(
+      (cmdOpts: {
+        inbox: string;
+        days?: string;
+        archiveDir?: string;
+        json?: boolean;
+      }) => {
+        const opts: Parameters<typeof pruneInbox>[0] = {
+          inboxPath: cmdOpts.inbox,
+          days: Number(cmdOpts.days ?? INBOX_RETENTION_DEFAULT),
+        };
+        if (cmdOpts.archiveDir) opts.archiveDir = cmdOpts.archiveDir;
+        const r = pruneInbox(opts);
+        if (cmdOpts.json) {
+          process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
+        } else {
+          const archived =
+            Object.entries(r.archived)
+              .map(([f, n]) => `${f}=${n}`)
+              .join(',') || 'none';
+          process.stdout.write(
+            `INBOX_PRUNED scanned=${r.scanned} kept=${r.kept} archived=${archived} bytes=${r.archive_bytes} rewrote=${r.rewrote_inbox}\n`,
+          );
         }
       },
     );
