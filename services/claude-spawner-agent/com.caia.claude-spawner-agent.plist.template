@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  claude-spawner-agent launchd plist template (M1 host-side daemon).
+  Render with sed/envsubst (substituting the placeholders below), then install:
+    launchctl load   ~/Library/LaunchAgents/com.caia.claude-spawner-agent.plist
+    launchctl unload ~/Library/LaunchAgents/com.caia.claude-spawner-agent.plist
+
+  Placeholders (substituted at install time — see services/claude-spawner-agent/README.md):
+    CLAUDE_SPAWNER_VENV    absolute path to the python venv (e.g. ~/.caia/spawner-venv)
+    CLAUDE_SPAWNER_REPO    absolute path to a checkout of the caia repo on this host
+                           (so the daemon resolves services/claude-spawner-agent/claude_spawner_agent.py)
+    CLAUDE_SPAWNER_LOG_DIR absolute path to the log directory (e.g. ~/Documents/conductor-logs)
+    SLOT_MANAGER_BASE_URL  http://STOLUTION-HOST:PORT  (slot-manager API URL)
+    CLAUDE_BINARY          absolute path to the `claude` CLI (e.g. /opt/homebrew/bin/claude)
+    ALLOWED_ROOT           absolute path that bounds the add-dir allowlist (e.g. ~/Documents/projects)
+    NODE_BIN_PATH          PATH prefix that includes node (homebrew/local)
+
+  Subscription guard:
+    ANTHROPIC_API_KEY is INTENTIONALLY NOT set here. The spawner strips it from
+    the subprocess env on every call. The zero-dollar rule is non-negotiable.
+
+  Process control:
+    KeepAlive: true        — restart on crash.
+    RunAtLoad: true        — start on user login.
+    ThrottleInterval: 10   — minimum 10s between restarts to prevent crash loops.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.caia.claude-spawner-agent</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>CLAUDE_SPAWNER_VENV/bin/python</string>
+    <string>-m</string>
+    <string>uvicorn</string>
+    <string>claude_spawner_agent:app</string>
+    <string>--host</string>
+    <string>127.0.0.1</string>
+    <string>--port</string>
+    <string>7780</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>CLAUDE_SPAWNER_REPO/services/claude-spawner-agent</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>NODE_BIN_PATH:/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    <key>SLOT_MANAGER_BASE_URL</key>
+    <string>SLOT_MANAGER_BASE_URL</string>
+    <key>CLAUDE_BINARY</key>
+    <string>CLAUDE_BINARY</string>
+    <key>ALLOWED_ROOT</key>
+    <string>ALLOWED_ROOT</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>CLAUDE_SPAWNER_LOG_DIR/claude-spawner-agent.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>CLAUDE_SPAWNER_LOG_DIR/claude-spawner-agent.err.log</string>
+
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+</dict>
+</plist>
