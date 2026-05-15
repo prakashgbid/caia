@@ -281,7 +281,10 @@ describe('mentor-emit', () => {
         {
           isAvailable: vi.fn().mockResolvedValue(true),
           generate: vi.fn().mockResolvedValue({
-            response: 'ok',
+            // R-1 cascade-escalation guard fires on <8-char responses; keep
+            // the fixture long enough to bypass it so this test exercises
+            // the happy-path RouterDecision emit, not the escalation path.
+            response: 'classification: domain=auth, confidence=high',
             model: 'qwen2.5-coder:7b',
             provider: 'local',
             durationMs: 5,

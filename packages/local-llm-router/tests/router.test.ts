@@ -198,3 +198,128 @@ describe('route — llmMetrics wiring (A.9.1.1)', () => {
     expect(snap.savedUsd).toBeGreaterThan(0);
   });
 });
+
+// R-1 (2026-05-15): cascade-escalation post-dispatch fallthrough.
+// Verifies that a successful-but-low-confidence local response is re-dispatched
+// to claude when the response signals refusal / empty / schema-fail /
+// explicit-needs-escalation. Mirrors the existing error-path fallback tests.
+describe('route — cascade escalation (R-1)', () => {
+  beforeEach(() => {
+    __setAdapters(null, null);
+    llmMetrics.reset();
+  });
+
+  it('escalates to claude when local returns "i don\'t know"', async () => {
+    const ollama = fakeOllama({
+      response: { response: "I don't know how to classify this." },
+    });
+    const claude = fakeClaude();
+    __setAdapters(ollama, claude);
+
+    const res = await route('domain-classification', 'classify this');
+
+    expect(ollama.generate).toHaveBeenCalledOnce();
+    expect(claude.generate).toHaveBeenCalledOnce();
+    expect(res.provider).toBe('claude');
+  });
+
+  it('escalates to claude when local returns an empty response', async () => {
+    const ollama = fakeOllama({ response: { response: '' } });
+    const claude = fakeClaude();
+    __setAdapters(ollama, claude);
+
+    const res = await route('domain-classification', 'classify this');
+
+    expect(claude.generate).toHaveBeenCalledOnce();
+    expect(res.provider).toBe('claude');
+  });
+
+  it('escalates to claude when local emits needs_escalation:true', async () => {
+    const ollama = fakeOllama({
+      response: {
+        response:
+          '{"intent":"unknown","confidence":0.3,"needs_escalation":true,"recommended_tier":"claude","reasoning":"beyond scope"}',
+      },
+    });
+    const claude = fakeClaude();
+    __setAdapters(ollama, claude);
+
+    const res = await route('domain-classification', 'classify this');
+
+    expect(claude.generate).toHaveBeenCalledOnce();
+    expect(res.provider).toBe('claude');
+  });
+
+  it('escalates to claude when local returns malformed JSON', async () => {
+    const ollama = fakeOllama({
+      response: { response: '{"intent":"rename","confidence":}' },
+    });
+    const claude = fakeClaude();
+    __setAdapters(ollama, claude);
+
+    const res = await route('domain-classification', 'classify this');
+
+    expect(claude.generate).toHaveBeenCalledOnce();
+    expect(res.provider).toBe('claude');
+  });
+
+  it('does NOT escalate when local returns a well-formed response', async () => {
+    const ollama = fakeOllama({
+      response: {
+        response:
+          '{"intent":"rename","confidence":0.92,"needs_escalation":false,"recommended_tier":"local-7b","reasoning":"clear single-file rename"}',
+      },
+    });
+    const claude = fakeClaude();
+    __setAdapters(ollama, claude);
+
+    const res = await route('domain-classification', 'classify this');
+
+    expect(ollama.generate).toHaveBeenCalledOnce();
+    expect(claude.generate).not.toHaveBeenCalled();
+    expect(res.provider).toBe('local');
+  });
+
+  it('respects forceLocal — does NOT escalate even on refusal', async () => {
+    const ollama = fakeOllama({
+      response: { response: "I don't know how to classify this." },
+    });
+    const claude = fakeClaude();
+    __setAdapters(ollama, claude);
+
+    const res = await route('hierarchy-decomposition', 'decompose this', {
+      forceLocal: true,
+    });
+
+    expect(claude.generate).not.toHaveBeenCalled();
+    expect(res.provider).toBe('local');
+  });
+
+  it('does NOT escalate when fallbackOnError=false (caller opted out)', async () => {
+    const ollama = fakeOllama({ response: { response: '' } });
+    const claude = fakeClaude();
+    __setAdapters(ollama, claude);
+
+    const res = await route('domain-classification', 'classify this', {
+      fallbackOnError: false,
+    });
+
+    expect(claude.generate).not.toHaveBeenCalled();
+    expect(res.provider).toBe('local');
+  });
+
+  it('records the cascade-escalation as a fallback in llmMetrics', async () => {
+    __setAdapters(
+      fakeOllama({ response: { response: "I don't know." } }),
+      fakeClaude(),
+    );
+    await route('domain-classification', 'classify this');
+    const snap = llmMetrics.snapshot();
+    // The final dispatch is claude; the local call doesn't get its own
+    // metrics row (single dispatch = single record, matching the existing
+    // fallback-from-error behavior).
+    expect(snap.totalCalls).toBe(1);
+    expect(snap.claudeCalls).toBe(1);
+    expect(snap.localCalls).toBe(0);
+  });
+});
