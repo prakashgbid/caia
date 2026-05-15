@@ -19,7 +19,7 @@
  */
 
 import { spawnClaude } from '@chiefaia/claude-spawner';
-import type { spawn, spawnSync, SpawnSyncReturns } from 'node:child_process';
+import type { spawn, SpawnSyncReturns } from 'node:child_process';
 
 import type { LlmClient, LlmCompletion } from './types.js';
 
