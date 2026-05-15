@@ -55,3 +55,7 @@ agent-memory/
 outputs/
 # Legacy claude worktree path (live spawner uses .spawn-worktrees/ — see WORKTREE_SUBDIR_NAME in claude_spawner_agent.py)
 .claude/
+
+# Python bytecode caches (from python -m unittest in py-client and similar)
+__pycache__/
+*.pyc

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.claude-spawner-agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/macbook32/.cache/claude-spawner-agent/venv/bin/python</string>
+        <string>/Users/macbook32/Documents/projects/reports/claude-spawner-agent/claude_spawner_agent.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macbook32/Documents/projects/reports/claude-spawner-agent</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/Users/macbook32/.local/bin</string>
+        <key>PORT</key>
+        <string>8090</string>
+        <key>HOST_NAME</key>
+        <string>mac-m3</string>
+        <key>CLAUDE_BINARY</key>
+        <string>/Users/macbook32/.local/bin/claude</string>
+        <key>SLOT_MANAGER_URL</key>
+        <string>http://10.43.173.170:8081</string>
+        <key>SELF_SPAWNER_URL</key>
+        <string>http://__TAILSCALE_IP__:8090</string>
+        <key>AUTO_REGISTER</key>
+        <string>0</string>
+        <key>LOG_LEVEL</key>
+        <string>INFO</string>
+        <key>HOME</key>
+        <string>/Users/macbook32</string>
+        <!-- LAI phase 7: pre-spawn router-gate + 3-stage prompt-optimizer pre-pass. -->
+        <key>LOCAL_LLM_ROUTER_URL</key>
+        <string>http://100.68.247.58:7411</string>
+        <key>ROUTER_GATE_ENABLED</key>
+        <string>true</string>
+        <key>OPTIMIZER_ENABLED</key>
+        <string>true</string>
+        <key>OPTIMIZER_TIMEOUT_S</key>
+        <string>30.0</string>
+        <!-- SPS-Prompting phase α (A.9.3): wrap the claude binary call in
+             `headroom wrap claude` so every spawn routes Anthropic API
+             calls through the local compression proxy. The wrap is fail-
+             open: if HEADROOM_BINARY is missing on disk OR the kill-switch
+             is set, the spawner reverts to direct claude invocation. -->
+        <key>HEADROOM_BINARY</key>
+        <string>/opt/homebrew/bin/headroom</string>
+        <key>HEADROOM_WRAP_DISABLE</key>
+        <string></string>
+        <key>HEADROOM_PROXY_PORT</key>
+        <string>8787</string>
+        <key>HEADROOM_PROXY_OFFSET</key>
+        <string>0</string>
+        <!-- HEADROOM_REUSE_PROXY=1 tells `headroom wrap` not to start its
+             own short-lived proxy; useful once the operator runs a long-
+             lived `headroom proxy` daemon. Leave empty for the per-spawn
+             proxy startup default. -->
+        <key>HEADROOM_REUSE_PROXY</key>
+        <string></string>
+        <!-- SPS-Prompting phase α (A.9.6): pass `--exclude-dynamic-system-
+             prompt-sections` to claude so per-machine context (cwd, env,
+             memory paths, git status) moves out of the cached system
+             prefix into the first user message. Required precondition for
+             Anthropic's 90% prompt-cache discount to apply across spawns.
+             Flip STABILIZE_PREFIX_DISABLE=1 to revert. -->
+        <key>STABILIZE_PREFIX_DISABLE</key>
+        <string></string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/macbook32/Library/Logs/claude-spawner-agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/macbook32/Library/Logs/claude-spawner-agent.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
