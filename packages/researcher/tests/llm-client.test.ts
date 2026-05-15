@@ -1,9 +1,51 @@
+import { EventEmitter } from 'node:events';
+import { Readable, Writable } from 'node:stream';
+import type { spawn as nodeSpawn } from 'node:child_process';
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   createDefaultLlmClient,
   parseEnvelope,
   extractFirstJsonBlock
 } from '../src/llm-client.js';
+
+/** Fake-child compatible with `@chiefaia/claude-spawner`'s spawn seam. */
+function makeFakeSpawnFn(opts: {
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
+  errorBeforeClose?: Error;
+  argsSpy?: (args: readonly string[]) => void;
+  envSpy?: (env: NodeJS.ProcessEnv) => void;
+  onSpawn?: () => void;
+}): typeof nodeSpawn {
+  return ((
+    _cmd: string,
+    args: readonly string[],
+    spawnOpts?: { env?: NodeJS.ProcessEnv },
+  ): unknown => {
+    opts.onSpawn?.();
+    opts.argsSpy?.(args);
+    if (spawnOpts?.env !== undefined) opts.envSpy?.(spawnOpts.env);
+    const ee = new EventEmitter() as EventEmitter & {
+      stdin: Writable;
+      stdout: Readable;
+      stderr: Readable;
+      kill: () => boolean;
+    };
+    ee.stdin = new Writable({ write(_c, _e, cb): void { cb(); } });
+    ee.stdout = new Readable({ read(): void {} });
+    ee.stderr = new Readable({ read(): void {} });
+    ee.kill = (): boolean => true;
+    setImmediate(() => {
+      if (opts.stdout !== undefined) ee.stdout.emit('data', Buffer.from(opts.stdout, 'utf8'));
+      if (opts.stderr !== undefined) ee.stderr.emit('data', Buffer.from(opts.stderr, 'utf8'));
+      if (opts.errorBeforeClose !== undefined) ee.emit('error', opts.errorBeforeClose);
+      else ee.emit('close', opts.exitCode ?? 0);
+    });
+    return ee;
+  }) as unknown as typeof nodeSpawn;
+}
 
 describe('parseEnvelope', () => {
   it('parses claude --print envelope', () => {
@@ -54,52 +96,32 @@ describe('extractFirstJsonBlock', () => {
 describe('createDefaultLlmClient', () => {
   it('scrubs ANTHROPIC_API_KEY before spawn', async () => {
     let capturedEnv: NodeJS.ProcessEnv | null = null;
-    const fakeSpawn = (
-      _cmd: string,
-      _args: readonly string[],
-      sopts: {
-        input: string;
-        encoding: 'utf-8';
-        timeout: number;
-        env: NodeJS.ProcessEnv;
-        maxBuffer: number;
-      }
-    ) =>
-      ({
-        pid: 1,
-        output: [null, '', ''],
-        stdout: JSON.stringify({ result: 'ok' }),
-        stderr: '',
-        status: 0,
-        signal: null,
-        ...((capturedEnv = sopts.env), {})
-      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>);
-    process.env['ANTHROPIC_API_KEY'] = 'leak-me';
-    const client = createDefaultLlmClient({
-      binaryPath: 'claude',
-      spawnFn: fakeSpawn as Parameters<typeof createDefaultLlmClient>[0]['spawnFn']
+    const fakeSpawn = makeFakeSpawnFn({
+      stdout: JSON.stringify({ result: 'ok' }),
+      exitCode: 0,
+      envSpy: (env) => { capturedEnv = env; }
     });
-    const r = await client.complete({ prompt: 'hi', timeoutMs: 1000 });
-    expect(r.ok).toBe(true);
-    expect(r.text).toBe('ok');
-    expect(capturedEnv).not.toBeNull();
-    expect(capturedEnv?.['ANTHROPIC_API_KEY']).toBeUndefined();
-    delete process.env['ANTHROPIC_API_KEY'];
+    process.env['ANTHROPIC_API_KEY'] = 'leak-me';
+    try {
+      const client = createDefaultLlmClient({
+        binaryPath: 'claude',
+        spawnImpl: fakeSpawn
+      });
+      const r = await client.complete({ prompt: 'hi', timeoutMs: 1000 });
+      expect(r.ok).toBe(true);
+      expect(r.text).toBe('ok');
+      expect(capturedEnv).not.toBeNull();
+      expect(capturedEnv?.['ANTHROPIC_API_KEY']).toBeUndefined();
+    } finally {
+      delete process.env['ANTHROPIC_API_KEY'];
+    }
   });
 
   it('returns ok=false on non-zero exit', async () => {
-    const fakeSpawn = () =>
-      ({
-        pid: 1,
-        output: [null, '', 'boom'],
-        stdout: '',
-        stderr: 'boom',
-        status: 1,
-        signal: null
-      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>);
+    const fakeSpawn = makeFakeSpawnFn({ stderr: 'boom', exitCode: 1 });
     const client = createDefaultLlmClient({
       binaryPath: 'claude',
-      spawnFn: fakeSpawn as Parameters<typeof createDefaultLlmClient>[0]['spawnFn']
+      spawnImpl: fakeSpawn
     });
     const r = await client.complete({ prompt: 'hi', timeoutMs: 1000 });
     expect(r.ok).toBe(false);
@@ -107,22 +129,17 @@ describe('createDefaultLlmClient', () => {
   });
 
   it('returns ok=false on rate-limit envelope', async () => {
-    const fakeSpawn = () =>
-      ({
-        pid: 1,
-        output: [null, '', ''],
-        stdout: JSON.stringify({
-          is_error: true,
-          api_error_status: 429,
-          result: "You've hit your limit · resets 5pm"
-        }),
-        stderr: '',
-        status: 0,
-        signal: null
-      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>);
+    const fakeSpawn = makeFakeSpawnFn({
+      stdout: JSON.stringify({
+        is_error: true,
+        api_error_status: 429,
+        result: "You've hit your limit · resets 5pm"
+      }),
+      exitCode: 0
+    });
     const client = createDefaultLlmClient({
       binaryPath: 'claude',
-      spawnFn: fakeSpawn as Parameters<typeof createDefaultLlmClient>[0]['spawnFn']
+      spawnImpl: fakeSpawn
     });
     const r = await client.complete({ prompt: 'hi', timeoutMs: 1000 });
     expect(r.ok).toBe(false);
@@ -131,23 +148,14 @@ describe('createDefaultLlmClient', () => {
 
   it('forwards --model flag when provided', async () => {
     let capturedArgs: readonly string[] | null = null;
-    const fakeSpawn = (
-      _cmd: string,
-      args: readonly string[]
-    ) => {
-      capturedArgs = args;
-      return {
-        pid: 1,
-        output: [null, '', ''],
-        stdout: JSON.stringify({ result: 'ok' }),
-        stderr: '',
-        status: 0,
-        signal: null
-      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>;
-    };
+    const fakeSpawn = makeFakeSpawnFn({
+      stdout: JSON.stringify({ result: 'ok' }),
+      exitCode: 0,
+      argsSpy: (args) => { capturedArgs = args; }
+    });
     const client = createDefaultLlmClient({
       binaryPath: 'claude',
-      spawnFn: fakeSpawn as Parameters<typeof createDefaultLlmClient>[0]['spawnFn']
+      spawnImpl: fakeSpawn
     });
     await client.complete({
       prompt: 'hi',
@@ -178,12 +186,14 @@ describe('A.9.13 — small-payload local-router shortcut (researcher)', () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
     let spawned = false;
+    const fakeSpawn = makeFakeSpawnFn({
+      stdout: JSON.stringify({ result: 'ok' }),
+      exitCode: 0,
+      onSpawn: () => { spawned = true; }
+    });
     const client = createDefaultLlmClient({
       binaryPath: 'claude',
-      spawnFn: ((_c, _a, _o) => { spawned = true; return {
-        pid: 1, output: [null, '', ''], stdout: JSON.stringify({ result: 'ok' }),
-        stderr: '', status: 0, signal: null,
-      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>; }),
+      spawnImpl: fakeSpawn
     });
     const r = await client.complete({ prompt: 'small q', timeoutMs: 1000 });
     expect(r.ok).toBe(true);
@@ -199,11 +209,14 @@ describe('A.9.13 — small-payload local-router shortcut (researcher)', () => {
     }));
     vi.stubGlobal('fetch', fetchSpy);
     let spawned = false;
+    const fakeSpawn = makeFakeSpawnFn({
+      stdout: '',
+      exitCode: 0,
+      onSpawn: () => { spawned = true; }
+    });
     const client = createDefaultLlmClient({
       binaryPath: 'claude',
-      spawnFn: ((_c, _a, _o) => { spawned = true; return {
-        pid: 1, output: [null, '', ''], stdout: '', stderr: '', status: 0, signal: null,
-      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>; }),
+      spawnImpl: fakeSpawn
     });
     const r = await client.complete({ prompt: 'tiny', timeoutMs: 1000 });
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -218,12 +231,14 @@ describe('A.9.13 — small-payload local-router shortcut (researcher)', () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
     let spawned = false;
+    const fakeSpawn = makeFakeSpawnFn({
+      stdout: JSON.stringify({ result: 'claude' }),
+      exitCode: 0,
+      onSpawn: () => { spawned = true; }
+    });
     const client = createDefaultLlmClient({
       binaryPath: 'claude',
-      spawnFn: ((_c, _a, _o) => { spawned = true; return {
-        pid: 1, output: [null, '', ''], stdout: JSON.stringify({ result: 'claude' }),
-        stderr: '', status: 0, signal: null,
-      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>; }),
+      spawnImpl: fakeSpawn
     });
     await client.complete({ prompt: 'this prompt is more than 10 bytes', timeoutMs: 1000 });
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -235,12 +250,14 @@ describe('A.9.13 — small-payload local-router shortcut (researcher)', () => {
     const fetchSpy = vi.fn(async () => ({ ok: false, status: 502, json: async () => ({}) }));
     vi.stubGlobal('fetch', fetchSpy);
     let spawned = false;
+    const fakeSpawn = makeFakeSpawnFn({
+      stdout: JSON.stringify({ result: 'claude-fallback' }),
+      exitCode: 0,
+      onSpawn: () => { spawned = true; }
+    });
     const client = createDefaultLlmClient({
       binaryPath: 'claude',
-      spawnFn: ((_c, _a, _o) => { spawned = true; return {
-        pid: 1, output: [null, '', ''], stdout: JSON.stringify({ result: 'claude-fallback' }),
-        stderr: '', status: 0, signal: null,
-      } as unknown as ReturnType<typeof import('node:child_process').spawnSync>; }),
+      spawnImpl: fakeSpawn
     });
     const r = await client.complete({ prompt: 'small', timeoutMs: 1000 });
     expect(fetchSpy).toHaveBeenCalled();

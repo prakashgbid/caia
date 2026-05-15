@@ -14,7 +14,8 @@
  * always emitted regardless.
  */
 
-import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import { spawnClaude } from '@chiefaia/claude-spawner';
+import type { spawn } from 'node:child_process';
 
 import type {
   AdversarialFinding,
@@ -32,12 +33,11 @@ export interface DefaultLlmReasonerOptions {
   binaryPath: string;
   modelTag: string;
   timeoutMs: number;
-  /** Test seam — replaces `child_process.spawnSync`. */
-  spawnFn?: (
-    cmd: string,
-    args: readonly string[],
-    opts: { input: string; encoding: 'utf-8'; timeout: number; env: NodeJS.ProcessEnv }
-  ) => SpawnSyncReturns<string>;
+  /**
+   * Test seam — replaces `node:child_process.spawn` used by
+   * `@chiefaia/claude-spawner`.
+   */
+  spawnFn?: typeof spawn;
 }
 
 const SYSTEM_PROMPT = `You are an adversarial code reviewer for the CAIA monorepo. Your job is to assume malice or sloppiness and find concrete attack vectors / failure-modes in the changes. Do NOT comment on style. Do NOT rewrite code. Only surface what could go wrong.
@@ -73,41 +73,41 @@ ${hunksBlock}
 }
 
 export function createDefaultLlmReasoner(opts: DefaultLlmReasonerOptions): LlmReasoner {
-  const spawn = opts.spawnFn ?? spawnSync;
   return {
     async reason(input: LlmReasonInput): Promise<LlmReasonOutput> {
       const prompt = buildPrompt(input);
       // A.9.13 — small diffs go local first via the router. Threshold
       // and model are env-overridable; default off (opt-in via
       // CAIA_REVIEW_LOCAL_FIRST=1). On any local-route failure the path
-      // falls through to the existing claude binary spawn below — no
-      // adversarial finding is dropped.
+      // falls through to claude-spawner below — no adversarial finding
+      // is dropped.
       const localOutput = await trySmallDiffLocalRouter(input);
       if (localOutput !== null) return localOutput;
 
-      const env = { ...process.env };
-      delete env['ANTHROPIC_API_KEY'];
-      const result = spawn(
-        opts.binaryPath,
-        ['--print', '--output-format', 'json', '--model', opts.modelTag],
-        { input: prompt, encoding: 'utf-8', timeout: opts.timeoutMs, env }
-      );
-      if (result.error !== null && result.error !== undefined) {
+      // Delegate to `@chiefaia/claude-spawner` for the canonical
+      // subscription-only spawn (env scrub, timeout, etc).
+      const result = await spawnClaude({
+        prompt,
+        options: {
+          binaryPath: opts.binaryPath,
+          model: opts.modelTag,
+          timeoutMs: opts.timeoutMs,
+          ...(opts.spawnFn !== undefined ? { spawnFn: opts.spawnFn } : {})
+        }
+      });
+      if (!result.ok) {
+        const diag = result.diagnostic ?? 'unknown failure';
         return {
           findings: [],
           ok: false,
-          diagnostic: `claude spawn error: ${result.error.message}`
+          diagnostic: diag.startsWith('failed to spawn')
+            ? `claude spawn error: ${diag.slice('failed to spawn '.length)}`
+            : diag.startsWith('child process error')
+              ? `claude spawn error: ${diag.slice('child process error: '.length)}`
+              : diag
         };
       }
-      if (result.status !== 0) {
-        return {
-          findings: [],
-          ok: false,
-          diagnostic: `claude exited ${result.status}: ${(result.stderr ?? '').toString().slice(0, 300)}`
-        };
-      }
-      const stdout = (result.stdout ?? '').toString();
-      return parseLlmOutput(stdout);
+      return parseLlmOutput(result.stdout);
     }
   };
 }

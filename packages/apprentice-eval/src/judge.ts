@@ -8,7 +8,8 @@
  *   - Anonymised A/B presentation; the harness records the un-anon mapping.
  */
 
-import { spawn } from 'node:child_process';
+import { spawnClaude, SCRUBBED_AUTH_ENV_VARS } from '@chiefaia/claude-spawner';
+import type { spawn } from 'node:child_process';
 
 import type { ClaudeJudge } from './types.js';
 
@@ -19,13 +20,12 @@ export interface CreateClaudeJudgeOpts {
   readonly env?: NodeJS.ProcessEnv;
 }
 
-const SECRETS_TO_SCRUB = [
-  'ANTHROPIC_API_KEY',
-  'OPENAI_API_KEY',
-  'GROQ_API_KEY',
-  'COHERE_API_KEY',
-  'GEMINI_API_KEY'
-];
+/**
+ * Re-export of `@chiefaia/claude-spawner`'s SCRUBBED_AUTH_ENV_VARS so
+ * existing imports of `SECRETS_TO_SCRUB` from this module's tests
+ * keep working. Same list, single source of truth.
+ */
+const SECRETS_TO_SCRUB = SCRUBBED_AUTH_ENV_VARS;
 
 function scrub(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const out: NodeJS.ProcessEnv = { ...env };
@@ -58,39 +58,43 @@ interface RunResult {
   code: number | null;
 }
 
+/**
+ * Thin shim around `@chiefaia/claude-spawner`'s `spawnClaude` that
+ * preserves the existing judge-internal `RunResult` shape (so the
+ * preference-parsing path doesn't have to change).
+ *
+ * The `claude-spawner` package owns env scrub + timeout; we no longer
+ * manage either locally. Timeout-as-rejection is preserved via the
+ * `ok=false && timedOut=true` branch.
+ */
 async function runProcess(
   bin: string,
   args: ReadonlyArray<string>,
   stdin: string,
   timeoutMs: number,
   env: NodeJS.ProcessEnv,
-  spawnImpl: typeof spawn
+  spawnImpl: (typeof spawn) | undefined
 ): Promise<RunResult> {
-  return new Promise((resolve, reject) => {
-    const child = spawnImpl(bin, [...args], { env });
-    let stdout = '';
-    let stderr = '';
-    const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      reject(new Error(`[apprentice-eval] judge subprocess timeout after ${timeoutMs}ms`));
-    }, timeoutMs);
-    child.stdout?.on('data', (d: Buffer) => {
-      stdout += d.toString();
-    });
-    child.stderr?.on('data', (d: Buffer) => {
-      stderr += d.toString();
-    });
-    child.on('error', (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      resolve({ stdout, stderr, code });
-    });
-    child.stdin?.write(stdin);
-    child.stdin?.end();
+  const result = await spawnClaude({
+    prompt: stdin,
+    options: {
+      binaryPath: bin,
+      overrideArgs: [...args],
+      extraEnv: env as Record<string, string>,
+      timeoutMs,
+      ...(spawnImpl !== undefined ? { spawnFn: spawnImpl } : {})
+    }
   });
+  if (result.timedOut) {
+    throw new Error(`[apprentice-eval] judge subprocess timeout after ${timeoutMs}ms`);
+  }
+  if (!result.ok && result.diagnostic?.startsWith('child process error')) {
+    throw new Error(result.diagnostic.slice('child process error: '.length));
+  }
+  if (!result.ok && result.diagnostic?.startsWith('failed to spawn')) {
+    throw new Error(result.diagnostic.slice('failed to spawn '.length));
+  }
+  return { stdout: result.stdout, stderr: result.stderr, code: result.rc };
 }
 
 export function parseJudgeReply(reply: string): {
@@ -110,7 +114,8 @@ export function parseJudgeReply(reply: string): {
 export function createClaudeJudge(opts: CreateClaudeJudgeOpts = {}): ClaudeJudge {
   const claudeBin = opts.claudeBin ?? 'claude';
   const timeoutMs = opts.timeoutMs ?? 60_000;
-  const spawnImpl = opts.spawnImpl ?? spawn;
+  // spawnImpl falls back to undefined → spawnClaude uses its own default.
+  const spawnImpl = opts.spawnImpl;
   const env = scrub(opts.env ?? process.env);
 
   return {

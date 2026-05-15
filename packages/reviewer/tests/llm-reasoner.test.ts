@@ -1,6 +1,46 @@
+import { EventEmitter } from 'node:events';
+import { Readable, Writable } from 'node:stream';
+import type { spawn as nodeSpawn } from 'node:child_process';
+
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { buildPrompt, parseLlmOutput, createDefaultLlmReviewer } from '../src/llm-reasoner.js';
 import type { LlmReviewInput } from '../src/types.js';
+
+/** Fake-child for `@chiefaia/claude-spawner`'s `spawnFn` test seam. */
+function makeFakeSpawnFn(opts: {
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
+  errorBeforeClose?: Error;
+  envSpy?: (env: NodeJS.ProcessEnv) => void;
+  onSpawn?: () => void;
+}): typeof nodeSpawn {
+  return ((
+    _cmd: string,
+    _args: readonly string[],
+    spawnOpts?: { env?: NodeJS.ProcessEnv },
+  ): unknown => {
+    opts.onSpawn?.();
+    if (spawnOpts?.env !== undefined) opts.envSpy?.(spawnOpts.env);
+    const ee = new EventEmitter() as EventEmitter & {
+      stdin: Writable;
+      stdout: Readable;
+      stderr: Readable;
+      kill: () => boolean;
+    };
+    ee.stdin = new Writable({ write(_c, _e, cb): void { cb(); } });
+    ee.stdout = new Readable({ read(): void {} });
+    ee.stderr = new Readable({ read(): void {} });
+    ee.kill = (): boolean => true;
+    setImmediate(() => {
+      if (opts.stdout !== undefined) ee.stdout.emit('data', Buffer.from(opts.stdout, 'utf8'));
+      if (opts.stderr !== undefined) ee.stderr.emit('data', Buffer.from(opts.stderr, 'utf8'));
+      if (opts.errorBeforeClose !== undefined) ee.emit('error', opts.errorBeforeClose);
+      else ee.emit('close', opts.exitCode ?? 0);
+    });
+    return ee;
+  }) as unknown as typeof nodeSpawn;
+}
 
 describe('buildPrompt', () => {
   it('includes dimensions, conventions, and hunks', () => {
@@ -82,24 +122,26 @@ describe('createDefaultLlmReviewer (with spawnFn seam)', () => {
   it('returns ok=false on non-zero exit', async () => {
     const reviewer = createDefaultLlmReviewer({
       binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: (() => ({ status: 1, stdout: '', stderr: 'oops', error: null, signal: null, output: [] })) as never
+      spawnFn: makeFakeSpawnFn({ stderr: 'oops', exitCode: 1 })
     });
     const out = await reviewer.review({
       hunks: [], conventionExcerpts: [],
       pr: { prNumber: 1, branch: 'b', baseBranch: 'develop', title: 't', commitSubjects: [] }
     });
     expect(out.ok).toBe(false);
-    expect(out.diagnostic).toContain('exited 1');
+    expect(out.diagnostic).toContain('exited');
+    expect(out.diagnostic).toContain('1');
   });
 
   it('deletes ANTHROPIC_API_KEY from spawned env', async () => {
     let capturedEnv: NodeJS.ProcessEnv | null = null;
     const reviewer = createDefaultLlmReviewer({
       binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: ((_cmd, _args, opts) => {
-        capturedEnv = opts.env;
-        return { status: 0, stdout: JSON.stringify({ result: '{"findings":[]}' }), stderr: '', error: null, signal: null, output: [] };
-      }) as never
+      spawnFn: makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: '{"findings":[]}' }),
+        exitCode: 0,
+        envSpy: (env) => { capturedEnv = env; }
+      })
     });
     process.env['ANTHROPIC_API_KEY'] = 'sk-test';
     try {
@@ -152,7 +194,11 @@ describe('A.9.13 — small-diff local-router shortcut (reviewer)', () => {
     let spawned = false;
     const reviewer = createDefaultLlmReviewer({
       binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: (() => { spawned = true; return { status: 0, stdout: JSON.stringify({ result: '{"findings":[]}' }), stderr: '', error: null, signal: null, output: [] }; }) as never,
+      spawnFn: makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: '{"findings":[]}' }),
+        exitCode: 0,
+        onSpawn: () => { spawned = true; }
+      }),
     });
     await reviewer.review(smallInput);
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -169,7 +215,11 @@ describe('A.9.13 — small-diff local-router shortcut (reviewer)', () => {
     let spawned = false;
     const reviewer = createDefaultLlmReviewer({
       binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: (() => { spawned = true; return { status: 0, stdout: '', stderr: '', error: null, signal: null, output: [] }; }) as never,
+      spawnFn: makeFakeSpawnFn({
+        stdout: '',
+        exitCode: 0,
+        onSpawn: () => { spawned = true; }
+      }),
     });
     await reviewer.review(smallInput);
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -183,7 +233,11 @@ describe('A.9.13 — small-diff local-router shortcut (reviewer)', () => {
     let spawned = false;
     const reviewer = createDefaultLlmReviewer({
       binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: (() => { spawned = true; return { status: 0, stdout: JSON.stringify({ result: '{"findings":[]}' }), stderr: '', error: null, signal: null, output: [] }; }) as never,
+      spawnFn: makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: '{"findings":[]}' }),
+        exitCode: 0,
+        onSpawn: () => { spawned = true; }
+      }),
     });
     await reviewer.review(largeInput);
     expect(fetchSpy).not.toHaveBeenCalled();

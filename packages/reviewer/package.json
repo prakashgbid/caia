@@ -33,6 +33,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@chiefaia/claude-spawner": "workspace:*",
     "@chiefaia/mentor-event-bus": "workspace:*"
   },
   "devDependencies": {

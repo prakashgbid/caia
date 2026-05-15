@@ -601,6 +601,9 @@ importers:
 
   packages/apprentice-corpus:
     dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
@@ -620,6 +623,9 @@ importers:
       '@chiefaia/apprentice-corpus':
         specifier: workspace:*
         version: link:../apprentice-corpus
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -869,6 +875,27 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
+  packages/claude-spawner:
+    devDependencies:
+      '@chiefaia/eslint-config':
+        specifier: workspace:*
+        version: link:../../configs/eslint-config
+      '@chiefaia/tsconfig':
+        specifier: workspace:*
+        version: link:../../configs/tsconfig
+      '@chiefaia/vitest-config':
+        specifier: workspace:*
+        version: link:../../configs/vitest-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/claude-subagents:
     devDependencies:
       '@types/node':
@@ -908,6 +935,9 @@ importers:
 
   packages/code-reviewer:
     dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
@@ -980,6 +1010,9 @@ importers:
 
   packages/critic:
     dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
@@ -1762,6 +1795,10 @@ importers:
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/researcher:
+    dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -1778,6 +1815,9 @@ importers:
 
   packages/reviewer:
     dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
@@ -2189,6 +2229,10 @@ importers:
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/verifier:
+    dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -2202,6 +2246,12 @@ importers:
       vitest:
         specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  services/claude-spawner-agent: {}
+
+  services/slot-manager: {}
+
+  services/sps: {}
 
   templates/site-pokerzeno:
     dependencies:

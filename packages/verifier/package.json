@@ -34,7 +34,9 @@
     "lint": "eslint src tests",
     "clean": "rm -rf dist"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "1.6.1",

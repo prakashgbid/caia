@@ -16,7 +16,8 @@
  * always emitted regardless.
  */
 
-import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import { spawnClaude } from '@chiefaia/claude-spawner';
+import type { spawn } from 'node:child_process';
 
 import type {
   CraftsmanshipDimensionId,
@@ -32,12 +33,11 @@ export interface DefaultLlmReviewerOptions {
   binaryPath: string;
   modelTag: string;
   timeoutMs: number;
-  /** Test seam — replaces `child_process.spawnSync`. */
-  spawnFn?: (
-    cmd: string,
-    args: readonly string[],
-    opts: { input: string; encoding: 'utf-8'; timeout: number; env: NodeJS.ProcessEnv }
-  ) => SpawnSyncReturns<string>;
+  /**
+   * Test seam — replaces `node:child_process.spawn` used by
+   * `@chiefaia/claude-spawner`.
+   */
+  spawnFn?: typeof spawn;
 }
 
 const DIMENSION_DESCRIPTIONS: Readonly<Record<CraftsmanshipDimensionId, string>> = {
@@ -109,39 +109,37 @@ ${hunksBlock}
 }
 
 export function createDefaultLlmReviewer(opts: DefaultLlmReviewerOptions): LlmReviewer {
-  const spawn = opts.spawnFn ?? spawnSync;
   return {
     async review(input: LlmReviewInput): Promise<LlmReviewOutput> {
       const prompt = buildPrompt(input);
       // A.9.13 — try local router for small diffs first; fall through
-      // to claude on any failure. Off by default — set
+      // to claude-spawner on any failure. Off by default — set
       // CAIA_REVIEW_LOCAL_FIRST=1 to enable.
       const localOutput = await trySmallDiffLocalRouter(input, prompt);
       if (localOutput !== null) return localOutput;
 
-      const env = { ...process.env };
-      delete env['ANTHROPIC_API_KEY'];
-      const result = spawn(
-        opts.binaryPath,
-        ['--print', '--output-format', 'json', '--model', opts.modelTag],
-        { input: prompt, encoding: 'utf-8', timeout: opts.timeoutMs, env }
-      );
-      if (result.error !== null && result.error !== undefined) {
+      const result = await spawnClaude({
+        prompt,
+        options: {
+          binaryPath: opts.binaryPath,
+          model: opts.modelTag,
+          timeoutMs: opts.timeoutMs,
+          ...(opts.spawnFn !== undefined ? { spawnFn: opts.spawnFn } : {})
+        }
+      });
+      if (!result.ok) {
+        const diag = result.diagnostic ?? 'unknown failure';
         return {
           findings: [],
           ok: false,
-          diagnostic: `claude spawn error: ${result.error.message}`
+          diagnostic: diag.startsWith('failed to spawn')
+            ? `claude spawn error: ${diag.slice('failed to spawn '.length)}`
+            : diag.startsWith('child process error')
+              ? `claude spawn error: ${diag.slice('child process error: '.length)}`
+              : diag
         };
       }
-      if (result.status !== 0) {
-        return {
-          findings: [],
-          ok: false,
-          diagnostic: `claude exited ${result.status}: ${(result.stderr ?? '').toString().slice(0, 300)}`
-        };
-      }
-      const stdout = (result.stdout ?? '').toString();
-      return parseLlmOutput(stdout);
+      return parseLlmOutput(result.stdout);
     }
   };
 }

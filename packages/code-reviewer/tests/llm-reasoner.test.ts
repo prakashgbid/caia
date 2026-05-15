@@ -1,3 +1,7 @@
+import { EventEmitter } from 'node:events';
+import { Readable, Writable } from 'node:stream';
+import type { spawn as nodeSpawn } from 'node:child_process';
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildPrompt,
@@ -6,6 +10,44 @@ import {
   parseLlmOutput
 } from '../src/llm-reasoner.js';
 import type { DiffHunk, LlmReviewInput } from '../src/types.js';
+
+/**
+ * Fake-child helper — produces a `node:child_process.ChildProcess`-shaped
+ * mock compatible with `@chiefaia/claude-spawner`'s `spawnFn` test seam.
+ * Emits stdout/stderr after listeners attach (setImmediate), then `close`.
+ */
+function makeFakeSpawnFn(opts: {
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
+  errorBeforeClose?: Error;
+  envSpy?: (env: NodeJS.ProcessEnv) => void;
+}): typeof nodeSpawn {
+  return ((
+    _cmd: string,
+    _args: readonly string[],
+    spawnOpts?: { env?: NodeJS.ProcessEnv },
+  ): unknown => {
+    if (spawnOpts?.env !== undefined) opts.envSpy?.(spawnOpts.env);
+    const ee = new EventEmitter() as EventEmitter & {
+      stdin: Writable;
+      stdout: Readable;
+      stderr: Readable;
+      kill: () => boolean;
+    };
+    ee.stdin = new Writable({ write(_c, _e, cb): void { cb(); } });
+    ee.stdout = new Readable({ read(): void {} });
+    ee.stderr = new Readable({ read(): void {} });
+    ee.kill = (): boolean => true;
+    setImmediate(() => {
+      if (opts.stdout !== undefined) ee.stdout.emit('data', Buffer.from(opts.stdout, 'utf8'));
+      if (opts.stderr !== undefined) ee.stderr.emit('data', Buffer.from(opts.stderr, 'utf8'));
+      if (opts.errorBeforeClose !== undefined) ee.emit('error', opts.errorBeforeClose);
+      else ee.emit('close', opts.exitCode ?? 0);
+    });
+    return ee;
+  }) as unknown as typeof nodeSpawn;
+}
 
 const sampleHunk: DiffHunk = {
   file: 'src/foo.ts',
@@ -212,17 +254,11 @@ describe('parseLlmOutput', () => {
 describe('createDefaultLlmReviewer (subscription-only)', () => {
   it('strips ANTHROPIC_API_KEY from spawn env', async () => {
     let capturedEnv: NodeJS.ProcessEnv = {};
-    const fakeSpawn = (_cmd: string, _args: readonly string[], opts: { input: string; encoding: 'utf-8'; timeout: number; env: NodeJS.ProcessEnv }) => {
-      capturedEnv = opts.env;
-      return {
-        pid: 1,
-        output: [],
-        stdout: JSON.stringify({ result: JSON.stringify({ findings: [] }) }),
-        stderr: '',
-        status: 0,
-        signal: null
-      } as ReturnType<typeof import('node:child_process').spawnSync>;
-    };
+    const fakeSpawn = makeFakeSpawnFn({
+      stdout: JSON.stringify({ result: JSON.stringify({ findings: [] }) }),
+      exitCode: 0,
+      envSpy: (env) => { capturedEnv = env; }
+    });
     process.env['ANTHROPIC_API_KEY'] = 'sk-ant-api03-fake';
     try {
       const llm = createDefaultLlmReviewer({
@@ -239,15 +275,7 @@ describe('createDefaultLlmReviewer (subscription-only)', () => {
   });
 
   it('returns ok:false on spawn error', async () => {
-    const fakeSpawn = () => ({
-      pid: 0,
-      output: [],
-      stdout: '',
-      stderr: '',
-      status: null,
-      signal: null,
-      error: new Error('ENOENT')
-    } as unknown as ReturnType<typeof import('node:child_process').spawnSync>);
+    const fakeSpawn = makeFakeSpawnFn({ errorBeforeClose: new Error('ENOENT') });
     const llm = createDefaultLlmReviewer({
       binaryPath: 'nonexistent',
       modelTag: 'm',
@@ -260,14 +288,7 @@ describe('createDefaultLlmReviewer (subscription-only)', () => {
   });
 
   it('returns ok:false on non-zero exit', async () => {
-    const fakeSpawn = () => ({
-      pid: 1,
-      output: [],
-      stdout: '',
-      stderr: 'rate-limited',
-      status: 1,
-      signal: null
-    } as ReturnType<typeof import('node:child_process').spawnSync>);
+    const fakeSpawn = makeFakeSpawnFn({ stderr: 'rate-limited', exitCode: 1 });
     const llm = createDefaultLlmReviewer({
       binaryPath: 'claude',
       modelTag: 'm',
@@ -280,9 +301,7 @@ describe('createDefaultLlmReviewer (subscription-only)', () => {
   });
 
   it('parses successful spawn output', async () => {
-    const fakeSpawn = () => ({
-      pid: 1,
-      output: [],
+    const fakeSpawn = makeFakeSpawnFn({
       stdout: JSON.stringify({
         result: JSON.stringify({
           findings: [
@@ -290,10 +309,8 @@ describe('createDefaultLlmReviewer (subscription-only)', () => {
           ]
         })
       }),
-      stderr: '',
-      status: 0,
-      signal: null
-    } as ReturnType<typeof import('node:child_process').spawnSync>);
+      exitCode: 0
+    });
     const llm = createDefaultLlmReviewer({
       binaryPath: 'claude',
       modelTag: 'm',
@@ -325,11 +342,22 @@ describe('A.9.13 — small-diff local-router shortcut (code-reviewer)', () => {
   };
   const largeInput: LlmReviewInput = { ...sampleInput, hunks: [LARGE_HUNK] };
 
-  const okSpawn = () => ({
-    pid: 1, output: [],
-    stdout: JSON.stringify({ result: JSON.stringify({ findings: [] }) }),
-    stderr: '', status: 0, signal: null,
-  } as ReturnType<typeof import('node:child_process').spawnSync>);
+  function spawnSpy(): { fn: typeof nodeSpawn; called: () => boolean } {
+    let called = false;
+    const fn = ((
+      cmd: string,
+      args: readonly string[],
+      opts?: { env?: NodeJS.ProcessEnv },
+    ): unknown => {
+      called = true;
+      const real = makeFakeSpawnFn({
+        stdout: JSON.stringify({ result: JSON.stringify({ findings: [] }) }),
+        exitCode: 0,
+      });
+      return (real as unknown as (a: string, b: readonly string[], c: typeof opts) => unknown)(cmd, args, opts);
+    }) as unknown as typeof nodeSpawn;
+    return { fn, called: () => called };
+  }
 
   beforeEach(() => {
     delete process.env['CAIA_REVIEW_LOCAL_FIRST'];
@@ -343,14 +371,14 @@ describe('A.9.13 — small-diff local-router shortcut (code-reviewer)', () => {
   it('default: does NOT call the router (env flag unset)', async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
-    let spawned = false;
+    const spy = spawnSpy();
     const llm = createDefaultLlmReviewer({
       binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return okSpawn(); },
+      spawnFn: spy.fn,
     });
     await llm.review(sampleInput);
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(spawned).toBe(true);
+    expect(spy.called()).toBe(true);
   });
 
   it('routes small diff to the router when CAIA_REVIEW_LOCAL_FIRST=1', async () => {
@@ -360,41 +388,41 @@ describe('A.9.13 — small-diff local-router shortcut (code-reviewer)', () => {
       json: async () => ({ choices: [{ message: { content: JSON.stringify({ findings: [] }) } }] }),
     }));
     vi.stubGlobal('fetch', fetchSpy);
-    let spawned = false;
+    const spy = spawnSpy();
     const llm = createDefaultLlmReviewer({
       binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return okSpawn(); },
+      spawnFn: spy.fn,
     });
     await llm.review(sampleInput);
     expect(fetchSpy).toHaveBeenCalledOnce();
-    expect(spawned).toBe(false);
+    expect(spy.called()).toBe(false);
   });
 
   it('falls through to claude when diff > 200 lines', async () => {
     process.env['CAIA_REVIEW_LOCAL_FIRST'] = '1';
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
-    let spawned = false;
+    const spy = spawnSpy();
     const llm = createDefaultLlmReviewer({
       binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return okSpawn(); },
+      spawnFn: spy.fn,
     });
     await llm.review(largeInput);
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(spawned).toBe(true);
+    expect(spy.called()).toBe(true);
   });
 
   it('falls through to claude when router 5xx', async () => {
     process.env['CAIA_REVIEW_LOCAL_FIRST'] = '1';
     const fetchSpy = vi.fn(async () => ({ ok: false, status: 502, json: async () => ({}) }));
     vi.stubGlobal('fetch', fetchSpy);
-    let spawned = false;
+    const spy = spawnSpy();
     const llm = createDefaultLlmReviewer({
       binaryPath: 'claude', modelTag: 'm', timeoutMs: 1000,
-      spawnFn: () => { spawned = true; return okSpawn(); },
+      spawnFn: spy.fn,
     });
     await llm.review(sampleInput);
     expect(fetchSpy).toHaveBeenCalled();
-    expect(spawned).toBe(true);
+    expect(spy.called()).toBe(true);
   });
 });

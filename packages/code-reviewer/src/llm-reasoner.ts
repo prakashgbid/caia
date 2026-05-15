@@ -21,7 +21,8 @@
  * binary cannot fall back to per-token billing under any circumstance.
  */
 
-import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import { spawnClaude } from '@chiefaia/claude-spawner';
+import type { spawn } from 'node:child_process';
 
 import type {
   CodeReviewDimensionId,
@@ -43,12 +44,12 @@ export interface DefaultLlmReviewerOptions {
   binaryPath: string;
   modelTag: string;
   timeoutMs: number;
-  /** Test seam — replaces `child_process.spawnSync`. */
-  spawnFn?: (
-    cmd: string,
-    args: readonly string[],
-    opts: { input: string; encoding: 'utf-8'; timeout: number; env: NodeJS.ProcessEnv }
-  ) => SpawnSyncReturns<string>;
+  /**
+   * Test seam — replaces `node:child_process.spawn` used by
+   * `@chiefaia/claude-spawner`. Inject a fake child for testing the
+   * env-scrub / parse paths without actually launching the claude binary.
+   */
+  spawnFn?: typeof spawn;
 }
 
 const DIMENSION_DESCRIPTIONS: Readonly<Record<CodeReviewDimensionId, string>> = {
@@ -120,7 +121,6 @@ ${hunksBlock}
 }
 
 export function createDefaultLlmReviewer(opts: DefaultLlmReviewerOptions): LlmReviewer {
-  const spawn = opts.spawnFn ?? spawnSync;
   return {
     async review(input: LlmReviewInput): Promise<LlmReviewOutput> {
       const prompt = buildPrompt(input);
@@ -129,31 +129,33 @@ export function createDefaultLlmReviewer(opts: DefaultLlmReviewerOptions): LlmRe
       const localOutput = await trySmallDiffLocalRouter(input, prompt);
       if (localOutput !== null) return localOutput;
 
-      // SUBSCRIPTION-ONLY — strip API-key auth env var so the binary cannot
-      // fall through to per-token billing per `feedback_no_api_key_billing.md`.
-      const env = { ...process.env };
-      delete env['ANTHROPIC_API_KEY'];
-      const result = spawn(
-        opts.binaryPath,
-        ['--print', '--output-format', 'json', '--model', opts.modelTag],
-        { input: prompt, encoding: 'utf-8', timeout: opts.timeoutMs, env }
-      );
-      if (result.error !== null && result.error !== undefined) {
+      // Delegate to `@chiefaia/claude-spawner`. The spawner enforces the
+      // SUBSCRIPTION-ONLY env scrub (ANTHROPIC_API_KEY + siblings) per
+      // `feedback_no_api_key_billing.md`.
+      const result = await spawnClaude({
+        prompt,
+        options: {
+          binaryPath: opts.binaryPath,
+          model: opts.modelTag,
+          timeoutMs: opts.timeoutMs,
+          ...(opts.spawnFn !== undefined ? { spawnFn: opts.spawnFn } : {})
+        }
+      });
+      if (!result.ok) {
+        const diag = result.diagnostic ?? 'unknown failure';
         return {
           findings: [],
           ok: false,
-          diagnostic: `claude spawn error: ${result.error.message}`
+          // Preserve the "exited"/"spawn error"/"timed out" diagnostic
+          // shape that the existing telemetry pipelines key off.
+          diagnostic: diag.startsWith('failed to spawn')
+            ? `claude spawn error: ${diag.slice('failed to spawn '.length)}`
+            : diag.startsWith('child process error')
+              ? `claude spawn error: ${diag.slice('child process error: '.length)}`
+              : diag
         };
       }
-      if (result.status !== 0) {
-        return {
-          findings: [],
-          ok: false,
-          diagnostic: `claude exited ${result.status}: ${(result.stderr ?? '').toString().slice(0, 300)}`
-        };
-      }
-      const stdout = (result.stdout ?? '').toString();
-      return parseLlmOutput(stdout);
+      return parseLlmOutput(result.stdout);
     }
   };
 }

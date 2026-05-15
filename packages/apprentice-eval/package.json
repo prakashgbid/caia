@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@chiefaia/apprentice-corpus": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
