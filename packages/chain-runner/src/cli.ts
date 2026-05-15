@@ -1434,6 +1434,74 @@ export function buildProgram(): Command {
       },
     );
 
+  // H-47 (chain-runner-battle-harden phase 12, 2026-05-14). One-shot
+  // bootstrap of every artifact a chain needs to come online: wake script,
+  // runner shell, launchd plist, state.json scaffold, watchdog pointer
+  // files. The CLI does not take --chain-id / --phases via the common
+  // options because the bootstrap *creates* those — passing them as
+  // explicit flags would be misleading.
+  program
+    .command('bootstrap-new-chain')
+    .description(
+      'Scaffold a new chain end-to-end: wake script + runner shell + launchd plist + state.json (paused) + watchdog pointer files. Templates live in bin/templates/.',
+    )
+    .requiredOption('--label <plist-label>', 'launchd label, e.g. com.caia.chain-runner.my-chain')
+    .requiredOption('--chain-id <id>', 'chain identifier (directory under ~/.caia/chain/)')
+    .requiredOption('--phases <path>', 'absolute path to the phases YAML')
+    .requiredOption('--schedule <cron>', '5-field cron, e.g. "*/15 * * * *"')
+    .option('--no-bootstrap', 'skip the launchctl bootstrap call (default: bootstrap into gui/$(id -u))')
+    .option('--force', 'overwrite existing wake / runner / plist files')
+    .option('--start-unpaused', 'leave the chain unpaused after init (default: paused so operator must resume)')
+    .option('--log-slug <slug>', 'override the underscored log slug (default: deriveLogSlug(chain-id))')
+    .option('--wake-script-out <path>', 'override the wake-script absolute path')
+    .option('--runner-script-out <path>', 'override the runner-script absolute path')
+    .option('--plist-out <path>', 'override the plist absolute path')
+    .option('--phase-log-dir-out <path>', 'override the phase-log directory written into the runner')
+    .action(async (cmdOpts: {
+      label: string;
+      chainId: string;
+      phases: string;
+      schedule: string;
+      bootstrap?: boolean;
+      force?: boolean;
+      startUnpaused?: boolean;
+      logSlug?: string;
+      wakeScriptOut?: string;
+      runnerScriptOut?: string;
+      plistOut?: string;
+      phaseLogDirOut?: string;
+    }) => {
+      // commander's --no-bootstrap sets `bootstrap: false`; the default is
+      // undefined which means do-bootstrap.
+      const noBootstrap = cmdOpts.bootstrap === false;
+      const { bootstrapNewChain } = await import('./bootstrap-chain.js');
+      const args: Parameters<typeof bootstrapNewChain>[0] = {
+        label: cmdOpts.label,
+        chainId: cmdOpts.chainId,
+        phasesYaml: cmdOpts.phases,
+        schedule: cmdOpts.schedule,
+        noBootstrap,
+      };
+      if (cmdOpts.force !== undefined) args.force = cmdOpts.force;
+      if (cmdOpts.startUnpaused !== undefined) args.startUnpaused = cmdOpts.startUnpaused;
+      if (cmdOpts.logSlug !== undefined) args.logSlug = cmdOpts.logSlug;
+      if (cmdOpts.wakeScriptOut !== undefined) args.wakeScriptOut = cmdOpts.wakeScriptOut;
+      if (cmdOpts.runnerScriptOut !== undefined) args.runnerScriptOut = cmdOpts.runnerScriptOut;
+      if (cmdOpts.plistOut !== undefined) args.plistOut = cmdOpts.plistOut;
+      if (cmdOpts.phaseLogDirOut !== undefined) args.phaseLogDirOut = cmdOpts.phaseLogDirOut;
+      const result = bootstrapNewChain(args);
+      process.stdout.write(`BOOTSTRAPPED chain=${cmdOpts.chainId} label=${cmdOpts.label}\n`);
+      process.stdout.write(`  wake_script:  ${result.wakeScript}\n`);
+      process.stdout.write(`  runner:       ${result.runnerScript}\n`);
+      process.stdout.write(`  plist:        ${result.plist}\n`);
+      process.stdout.write(`  state_file:   ${result.stateFile}\n`);
+      process.stdout.write(`  phases_ptr:   ${result.phasesPointerFile}\n`);
+      process.stdout.write(`  runner_ptr:   ${result.runnerPointerFile}\n`);
+      process.stdout.write(
+        `  launchctl:    ${result.bootstrapped ? 'bootstrapped' : noBootstrap ? 'skipped (--no-bootstrap)' : 'failed (run launchctl bootstrap gui/$(id -u) <plist> manually)'}\n`,
+      );
+    });
+
   // Provide a save passthrough (used by some tests)
   attachCommonOptions(program.command('save-state-from-stdin'))
     .description('Read a JSON state from stdin and persist it (test helper)')

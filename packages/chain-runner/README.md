@@ -133,6 +133,45 @@ if (next.kind === 'phase_id') {
 
 All exports are tree-shakeable from `dist/`.
 
+## Operator docs
+
+The `docs/` directory is the operator-facing reference for running and
+recovering chains:
+
+- [`docs/runbook-failure-modes.md`](docs/runbook-failure-modes.md) —
+  one section per `FailureClass`: detection signal, default retry/action
+  policy, and the one-line recovery command.
+- [`docs/audit-events.md`](docs/audit-events.md) — every registered
+  audit event name with required-field payload schema and an example.
+- [`docs/operator-recovery.md`](docs/operator-recovery.md) — canonical
+  adjudication / re-arm / stop / pause playbook. The
+  "I broke it" recovery table.
+
+## Bootstrap a new chain
+
+The `bootstrap-new-chain` CLI verb scaffolds the wake script, runner
+shell, launchd plist, and state.json for a new chain from one templates
+directory (`bin/templates/`):
+
+```bash
+caia-chain bootstrap-new-chain \
+  --label com.caia.chain-runner.my-new-chain \
+  --chain-id my-new-chain \
+  --phases ~/Documents/projects/agent-memory/my_new_chain.phases.yaml \
+  --schedule '*/15 * * * *'
+```
+
+Files generated:
+
+- `~/.caia/chain-watchdog/my-new-chain_wake.sh`
+- `~/Documents/projects/agent-memory/_my_new_chain_run_phase.sh`
+- `~/Library/LaunchAgents/<label>.plist`
+- `~/.caia/chain/<chain-id>/state.json` (paused: true)
+
+The chain ships paused; `caia-chain resume --chain-id <id>` once
+ready. Pass `--no-bootstrap` to skip the `launchctl bootstrap` step
+(useful in tests or when you want to inspect the plist first).
+
 ## Scheduled task
 
 The generic Claude Code scheduled task lives at `~/Documents/Claude/Scheduled/caia-chain-orchestrator-15min/SKILL.md`. It accepts `chain-id` and `phases` paths via SKILL frontmatter and dispatches one phase per wake. See that SKILL.md for the full bash recipe.

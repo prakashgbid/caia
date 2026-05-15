@@ -277,6 +277,15 @@ export const AUDIT_EVENTS = {
     category: 'lifecycle',
     description: 'Operator retired the chain (superseded / dead-end).',
   },
+  chain_bootstrapped: {
+    category: 'lifecycle',
+    required: [
+      { name: 'label', type: 'string' },
+      { name: 'wake_script', type: 'string' },
+    ],
+    description:
+      'Chain artifacts scaffolded by `caia-chain bootstrap-new-chain` (H-47).',
+  },
 } as const satisfies Record<string, AuditEventSpec>;
 
 /** Closed-enum type — every appendAudit name should be assignable to this. */
