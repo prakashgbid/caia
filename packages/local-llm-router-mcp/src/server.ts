@@ -104,7 +104,7 @@ export function buildMcpServer(opts: BuildOptions = {}): Server {
         },
         {
           name: 'local_search_memory',
-          description: 'Embed the query and search the agent-memory index (sqlite-vec + nomic-embed-text). Returns top-k semantically similar memory entries. Use for "is there a memory file about X" lookups before deep-reading the index.',
+          description: 'Embed the query (nomic-embed-text via Ollama) and run cosine retrieval against the librarian + mentor-retrieval SQLite indexes. Returns top-k semantically similar memory entries (kind, slug, path, similarity, snippet, origin=librarian|mentor). Use BEFORE grep-style memory lookups; replaces the per-call caia-librarian-prepend / caia-mentor-prepend CLI subprocess (A.9.12).',
           inputSchema: {
             type: 'object',
             properties: {
@@ -211,19 +211,69 @@ export function buildMcpServer(opts: BuildOptions = {}): Server {
       }
 
       if (name === 'local_search_memory') {
-        const r = await fetch(`${routerBaseUrl}/v1/embeddings`, {
+        // A.9.12 — call the router /v1/search-memory endpoint which
+        // serves librarian + mentor retrieval in-process (no per-call
+        // CLI subprocess). The librarian + mentor SQLite indexes must
+        // be built (`caia-librarian-index` + `caia-mentor-index`) — if
+        // they aren't yet, the response includes warnings and hits=[].
+        const query = (args.query ?? '').trim();
+        if (query === '') {
+          return {
+            content: [{ type: 'text', text: 'error: query is required' }],
+            isError: true,
+          };
+        }
+        const k = typeof args.k === 'number' && Number.isFinite(args.k) && args.k > 0
+          ? args.k
+          : 5;
+        const r = await fetch(`${routerBaseUrl}/v1/search-memory`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input: args.query, model: 'nomic-embed-text' }),
+          body: JSON.stringify({ query, k, source: 'both' }),
         });
-        const body = await r.json() as { data?: Array<{ embedding?: number[] }> };
-        const dims = body.data?.[0]?.embedding?.length ?? 0;
-        return {
-          content: [{
-            type: 'text',
-            text: `local_search_memory: query embedded (${dims} dims). Memory index not yet built (L6 of router build plan deferred). Falling back to: grep on ~/Documents/projects/agent-memory/ recommended.`,
-          }],
+        const body = await r.json() as {
+          query?: string;
+          k?: number;
+          hits?: Array<{ kind?: string; slug?: string; path?: string; similarity?: number; snippet?: string; origin?: string }>;
+          warnings?: string[];
+          error?: string;
+          message?: string;
         };
+        if (!r.ok || body.error !== undefined) {
+          return {
+            content: [{
+              type: 'text',
+              text: `error: /v1/search-memory ${r.status} ${body.error ?? ''}${body.message ? ': ' + body.message : ''}`,
+            }],
+            isError: true,
+          };
+        }
+        const hits = body.hits ?? [];
+        if (hits.length === 0) {
+          const note = body.warnings && body.warnings.length > 0
+            ? ` (warnings: ${body.warnings.join('; ')})`
+            : '';
+          return {
+            content: [{
+              type: 'text',
+              text: `local_search_memory: no matches for query "${query}"${note}`,
+            }],
+          };
+        }
+        const lines: string[] = [];
+        lines.push(`local_search_memory: top-${hits.length} for "${query}"`);
+        for (let i = 0; i < hits.length; i++) {
+          const h = hits[i];
+          if (!h) continue;
+          const sim = typeof h.similarity === 'number' ? h.similarity.toFixed(3) : '?';
+          lines.push(`\n[${i + 1}] ${h.origin ?? '?'} · ${h.kind ?? '?'} · sim=${sim}`);
+          lines.push(`    ${h.path ?? '(no path)'}`);
+          if (h.snippet) {
+            const sn = h.snippet.length > 400 ? h.snippet.slice(0, 400) + '…' : h.snippet;
+            lines.push(`    ${sn.split('\n').join('\n    ')}`);
+          }
+        }
+        return { content: [{ type: 'text', text: lines.join('\n') }] };
       }
 
       if (name === 'local_optimize_prompt') {

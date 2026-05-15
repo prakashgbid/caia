@@ -124,6 +124,11 @@ export function createDefaultLlmReviewer(opts: DefaultLlmReviewerOptions): LlmRe
   return {
     async review(input: LlmReviewInput): Promise<LlmReviewOutput> {
       const prompt = buildPrompt(input);
+      // A.9.13 — small-diff local router path (opt-in via
+      // CAIA_REVIEW_LOCAL_FIRST=1). Falls through to claude on any error.
+      const localOutput = await trySmallDiffLocalRouter(input, prompt);
+      if (localOutput !== null) return localOutput;
+
       // SUBSCRIPTION-ONLY — strip API-key auth env var so the binary cannot
       // fall through to per-token billing per `feedback_no_api_key_billing.md`.
       const env = { ...process.env };
@@ -151,6 +156,71 @@ export function createDefaultLlmReviewer(opts: DefaultLlmReviewerOptions): LlmRe
       return parseLlmOutput(stdout);
     }
   };
+}
+
+/**
+ * A.9.13 — Same shape as the Critic/Reviewer siblings: small diffs route
+ * to the local router; everything else falls through to the claude
+ * binary subprocess. Returns null on any error.
+ */
+async function trySmallDiffLocalRouter(
+  input: LlmReviewInput,
+  prompt: string,
+): Promise<LlmReviewOutput | null> {
+  if (process.env['CAIA_REVIEW_LOCAL_FIRST'] !== '1') return null;
+  const maxLines = parseEnvInt(
+    process.env['CAIA_REVIEW_LOCAL_DIFF_LINES_MAX'],
+    200,
+  );
+  let totalLines = 0;
+  for (const h of input.hunks) {
+    if (h.body) totalLines += h.body.split('\n').length;
+  }
+  if (totalLines === 0 || totalLines > maxLines) return null;
+
+  const routerBaseUrl =
+    process.env['ROUTER_BASE_URL'] ?? 'http://127.0.0.1:7411';
+  const model = process.env['CAIA_REVIEW_LOCAL_MODEL'] ?? 'qwen2.5-coder:14b';
+  const timeoutMs = parseEnvInt(
+    process.env['CAIA_REVIEW_LOCAL_TIMEOUT_MS'],
+    45_000,
+  );
+  try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), timeoutMs);
+    try {
+      const r = await fetch(`${routerBaseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+          caia_task_type: 'code-review-light',
+        }),
+        signal: ac.signal,
+      });
+      if (!r.ok) return null;
+      const body = (await r.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const text = body.choices?.[0]?.message?.content ?? '';
+      if (text === '') return null;
+      const synthetic = JSON.stringify({ result: text });
+      const parsed = parseLlmOutput(synthetic);
+      return parsed.ok ? parsed : null;
+    } finally {
+      clearTimeout(t);
+    }
+  } catch {
+    return null;
+  }
+}
+
+function parseEnvInt(v: string | undefined, def: number): number {
+  if (v === undefined) return def;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : def;
 }
 
 /** Noop reviewer — used when `enableLlmReasoning` is false. */

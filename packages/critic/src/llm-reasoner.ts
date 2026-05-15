@@ -77,6 +77,14 @@ export function createDefaultLlmReasoner(opts: DefaultLlmReasonerOptions): LlmRe
   return {
     async reason(input: LlmReasonInput): Promise<LlmReasonOutput> {
       const prompt = buildPrompt(input);
+      // A.9.13 — small diffs go local first via the router. Threshold
+      // and model are env-overridable; default off (opt-in via
+      // CAIA_REVIEW_LOCAL_FIRST=1). On any local-route failure the path
+      // falls through to the existing claude binary spawn below — no
+      // adversarial finding is dropped.
+      const localOutput = await trySmallDiffLocalRouter(input);
+      if (localOutput !== null) return localOutput;
+
       const env = { ...process.env };
       delete env['ANTHROPIC_API_KEY'];
       const result = spawn(
@@ -102,6 +110,84 @@ export function createDefaultLlmReasoner(opts: DefaultLlmReasonerOptions): LlmRe
       return parseLlmOutput(stdout);
     }
   };
+}
+
+/**
+ * A.9.13 — Try the local-llm-router for small diffs. Returns null when
+ * the env disables the path, the diff is too large, or any network /
+ * parse failure happens — the caller then falls through to the existing
+ * `claude --print` subprocess. NEVER throws.
+ *
+ * Sized to the gap analysis floor: diffs < 200 hunk-body lines (counting
+ * both `+` and `-` lines) route to qwen2.5-coder:14b (default; override
+ * via CAIA_REVIEW_LOCAL_MODEL). The router task type is
+ * 'code-review-light' which already exists in routing-config.ts.
+ */
+async function trySmallDiffLocalRouter(
+  input: LlmReasonInput,
+): Promise<LlmReasonOutput | null> {
+  if (process.env['CAIA_REVIEW_LOCAL_FIRST'] !== '1') return null;
+  const maxLines = parseEnvInt(
+    process.env['CAIA_REVIEW_LOCAL_DIFF_LINES_MAX'],
+    200,
+  );
+  let totalLines = 0;
+  for (const h of input.hunks) {
+    if (h.body) totalLines += h.body.split('\n').length;
+  }
+  if (totalLines === 0 || totalLines > maxLines) return null;
+
+  const routerBaseUrl =
+    process.env['ROUTER_BASE_URL'] ?? 'http://127.0.0.1:7411';
+  const model = process.env['CAIA_REVIEW_LOCAL_MODEL'] ?? 'qwen2.5-coder:14b';
+  const timeoutMs = parseEnvInt(
+    process.env['CAIA_REVIEW_LOCAL_TIMEOUT_MS'],
+    45_000,
+  );
+  const prompt = buildPrompt(input);
+  try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), timeoutMs);
+    try {
+      const r = await fetch(`${routerBaseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+          caia_task_type: 'code-review-light',
+        }),
+        signal: ac.signal,
+      });
+      if (!r.ok) return null;
+      const body = (await r.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const text = body.choices?.[0]?.message?.content ?? '';
+      if (text === '') return null;
+      // The local model emits raw text, not the claude --print JSON
+      // envelope. parseLlmOutput expects the envelope, so wrap it.
+      const synthetic = JSON.stringify({ result: text });
+      const parsed = parseLlmOutput(synthetic);
+      // Only succeed if we got at least one well-formed finding OR the
+      // model produced an empty findings array (legitimately clean diff).
+      // Any other failure mode (no JSON, garbage) returns null so the
+      // claude path runs.
+      if (parsed.ok) return parsed;
+      return null;
+    } finally {
+      clearTimeout(t);
+    }
+  } catch {
+    return null;
+  }
+}
+
+function parseEnvInt(v: string | undefined, def: number): number {
+  if (v === undefined) return def;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : def;
 }
 
 /** Parse the `claude --print --output-format json` envelope, then the
