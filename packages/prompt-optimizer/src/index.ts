@@ -29,6 +29,7 @@ export {
   pruneSegment,
   scoreHeuristic,
   stage3Prune,
+  __resetRouter404Memo,
 } from './stage3.js';
 export type {
   OptimizerInput,

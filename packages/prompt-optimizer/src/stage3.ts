@@ -25,6 +25,15 @@
 // a protected span are force-kept regardless of score.
 //
 // Phase 5 of the Local-AI-First build chain (404-fallback hardened in phase 6).
+//
+// A.9.4 (2026-05-14) — Stage 3 was burning one HTTP roundtrip per call on
+// every request to discover the router /v1/score-tokens endpoint is missing
+// (404). At ~50ms per Stage 3 invocation that compounds across the live
+// traffic Stage 3 is now seeing post-Phase α wiring. We now memoize the
+// 404 outcome per routerBaseUrl with a TTL so subsequent calls skip the
+// roundtrip entirely; the router-upgrade path is unchanged — on TTL
+// expiry the next call will probe again and pick up the endpoint if it
+// has become available.
 
 import { findProtectedRanges, isIndexProtected } from './stage1.js';
 import { estimateTokens } from './types.js';
@@ -67,6 +76,39 @@ const DEFAULTS: Required<Omit<Stage3Options, 'fetchImpl' | 'forceHeuristic'>> = 
   minTokensToPrune: 500,
 };
 
+// ─── Missing-endpoint memo (A.9.4) ────────────────────────────────────
+//
+// Cache per routerBaseUrl: the first call to score this URL via
+// /v1/score-tokens that returns 404 records the timestamp. Subsequent
+// calls within the TTL skip the roundtrip and go straight to heuristic.
+//
+// Overridable via env STAGE3_ROUTER_404_TTL_MS (default 1 h). Tests
+// reset the memo via `__resetRouter404Memo`.
+const ROUTER_404_TTL_MS = parseInt(
+  process.env['STAGE3_ROUTER_404_TTL_MS'] ?? '3600000',
+  10,
+);
+const router404Memo = new Map<string, number>();
+
+/** Internal: reset the per-baseUrl 404 cache. Test-only seam. */
+export function __resetRouter404Memo(): void {
+  router404Memo.clear();
+}
+
+function memoKnown404(baseUrl: string): boolean {
+  const ts = router404Memo.get(baseUrl);
+  if (ts === undefined) return false;
+  if (Date.now() - ts > ROUTER_404_TTL_MS) {
+    router404Memo.delete(baseUrl);
+    return false;
+  }
+  return true;
+}
+
+function recordRouter404(baseUrl: string): void {
+  router404Memo.set(baseUrl, Date.now());
+}
+
 // Default per-segment weights from the design doc §5.3.
 export const DEFAULT_SEGMENT_WEIGHTS: Record<PromptSegment['kind'], number> = {
   system: 0,
@@ -104,19 +146,28 @@ export async function stage3Prune(
   let routerError: string | undefined;
 
   if (!opts.forceHeuristic) {
-    try {
-      scoredSegments = await scoreViaRouter(segments, userQuestion, o, fetcher);
-      backend = 'router';
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      // A 404 from the router means the optional `/v1/score-tokens` endpoint
-      // isn't implemented on this build — that's the expected v1 path. Treat
-      // it as silent fallback and don't surface it as an error. Any other
-      // failure (5xx, network, timeout, shape) is surfaced for ops.
-      if (msg !== 'router-status-404') {
-        routerError = msg;
-      }
+    // Skip the HTTP roundtrip if we already know this routerBaseUrl
+    // returns 404 for /v1/score-tokens (A.9.4).
+    if (memoKnown404(o.routerBaseUrl)) {
       scoredSegments = scoreHeuristic(segments, userQuestion);
+    } else {
+      try {
+        scoredSegments = await scoreViaRouter(segments, userQuestion, o, fetcher);
+        backend = 'router';
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // A 404 from the router means the optional `/v1/score-tokens` endpoint
+        // isn't implemented on this build — that's the expected v1 path. Treat
+        // it as silent fallback and don't surface it as an error, AND memoize
+        // so subsequent calls skip the roundtrip. Any other failure
+        // (5xx, network, timeout, shape) is surfaced for ops.
+        if (msg === 'router-status-404') {
+          recordRouter404(o.routerBaseUrl);
+        } else {
+          routerError = msg;
+        }
+        scoredSegments = scoreHeuristic(segments, userQuestion);
+      }
     }
   } else {
     scoredSegments = scoreHeuristic(segments, userQuestion);
