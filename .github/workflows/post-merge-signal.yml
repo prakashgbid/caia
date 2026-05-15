@@ -1,0 +1,91 @@
+# INT.1.A1 — Guardrail #7 post-merge deployment signal (DoD v2)
+#
+# On every merged PR, append a JSON-Lines row to `queue.jsonl` on the orphan
+# branch `post-merge-queue`. A local launchd watcher
+# (`com.caia.post-merge-watcher`) polls this branch every 60s and invokes
+# `~/.caia/post-merge/post-merge-deploy.sh <row>` per new row.
+#
+# Pull model — see reports/integration_remediation_plan_2026-05-14.md AR-2.
+# Uses GITHUB_TOKEN; no operator PAT required.
+
+name: post-merge-signal
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop, main]
+
+permissions:
+  contents: write
+
+concurrency:
+  # Serialize all writes to the post-merge-queue branch to avoid push races.
+  group: post-merge-queue
+  cancel-in-progress: false
+
+jobs:
+  enqueue:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout (or create) post-merge-queue branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions[bot]"
+          git init queue-work
+          cd queue-work
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # Try to fetch existing queue branch; fall back to fresh orphan.
+          if git fetch --depth=1 origin post-merge-queue 2>/dev/null; then
+            git checkout post-merge-queue
+          else
+            git checkout --orphan post-merge-queue
+            git rm -rf . 2>/dev/null || true
+            : > queue.jsonl
+            git add queue.jsonl
+            git commit -m "post-merge-queue: init"
+          fi
+
+      - name: Append row
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          REPO_FULL_NAME: ${{ github.repository }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd queue-work
+          # Build row with jq to escape correctly.
+          ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          row="$(jq -nc \
+            --arg pr "$PR_NUMBER" \
+            --arg repo "$REPO_FULL_NAME" \
+            --arg sha "$MERGE_SHA" \
+            --arg base "$BASE_BRANCH" \
+            --arg ts "$ts" \
+            --arg title "$PR_TITLE" \
+            --arg author "$PR_AUTHOR" \
+            '{schema_version:1, pr_number:($pr|tonumber), repo:$repo, merge_sha:$sha, base_branch:$base, ts:$ts, pr_title:$title, pr_author:$author}')"
+          # Append + push. Concurrency group serializes; safe pull-rebase + push.
+          for attempt in 1 2 3 4 5; do
+            git fetch --depth=1 origin post-merge-queue || true
+            git reset --hard origin/post-merge-queue 2>/dev/null || true
+            printf '%s\n' "$row" >> queue.jsonl
+            git add queue.jsonl
+            git commit -m "post-merge: ${REPO_FULL_NAME} PR #${PR_NUMBER} (${MERGE_SHA:0:8})"
+            if git push origin HEAD:post-merge-queue; then
+              echo "enqueued on attempt ${attempt}"
+              exit 0
+            fi
+            echo "push attempt ${attempt} failed, retrying"
+            sleep $((attempt * 2))
+          done
+          echo "FAILED to enqueue after 5 attempts" >&2
+          exit 1
