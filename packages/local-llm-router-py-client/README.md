@@ -86,3 +86,51 @@ Eighteen tests cover template rendering, env-driven version dispatch,
 the strict schema validator (positive + 6 negatives), and an end-to-end
 fixture task ("add SPDX header to file X") that renders the v2 prompt
 and validates a simulated spawn output against the schema.
+
+## SPS-Prompting phase α — claude-argv builder (A.9.3 + A.9.6)
+
+`src/spawner_argv.py` is a zero-dep helper that builds the subprocess argv
+the spawner feeds to `subprocess.Popen`. Reference patch
+`src/spawner_patch_v4.diff` wires it into `run_claude()` and adds six new
+env knobs that the operator can flip without redeploying:
+
+| Var | Default | Description |
+|---|---|---|
+| `HEADROOM_BINARY` | `/opt/homebrew/bin/headroom` | Headroom CLI path |
+| `HEADROOM_WRAP_DISABLE` | `` | Set to `1` to bypass the wrap (kill-switch) |
+| `HEADROOM_PROXY_PORT` | `8787` | Base proxy port |
+| `HEADROOM_PROXY_OFFSET` | `0` | Add to port (use when cap > 1 spawns concurrently) |
+| `HEADROOM_REUSE_PROXY` | `` | Set to `1` if a long-lived `headroom proxy` daemon is running |
+| `STABILIZE_PREFIX_DISABLE` | `` | Set to `1` to drop `--exclude-dynamic-system-prompt-sections` |
+
+When `HEADROOM_BINARY` exists on disk and the kill-switch is off, the spawn
+argv is prefixed with:
+
+```text
+<HEADROOM_BINARY> wrap claude --port <port> --no-mcp --no-serena --no-context-tool --
+```
+
+so every Anthropic API call routes through the local compression proxy
+(target: 30–50 % input-token reduction with ≥97 % accuracy per published
+headroom benchmarks). When the binary is missing — e.g. stolution today —
+the wrap is silently skipped (fail-open) so a single code path covers both
+hosts.
+
+Independently, the claude argv always carries
+`--exclude-dynamic-system-prompt-sections` (unless `STABILIZE_PREFIX_DISABLE=1`)
+so cwd/env/memory/git-status moves out of the cached system prefix into
+the first user message — the precondition for Anthropic's 90 % prompt-cache
+discount to hit the standing-rules prefix every spawn shares.
+
+### Tests
+
+```bash
+cd packages/local-llm-router-py-client
+python3 -m unittest tests.test_spawner_argv -v
+```
+
+Twelve tests pin the decision tree: wrap-on/off (kill-switch, missing
+binary, empty binary), prefix-on/off, port offset, reuse-proxy flag,
+allow-list expansion, permission-mode + max-turns threading, and the
+`--print` long-form requirement (avoids the `-p` ↔ `--port` collision
+in `headroom wrap claude`).

@@ -1,0 +1,241 @@
+# Reference patch v4 for claude_spawner_agent.py — SPS-Prompting phase α
+#
+# Supersedes spawner_patch_v3.diff (B15.C strict-JSON gate); v4 wires the
+# substrate-level local-AI substrate items A.9.3 (headroom-wrap-claude) and
+# A.9.6 (KV-cache prefix stabilization) onto every spawn.
+#
+# v4 changes from v3:
+#   - Vendor a new standalone module `spawner_argv.py` alongside
+#     local_llm_router_client.py. Holds `build_claude_argv` (zero non-stdlib
+#     deps so the py-client unit tests can exercise the decision tree
+#     without dragging fastapi/sqlite).
+#   - Import `_build_claude_argv` from `spawner_argv` at the top of
+#     claude_spawner_agent.py.
+#   - Add six new module-level config constants:
+#         HEADROOM_BINARY            default /opt/homebrew/bin/headroom
+#         HEADROOM_WRAP_DISABLE      env "1"/"true"/"yes" → bypass wrap
+#         HEADROOM_PROXY_PORT        default 8787
+#         HEADROOM_PROXY_OFFSET      default 0 (cap > 1 → vary per spawn)
+#         HEADROOM_REUSE_PROXY       env → adds `--no-proxy` to wrap argv
+#                                    (lets operator run a long-lived
+#                                    `headroom proxy` daemon)
+#         STABILIZE_PREFIX_DISABLE   env → reverts to dynamic system prefix
+#   - Replace the inline argv-build inside `run_claude()` with a call to
+#     the thin `build_claude_argv()` adapter that threads the config into
+#     the standalone helper. Argv now uses `--print` (long form) instead
+#     of `-p` to avoid the option collision with `headroom wrap claude`'s
+#     `-p, --port` flag.
+#   - Always append `--exclude-dynamic-system-prompt-sections` to the
+#     claude argv (unless STABILIZE_PREFIX_DISABLE=1) so per-machine
+#     sections (cwd, env info, memory paths, git status) move out of the
+#     cached system prefix into the first user message. Anthropic 90 %
+#     prompt-cache discount precondition.
+#   - When HEADROOM_BINARY exists on disk AND the kill-switch is off,
+#     prefix the argv with
+#         <HEADROOM_BINARY> wrap claude --port <port> --no-mcp --no-serena
+#         --no-context-tool --
+#     so every spawn routes Anthropic API calls through the headroom
+#     compression proxy. Fail-open: if the binary is missing (e.g.
+#     stolution today) the wrap is silently skipped — keeps a single
+#     code path across hosts.
+#   - The spawn record gains `headroom_wrapped: bool` and
+#     `prefix_stabilized: bool` fields. These are emitted as a
+#     `claude-invocation-mode` journal event (not new DB columns) so no
+#     schema migration is required to ship.
+#   - The lifespan startup banner gains an SPS-α line that logs
+#     HEADROOM_BINARY / present / wrap_disable / wrap_active /
+#     proxy_port / offset / stabilize_prefix_disable.
+#   - `/version` response gains 8 new fields:
+#         router_gate_enabled, optimizer_enabled, headroom_binary,
+#         headroom_present, headroom_wrap_disable, headroom_proxy_port,
+#         headroom_proxy_offset, stabilize_prefix_disable
+#     so the operator can curl the live state.
+#
+# DO NOT auto-apply — operator review required. This is a reference patch.
+# The real spawner is ~2000 lines; the hunks below show the intent + exact
+# lines to add against the v3-patched source tree. Apply by hand or adapt
+# as a code-review checklist.
+#
+# Pre-req: vendor `spawner_argv.py` in the spawner-agent directory (it
+# imports from a sibling file, not a package).
+#
+# Apply (after v2 + v3 are already applied, or directly on top of v2 if
+# the v3 prompt-version dispatch isn't yet shipped on this host):
+#   cd <spawner-dir>
+#   cp /path/to/local-llm-router-py-client/src/spawner_argv.py .
+#   patch -p0 < spawner_patch_v4.diff
+#
+# Smoke test post-deploy (Mac, where headroom is installed):
+#   1. Restart spawner: launchctl kickstart -k gui/$UID/com.caia.claude-spawner-agent
+#   2. curl -s http://127.0.0.1:8090/version | jq '.headroom_present,
+#      .headroom_wrap_disable, .stabilize_prefix_disable' → true, false, false
+#   3. Send a trivial /spawn (plan mode, read-only). Tail the spawner log;
+#      a `headroom_wrap=True prefix_stabilized=True` line appears at
+#      invocation time, AND a `claude-invocation-mode` row lands in the
+#      events table.
+#   4. Run `headroom perf --since 5m` and confirm the compression layer
+#      saw traffic (cache hits + token reduction).
+#   5. Verify the spawn rc=0 + parsed JSON populated (compression must be
+#      lossless w.r.t. claude's output contract).
+#
+# Smoke test post-deploy (stolution, no headroom installed):
+#   1. patch -p0 < spawner_patch_v4.diff && systemctl --user restart claude-spawner.service
+#   2. curl http://127.0.0.1:8090/version | jq '.headroom_present' → false
+#   3. Send trivial /spawn → spawner log shows `headroom_wrap=False
+#      prefix_stabilized=True` (fail-open). Spawn completes normally.
+#   4. (Operator-only) `pipx install headroom` to activate the wrap layer
+#      on stolution too.
+#
+# Rollback:
+#   - HEADROOM_WRAP_DISABLE=1 in the plist + restart → reverts wrap only.
+#   - STABILIZE_PREFIX_DISABLE=1 → reverts prefix flag only.
+#   - Both → equivalent to pre-v4 behaviour.
+
+--- claude_spawner_agent.py
++++ claude_spawner_agent.py
+@@ -83,6 +83,11 @@
+ from local_llm_router_client import (
+     classify_and_maybe_route,
+     health as router_health,
+     optimize_prompt,
+ )
++# SPS-Prompting phase α (A.9.3 + A.9.6): claude-argv builder.
++# Vendored alongside local_llm_router_client.py as a standalone module so
++# the py-client test suite can exercise the wrap/stabilize decision tree
++# without dragging in fastapi/sqlite.
++from spawner_argv import build_claude_argv as _build_claude_argv
+@@ -118,6 +123,40 @@
+ OPTIMIZER_ENABLED   = os.environ.get("OPTIMIZER_ENABLED", "true").lower() in ("1", "true", "yes")
+ OPTIMIZER_TIMEOUT_S = float(os.environ.get("OPTIMIZER_TIMEOUT_S", "30.0"))
+
++# SPS-Prompting phase α (A.9.3): headroom wrap on the claude binary call.
++# When enabled, the claude argv is prefixed with `<HEADROOM_BINARY> wrap
++# claude --no-mcp --no-serena --no-context-tool --port <port> -- ...`
++# so every spawn routes Anthropic API calls through the headroom proxy for
++# input-side compression. The MCP/Serena/context-tool subsystems are
++# disabled — spawns are headless print-mode and we want minimum wrapper
++# overhead; only the proxy compression layer is load-bearing here.
++#
++# Kill-switch: HEADROOM_WRAP_DISABLE=1 (operator can flip without redeploy)
++# bypasses the wrap entirely. Also bypassed if HEADROOM_BINARY doesn't
++# exist on disk — fail-open so a missing headroom never blocks a spawn.
++HEADROOM_BINARY        = os.environ.get("HEADROOM_BINARY", "/opt/homebrew/bin/headroom")
++HEADROOM_WRAP_DISABLE  = os.environ.get("HEADROOM_WRAP_DISABLE", "").lower() in ("1", "true", "yes")
++HEADROOM_PROXY_PORT    = int(os.environ.get("HEADROOM_PROXY_PORT", "8787"))
++HEADROOM_PROXY_OFFSET  = int(os.environ.get("HEADROOM_PROXY_OFFSET", "0"))
++# SPS-Prompting phase α (A.9.6): KV-cache prefix stabilization.
++# Passes `--exclude-dynamic-system-prompt-sections` to the claude binary so
++# per-machine bits (cwd, env info, memory paths, git status) move out of
++# the cached system prefix into the first user message. This makes the
++# system-prompt bytes byte-identical across spawns and across hosts, which
++# is the precondition for Anthropic's 90% prompt-cache discount to apply
++# to the standing-rules prefix every spawn shares.
++#
++# Kill-switch: STABILIZE_PREFIX_DISABLE=1 reverts to the dynamic prefix
++# behaviour if a regression surfaces.
++STABILIZE_PREFIX_DISABLE = os.environ.get("STABILIZE_PREFIX_DISABLE", "").lower() in ("1", "true", "yes")
++
+@@ -1245,38 +1284,28 @@ def run_claude(spawn_id: str,
++def build_claude_argv(prompt: str,
++                      *,
++                      permission_mode: str,
++                      allow_list: list[str]) -> tuple[list[str], bool, bool]:
++    """Thin adapter around :func:`spawner_argv.build_claude_argv`.
++
++    Threads the spawner's module-level config (CLAUDE_BINARY, the
++    headroom + prefix-stabilization knobs) into the standalone helper so
++    the helper stays unit-testable in isolation.
++    """
++    return _build_claude_argv(
++        prompt,
++        permission_mode=permission_mode,
++        allow_list=allow_list,
++        claude_binary=CLAUDE_BINARY,
++        permission_mode_max_turns=PERMISSION_MODE_MAX_TURNS,
++        headroom_binary=HEADROOM_BINARY,
++        headroom_wrap_disable=HEADROOM_WRAP_DISABLE,
++        headroom_proxy_port=HEADROOM_PROXY_PORT,
++        headroom_proxy_offset=HEADROOM_PROXY_OFFSET,
++        headroom_reuse_proxy=os.environ.get("HEADROOM_REUSE_PROXY", "").lower()
++                              in ("1", "true", "yes"),
++        stabilize_prefix_disable=STABILIZE_PREFIX_DISABLE,
++    )
++
++
+ def run_claude(spawn_id: str,
+                prompt: str,
+                timeout_s: float,
+                *,
+                permission_mode: str,
+                allow_list: list[str],
+                cwd: str | None) -> dict[str, Any]:
+     ...
+     env = {k: v for k, v in os.environ.items()
+            if k not in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")}
+     env["PYTHONUNBUFFERED"] = "1"
+     env["ANTHROPIC_API_KEY"] = ""
+
+-    # Build argv
+-    cmd = [
+-        CLAUDE_BINARY, "-p", prompt,
+-        "--output-format", "json",
+-        "--permission-mode", permission_mode,
+-    ]
+-    max_turns = PERMISSION_MODE_MAX_TURNS.get(permission_mode)
+-    if max_turns is not None:
+-        cmd += ["--max-turns", str(max_turns)]
+-    for p in allow_list:
+-        cmd += ["--add-dir", p]
++    cmd, headroom_wrapped, prefix_stabilized = build_claude_argv(
++        prompt,
++        permission_mode=permission_mode,
++        allow_list=allow_list,
++    )
+
+     started = time.time()
+-    log.info("spawn_id=%s mode=%s allow_list=%d cwd=%s invoking claude...",
+-             spawn_id, permission_mode, len(allow_list), cwd or "<inherit>")
++    log.info("spawn_id=%s mode=%s allow_list=%d cwd=%s "
++             "headroom_wrap=%s prefix_stabilized=%s invoking claude...",
++             spawn_id, permission_mode, len(allow_list), cwd or "<inherit>",
++             headroom_wrapped, prefix_stabilized)
+@@ -1340,7 +1370,9 @@ def run_claude(spawn_id: str,
+     return {
+         ...
+         "stdout_head":  (stdout or "")[:2000],
+         "stderr_head":  (stderr or "")[:2000],
++        "headroom_wrapped":    headroom_wrapped,
++        "prefix_stabilized":   prefix_stabilized,
+     }
+@@ -1437,6 +1469,16 @@ async def lifespan(app: FastAPI):
+     log.info("LAI phase 7: ROUTER_GATE_ENABLED=%s OPTIMIZER_ENABLED=%s "
+              "router_url=%s optimizer_timeout_s=%.1f",
+              ROUTER_GATE_ENABLED, OPTIMIZER_ENABLED, ROUTER_URL, OPTIMIZER_TIMEOUT_S)
++    headroom_present = bool(HEADROOM_BINARY) and os.path.exists(HEADROOM_BINARY)
++    headroom_wrap_active = headroom_present and not HEADROOM_WRAP_DISABLE
++    log.info("SPS-α: HEADROOM_BINARY=%s present=%s wrap_disable=%s wrap_active=%s "
++             "proxy_port=%d offset=%d stabilize_prefix_disable=%s",
++             HEADROOM_BINARY, headroom_present, HEADROOM_WRAP_DISABLE,
++             headroom_wrap_active, HEADROOM_PROXY_PORT, HEADROOM_PROXY_OFFSET,
++             STABILIZE_PREFIX_DISABLE)
+     log.info("claude --version: %s", claude_version_str())
+@@ -1524,4 +1566,12 @@ def version() -> dict[str, Any]:
+         "worktree_subdir_name":    WORKTREE_SUBDIR_NAME,
++        "router_gate_enabled":     ROUTER_GATE_ENABLED,
++        "optimizer_enabled":       OPTIMIZER_ENABLED,
++        "headroom_binary":         HEADROOM_BINARY,
++        "headroom_present":        bool(HEADROOM_BINARY) and os.path.exists(HEADROOM_BINARY),
++        "headroom_wrap_disable":   HEADROOM_WRAP_DISABLE,
++        "headroom_proxy_port":     HEADROOM_PROXY_PORT,
++        "headroom_proxy_offset":   HEADROOM_PROXY_OFFSET,
++        "stabilize_prefix_disable": STABILIZE_PREFIX_DISABLE,
+     }
+@@ -2010,4 +2060,10 @@ async def spawn(request: Request) -> JSONResponse:
+                      optimizer_wall_ms=optimizer_meta.get("wall_ms"),
+                      optimizer_error=optimizer_meta.get("error"))
++    # SPS-α telemetry: emit per-spawn substrate state as a journal event so the
++    # displacement metric can distinguish wrapped/stabilized runs without
++    # requiring a schema migration on the claude_sessions table.
++    journal_event(spawn_id, "claude-invocation-mode",
++                  f"headroom_wrapped={record.get('headroom_wrapped', False)} "
++                  f"prefix_stabilized={record.get('prefix_stabilized', False)}")
