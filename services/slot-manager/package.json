@@ -1,0 +1,9 @@
+{
+  "name": "@caia/services-slot-manager",
+  "version": "0.4.0",
+  "private": true,
+  "description": "slot-manager — Self-Driving Slot Allocator (Phase 4). Python/FastAPI service deployed to the K3s caia-orchestrator namespace. This directory is the canonical source; the K3s ConfigMap `slot-manager-src` mounts slot_manager.py + schema.sql from here.",
+  "scripts": {
+    "smoke": "bash smoke.sh"
+  }
+}
