@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.chiefaia.headroom-learn-weekly
+
+  Weekly run of `headroom learn` to extract failure-mode corrections from
+  the previous week's spawner-claude / Claude Code sessions and write them
+  into CLAUDE.md / per-project memory. Closes A.9.17 / GC-5 from the
+  SPS-Prompting #2 priority campaign.
+
+  Schedule: Sundays at 03:00 LOCAL (StartCalendarInterval is local time
+  on macOS — operator brief specified UTC, but launchd does not support
+  TZ-aware schedules; 03:00 local is the universal "off-hours weekly"
+  expression that the operator can re-template if a strict UTC slot is
+  required).
+
+  Install:
+    mkdir -p ~/.caia/headroom-learn
+    cp infra/cron/headroom-learn-weekly.sh ~/.caia/headroom-learn/learn.sh
+    chmod +x ~/.caia/headroom-learn/learn.sh
+    cp infra/cron/headroom-learn-weekly.plist ~/Library/LaunchAgents/com.chiefaia.headroom-learn-weekly.plist
+    launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.chiefaia.headroom-learn-weekly.plist
+
+  Uninstall:
+    launchctl bootout gui/$UID/com.chiefaia.headroom-learn-weekly
+
+  Logs:
+    out  -> ~/.caia/headroom-learn/launchd.out.log
+    err  -> ~/.caia/headroom-learn/launchd.err.log
+    weekly run log -> ~/.caia/headroom-learn/run-YYYY-MM-DD.log
+    weekly report  -> ~/Documents/projects/reports/headroom_learn_weekly_YYYY-MM-DD.md
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key><string>com.chiefaia.headroom-learn-weekly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-lc</string>
+      <string>$HOME/.caia/headroom-learn/learn.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+      <!-- 0 = Sunday (launchd numbering: Sun=0, Mon=1, ..., Sat=6) -->
+      <key>Weekday</key><integer>0</integer>
+      <key>Hour</key><integer>3</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/macbook32/.caia/headroom-learn/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/macbook32/.caia/headroom-learn/launchd.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+      <key>HOME</key><string>/Users/macbook32</string>
+      <!-- Pin node@22 to dodge the better-sqlite3 ABI footgun (caia_pnpm_node_abi memory). -->
+      <key>CAIA_NODE_BIN</key><string>/opt/homebrew/opt/node@22/bin/node</string>
+    </dict>
+
+    <key>Nice</key><integer>10</integer>
+    <key>ProcessType</key><string>Background</string>
+    <key>RunAtLoad</key><false/>
+    <key>KeepAlive</key><false/>
+  </dict>
+</plist>
