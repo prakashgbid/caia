@@ -1,0 +1,20 @@
+id: sample-readme-jsdoc
+title: "Add a JSDoc block to the exported `parseCron` helper"
+description: |
+  parseCron in @chiefaia/chain-runner is undocumented; new readers grep for
+  cron syntax and miss it. Add a JSDoc block describing supported syntax
+  (single int, comma-list, *, */N) and the field order
+  (Minute Hour Day Month Weekday). Don't change behavior.
+machine: m3
+file_paths:
+  - caia/packages/chain-runner/src/bootstrap-chain.ts
+success_criteria:
+  output_file: ~/Documents/projects/reports/sample_readme_jsdoc_2026-05-16.md
+  min_bytes: 400
+  grep_match: "JSDoc|parseCron"
+  requires_merged_pr: true
+phase_count: 1
+deps: []
+demonstrate_step: |
+  pnpm --filter @chiefaia/chain-runner typecheck
+  grep -A3 'export function parseCron' caia/packages/chain-runner/src/bootstrap-chain.ts | head -20
