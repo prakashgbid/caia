@@ -13,6 +13,13 @@
   Phase 4 ships ENABLED — this is the activation point for the full
   Apprentice loop. The install script verifies upstream packages are
   built before activating.
+
+  Entry: `dist/cron.js` — constructs `ApprenticeRetrainer` with the full
+  production wiring (corpus + training + eval + serving injected). The
+  sibling `dist/cli.js` entry is for dev / operator use only and ships
+  with NO pipelines wired by design (it would throw CorpusFailedError on
+  every scheduled tick, which is exactly what happened before this fix —
+  see retrainer-state.json after 2026-05-16T09:00Z).
 -->
 <plist version="1.0">
 <dict>
@@ -25,8 +32,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>CURRENT_NODE_BIN</string>
-        <string>CURRENT_PKG_DIR/dist/cli.js</string>
-        <string>run</string>
+        <string>CURRENT_PKG_DIR/dist/cron.js</string>
     </array>
 
     <key>WorkingDirectory</key>

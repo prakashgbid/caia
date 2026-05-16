@@ -31,6 +31,9 @@ export type {
   QualityGateInput
 } from './quality-gate.js';
 
+export { createProductionRetrainer } from './production-wiring.js';
+export type { ProductionWiringOverrides } from './production-wiring.js';
+
 export type {
   ApprenticeRetrainerConfig,
   CorpusAggregateResult,

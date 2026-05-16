@@ -8,7 +8,8 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "caia-apprentice-retrainer": "./dist/cli.js"
+    "caia-apprentice-retrainer": "./dist/cli.js",
+    "caia-apprentice-retrainer-cron": "./dist/cron.js"
   },
   "exports": {
     ".": {
@@ -18,6 +19,14 @@
     "./cli": {
       "import": "./dist/cli.js",
       "types": "./dist/cli.d.ts"
+    },
+    "./cron": {
+      "import": "./dist/cron.js",
+      "types": "./dist/cron.d.ts"
+    },
+    "./production-wiring": {
+      "import": "./dist/production-wiring.js",
+      "types": "./dist/production-wiring.d.ts"
     }
   },
   "files": [
@@ -35,7 +44,10 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@chiefaia/apprentice-serving": "workspace:*"
+    "@chiefaia/apprentice-corpus": "workspace:*",
+    "@chiefaia/apprentice-eval": "workspace:*",
+    "@chiefaia/apprentice-serving": "workspace:*",
+    "@chiefaia/apprentice-training": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

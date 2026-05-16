@@ -648,9 +648,18 @@ importers:
 
   packages/apprentice-retrainer:
     dependencies:
+      '@chiefaia/apprentice-corpus':
+        specifier: workspace:*
+        version: link:../apprentice-corpus
+      '@chiefaia/apprentice-eval':
+        specifier: workspace:*
+        version: link:../apprentice-eval
       '@chiefaia/apprentice-serving':
         specifier: workspace:*
         version: link:../apprentice-serving
+      '@chiefaia/apprentice-training':
+        specifier: workspace:*
+        version: link:../apprentice-training
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
