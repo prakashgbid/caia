@@ -1,0 +1,75 @@
+# sps-router-critical-fixes — stripped fewshot
+# Demonstrates well-formed phases YAML: 1-3 phases, deps, prompt_template
+# with Background/Implementation/PR/Report sections, success_criteria with
+# requires_merged_pr.
+
+defaults:
+  max_retries: 2
+  heartbeat_interval_sec: 60
+
+chain_config:
+  alert_channels: [handoff, inbox, audit]
+  max_concurrent: 1
+  acceptance_enforce_default: warn
+  machine: m3
+
+phases:
+  - id: 1
+    name: rr1_adversarial_prefilter
+    description: "RR-1 mitigation: adversarial prompt prefilter + ban-list at the router's classifier-input boundary."
+    deps: []
+    max_minutes: 120
+    success_criteria:
+      output_file: "~/Documents/projects/reports/rr1_adversarial_prefilter_2026-05-15.md"
+      min_bytes: 1000
+      grep_match: "RR-1|adversarial|prefilter|ban-list"
+      requires_merged_pr: true
+    prompt_template: |
+      Phase 1 — RR-1 fast mitigation: adversarial prefilter + ban-list.
+
+      ## Background
+      Cross-test surfaced 50% adversarial bypass: crafted prompts route to local-7b
+      instead of being held/escalated. Security gap — apply prefilter/ban-list now.
+
+      ## Implementation
+      1. New file: `caia/packages/local-llm-router/src/adversarial-prefilter.ts`
+         exporting `screenForInjection(prompt): {blocked, reason?, matched?}`.
+      2. Wire into `caia/packages/local-llm-router/src/router.ts` BEFORE classifier.
+      3. Unit tests in `__tests__/adversarial-prefilter.test.ts` covering the 10
+         adversarial prompts and 10 benign prompts.
+
+      ## PR
+      Branch `feat/rr1-adversarial-prefilter-2026-05-15`. caia-pr-create-safe → MERGED.
+
+      ## Report
+      `~/Documents/projects/reports/rr1_adversarial_prefilter_2026-05-15.md`.
+      gate-mark-done.sh + caia-chain mark-done 1.
+
+  - id: 2
+    name: r1_cascade_doesnt_cascade
+    description: "R-1: dispatcher doesn't fall through to claude on low-confidence local response."
+    deps: [1]
+    max_minutes: 120
+    success_criteria:
+      output_file: "~/Documents/projects/reports/r1_cascade_fallthrough_2026-05-15.md"
+      min_bytes: 1000
+      grep_match: "R-1|cascade|fallthrough|escalation"
+      requires_merged_pr: true
+    prompt_template: |
+      Phase 2 — R-1: cascade-doesn't-cascade fix.
+
+      ## Background
+      Dispatcher routes everything to local-7b. Cascade fall-through on
+      `needs_escalation:true`, low confidence, or schema-fail is broken.
+
+      ## Implementation
+      Tighten escalation logic in `caia/packages/local-llm-router/src/router.ts`:
+      explicit `needs_escalation` signal + low-confidence threshold. On escalation,
+      route to claude or stolution-batch:32b with the same prompt.
+
+      ## PR
+      Branch `feat/r1-cascade-fallthrough-2026-05-15`. Merge required.
+
+      ## Report
+      `~/Documents/projects/reports/r1_cascade_fallthrough_2026-05-15.md`.
+      gate-mark-done.sh + caia-chain mark-done 2.

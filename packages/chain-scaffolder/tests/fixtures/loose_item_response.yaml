@@ -1,0 +1,40 @@
+```yaml
+defaults:
+  max_retries: 2
+  heartbeat_interval_sec: 60
+
+chain_config:
+  alert_channels: [handoff, inbox, audit]
+  max_concurrent: 1
+  acceptance_enforce_default: warn
+  machine: m3
+
+phases:
+  - id: 1
+    name: implement_widget_cache
+    description: "Add an in-process LRU cache for widget lookups in the demo package."
+    deps: []
+    max_minutes: 90
+    success_criteria:
+      output_file: "~/Documents/projects/reports/loose_demo_p1_2026-05-16.md"
+      min_bytes: 800
+      grep_match: "widget|cache|lru"
+      requires_merged_pr: true
+    prompt_template: |
+      Phase 1 — Add LRU cache for widget lookups.
+
+      ## Background
+      The widget-store currently scans on every call; profiling showed it's the hot path.
+
+      ## Implementation
+      1. New file `caia/packages/widget-store/src/lru.ts` — minimal LRU.
+      2. Wire into `caia/packages/widget-store/src/store.ts` getWidget().
+      3. Unit tests for hit/miss + eviction.
+
+      ## PR
+      Branch `feat/loose-demo-2026-05-16`. caia-pr-create-safe → MERGED.
+
+      ## Report
+      `~/Documents/projects/reports/loose_demo_p1_2026-05-16.md`.
+      gate-mark-done.sh + caia-chain mark-done 1.
+```
