@@ -1,0 +1,195 @@
+# decision_defaults.yaml
+#
+# Operator-authorized defaults for recurring decisions. The orchestrator (and
+# every spawned task) consults this file BEFORE thinking about asking the
+# operator. If a decision class matches a row here, take the default action.
+#
+# Source: feedback_24_7_bulletproof_2026-05-08.md "Decision auto-defaults
+# register" — extended as new patterns emerge. Versioned in git so additions
+# are visible.
+#
+# Schema:
+#   defaults:
+#     - class:        short identifier
+#       situation:    when this rule fires
+#       default:      what to do
+#       precondition: required state for default to apply
+#       exceptions:   when default does NOT apply
+#       escalation:   what to do if exception fires
+#       authority:    file:line where rule originates
+#
+# Loading: orchestrator's pre-spawn template injects the relevant rows verbatim
+# into every spawned task's prompt prefix.
+
+version: 1
+last_updated: 2026-05-08
+
+defaults:
+
+  - class: pr_merge_conflict_obvious_resolution
+    situation: |
+      Open PR has a merge conflict. Resolution direction is one of: theirs,
+      ours, mechanical-only (whitespace/import order/lockfile regen).
+    default: |
+      Resolve in the obvious direction. Force-with-lease the branch.
+      Re-run CI. Admin-merge when green per Path B.
+    precondition: |
+      No business logic in the conflicting hunks. No code-review-required
+      label. CI was green prior to the conflict.
+    exceptions: []
+    escalation: log to memory; proceed
+    authority: feedback_24_7_bulletproof_2026-05-08.md L62
+
+  - class: pr_red_in_known_preexisting_set
+    situation: |
+      PR's only failing checks are in the documented pre-existing-red set
+      (e.g., flaky e2e suite, third-party CDN flake, known-unrelated
+      regression).
+    default: admin-merge per Path B documented in path_b_admin_merge_campaign_2026-05-08.md
+    precondition: PR otherwise green; functional change verified locally
+    exceptions:
+      - new red appears (not in pre-existing list)
+    escalation: investigate the new red; do not admin-merge
+    authority: feedback_24_7_bulletproof_2026-05-08.md L63
+
+  - class: cve_patch_requires_major_bump
+    situation: |
+      A CVE patch requires a major-version bump of a dependency (security >
+      stability tradeoff).
+    default: take the major bump
+    precondition: dependent code's API surface has not been deeply customized
+    exceptions:
+      - the major bump touches a framework with org-wide migration impact
+        (Fastify 5, Angular 19) — those are deferred per master sequencing
+    escalation: file a multi-day campaign rather than rush; surface no decision
+    authority: feedback_24_7_bulletproof_2026-05-08.md L64
+
+  - class: backlog_item_pre_approved
+    situation: an item exists in master_backlog_sequencing AND its dependencies are met
+    default: spawn the next leg
+    precondition: |
+      no in-flight task already owns the same item; running task count <
+      target (35-45)
+    exceptions: []
+    escalation: n/a
+    authority: feedback_24_7_bulletproof_2026-05-08.md L65 + master_backlog_sequencing_2026-05-05.md
+
+  - class: multi_option_security_vs_cosmetic
+    situation: |
+      Decision menu has two valid options. One is safer for security/data,
+      the other is faster for cosmetics.
+    default: |
+      Pick safer option for security/data work. Pick faster option for
+      cosmetic / non-data-touching work.
+    precondition: both options pass functional tests
+    exceptions: []
+    escalation: n/a
+    authority: feedback_24_7_bulletproof_2026-05-08.md L66
+
+  - class: whats_next
+    situation: a task or campaign just completed and there is no obvious follow-up dispatched
+    default: read master_backlog_sequencing → spawn next unblocked item's first leg
+    precondition: master sequencing not exhausted; no master stop condition fired
+    exceptions:
+      - 60+ days no operator interaction
+      - 3 consecutive items failed Stage 10
+      - subscription cap hit
+    escalation: send proactive SendUserMessage with state summary; do NOT halt
+    authority: feedback_24_7_bulletproof_2026-05-08.md L67 + feedback_self_perpetuating_campaigns.md
+
+  - class: heartbeat_running_below_target
+    situation: heartbeat fires; running task count < 5 (or < target floor)
+    default: spawn from backlog BEFORE writing the heartbeat report
+    precondition: backlog has unblocked items
+    exceptions:
+      - operator-only blocker on next backlog item (rare)
+    escalation: skip blocked item; spawn the next non-blocked one
+    authority: feedback_24_7_bulletproof_2026-05-08.md L68
+
+  - class: task_surfaces_needs_operator_decision
+    situation: a child task reports back "needs operator decision"
+    default: |
+      re-evaluate per decision-classifier. 90% of the time the answer is in
+      operator's standing prefs. Decide and instruct child to proceed.
+    precondition: decision is technical (code/CI/deps/infra/branches/PRs/tools)
+    exceptions:
+      - decision is genuine product/business pivot (decision-classifier
+        "Product/business/usability topic" list)
+    escalation: only then surface to operator with a default already chosen
+    authority: feedback_24_7_bulletproof_2026-05-08.md L69 + feedback_decision_classifier.md
+
+  - class: memory_unclear_or_contradictory
+    situation: two memory files give conflicting guidance
+    default: read MEMORY.md fresh; trust most recent dated entry
+    precondition: most recent entry is dated; older entry is dated
+    exceptions:
+      - the older rule is explicitly marked SUPERSEDES
+    escalation: use the SUPERSEDES rule
+    authority: feedback_24_7_bulletproof_2026-05-08.md L70
+
+  - class: dependency_upgrade_version_choice
+    situation: dependabot / renovate proposes multiple acceptable target versions
+    default: latest stable that passes CI
+    precondition: not a major bump on a deferred-major framework
+    exceptions:
+      - pre-release / RC / beta — skip these
+    escalation: pick previous stable
+    authority: feedback_24_7_bulletproof_2026-05-08.md L71
+
+  - class: lockfile_regen_needed
+    situation: pnpm-lock.yaml needs regen (added/removed deps; major bump)
+    default: |
+      run `pnpm install`; commit the lock change in the same PR as the dep
+      change
+    precondition: working tree clean before run
+    exceptions: []
+    escalation: n/a
+    authority: feedback_24_7_bulletproof_2026-05-08.md L72
+
+  - class: eslint_config_conflict
+    situation: ESLint rule fires on legitimate code (e.g., rules-of-hooks in render bodies)
+    default: apply canonical fix per plugin docs
+    precondition: code itself is correct; only the rule misfires
+    exceptions: []
+    escalation: file a plugin issue if canonical fix doesn't exist
+    authority: feedback_24_7_bulletproof_2026-05-08.md L73
+
+  - class: bundle_same_change_across_files
+    situation: 2+ files need the same mechanical change
+    default: bundle into single PR with multiple commits, one per file
+    precondition: files are in the same repo or related repos
+    exceptions: []
+    escalation: split if PR exceeds 1000-line review threshold
+    authority: feedback_24_7_bulletproof_2026-05-08.md L74
+
+  - class: test_threshold_flake
+    situation: a test asserts a numeric threshold and flakes
+    default: |
+      bump 5x current threshold or use retry semantics (per Jest /
+      @testing-library guidance)
+    precondition: flake is environmental, not a real regression
+    exceptions:
+      - flake reveals a real race condition → fix the race instead
+    escalation: file an issue + add a regression test for the race
+    authority: feedback_24_7_bulletproof_2026-05-08.md L75
+
+  - class: self_hosted_runner_missing_dep
+    situation: a runner CI job fails because a system dep is missing
+    default: install + verify on the runner host, then proceed
+    precondition: dep is free / OSS / no commercial license requirement
+    exceptions:
+      - dep is paid → defer + surface (per zero-dollar budget rule)
+    escalation: file backlog item for the install
+    authority: feedback_24_7_bulletproof_2026-05-08.md L76
+
+# Add new defaults below as patterns emerge. PRs that add a row must cite the
+# transcript or memory entry that authorized the default. Every row makes the
+# orchestrator faster and the operator less of a blocker.
+
+new_patterns:
+  process: |
+    When a new "the orchestrator stalled because of decision X" failure pattern
+    is identified, the post-incident memory file MUST include the YAML row
+    proposed for this register. The Backlog Driver's nightly diff job applies
+    the row. Compounding effect: every observed stall becomes a default; over
+    weeks, the surface area for fresh stalls shrinks.

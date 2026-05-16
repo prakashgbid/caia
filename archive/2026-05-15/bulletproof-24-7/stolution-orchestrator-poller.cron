@@ -1,0 +1,27 @@
+# Stolution server cron rules — mirror of the Mac LaunchAgent
+# Install: crontab -e (as user s903) and paste these lines
+# Verify:  crontab -l | grep orchestrator
+# Logs:    /home/s903/.cache/orchestrator/*.log
+#
+# ZERO Claude tokens. All pure-bash local scripts. The thin Claude scheduled
+# tasks (thin-spawner, thin-alerter) are managed via Cowork's
+# scheduled-tasks API, NOT cron — they need access to mcp__cowork__start_task
+# and SendUserMessage.
+
+# Every minute: poll session count, update state files, raise idle alarm if needed.
+* * * * * /home/s903/caia/scripts/orchestrator/local-poller.sh && /home/s903/caia/scripts/orchestrator/idle-detector.sh
+
+# Every hour: audit. Write anomaly marker if heartbeat shows stagnation.
+7 * * * * /home/s903/caia/scripts/orchestrator/heartbeat-auditor.sh
+
+# Daily 02:00: rotate poller log to keep disk usage bounded.
+0 2 * * * gzip -k /home/s903/.cache/orchestrator/poller_log.tsv && mv /home/s903/.cache/orchestrator/poller_log.tsv.gz /home/s903/.cache/orchestrator/archive/poller_log_$(date +\%Y\%m\%d).tsv.gz && : > /home/s903/.cache/orchestrator/poller_log.tsv
+
+# Every 10 min: drift check. If a recent spawned task is missing the sentinel
+# block, log it.
+*/10 * * * * /home/s903/caia/scripts/orchestrator/audit-spawn-prefix.sh
+
+# Every 30 min: if Ollama is up, run the semantic-classifier on any
+# pre-send-classifier "ambiguous" exits captured in the log. Pure local LLM,
+# zero Claude tokens.
+*/30 * * * * /home/s903/caia/scripts/orchestrator/ollama-semantic-classifier.sh
