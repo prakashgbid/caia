@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard preview · CAIA</title>
+  <meta name="description" content="A look at the CAIA operator dashboard — the full surface for chains, queues, agents, gates, and observability." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink: { 950: '#0a0c12', 900: '#0f1117', 850: '#141823', 800: '#1a1f2e', 700: '#252a3a', 600: '#2d3748' },
+            chalk: { 50: '#f8fafc', 100: '#f0f4f8', 300: '#cbd5e1', 400: '#a0aec0', 500: '#64748b' },
+            brand: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
+            accent: { 400: '#a78bfa', 500: '#8b5cf6' },
+            mint: { 400: '#34d399', 500: '#10b981' },
+            amber: { 400: '#fbbf24', 500: '#f59e0b' },
+            rose: { 400: '#fb7185', 500: '#ef4444' },
+            sky: { 400: '#63b3ed' },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    html, body { background: #0a0c12; color: #f0f4f8; }
+    .text-gradient { background: linear-gradient(90deg, #a5b4fc, #c4b5fd, #f0abfc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .grid-bg {
+      background-image: linear-gradient(rgba(99,102,241,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    /* Sparkline */
+    .spark path { fill: none; stroke-width: 1.5; }
+    /* Sidebar scroll mock */
+    .mock-sidebar { background: #1a1f2e; border-right: 1px solid #2d3748; }
+    .mock-pulse { animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.55 } }
+    .nav-leaf:hover { background: rgba(99,102,241,0.08); }
+    .nav-active { background: rgba(99,102,241,0.15); color: #f0f4f8 !important; border-left: 2px solid #818cf8; }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+  <!-- Marketing nav -->
+  <header class="sticky top-0 z-30 backdrop-blur bg-ink-950/70 border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="home.html" class="flex items-center gap-2">
+        <span class="inline-grid place-items-center h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 text-ink-950 font-bold">C</span>
+        <span class="font-semibold tracking-tight">CAIA</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-chalk-300">
+        <a href="architecture.html" class="hover:text-chalk-100">Architecture</a>
+        <a href="packages.html" class="hover:text-chalk-100">Packages</a>
+        <a href="home.html#concepts" class="hover:text-chalk-100">Concepts</a>
+        <a href="dashboard-preview.html" class="text-chalk-100 font-medium">Dashboard</a>
+      </nav>
+      <a href="login.html" class="text-sm font-medium bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white px-3.5 py-1.5 rounded-md">Open dashboard</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="grid-bg border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 py-16 md:py-20 text-center">
+      <p class="text-sm uppercase tracking-[0.18em] text-brand-400 font-semibold">Operator surface</p>
+      <h1 class="mt-3 text-4xl md:text-6xl font-bold tracking-tight">The dashboard <span class="text-gradient">you actually live in.</span></h1>
+      <p class="mt-5 max-w-2xl mx-auto text-lg text-chalk-300">Real screenshot, not a stylised mock. This is what the operator sees at
+        <code class="font-mono text-chalk-100">localhost:7777</code> — six top-level sections, 40+ leaves, every chain &amp; gate at a glance.</p>
+      <div class="mt-7 flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="login.html" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 font-semibold text-white">
+          Sign in to open it
+        </a>
+        <a href="architecture.html" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-ink-800/80 ring-1 ring-ink-600 hover:ring-ink-700 text-chalk-100">See how it fits</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screenshot frame -->
+  <section class="border-b border-ink-600/60 py-14">
+    <div class="max-w-[1280px] mx-auto px-6">
+      <div class="relative">
+        <div class="absolute inset-x-10 -bottom-6 h-12 rounded-full bg-brand-500/30 blur-2xl opacity-50"></div>
+        <div class="relative rounded-2xl ring-1 ring-ink-600 bg-ink-900 shadow-2xl overflow-hidden">
+          <!-- Browser chrome -->
+          <div class="flex items-center gap-3 px-4 py-2.5 border-b border-ink-600 bg-ink-850">
+            <div class="flex items-center gap-1.5">
+              <span class="h-3 w-3 rounded-full bg-rose-500/80"></span>
+              <span class="h-3 w-3 rounded-full bg-amber-500/80"></span>
+              <span class="h-3 w-3 rounded-full bg-mint-500/80"></span>
+            </div>
+            <div class="flex-1 max-w-2xl mx-auto">
+              <div class="flex items-center gap-2 px-3 py-1 rounded-md bg-ink-900 ring-1 ring-ink-600 text-xs text-chalk-400 font-mono">
+                <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 text-mint-400" fill="currentColor"><path d="M8 1.5a3.5 3.5 0 0 0-3.5 3.5v2H4a1.5 1.5 0 0 0-1.5 1.5v5A1.5 1.5 0 0 0 4 15h8a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 12 7h-.5V5A3.5 3.5 0 0 0 8 1.5Zm2 5.5H6V5a2 2 0 1 1 4 0v2Z"/></svg>
+                localhost:7777/timeline
+              </div>
+            </div>
+            <span class="text-xs text-chalk-500 font-mono">Conductor · CAIA</span>
+          </div>
+
+          <!-- App body -->
+          <div class="grid grid-cols-[220px_1fr] h-[720px]">
+            <!-- Sidebar -->
+            <aside class="mock-sidebar overflow-hidden">
+              <div class="px-4 py-4 border-b border-ink-600 flex items-center gap-2">
+                <span class="inline-grid place-items-center h-7 w-7 rounded-md bg-gradient-to-br from-brand-500 to-accent-500 text-ink-950 font-bold text-sm">C</span>
+                <span class="text-sm font-semibold tracking-tight">Conductor</span>
+              </div>
+              <div class="px-3 py-2 text-[10px] uppercase tracking-wider text-chalk-500 font-mono">project</div>
+              <button class="mx-3 mb-3 w-[calc(100%-1.5rem)] flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md bg-ink-900 ring-1 ring-ink-600 text-xs text-chalk-200">
+                <span class="font-mono">caia</span>
+                <svg class="h-3 w-3 text-chalk-500" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/></svg>
+              </button>
+
+              <nav class="text-sm">
+                <!-- Group: Work (expanded) -->
+                <div>
+                  <div class="px-4 py-1.5 flex items-center justify-between text-chalk-300">
+                    <span class="flex items-center gap-2"><span>📋</span><span class="font-medium">Work</span></span>
+                    <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/></svg>
+                  </div>
+                  <ul class="text-chalk-400">
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>💭</span>Chat</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>💬</span>Prompts</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>➕</span>Submit</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>🎯</span>Queue <span class="ml-auto text-[10px] px-1.5 rounded-full bg-brand-500/20 text-brand-400">7</span></li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>🗂️</span>Buckets</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>🌳</span>Stories</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>📋</span>Tasks</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>📝</span>Requirements</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>🚨</span>Blockers <span class="ml-auto text-[10px] px-1.5 rounded-full bg-rose-500/20 text-rose-400">2</span></li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>❓</span>Questions</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>💡</span>Suggestions</li>
+                  </ul>
+                </div>
+                <!-- Group: Pipeline (expanded) -->
+                <div class="mt-1">
+                  <div class="px-4 py-1.5 flex items-center justify-between text-chalk-300">
+                    <span class="flex items-center gap-2"><span>🔀</span><span class="font-medium">Pipeline</span></span>
+                    <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/></svg>
+                  </div>
+                  <ul class="text-chalk-400">
+                    <li class="nav-leaf nav-active px-4 pl-[34px] py-1 flex items-center gap-2 text-chalk-100"><span>🕒</span>Timeline</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>🔀</span>Pipeline</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>⚡</span>Events</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>📡</span>Task runs</li>
+                    <li class="nav-leaf px-4 pl-9 py-1 flex items-center gap-2"><span>🕸️</span>Dependency graph</li>
+                  </ul>
+                </div>
+                <!-- Group: Catalog (collapsed) -->
+                <div class="mt-1">
+                  <div class="px-4 py-1.5 flex items-center justify-between text-chalk-400">
+                    <span class="flex items-center gap-2"><span>📚</span><span>Catalog</span></span>
+                    <svg class="h-3 w-3 -rotate-90" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/></svg>
+                  </div>
+                </div>
+                <!-- Group: Quality (collapsed) -->
+                <div class="mt-1">
+                  <div class="px-4 py-1.5 flex items-center justify-between text-chalk-400">
+                    <span class="flex items-center gap-2"><span>✅</span><span>Quality</span></span>
+                    <svg class="h-3 w-3 -rotate-90" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/></svg>
+                  </div>
+                </div>
+                <!-- Group: Operations (collapsed) -->
+                <div class="mt-1">
+                  <div class="px-4 py-1.5 flex items-center justify-between text-chalk-400">
+                    <span class="flex items-center gap-2"><span>🛠️</span><span>Operations</span></span>
+                    <svg class="h-3 w-3 -rotate-90" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/></svg>
+                  </div>
+                </div>
+                <!-- Group: Settings (collapsed) -->
+                <div class="mt-1">
+                  <div class="px-4 py-1.5 flex items-center justify-between text-chalk-400">
+                    <span class="flex items-center gap-2"><span>⚙️</span><span>Settings</span></span>
+                    <svg class="h-3 w-3 -rotate-90" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"/></svg>
+                  </div>
+                </div>
+              </nav>
+
+              <div class="absolute bottom-0 left-0 w-[220px] border-t border-ink-600 bg-ink-850 px-3 py-3 flex items-center gap-2 text-xs">
+                <span class="h-7 w-7 grid place-items-center rounded-full bg-brand-500/20 text-brand-400 font-semibold">O</span>
+                <div class="min-w-0">
+                  <p class="text-chalk-200 truncate">operator</p>
+                  <p class="text-chalk-500 truncate">caia · localhost</p>
+                </div>
+                <span class="ml-auto h-2 w-2 rounded-full bg-mint-400 mock-pulse"></span>
+              </div>
+            </aside>
+
+            <!-- Main -->
+            <main class="overflow-hidden">
+              <!-- Breadcrumb -->
+              <div class="border-b border-ink-600 bg-ink-900/80 px-6 py-3 flex items-center justify-between text-xs text-chalk-400 font-mono">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-chalk-500">Pipeline</span>
+                  <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M7.293 4.293a1 1 0 0 1 1.414 0l5 5a1 1 0 0 1 0 1.414l-5 5a1 1 0 1 1-1.414-1.414L11.586 10 7.293 5.707a1 1 0 0 1 0-1.414Z"/></svg>
+                  <span class="text-chalk-200">Timeline</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-mint-400 mock-pulse"></span><span class="text-chalk-300">3 chains active</span></span>
+                  <span class="text-chalk-500">·</span>
+                  <span>budget <span class="text-chalk-200">62%</span></span>
+                  <span class="text-chalk-500">·</span>
+                  <span>10:14:32</span>
+                </div>
+              </div>
+
+              <!-- Page content -->
+              <div class="p-6 overflow-y-auto h-[calc(720px-48px)]">
+                <!-- KPI strip -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                  <div class="rounded-xl bg-ink-900/70 ring-1 ring-ink-600 p-4">
+                    <p class="text-[10px] uppercase tracking-wider text-chalk-500 font-mono">Active chains</p>
+                    <p class="mt-1 text-2xl font-bold text-chalk-50">3<span class="text-sm text-chalk-500 font-normal"> / 7 queued</span></p>
+                    <p class="mt-1 text-xs text-mint-400">+2 vs yesterday</p>
+                  </div>
+                  <div class="rounded-xl bg-ink-900/70 ring-1 ring-ink-600 p-4">
+                    <p class="text-[10px] uppercase tracking-wider text-chalk-500 font-mono">PRs merged · 7d</p>
+                    <p class="mt-1 text-2xl font-bold text-chalk-50">38</p>
+                    <p class="mt-1 text-xs text-mint-400">all reviewers green</p>
+                  </div>
+                  <div class="rounded-xl bg-ink-900/70 ring-1 ring-ink-600 p-4">
+                    <p class="text-[10px] uppercase tracking-wider text-chalk-500 font-mono">Local-LLM displacement</p>
+                    <p class="mt-1 text-2xl font-bold text-chalk-50">71.4%</p>
+                    <div class="mt-2 h-1.5 rounded-full bg-ink-600 overflow-hidden">
+                      <div class="h-full rounded-full bg-gradient-to-r from-brand-500 to-accent-500" style="width: 71.4%"></div>
+                    </div>
+                  </div>
+                  <div class="rounded-xl bg-ink-900/70 ring-1 ring-ink-600 p-4">
+                    <p class="text-[10px] uppercase tracking-wider text-chalk-500 font-mono">Spend (subscription)</p>
+                    <p class="mt-1 text-2xl font-bold text-mint-400">$0.00</p>
+                    <p class="mt-1 text-xs text-chalk-500">API-key billing: disabled</p>
+                  </div>
+                </div>
+
+                <!-- 2-col layout -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <!-- Timeline feed -->
+                  <section class="lg:col-span-2 rounded-xl bg-ink-900/60 ring-1 ring-ink-600 overflow-hidden">
+                    <div class="px-5 py-3 border-b border-ink-600 flex items-center justify-between">
+                      <h2 class="font-semibold text-sm">Recent activity</h2>
+                      <div class="flex items-center gap-2 text-xs text-chalk-500">
+                        <button class="px-2 py-0.5 rounded ring-1 ring-ink-600 text-chalk-300">all</button>
+                        <button class="px-2 py-0.5 rounded ring-1 ring-brand-500/40 bg-brand-500/10 text-brand-400">chains</button>
+                        <button class="px-2 py-0.5 rounded ring-1 ring-ink-600 text-chalk-300">events</button>
+                        <button class="px-2 py-0.5 rounded ring-1 ring-ink-600 text-chalk-300">PRs</button>
+                      </div>
+                    </div>
+                    <ol class="divide-y divide-ink-600">
+                      <li class="flex items-start gap-3 px-5 py-3 text-sm">
+                        <span class="mt-1 h-2 w-2 rounded-full bg-mint-400 mock-pulse"></span>
+                        <div class="min-w-0 flex-1">
+                          <p><span class="text-chalk-100 font-medium">caia-website-high-fidelity-mockups</span> · phase 1 <span class="text-chalk-500">→</span> <span class="text-amber-400 font-mono text-xs">in_progress</span></p>
+                          <p class="text-xs text-chalk-500 mt-0.5">heartbeat 6s ago · session phase1-20260516T090352-66541</p>
+                        </div>
+                        <span class="text-xs text-chalk-500 font-mono">now</span>
+                      </li>
+                      <li class="flex items-start gap-3 px-5 py-3 text-sm">
+                        <span class="mt-1 h-2 w-2 rounded-full bg-mint-500"></span>
+                        <div class="min-w-0 flex-1">
+                          <p><span class="text-chalk-100 font-medium">PR #4711</span> · feat/oauth-apple-google <span class="text-chalk-500">→</span> <span class="text-mint-400 font-mono text-xs">merged</span></p>
+                          <p class="text-xs text-chalk-500 mt-0.5">all four reviewers green · steward gate passed in 38s</p>
+                        </div>
+                        <span class="text-xs text-chalk-500 font-mono">2m</span>
+                      </li>
+                      <li class="flex items-start gap-3 px-5 py-3 text-sm">
+                        <span class="mt-1 h-2 w-2 rounded-full bg-amber-400"></span>
+                        <div class="min-w-0 flex-1">
+                          <p><span class="text-chalk-100 font-medium">critic</span> filed 1 high-severity finding on PR #4712</p>
+                          <p class="text-xs text-chalk-500 mt-0.5">"new endpoint bypasses spend-guard middleware" · fix-it loop opened</p>
+                        </div>
+                        <span class="text-xs text-chalk-500 font-mono">7m</span>
+                      </li>
+                      <li class="flex items-start gap-3 px-5 py-3 text-sm">
+                        <span class="mt-1 h-2 w-2 rounded-full bg-sky-400"></span>
+                        <div class="min-w-0 flex-1">
+                          <p><span class="text-chalk-100 font-medium">apprentice-retrainer</span> · weekly run complete</p>
+                          <p class="text-xs text-chalk-500 mt-0.5">winRate 0.64 vs base · adapter promoted to canary</p>
+                        </div>
+                        <span class="text-xs text-chalk-500 font-mono">11m</span>
+                      </li>
+                      <li class="flex items-start gap-3 px-5 py-3 text-sm">
+                        <span class="mt-1 h-2 w-2 rounded-full bg-accent-400"></span>
+                        <div class="min-w-0 flex-1">
+                          <p><span class="text-chalk-100 font-medium">mentor</span> recorded operator correction</p>
+                          <p class="text-xs text-chalk-500 mt-0.5">"prefer single bundled PR for refactors in router area" → memory · 0 hits</p>
+                        </div>
+                        <span class="text-xs text-chalk-500 font-mono">14m</span>
+                      </li>
+                      <li class="flex items-start gap-3 px-5 py-3 text-sm">
+                        <span class="mt-1 h-2 w-2 rounded-full bg-mint-500"></span>
+                        <div class="min-w-0 flex-1">
+                          <p><span class="text-chalk-100 font-medium">verifier</span> · PR #4710 acceptance re-derived</p>
+                          <p class="text-xs text-chalk-500 mt-0.5">verdict <span class="text-mint-400">PASS</span> · 4 criteria · 11 files in scope</p>
+                        </div>
+                        <span class="text-xs text-chalk-500 font-mono">18m</span>
+                      </li>
+                      <li class="flex items-start gap-3 px-5 py-3 text-sm">
+                        <span class="mt-1 h-2 w-2 rounded-full bg-rose-400"></span>
+                        <div class="min-w-0 flex-1">
+                          <p><span class="text-chalk-100 font-medium">spend-guard</span> · weekly cap @ 65%</p>
+                          <p class="text-xs text-chalk-500 mt-0.5">no action required · subscription-only path active</p>
+                        </div>
+                        <span class="text-xs text-chalk-500 font-mono">22m</span>
+                      </li>
+                    </ol>
+                  </section>
+
+                  <!-- Right column -->
+                  <aside class="space-y-5">
+                    <!-- Chains -->
+                    <section class="rounded-xl bg-ink-900/60 ring-1 ring-ink-600 overflow-hidden">
+                      <div class="px-4 py-2.5 border-b border-ink-600 flex items-center justify-between">
+                        <h2 class="font-semibold text-sm">Chains</h2>
+                        <span class="text-xs text-chalk-500 font-mono">3 active</span>
+                      </div>
+                      <ul class="divide-y divide-ink-600 text-xs">
+                        <li class="px-4 py-2.5">
+                          <div class="flex items-center justify-between">
+                            <span class="font-mono text-chalk-100 truncate">caia-website-high-fidelity-mockups</span>
+                            <span class="text-amber-400 font-mono">P1</span>
+                          </div>
+                          <div class="mt-1.5 h-1 rounded-full bg-ink-600 overflow-hidden">
+                            <div class="h-full bg-amber-400" style="width: 35%"></div>
+                          </div>
+                        </li>
+                        <li class="px-4 py-2.5">
+                          <div class="flex items-center justify-between">
+                            <span class="font-mono text-chalk-100 truncate">caia-website-design-system</span>
+                            <span class="text-amber-400 font-mono">P1</span>
+                          </div>
+                          <div class="mt-1.5 h-1 rounded-full bg-ink-600 overflow-hidden">
+                            <div class="h-full bg-amber-400" style="width: 78%"></div>
+                          </div>
+                        </li>
+                        <li class="px-4 py-2.5">
+                          <div class="flex items-center justify-between">
+                            <span class="font-mono text-chalk-100 truncate">caia-website-sitemap-content</span>
+                            <span class="text-amber-400 font-mono">P1</span>
+                          </div>
+                          <div class="mt-1.5 h-1 rounded-full bg-ink-600 overflow-hidden">
+                            <div class="h-full bg-amber-400" style="width: 90%"></div>
+                          </div>
+                        </li>
+                        <li class="px-4 py-2.5 flex items-center justify-between text-chalk-400">
+                          <span class="font-mono truncate">apprentice-pull-forward</span>
+                          <span class="font-mono text-chalk-500">queued</span>
+                        </li>
+                      </ul>
+                    </section>
+
+                    <!-- Router displacement -->
+                    <section class="rounded-xl bg-ink-900/60 ring-1 ring-ink-600 overflow-hidden">
+                      <div class="px-4 py-2.5 border-b border-ink-600 flex items-center justify-between">
+                        <h2 class="font-semibold text-sm">Router displacement</h2>
+                        <span class="text-xs text-chalk-500 font-mono">24h</span>
+                      </div>
+                      <div class="px-4 py-3">
+                        <svg viewBox="0 0 200 60" class="w-full h-16 spark">
+                          <defs>
+                            <linearGradient id="gradFill" x1="0" x2="0" y1="0" y2="1">
+                              <stop offset="0%" stop-color="#6366f1" stop-opacity="0.45"/>
+                              <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+                            </linearGradient>
+                          </defs>
+                          <path d="M0,48 L10,42 L20,40 L30,34 L40,32 L50,28 L60,30 L70,22 L80,24 L90,18 L100,16 L110,20 L120,14 L130,12 L140,16 L150,10 L160,12 L170,8 L180,12 L190,6 L200,8 L200,60 L0,60 Z" fill="url(#gradFill)"/>
+                          <path d="M0,48 L10,42 L20,40 L30,34 L40,32 L50,28 L60,30 L70,22 L80,24 L90,18 L100,16 L110,20 L120,14 L130,12 L140,16 L150,10 L160,12 L170,8 L180,12 L190,6 L200,8" stroke="#818cf8"/>
+                        </svg>
+                        <ul class="mt-3 space-y-1.5 text-xs">
+                          <li class="flex items-center justify-between"><span class="text-chalk-400">local · 7B-instruct</span><span class="text-chalk-100 font-mono">62%</span></li>
+                          <li class="flex items-center justify-between"><span class="text-chalk-400">local · apprentice-canary</span><span class="text-chalk-100 font-mono">9%</span></li>
+                          <li class="flex items-center justify-between"><span class="text-chalk-400">claude · sonnet-4-6</span><span class="text-chalk-100 font-mono">26%</span></li>
+                          <li class="flex items-center justify-between"><span class="text-chalk-400">claude · opus-4-7</span><span class="text-chalk-100 font-mono">3%</span></li>
+                        </ul>
+                      </div>
+                    </section>
+
+                    <!-- Health -->
+                    <section class="rounded-xl bg-ink-900/60 ring-1 ring-ink-600 overflow-hidden">
+                      <div class="px-4 py-2.5 border-b border-ink-600 flex items-center justify-between">
+                        <h2 class="font-semibold text-sm">Health</h2>
+                        <span class="text-xs text-mint-400 font-mono">all green</span>
+                      </div>
+                      <ul class="px-4 py-3 grid grid-cols-2 gap-2 text-xs">
+                        <li class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-mint-400"></span>router</li>
+                        <li class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-mint-400"></span>mentor-bus</li>
+                        <li class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-mint-400"></span>ollama</li>
+                        <li class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-mint-400"></span>steward</li>
+                        <li class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-mint-400"></span>chain-runner</li>
+                        <li class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-mint-400"></span>dashboard</li>
+                      </ul>
+                    </section>
+                  </aside>
+                </div>
+
+                <!-- DAG snippet -->
+                <section class="mt-6 rounded-xl bg-ink-900/60 ring-1 ring-ink-600 overflow-hidden">
+                  <div class="px-5 py-3 border-b border-ink-600 flex items-center justify-between">
+                    <h2 class="font-semibold text-sm">Dependency graph · caia-website-* chains</h2>
+                    <span class="text-xs text-chalk-500 font-mono">3 nodes</span>
+                  </div>
+                  <div class="px-5 py-5 grid grid-cols-3 gap-6 items-center">
+                    <div class="rounded-lg bg-ink-900 ring-1 ring-mint-500/40 p-3 text-center">
+                      <p class="text-xs text-chalk-500 font-mono">P1</p>
+                      <p class="mt-1 font-medium text-chalk-100 text-sm">sitemap-content</p>
+                      <p class="text-xs text-mint-400 mt-1">99% · heartbeating</p>
+                    </div>
+                    <div class="rounded-lg bg-ink-900 ring-1 ring-mint-500/40 p-3 text-center">
+                      <p class="text-xs text-chalk-500 font-mono">P1</p>
+                      <p class="mt-1 font-medium text-chalk-100 text-sm">design-system</p>
+                      <p class="text-xs text-mint-400 mt-1">78% · heartbeating</p>
+                    </div>
+                    <div class="rounded-lg bg-ink-900 ring-1 ring-amber-400/50 p-3 text-center">
+                      <p class="text-xs text-chalk-500 font-mono">P1</p>
+                      <p class="mt-1 font-medium text-chalk-100 text-sm">high-fidelity-mockups</p>
+                      <p class="text-xs text-amber-400 mt-1">35% · this run</p>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature callouts under screenshot -->
+  <section class="border-b border-ink-600/60 bg-ink-900/40">
+    <div class="max-w-7xl mx-auto px-6 py-20 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="rounded-xl ring-1 ring-ink-600 bg-ink-900/60 p-6">
+        <p class="text-xs uppercase tracking-[0.18em] text-brand-400 font-semibold">Six sections</p>
+        <h3 class="mt-2 text-xl font-semibold text-chalk-50">Work · Pipeline · Catalog · Quality · Operations · Settings</h3>
+        <p class="mt-2 text-sm text-chalk-400">Accordion nav with persisted expand state. 40+ leaf pages, each one a deep-link target.</p>
+      </div>
+      <div class="rounded-xl ring-1 ring-ink-600 bg-ink-900/60 p-6">
+        <p class="text-xs uppercase tracking-[0.18em] text-accent-400 font-semibold">Live data</p>
+        <h3 class="mt-2 text-xl font-semibold text-chalk-50">SWR + Mentor event bus</h3>
+        <p class="mt-2 text-sm text-chalk-400">No polling theatre — every panel subscribes to an event topic. Heartbeats, gate transitions, and PR merges land in &lt;1s.</p>
+      </div>
+      <div class="rounded-xl ring-1 ring-ink-600 bg-ink-900/60 p-6">
+        <p class="text-xs uppercase tracking-[0.18em] text-mint-400 font-semibold">Operator-only</p>
+        <h3 class="mt-2 text-xl font-semibold text-chalk-50">Runs on your laptop</h3>
+        <p class="mt-2 text-sm text-chalk-400">Next.js 15, port 7777, no cloud component. Your state stays yours; chains run via LaunchAgent locally.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section>
+    <div class="max-w-4xl mx-auto px-6 py-20 text-center">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight">Ready to operate?</h2>
+      <p class="mt-4 text-chalk-400">Sign in and the dashboard opens at <code class="font-mono text-chalk-100">localhost:7777</code>.</p>
+      <a href="login.html" class="mt-7 inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 font-semibold text-white">
+        Sign in
+        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.293 3.293a1 1 0 0 1 1.414 0l5 5a1 1 0 0 1 0 1.414l-5 5a1 1 0 1 1-1.414-1.414L13.586 10H4a1 1 0 1 1 0-2h9.586l-3.293-3.293a1 1 0 0 1 0-1.414Z"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-ink-600/60 bg-ink-950/80">
+    <div class="max-w-7xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-chalk-400">
+      <p class="text-xs font-mono text-chalk-500">caia · dashboard preview · 2026-05</p>
+      <div class="flex gap-5">
+        <a href="home.html" class="hover:text-chalk-100">Home</a>
+        <a href="architecture.html" class="hover:text-chalk-100">Architecture</a>
+        <a href="packages.html" class="hover:text-chalk-100">Packages</a>
+        <a href="login.html" class="hover:text-chalk-100">Sign in</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

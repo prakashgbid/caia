@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Packages · CAIA</title>
+  <meta name="description" content="Searchable catalog of every CAIA package — 75 modules across orchestration, agents, local-first AI, the apprentice loop, safety, registries, foundation, and more." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink: { 950: '#0a0c12', 900: '#0f1117', 850: '#141823', 800: '#1a1f2e', 700: '#252a3a', 600: '#2d3748' },
+            chalk: { 50: '#f8fafc', 100: '#f0f4f8', 300: '#cbd5e1', 400: '#a0aec0', 500: '#64748b' },
+            brand: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
+            accent: { 400: '#a78bfa', 500: '#8b5cf6' },
+            mint: { 400: '#34d399', 500: '#10b981' },
+            amber: { 400: '#fbbf24', 500: '#f59e0b' },
+            rose: { 400: '#fb7185', 500: '#ef4444' },
+            sky: { 400: '#63b3ed' },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    html, body { background: #0a0c12; color: #f0f4f8; }
+    .text-gradient { background: linear-gradient(90deg, #a5b4fc, #c4b5fd, #f0abfc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .chip { transition: all 0.15s ease; }
+    .chip.active { background: rgba(99,102,241,0.18); border-color: rgba(129,140,248,0.55); color: #f0f4f8; }
+    .pkg-card { transition: border-color 0.18s ease, transform 0.18s ease; }
+    .pkg-card:hover { border-color: rgba(129,140,248,0.55); transform: translateY(-1px); }
+    .grid-bg {
+      background-image: linear-gradient(rgba(99,102,241,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+  <!-- Nav -->
+  <header class="sticky top-0 z-30 backdrop-blur bg-ink-950/70 border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="home.html" class="flex items-center gap-2">
+        <span class="inline-grid place-items-center h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 text-ink-950 font-bold">C</span>
+        <span class="font-semibold tracking-tight">CAIA</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-chalk-300">
+        <a href="architecture.html" class="hover:text-chalk-100">Architecture</a>
+        <a href="packages.html" class="text-chalk-100 font-medium">Packages</a>
+        <a href="home.html#concepts" class="hover:text-chalk-100">Concepts</a>
+        <a href="dashboard-preview.html" class="hover:text-chalk-100">Dashboard</a>
+      </nav>
+      <a href="login.html" class="text-sm font-medium bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white px-3.5 py-1.5 rounded-md">Open dashboard</a>
+    </div>
+  </header>
+
+  <!-- Title -->
+  <section class="grid-bg border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 py-16">
+      <p class="text-sm uppercase tracking-[0.18em] text-brand-400 font-semibold">Catalog</p>
+      <h1 class="mt-3 text-4xl md:text-6xl font-bold tracking-tight">All <span class="text-gradient">75 packages</span>, searchable.</h1>
+      <p class="mt-5 max-w-2xl text-lg text-chalk-300">Every module in <code class="font-mono text-chalk-100 text-base">caia/packages/*</code>. Filter by category, search by name or description. Each card links to its source on GitHub.</p>
+    </div>
+  </section>
+
+  <!-- Controls -->
+  <section class="sticky top-16 z-20 bg-ink-950/85 backdrop-blur border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+        <div class="relative flex-1 max-w-xl">
+          <svg viewBox="0 0 20 20" class="h-4 w-4 absolute left-3.5 top-3 text-chalk-500" fill="currentColor"><path fill-rule="evenodd" d="M9 3a6 6 0 1 0 3.708 10.708l3.292 3.293a1 1 0 0 0 1.414-1.414l-3.293-3.293A6 6 0 0 0 9 3Zm-4 6a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clip-rule="evenodd"/></svg>
+          <input id="search" type="search" placeholder="Search 75 packages — name, description, concern…" class="w-full bg-ink-900/70 ring-1 ring-ink-600 focus:ring-brand-500 outline-none rounded-lg pl-10 pr-3 py-2.5 text-sm placeholder:text-chalk-500" />
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-chalk-500 font-mono"><span id="count">75</span> / 75 shown</span>
+          <button id="reset" class="text-xs text-chalk-400 hover:text-chalk-100 underline-offset-4 hover:underline">reset</button>
+        </div>
+      </div>
+      <div id="filters" class="mt-3 flex flex-wrap gap-2 text-xs">
+        <button data-cat="all" class="chip active px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-200">All</button>
+        <button data-cat="orchestration" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Orchestration</button>
+        <button data-cat="agents" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Agents</button>
+        <button data-cat="local-ai" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Local-first AI</button>
+        <button data-cat="apprentice" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Apprentice loop</button>
+        <button data-cat="events" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Event substrate</button>
+        <button data-cat="safety" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Safety &amp; policy</button>
+        <button data-cat="registries" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Registries</button>
+        <button data-cat="foundation" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Foundation</button>
+        <button data-cat="quality" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Quality</button>
+        <button data-cat="web" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Web factory</button>
+        <button data-cat="sites" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">Sites</button>
+        <button data-cat="mcp" class="chip px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 text-chalk-300">MCP &amp; dispatch</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Grid -->
+  <main class="max-w-7xl mx-auto px-6 py-10">
+    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    <p id="empty" class="hidden text-center text-chalk-400 py-16">No packages match those filters.</p>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-ink-950/80 border-t border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-chalk-400">
+      <p class="text-xs font-mono text-chalk-500">caia/packages/* · 2026-05</p>
+      <div class="flex gap-5">
+        <a href="home.html" class="hover:text-chalk-100">Home</a>
+        <a href="architecture.html" class="hover:text-chalk-100">Architecture</a>
+        <a href="dashboard-preview.html" class="hover:text-chalk-100">Dashboard preview</a>
+        <a href="login.html" class="hover:text-chalk-100">Sign in</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const PACKAGES = [
+      // Orchestration
+      { name: 'chain-runner', cat: 'orchestration', status: 'stable', desc: 'Multi-phase chain runner — atomic state machine, lockfile + heartbeat, audit log, scheduled-wake dispatch.' },
+      { name: 'chain-scaffolder', cat: 'orchestration', status: 'beta', desc: 'Converts backlog items into chain definitions (state.json + phases.yaml + runner script).' },
+      { name: 'claude-spawner', cat: 'orchestration', status: 'stable', desc: 'Unified subscription-only `claude` binary spawner — never sets ANTHROPIC_API_KEY.' },
+      { name: 'claude-subagents', cat: 'orchestration', status: 'beta', desc: 'Canonical Claude Code subagent definitions (BA/EA/PO/Coding/Fix-It/Steward/Mentor/Curator) + installer.' },
+      { name: 'decomposer', cat: 'orchestration', status: 'stable', desc: 'AI-driven hierarchy decomposer — Initiative → Epic → Module → Story → Task.' },
+      { name: 'decomposer-recursive', cat: 'orchestration', status: 'beta', desc: 'Recursive PO decomposition — scope detector, atomicity classifier, per-scope decomposers, MECE judge.' },
+      { name: 'story-decomposer', cat: 'orchestration', status: 'alpha', desc: 'Story-level decomposition primitives. Early scaffold.' },
+      { name: 'ticket-template', cat: 'orchestration', status: 'stable', desc: 'Strict, Zod-validated ticket template — the contract between Phase-1 agents and the executor.' },
+
+      // Agents
+      { name: 'aiml-architect', cat: 'agents', status: 'beta', desc: 'AI/ML Architect Agent — unifies model selection, prompt patterns, eval ownership, Apprentice coordination.' },
+      { name: 'code-reviewer', cat: 'agents', status: 'beta', desc: 'Blocking PR review agent — correctness, bugs, style, type safety, coverage, naming.' },
+      { name: 'critic', cat: 'agents', status: 'beta', desc: 'Adversarial pre-commit review against Mentor\'s 18-category failure-mode taxonomy. Blocking on high severity.' },
+      { name: 'curator', cat: 'agents', status: 'beta', desc: 'Daily-running platform scanner — emits findings, alarms, PR proposals, backlog directives, industry briefings.' },
+      { name: 'librarian', cat: 'agents', status: 'beta', desc: 'Pre-spawn precedent retrieval — embeds memory/reports corpus and prepends top-N prior decisions.' },
+      { name: 'mentor-fastpath', cat: 'agents', status: 'beta', desc: 'Mentor Phase-1/2 reactive fast-path + postmerge data layer + watcher daemon + consumer.' },
+      { name: 'mentor-retrieval', cat: 'agents', status: 'beta', desc: 'Mentor Phase-3/4 — lesson retrieval, clustering, Steward-rule proposals, quarterly self-review.' },
+      { name: 'researcher', cat: 'agents', status: 'beta', desc: 'On-demand deep-dive evaluator — sub-question decomposition, multi-source evidence, structured report.' },
+      { name: 'reviewer', cat: 'agents', status: 'beta', desc: 'Craftsmanship review — readability, idiom, maintainability. Advisory only; never blocking.' },
+      { name: 'steward-core', cat: 'agents', status: 'beta', desc: 'DevOps Steward — process-graph evaluator. Codifies back-merge, migration, and graph-divergence expectations.' },
+      { name: 'steward-analyzers', cat: 'agents', status: 'beta', desc: 'Static analyzers (Drizzle migrations, numbering collisions, develop↔main divergence) wired into CI.' },
+      { name: 'surface', cat: 'agents', status: 'beta', desc: 'Operator-curation lens — digests PR activity + memory deltas into a curated weekly view.' },
+      { name: 'verifier', cat: 'agents', status: 'beta', desc: 'Fresh-prompt fresh-worktree verifier — re-derives acceptance criteria from the actual diff.' },
+
+      // Local-first AI
+      { name: 'local-llm-router', cat: 'local-ai', status: 'stable', desc: 'LLM routing — dispatches tasks to local Ollama models or Claude based on complexity + cost rules.' },
+      { name: 'local-llm-router-mcp', cat: 'local-ai', status: 'beta', desc: 'MCP stdio server exposing local-llm-router as 5 Cowork tools (classify/summarize/draft/format/search).' },
+      { name: 'local-llm-router-py-client', cat: 'local-ai', status: 'beta', desc: 'Python client + SPS-α claude-argv builder. Pure stdlib, vendored into spawner agents.' },
+      { name: 'local-rag', cat: 'local-ai', status: 'beta', desc: 'Local-first RAG over the CAIA monorepo — Ollama embeddings + SQLite vector store. Zero cloud calls.' },
+      { name: 'llm-cache', cat: 'local-ai', status: 'stable', desc: 'Two-tier (exact + semantic) prompt cache, sqlite-backed, embedder-pluggable. L6 cascade preset.' },
+      { name: 'prompt-optimizer', cat: 'local-ai', status: 'beta', desc: 'Three-stage optimizer: rule-based prepass + tool-output summarize + token-importance prune.' },
+      { name: 'prompt-evals', cat: 'local-ai', status: 'beta', desc: 'Promptfoo-based eval suites for every CAIA agent prompt. Deterministic local provider for free CI.' },
+      { name: 'dspy-bridge', cat: 'local-ai', status: 'beta', desc: 'Node ↔ Python bridge for DSPy — uv-pinned subprocess hosting compiled DSPy programs.' },
+
+      // Apprentice loop
+      { name: 'apprentice-corpus', cat: 'apprentice', status: 'beta', desc: 'Phase 0 — aggregates CAIA artifacts into a deduplicated, PII-masked, quality-scored JSONL corpus.' },
+      { name: 'apprentice-eval', cat: 'apprentice', status: 'beta', desc: 'Phase 1 — eval harness scoring base + LoRA adapters against a canonical YAML prompt suite.' },
+      { name: 'apprentice-training', cat: 'apprentice', status: 'beta', desc: 'Phase 2 — QLoRA training of a 4-bit 7B base on Mac MLX. Cloud-GPU fallback at $50/run cap.' },
+      { name: 'apprentice-serving', cat: 'apprentice', status: 'beta', desc: 'Phase 3 — adapter swap into Ollama + lifecycle registry + deterministic canary routing.' },
+      { name: 'apprentice-retrainer', cat: 'apprentice', status: 'beta', desc: 'Phase 4 — weekly + threshold-triggered continuous retraining cron. Single-instance flocked.' },
+
+      // Event substrate
+      { name: 'mentor-event-bus', cat: 'events', status: 'stable', desc: 'Typed append-only event substrate — SQLite events table, Zod schemas, AsyncLocalStorage correlation IDs.' },
+      { name: 'event-bus-internal', cat: 'events', status: 'stable', desc: 'Internal event bus shared by orchestrator apps. Not published.' },
+      { name: 'events', cat: 'events', status: 'stable', desc: 'Typed in-process event bus — primitive for the rest of the event substrate.' },
+      { name: 'events-taxonomy-internal', cat: 'events', status: 'stable', desc: 'Internal events taxonomy registry shared by orchestrator apps.' },
+
+      // Safety
+      { name: 'capability-broker', cat: 'safety', status: 'beta', desc: 'Capability-token broker for irreversible agent actions — signed tokens, append-only ledger.' },
+      { name: 'guardrails-validator', cat: 'safety', status: 'beta', desc: 'Layer-2 input/output validation — composable profiles for PII, secrets, prompt injection, leakage.' },
+      { name: 'tool-output-sanitizer', cat: 'safety', status: 'stable', desc: 'Deterministic prompt-injection defense — strips role markers, [INST] blocks, zero-width Unicode, ANSI.' },
+      { name: 'hmac-auth', cat: 'safety', status: 'stable', desc: 'Shared HMAC-SHA256 primitives + timestamped request signing. Mandatory across CAIA services.' },
+      { name: 'mcp-allowlist-proxy', cat: 'safety', status: 'beta', desc: 'Allowlist proxy in front of MCP servers — pinned commit SHA, sandbox-exec wrapper, policy enforcement.' },
+      { name: 'spend-guard', cat: 'safety', status: 'beta', desc: 'Programmatic Anthropic-spend cap — per-task/project/day/week budgets, auto-pause on breach.' },
+      { name: 'secrets', cat: 'safety', status: 'stable', desc: 'Secret management client — typed access, env-driven configuration.' },
+      { name: 'secrets-broker', cat: 'safety', status: 'alpha', desc: 'Brokered secret distribution for agents. Early scaffold.' },
+      { name: 'orchestrator-elevate', cat: 'safety', status: 'beta', desc: 'Root-owned sudo wrapper + scoped Vault AppRole for orchestrator privilege escalation on stolution.' },
+
+      // Registries
+      { name: 'agent-contract-registry', cat: 'registries', status: 'beta', desc: 'Declarative store of per-agent contracts + composeTemplate(scope) for the Story Validator.' },
+      { name: 'architecture-registry', cat: 'registries', status: 'beta', desc: 'Architecture Knowledge Graph — services, APIs, components, schemas, with dependency edges + embeddings.' },
+      { name: 'feature-registry', cat: 'registries', status: 'stable', desc: 'Fast local feature registry — hybrid sqlite-vec + FTS5 search via Ollama embeddings. Zero Claude tokens.' },
+      { name: 'skills-registry', cat: 'registries', status: 'stable', desc: 'Typed registry for agent capabilities — discriminated-union manifests, runtime Zod validation.' },
+
+      // Foundation
+      { name: 'config', cat: 'foundation', status: 'stable', desc: 'Validated runtime configuration loading.' },
+      { name: 'errors', cat: 'foundation', status: 'stable', desc: 'Typed error hierarchy and serialisation.' },
+      { name: 'logger', cat: 'foundation', status: 'stable', desc: 'Structured logging (Pino-backed) for CAIA applications.' },
+      { name: 'metrics', cat: 'foundation', status: 'stable', desc: 'Prometheus-compatible application metrics.' },
+      { name: 'tracing', cat: 'foundation', status: 'stable', desc: 'OpenTelemetry distributed tracing.' },
+      { name: 'test-kit', cat: 'foundation', status: 'stable', desc: 'Test utilities, mocks, and fixtures for CAIA packages.' },
+      { name: 'test-isolation', cat: 'foundation', status: 'stable', desc: 'Per-test ephemeral SQLite + isolated localhost ports for parallel test runs.' },
+      { name: 'playwright-config', cat: 'foundation', status: 'stable', desc: 'Shared Playwright config factory for the Fix-It Test Agent — local + Browserless modes.' },
+      { name: 'cli', cat: 'foundation', status: 'stable', desc: 'CAIA CLI — scaffold utilities, sites, and agents.' },
+      { name: 'system-prompt-block', cat: 'foundation', status: 'beta', desc: 'Generates a stable ≤1K-token CAIA primer block to prepend to every spawned agent\'s system prompt.' },
+
+      // Quality
+      { name: 'behavior-suite', cat: 'quality', status: 'stable', desc: 'Behavioral / functional / layout testing foundation for pokerzeno sites.' },
+      { name: 'integrity-check', cat: 'quality', status: 'stable', desc: 'Link &amp; Action Integrity checker for Next.js sites — zero broken links, zero dead click handlers.' },
+      { name: 'dead-shell-detector', cat: 'quality', status: 'alpha', desc: 'Detector for dead UI shells / components that no longer have inbound references.' },
+      { name: 'dev-inspector', cat: 'quality', status: 'stable', desc: 'Dev-only React element inspector — hover outline, stable fiber IDs, click-to-copy.' },
+      { name: 'classifier', cat: 'quality', status: 'stable', desc: 'Domain taxonomy engine — classifies text into functional domains and assigns labels.' },
+      { name: 'dedup-engine', cat: 'quality', status: 'stable', desc: 'Deduplication engine — Jaccard similarity with temporal decay.' },
+
+      // Web factory
+      { name: 'vastu', cat: 'web', status: 'beta', desc: 'Text → page brief → Figma spec → Next.js scaffold pipeline. CAIA website factory backbone.' },
+
+      // Sites
+      { name: 'analytics', cat: 'sites', status: 'stable', desc: 'Shared GA4 analytics, consent management, and event taxonomy for Pokerzeno sites.' },
+      { name: 'backend-core', cat: 'sites', status: 'stable', desc: 'Shared Supabase backend for RouletteCommunity and PokerZeno.' },
+      { name: 'cast-bridge', cat: 'sites', status: 'stable', desc: 'Reusable casting utility — BroadcastChannel two-tab sync + Chrome tab-mirror casting.' },
+      { name: 'content-engine', cat: 'sites', status: 'beta', desc: 'Automated content generation for PokerZeno and Roulette Community.' },
+      { name: 'image-provider', cat: 'sites', status: 'stable', desc: 'Supply real photo-quality imagery to roulette-community and poker-zeno sites.' },
+      { name: 'seo-program', cat: 'sites', status: 'beta', desc: 'SEO audit engine for pokerzeno.com and roulettecommunity.com.' },
+
+      // MCP / dispatch
+      { name: 'stolution-dispatch', cat: 'mcp', status: 'beta', desc: 'MCP tool wrapper for spawning remote Claude Code workers on stolution via SSH.' },
+    ];
+
+    const STATUS_BADGE = {
+      stable: 'bg-mint-500/15 text-mint-400 ring-mint-500/30',
+      beta: 'bg-amber-500/15 text-amber-400 ring-amber-500/30',
+      alpha: 'bg-rose-500/15 text-rose-400 ring-rose-500/30',
+    };
+    const STATUS_DOT = {
+      stable: 'bg-mint-500',
+      beta: 'bg-amber-500',
+      alpha: 'bg-rose-500',
+    };
+    const CAT_LABEL = {
+      orchestration: 'Orchestration',
+      agents: 'Agents',
+      'local-ai': 'Local AI',
+      apprentice: 'Apprentice',
+      events: 'Events',
+      safety: 'Safety',
+      registries: 'Registries',
+      foundation: 'Foundation',
+      quality: 'Quality',
+      web: 'Web factory',
+      sites: 'Sites',
+      mcp: 'MCP',
+    };
+
+    const grid = document.getElementById('grid');
+    const count = document.getElementById('count');
+    const empty = document.getElementById('empty');
+    const searchEl = document.getElementById('search');
+    const filtersEl = document.getElementById('filters');
+    const resetBtn = document.getElementById('reset');
+
+    let state = { cat: 'all', q: '' };
+
+    function render() {
+      const q = state.q.trim().toLowerCase();
+      const filtered = PACKAGES.filter(p => {
+        if (state.cat !== 'all' && p.cat !== state.cat) return false;
+        if (!q) return true;
+        return p.name.includes(q) || p.desc.toLowerCase().includes(q);
+      });
+      count.textContent = filtered.length;
+      empty.classList.toggle('hidden', filtered.length !== 0);
+      grid.innerHTML = filtered.map(p => `
+        <a class="pkg-card group block rounded-xl bg-ink-900/60 ring-1 ring-ink-600 p-5"
+           href="https://github.com/prakashgbid/caia/tree/develop/packages/${p.name}" target="_blank" rel="noreferrer">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-mono text-sm text-chalk-100 group-hover:text-brand-400 truncate">@chiefaia/${p.name}</p>
+              <p class="text-[10px] uppercase tracking-wider text-chalk-500 mt-0.5">${CAT_LABEL[p.cat] || p.cat}</p>
+            </div>
+            <span class="shrink-0 inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full ring-1 ${STATUS_BADGE[p.status]}">
+              <span class="h-1.5 w-1.5 rounded-full ${STATUS_DOT[p.status]}"></span>${p.status}
+            </span>
+          </div>
+          <p class="mt-3 text-sm text-chalk-300 leading-relaxed line-clamp-3">${p.desc}</p>
+        </a>
+      `).join('');
+    }
+
+    searchEl.addEventListener('input', e => { state.q = e.target.value; render(); });
+    filtersEl.addEventListener('click', e => {
+      const btn = e.target.closest('button[data-cat]');
+      if (!btn) return;
+      state.cat = btn.dataset.cat;
+      filtersEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+      render();
+    });
+    resetBtn.addEventListener('click', () => {
+      state = { cat: 'all', q: '' };
+      searchEl.value = '';
+      filtersEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.cat === 'all'));
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>

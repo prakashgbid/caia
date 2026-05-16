@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Architecture · CAIA</title>
+  <meta name="description" content="Enterprise, application, and systems architecture for CAIA — agents, chains, the four-layer safety stack, and the local-first AI substrate." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink: { 950: '#0a0c12', 900: '#0f1117', 850: '#141823', 800: '#1a1f2e', 700: '#252a3a', 600: '#2d3748' },
+            chalk: { 50: '#f8fafc', 100: '#f0f4f8', 300: '#cbd5e1', 400: '#a0aec0', 500: '#64748b' },
+            brand: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
+            accent: { 400: '#a78bfa', 500: '#8b5cf6' },
+            mint: { 400: '#34d399', 500: '#10b981' },
+            amber: { 400: '#fbbf24', 500: '#f59e0b' },
+            rose: { 400: '#fb7185', 500: '#ef4444' },
+            sky: { 400: '#63b3ed' },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    html, body { background: #0a0c12; color: #f0f4f8; }
+    .text-gradient { background: linear-gradient(90deg, #a5b4fc, #c4b5fd, #f0abfc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .box { background: rgba(26,31,46,0.7); border: 1px solid #2d3748; border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 16px -10px rgba(0,0,0,0.6); }
+    .arrow-down::after { content: '↓'; display: block; text-align: center; color: #64748b; margin: 6px 0; font-size: 14px; }
+    .arrow-right { position: relative; }
+    .grid-bg {
+      background-image: linear-gradient(rgba(99,102,241,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+  <!-- Nav -->
+  <header class="sticky top-0 z-30 backdrop-blur bg-ink-950/70 border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="home.html" class="flex items-center gap-2">
+        <span class="inline-grid place-items-center h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 text-ink-950 font-bold">C</span>
+        <span class="font-semibold tracking-tight">CAIA</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-chalk-300">
+        <a href="architecture.html" class="text-chalk-100 font-medium">Architecture</a>
+        <a href="packages.html" class="hover:text-chalk-100">Packages</a>
+        <a href="home.html#concepts" class="hover:text-chalk-100">Concepts</a>
+        <a href="dashboard-preview.html" class="hover:text-chalk-100">Dashboard</a>
+      </nav>
+      <a href="login.html" class="text-sm font-medium bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white px-3.5 py-1.5 rounded-md">Open dashboard</a>
+    </div>
+  </header>
+
+  <!-- Title -->
+  <section class="grid-bg border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 py-20">
+      <p class="text-sm uppercase tracking-[0.18em] text-brand-400 font-semibold">Architecture</p>
+      <h1 class="mt-3 text-4xl md:text-6xl font-bold tracking-tight leading-tight">Three views of <span class="text-gradient">one factory.</span></h1>
+      <p class="mt-5 max-w-3xl text-lg text-chalk-300 leading-relaxed">CAIA is intentionally layered. The same intent flows through enterprise, application, and systems views — only the resolution changes. Diagrams below are rendered in CSS so they stay the source of truth alongside the code.</p>
+      <div class="mt-8 flex flex-wrap gap-2 text-xs">
+        <a href="#enterprise" class="px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 hover:ring-brand-500 text-chalk-200">① Enterprise</a>
+        <a href="#application" class="px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 hover:ring-brand-500 text-chalk-200">② Application</a>
+        <a href="#systems" class="px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 hover:ring-brand-500 text-chalk-200">③ Systems</a>
+        <a href="#flow" class="px-3 py-1.5 rounded-full bg-ink-800/80 ring-1 ring-ink-600 hover:ring-brand-500 text-chalk-200">A request, end to end</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Enterprise view -->
+  <section id="enterprise" class="border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 py-20">
+      <div class="flex items-baseline justify-between gap-6 mb-10 flex-wrap">
+        <div>
+          <p class="text-xs uppercase tracking-[0.18em] text-accent-400 font-semibold">View ①</p>
+          <h2 class="mt-2 text-3xl md:text-4xl font-bold tracking-tight">Enterprise view</h2>
+          <p class="mt-3 max-w-2xl text-chalk-400">The operator gives CAIA work. CAIA produces merged code, evolving memory, and ops signals — all from a single subscription, with zero API keys.</p>
+        </div>
+        <p class="text-xs font-mono text-chalk-500">scale: organisation</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <!-- Operator -->
+        <div class="lg:col-span-3 box p-5 flex flex-col items-center text-center justify-center">
+          <div class="h-12 w-12 grid place-items-center rounded-full bg-brand-500/15 ring-1 ring-brand-500/40 text-brand-400 mb-3">
+            <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          </div>
+          <p class="font-semibold">Operator</p>
+          <p class="text-xs text-chalk-400 mt-1">Intent, judgement, preferences</p>
+        </div>
+
+        <!-- Arrow -->
+        <div class="hidden lg:flex lg:col-span-1 items-center justify-center text-chalk-500">→</div>
+
+        <!-- CAIA core -->
+        <div class="lg:col-span-5 box p-6 bg-gradient-to-b from-brand-500/5 to-accent-500/5 ring-1 ring-brand-500/30">
+          <div class="flex items-center justify-between mb-4">
+            <p class="font-semibold text-chalk-50">CAIA Platform</p>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-mint-500/15 text-mint-400 ring-1 ring-mint-500/30 font-mono">subscription-only</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="rounded-lg bg-ink-900/80 ring-1 ring-ink-600 p-3">
+              <p class="text-chalk-200 font-medium">Operator dashboard</p>
+              <p class="text-xs text-chalk-500 mt-0.5">Next.js · localhost:7777</p>
+            </div>
+            <div class="rounded-lg bg-ink-900/80 ring-1 ring-ink-600 p-3">
+              <p class="text-chalk-200 font-medium">Chain runner</p>
+              <p class="text-xs text-chalk-500 mt-0.5">12-phase state machines</p>
+            </div>
+            <div class="rounded-lg bg-ink-900/80 ring-1 ring-ink-600 p-3">
+              <p class="text-chalk-200 font-medium">Agent ecosystem</p>
+              <p class="text-xs text-chalk-500 mt-0.5">PO · BA · EA · Coding · Critic · …</p>
+            </div>
+            <div class="rounded-lg bg-ink-900/80 ring-1 ring-ink-600 p-3">
+              <p class="text-chalk-200 font-medium">Local-LLM substrate</p>
+              <p class="text-xs text-chalk-500 mt-0.5">Ollama · MLX · cache · router</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hidden lg:flex lg:col-span-1 items-center justify-center text-chalk-500">→</div>
+
+        <!-- Outputs -->
+        <div class="lg:col-span-2 grid grid-rows-3 gap-3">
+          <div class="box p-3 text-center">
+            <p class="text-xs uppercase tracking-wider text-mint-400 font-semibold">Merged PRs</p>
+            <p class="text-xs text-chalk-400 mt-1">Code → develop → main</p>
+          </div>
+          <div class="box p-3 text-center">
+            <p class="text-xs uppercase tracking-wider text-accent-400 font-semibold">Memory</p>
+            <p class="text-xs text-chalk-400 mt-1">Mentor events, precedent</p>
+          </div>
+          <div class="box p-3 text-center">
+            <p class="text-xs uppercase tracking-wider text-sky-400 font-semibold">Ops signals</p>
+            <p class="text-xs text-chalk-400 mt-1">Metrics · traces · alerts</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Constraints rail -->
+      <div class="mt-10 box p-6">
+        <p class="text-xs uppercase tracking-[0.18em] text-chalk-500 font-semibold">Non-negotiable constraints</p>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+          <div class="flex items-start gap-3">
+            <span class="h-2 w-2 rounded-full bg-mint-500 mt-2"></span>
+            <div>
+              <p class="text-chalk-200 font-medium">No API-key billing</p>
+              <p class="text-xs text-chalk-500 mt-0.5">claude-spawner never sets ANTHROPIC_API_KEY</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="h-2 w-2 rounded-full bg-brand-400 mt-2"></span>
+            <div>
+              <p class="text-chalk-200 font-medium">Local-first</p>
+              <p class="text-xs text-chalk-500 mt-0.5">Ollama for embeddings, classification, drafts</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="h-2 w-2 rounded-full bg-accent-400 mt-2"></span>
+            <div>
+              <p class="text-chalk-200 font-medium">Audit by default</p>
+              <p class="text-xs text-chalk-500 mt-0.5">Every spawn, gate, and merge in append-only logs</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="h-2 w-2 rounded-full bg-amber-400 mt-2"></span>
+            <div>
+              <p class="text-chalk-200 font-medium">Private workspace</p>
+              <p class="text-xs text-chalk-500 mt-0.5">@chiefaia/* packages never published to public npm</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Application view -->
+  <section id="application" class="border-b border-ink-600/60 bg-ink-900/40">
+    <div class="max-w-7xl mx-auto px-6 py-20">
+      <div class="flex items-baseline justify-between gap-6 mb-10 flex-wrap">
+        <div>
+          <p class="text-xs uppercase tracking-[0.18em] text-accent-400 font-semibold">View ②</p>
+          <h2 class="mt-2 text-3xl md:text-4xl font-bold tracking-tight">Application view</h2>
+          <p class="mt-3 max-w-2xl text-chalk-400">Five vertical bands. Each band owns a concern; cross-band wiring is explicit. Read it top-down: every operator request descends, every signal climbs back.</p>
+        </div>
+        <p class="text-xs font-mono text-chalk-500">scale: subsystem</p>
+      </div>
+
+      <!-- Layer stack -->
+      <div class="space-y-4">
+        <!-- L1 Surface -->
+        <div class="box p-5">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs uppercase tracking-wider text-chalk-500 font-mono">L1 · Surface</p>
+            <p class="text-xs text-chalk-500">operator-facing</p>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-3"><p class="text-chalk-100">Dashboard (Next.js)</p><p class="text-xs text-chalk-500">apps/dashboard · :7777</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-3"><p class="text-chalk-100">Chat / Submit</p><p class="text-xs text-chalk-500">intent capture</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-3"><p class="text-chalk-100">CLI</p><p class="text-xs text-chalk-500">caia-chain · caia-* binaries</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-3"><p class="text-chalk-100">Marketing site</p><p class="text-xs text-chalk-500">this site, login → :7777</p></div>
+          </div>
+        </div>
+        <div class="text-center text-chalk-500 text-xl">↓</div>
+
+        <!-- L2 Orchestration -->
+        <div class="box p-5">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs uppercase tracking-wider text-chalk-500 font-mono">L2 · Orchestration</p>
+            <p class="text-xs text-chalk-500">chains + decomposition</p>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div class="rounded-md bg-brand-500/10 ring-1 ring-brand-500/30 p-3"><p class="text-chalk-100">chain-runner</p><p class="text-xs text-chalk-500">state machine + lock + heartbeat</p></div>
+            <div class="rounded-md bg-brand-500/10 ring-1 ring-brand-500/30 p-3"><p class="text-chalk-100">chain-scaffolder</p><p class="text-xs text-chalk-500">backlog → phases.yaml</p></div>
+            <div class="rounded-md bg-brand-500/10 ring-1 ring-brand-500/30 p-3"><p class="text-chalk-100">decomposer-recursive</p><p class="text-xs text-chalk-500">scope detect + atomicity</p></div>
+            <div class="rounded-md bg-brand-500/10 ring-1 ring-brand-500/30 p-3"><p class="text-chalk-100">ticket-template</p><p class="text-xs text-chalk-500">Zod contract for Phase-1 agents</p></div>
+          </div>
+        </div>
+        <div class="text-center text-chalk-500 text-xl">↓</div>
+
+        <!-- L3 Agents -->
+        <div class="box p-5">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs uppercase tracking-wider text-chalk-500 font-mono">L3 · Agents</p>
+            <p class="text-xs text-chalk-500">specialists with typed contracts</p>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+            <div class="rounded-md bg-accent-500/10 ring-1 ring-accent-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">PO</p><p class="text-chalk-500">product</p></div>
+            <div class="rounded-md bg-accent-500/10 ring-1 ring-accent-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">BA</p><p class="text-chalk-500">analysis</p></div>
+            <div class="rounded-md bg-accent-500/10 ring-1 ring-accent-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">EA</p><p class="text-chalk-500">enterprise arch</p></div>
+            <div class="rounded-md bg-accent-500/10 ring-1 ring-accent-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">aiml-architect</p><p class="text-chalk-500">model + eval</p></div>
+            <div class="rounded-md bg-accent-500/10 ring-1 ring-accent-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Coding</p><p class="text-chalk-500">implementation</p></div>
+            <div class="rounded-md bg-accent-500/10 ring-1 ring-accent-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Fix-It</p><p class="text-chalk-500">repair loops</p></div>
+            <div class="rounded-md bg-rose-500/10 ring-1 ring-rose-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Critic</p><p class="text-chalk-500">adversarial · blocking</p></div>
+            <div class="rounded-md bg-rose-500/10 ring-1 ring-rose-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Code-Reviewer</p><p class="text-chalk-500">correctness · blocking</p></div>
+            <div class="rounded-md bg-amber-500/10 ring-1 ring-amber-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Reviewer</p><p class="text-chalk-500">craft · advisory</p></div>
+            <div class="rounded-md bg-rose-500/10 ring-1 ring-rose-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Verifier</p><p class="text-chalk-500">fresh re-derivation</p></div>
+            <div class="rounded-md bg-amber-500/10 ring-1 ring-amber-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Steward</p><p class="text-chalk-500">merge gates</p></div>
+            <div class="rounded-md bg-sky-400/10 ring-1 ring-sky-400/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Mentor</p><p class="text-chalk-500">corrections → memory</p></div>
+            <div class="rounded-md bg-sky-400/10 ring-1 ring-sky-400/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Curator</p><p class="text-chalk-500">daily digest + actions</p></div>
+            <div class="rounded-md bg-sky-400/10 ring-1 ring-sky-400/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Surface</p><p class="text-chalk-500">operator lens</p></div>
+            <div class="rounded-md bg-sky-400/10 ring-1 ring-sky-400/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Librarian</p><p class="text-chalk-500">precedent retrieval</p></div>
+            <div class="rounded-md bg-sky-400/10 ring-1 ring-sky-400/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Researcher</p><p class="text-chalk-500">deep-dive synthesis</p></div>
+            <div class="rounded-md bg-mint-500/10 ring-1 ring-mint-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Test-Design</p><p class="text-chalk-500">spec → cases</p></div>
+            <div class="rounded-md bg-mint-500/10 ring-1 ring-mint-500/30 p-2.5 text-center"><p class="text-chalk-100 font-medium">Validator</p><p class="text-chalk-500">contract enforcement</p></div>
+          </div>
+          <p class="mt-3 text-xs text-chalk-500"><span class="inline-block h-2 w-2 rounded-sm bg-rose-500/60 align-middle mr-1"></span>blocking · <span class="inline-block h-2 w-2 rounded-sm bg-amber-500/60 align-middle mx-1"></span>gating · <span class="inline-block h-2 w-2 rounded-sm bg-accent-500/60 align-middle mx-1"></span>build · <span class="inline-block h-2 w-2 rounded-sm bg-mint-500/60 align-middle mx-1"></span>test · <span class="inline-block h-2 w-2 rounded-sm bg-sky-400/60 align-middle mx-1"></span>memory</p>
+        </div>
+        <div class="text-center text-chalk-500 text-xl">↓</div>
+
+        <!-- L4 Substrate -->
+        <div class="box p-5">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs uppercase tracking-wider text-chalk-500 font-mono">L4 · AI Substrate</p>
+            <p class="text-xs text-chalk-500">routing · models · adapters · cache</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-3"><p class="text-chalk-100">local-llm-router</p><p class="text-xs text-chalk-500">complexity-aware dispatch</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-3"><p class="text-chalk-100">llm-cache · prompt-optimizer</p><p class="text-xs text-chalk-500">exact + semantic, prune + summarize</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-3"><p class="text-chalk-100">Apprentice (4 phases)</p><p class="text-xs text-chalk-500">corpus → eval → train → serve</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-3"><p class="text-chalk-100">local-rag · dspy-bridge</p><p class="text-xs text-chalk-500">monorepo retrieval, DSPy programs</p></div>
+          </div>
+        </div>
+        <div class="text-center text-chalk-500 text-xl">↓</div>
+
+        <!-- L5 Foundation -->
+        <div class="box p-5">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs uppercase tracking-wider text-chalk-500 font-mono">L5 · Foundation</p>
+            <p class="text-xs text-chalk-500">data, registries, observability, safety</p>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-2.5"><p class="text-chalk-100">mentor-event-bus</p><p class="text-chalk-500">append-only events</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-2.5"><p class="text-chalk-100">feature-registry</p><p class="text-chalk-500">sqlite-vec + FTS5</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-2.5"><p class="text-chalk-100">architecture-registry</p><p class="text-chalk-500">AKG</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-2.5"><p class="text-chalk-100">skills-registry</p><p class="text-chalk-500">capability manifests</p></div>
+            <div class="rounded-md bg-rose-500/5 ring-1 ring-rose-500/30 p-2.5"><p class="text-chalk-100">capability-broker</p><p class="text-chalk-500">irreversible action tokens</p></div>
+            <div class="rounded-md bg-rose-500/5 ring-1 ring-rose-500/30 p-2.5"><p class="text-chalk-100">guardrails-validator</p><p class="text-chalk-500">layer-2 IO checks</p></div>
+            <div class="rounded-md bg-rose-500/5 ring-1 ring-rose-500/30 p-2.5"><p class="text-chalk-100">tool-output-sanitizer</p><p class="text-chalk-500">prompt-injection scrub</p></div>
+            <div class="rounded-md bg-rose-500/5 ring-1 ring-rose-500/30 p-2.5"><p class="text-chalk-100">spend-guard</p><p class="text-chalk-500">budget caps + auto-pause</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-2.5"><p class="text-chalk-100">logger · metrics · tracing</p><p class="text-chalk-500">Pino · Prometheus · OTel</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-2.5"><p class="text-chalk-100">errors · config · events</p><p class="text-chalk-500">shared primitives</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-2.5"><p class="text-chalk-100">test-kit · test-isolation</p><p class="text-chalk-500">ephemeral sqlite + ports</p></div>
+            <div class="rounded-md bg-ink-900/80 ring-1 ring-ink-600 p-2.5"><p class="text-chalk-100">hmac-auth · secrets</p><p class="text-chalk-500">signed requests, vault</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Systems view: packages grouped by concern -->
+  <section id="systems" class="border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 py-20">
+      <div class="flex items-baseline justify-between gap-6 mb-10 flex-wrap">
+        <div>
+          <p class="text-xs uppercase tracking-[0.18em] text-accent-400 font-semibold">View ③</p>
+          <h2 class="mt-2 text-3xl md:text-4xl font-bold tracking-tight">Systems view — packages by concern</h2>
+          <p class="mt-3 max-w-2xl text-chalk-400">All 75 packages, grouped by the concern they own. Each group is a stable contract surface; the packages inside it are swappable implementations.</p>
+        </div>
+        <a href="packages.html" class="text-sm text-brand-400 hover:text-brand-500 font-medium">Browse full catalog →</a>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Orchestration -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Orchestration</h3>
+            <span class="text-xs text-chalk-500 font-mono">8 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">State machines, dispatch, intent decomposition.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>chain-runner</li><li>chain-scaffolder</li><li>claude-spawner</li><li>claude-subagents</li>
+            <li>decomposer</li><li>decomposer-recursive</li><li>story-decomposer</li><li>ticket-template</li>
+          </ul>
+        </article>
+        <!-- Agents -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Agents</h3>
+            <span class="text-xs text-chalk-500 font-mono">13 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Typed specialists. Review, build, remember, curate.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>aiml-architect</li><li>code-reviewer</li><li>critic</li><li>curator</li><li>librarian</li>
+            <li>mentor-fastpath</li><li>mentor-retrieval</li><li>researcher</li><li>reviewer</li>
+            <li>steward-core</li><li>steward-analyzers</li><li>surface</li><li>verifier</li>
+          </ul>
+        </article>
+        <!-- Local-first AI -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Local-first AI</h3>
+            <span class="text-xs text-chalk-500 font-mono">8 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Routing, caching, embeddings, Python ↔ Node bridge.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>local-llm-router</li><li>local-llm-router-mcp</li><li>local-llm-router-py-client</li>
+            <li>local-rag</li><li>llm-cache</li><li>prompt-optimizer</li><li>prompt-evals</li><li>dspy-bridge</li>
+          </ul>
+        </article>
+        <!-- Apprentice -->
+        <article class="box p-5 ring-1 ring-mint-500/30">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Apprentice loop</h3>
+            <span class="text-xs text-mint-400 font-mono">5 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Train a CAIA-flavoured 7B on Mac MLX from your own corpus.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>apprentice-corpus <span class="text-chalk-500 text-xs">— phase 0</span></li>
+            <li>apprentice-eval <span class="text-chalk-500 text-xs">— phase 1</span></li>
+            <li>apprentice-training <span class="text-chalk-500 text-xs">— phase 2</span></li>
+            <li>apprentice-serving <span class="text-chalk-500 text-xs">— phase 3</span></li>
+            <li>apprentice-retrainer <span class="text-chalk-500 text-xs">— phase 4</span></li>
+          </ul>
+        </article>
+        <!-- Event substrate -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Event substrate</h3>
+            <span class="text-xs text-chalk-500 font-mono">4 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Append-only buses, typed taxonomies, correlation IDs.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>mentor-event-bus</li><li>event-bus-internal</li><li>events</li><li>events-taxonomy-internal</li>
+          </ul>
+        </article>
+        <!-- Safety -->
+        <article class="box p-5 ring-1 ring-rose-500/30">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Safety &amp; policy</h3>
+            <span class="text-xs text-rose-400 font-mono">9 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Four-layer defense: tokens → guardrails → sanitizer → auth.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>capability-broker</li><li>guardrails-validator</li><li>tool-output-sanitizer</li>
+            <li>hmac-auth</li><li>mcp-allowlist-proxy</li><li>spend-guard</li>
+            <li>secrets</li><li>secrets-broker</li><li>orchestrator-elevate</li>
+          </ul>
+        </article>
+        <!-- Registries -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Registries</h3>
+            <span class="text-xs text-chalk-500 font-mono">4 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">The platform's structured memory of itself.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>agent-contract-registry</li><li>architecture-registry</li>
+            <li>feature-registry</li><li>skills-registry</li>
+          </ul>
+        </article>
+        <!-- Foundation -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Foundation</h3>
+            <span class="text-xs text-chalk-500 font-mono">10 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Logger, metrics, tracing, errors — shared by everything.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>config</li><li>errors</li><li>logger</li><li>metrics</li>
+            <li>tracing</li><li>test-kit</li><li>test-isolation</li>
+            <li>playwright-config</li><li>cli</li><li>system-prompt-block</li>
+          </ul>
+        </article>
+        <!-- Quality + classifier -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Quality &amp; classifiers</h3>
+            <span class="text-xs text-chalk-500 font-mono">6 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Static analyzers, link checkers, dedup, taxonomy.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>behavior-suite</li><li>integrity-check</li><li>dead-shell-detector</li>
+            <li>dev-inspector</li><li>classifier</li><li>dedup-engine</li>
+          </ul>
+        </article>
+        <!-- Web factory -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Web factory</h3>
+            <span class="text-xs text-chalk-500 font-mono">2 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Prose → page brief → Figma spec → Next.js scaffold.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>vastu</li><li>system-prompt-block</li>
+          </ul>
+        </article>
+        <!-- Sites -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Site-specific</h3>
+            <span class="text-xs text-chalk-500 font-mono">6 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Powers Pokerzeno + Roulette Community.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>analytics</li><li>backend-core</li><li>cast-bridge</li>
+            <li>content-engine</li><li>image-provider</li><li>seo-program</li>
+          </ul>
+        </article>
+        <!-- MCP / dispatch -->
+        <article class="box p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">MCP &amp; remote dispatch</h3>
+            <span class="text-xs text-chalk-500 font-mono">2 pkgs</span>
+          </div>
+          <p class="mt-1 text-xs text-chalk-400">Bridge protocols + remote workers.</p>
+          <ul class="mt-3 space-y-1 text-sm text-chalk-300 font-mono">
+            <li>local-llm-router-mcp</li><li>stolution-dispatch</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- End-to-end request flow -->
+  <section id="flow" class="border-b border-ink-600/60 bg-ink-900/40">
+    <div class="max-w-7xl mx-auto px-6 py-20">
+      <p class="text-xs uppercase tracking-[0.18em] text-accent-400 font-semibold">Walkthrough</p>
+      <h2 class="mt-2 text-3xl md:text-4xl font-bold tracking-tight">A single request, end to end.</h2>
+      <p class="mt-3 max-w-2xl text-chalk-400">"Add OAuth login with Apple + Google" — what actually happens between the operator pressing Submit and the green checkmark in CI.</p>
+
+      <ol class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- step 1 -->
+        <li class="box p-5 flex gap-4">
+          <span class="h-9 w-9 grid place-items-center rounded-md bg-brand-500/15 text-brand-400 font-mono">01</span>
+          <div>
+            <p class="font-semibold">Operator submits intent</p>
+            <p class="text-sm text-chalk-400 mt-1">Dashboard /submit posts free-form prose to the events bus, with project + domain context. Mentor's pre-spawn hook prepends precedent.</p>
+            <p class="mt-2 text-xs font-mono text-chalk-500">→ dashboard · mentor-retrieval · librarian</p>
+          </div>
+        </li>
+        <!-- 2 -->
+        <li class="box p-5 flex gap-4">
+          <span class="h-9 w-9 grid place-items-center rounded-md bg-brand-500/15 text-brand-400 font-mono">02</span>
+          <div>
+            <p class="font-semibold">PO decomposes</p>
+            <p class="text-sm text-chalk-400 mt-1">decomposer-recursive splits into Initiative/Epic/Module/Story/Task. feature-registry classifies new-vs-enhance (sqlite-vec, zero Claude tokens).</p>
+            <p class="mt-2 text-xs font-mono text-chalk-500">→ decomposer-recursive · feature-registry · classifier</p>
+          </div>
+        </li>
+        <!-- 3 -->
+        <li class="box p-5 flex gap-4">
+          <span class="h-9 w-9 grid place-items-center rounded-md bg-accent-500/15 text-accent-400 font-mono">03</span>
+          <div>
+            <p class="font-semibold">Phase-1 agents fill the ticket</p>
+            <p class="text-sm text-chalk-400 mt-1">BA, EA, DBA, BFF, UI, Security, Testing, Release each populate a Zod section of ticket-template. Validator rejects any malformed handoff.</p>
+            <p class="mt-2 text-xs font-mono text-chalk-500">→ ticket-template · agent-contract-registry · validator</p>
+          </div>
+        </li>
+        <!-- 4 -->
+        <li class="box p-5 flex gap-4">
+          <span class="h-9 w-9 grid place-items-center rounded-md bg-accent-500/15 text-accent-400 font-mono">04</span>
+          <div>
+            <p class="font-semibold">Chain runner dispatches</p>
+            <p class="text-sm text-chalk-400 mt-1">phases.yaml is realised as a state machine. A LaunchAgent wakes the runner; it acquires a lock, emits a heartbeat, and spawns the coding worker.</p>
+            <p class="mt-2 text-xs font-mono text-chalk-500">→ chain-runner · chain-scaffolder</p>
+          </div>
+        </li>
+        <!-- 5 -->
+        <li class="box p-5 flex gap-4">
+          <span class="h-9 w-9 grid place-items-center rounded-md bg-mint-500/15 text-mint-400 font-mono">05</span>
+          <div>
+            <p class="font-semibold">Coding agent writes the diff</p>
+            <p class="text-sm text-chalk-400 mt-1">Runs in an isolated worktree. local-llm-router picks the cheapest model that can satisfy the task (often a local 7B); escalates to Claude when complexity demands.</p>
+            <p class="mt-2 text-xs font-mono text-chalk-500">→ claude-spawner · local-llm-router · llm-cache · prompt-optimizer</p>
+          </div>
+        </li>
+        <!-- 6 -->
+        <li class="box p-5 flex gap-4">
+          <span class="h-9 w-9 grid place-items-center rounded-md bg-rose-500/15 text-rose-400 font-mono">06</span>
+          <div>
+            <p class="font-semibold">Four-layer safety stack</p>
+            <p class="text-sm text-chalk-400 mt-1">Every tool output passes through tool-output-sanitizer; every irreversible action requires a capability-broker token; spend-guard pauses if budget breached.</p>
+            <p class="mt-2 text-xs font-mono text-chalk-500">→ tool-output-sanitizer · capability-broker · guardrails-validator · spend-guard</p>
+          </div>
+        </li>
+        <!-- 7 -->
+        <li class="box p-5 flex gap-4">
+          <span class="h-9 w-9 grid place-items-center rounded-md bg-rose-500/15 text-rose-400 font-mono">07</span>
+          <div>
+            <p class="font-semibold">Reviewers file findings</p>
+            <p class="text-sm text-chalk-400 mt-1">Code-Reviewer (correctness) and Critic (adversarial) are blocking. Verifier re-derives acceptance from a fresh worktree. Reviewer (craft) is advisory.</p>
+            <p class="mt-2 text-xs font-mono text-chalk-500">→ code-reviewer · critic · verifier · reviewer</p>
+          </div>
+        </li>
+        <!-- 8 -->
+        <li class="box p-5 flex gap-4">
+          <span class="h-9 w-9 grid place-items-center rounded-md bg-amber-500/15 text-amber-400 font-mono">08</span>
+          <div>
+            <p class="font-semibold">Steward gates the merge</p>
+            <p class="text-sm text-chalk-400 mt-1">Process-graph evaluator confirms back-merge, migration breakpoints, and required contexts. Only then does the chain mark the phase done and merge.</p>
+            <p class="mt-2 text-xs font-mono text-chalk-500">→ steward-core · steward-analyzers</p>
+          </div>
+        </li>
+        <!-- 9 -->
+        <li class="box p-5 flex gap-4 md:col-span-2 ring-1 ring-mint-500/30">
+          <span class="h-9 w-9 grid place-items-center rounded-md bg-mint-500/15 text-mint-400 font-mono">09</span>
+          <div>
+            <p class="font-semibold">Mentor remembers; Curator digests</p>
+            <p class="text-sm text-chalk-400 mt-1">Any operator correction, postmerge regression, or rejected finding becomes a Mentor event. Curator rolls events into a daily digest + alarms + PR proposals + backlog directives. Surface surfaces only what the operator should actually see this week.</p>
+            <p class="mt-2 text-xs font-mono text-chalk-500">→ mentor-event-bus · mentor-fastpath · mentor-retrieval · curator · surface</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-ink-950/80">
+    <div class="max-w-7xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-chalk-400">
+      <p class="text-xs font-mono text-chalk-500">caia · architecture · 2026-05</p>
+      <div class="flex gap-5">
+        <a href="home.html" class="hover:text-chalk-100">Home</a>
+        <a href="packages.html" class="hover:text-chalk-100">Packages</a>
+        <a href="dashboard-preview.html" class="hover:text-chalk-100">Dashboard preview</a>
+        <a href="login.html" class="hover:text-chalk-100">Sign in</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
