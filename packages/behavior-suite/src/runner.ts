@@ -10,6 +10,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 
+import { createLogger } from '@chiefaia/logger';
+
+const logger = createLogger({ name: 'behavior-suite/runner' });
+
 export type RunScope =
   | `site:${string}`
   | `site:${string} feature:${string}`
@@ -147,7 +151,7 @@ export async function runBehaviorSuite(
 
   if (testFiles.length === 0) {
     const endedAt = new Date().toISOString();
-    console.log(`[behavior-suite] No tests matched scope: ${scope}`);
+    logger.info('no tests matched scope', { scope });
     return { scope, startedAt, endedAt, passed: 0, failed: 0, skipped: 0, results: [], exitCode: 0 };
   }
 
@@ -161,7 +165,10 @@ export async function runBehaviorSuite(
     ...(options.ci ? ['--forbid-only'] : []),
   ];
 
-  console.log(`[behavior-suite] Running ${testFiles.length} behavior test file(s) for scope: ${scope}`);
+  logger.info('running behavior test files', {
+    scope,
+    file_count: testFiles.length,
+  });
   const result = spawnSync('npx', playwrightArgs, {
     cwd,
     stdio: 'inherit',
@@ -199,7 +206,10 @@ export async function runBehaviorSuite(
     try {
       await postResultsToConductor(options.conductorUrl, suiteResult);
     } catch (err) {
-      console.warn('[behavior-suite] Could not post results to Conductor:', err);
+      logger.warn('could not post results to Conductor', {
+        error: err instanceof Error ? err.message : String(err),
+        conductor_url: options.conductorUrl,
+      });
     }
   }
 
