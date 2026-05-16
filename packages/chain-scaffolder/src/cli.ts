@@ -1,11 +1,18 @@
 import { Command } from 'commander';
-import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
+import yaml from 'js-yaml';
 import { scaffoldFromLlm } from './llm.js';
 import { specToYaml } from './schema.js';
 import { parseBacklogLine } from './parse-backlog-line.js';
 import type { Machine } from './types.js';
+import {
+  scaffoldFromBacklogItem,
+  validateBacklogItem,
+  type BacklogItem,
+} from './templated.js';
+import { listPending, nextAvailable } from './backlog.js';
 
 const DEFAULT_AGENT_MEMORY_DIR = resolve(homedir(), 'Documents/projects/agent-memory');
 const DEFAULT_CHAIN_BASE_DIR = resolve(homedir(), '.caia/chain');
@@ -72,14 +79,14 @@ export function buildCli(): Command {
       if (opts.fewShotExample !== undefined) scaffoldOpts.fewShotExamplePath = opts.fewShotExample;
       const result = await scaffoldFromLlm(item, scaffoldOpts);
 
-      const yaml = specToYaml(result.spec);
+      const yamlOut = specToYaml(result.spec);
       const outDir = opts.outDir ?? DEFAULT_AGENT_MEMORY_DIR;
       const outFile = resolve(outDir, `${item.id.replace(/-/g, '_')}_phases.yaml`);
 
       const shouldWrite = opts.write !== false;
       if (shouldWrite) {
         if (!existsSync(dirname(outFile))) mkdirSync(dirname(outFile), { recursive: true });
-        writeFileSync(outFile, yaml, 'utf8');
+        writeFileSync(outFile, yamlOut, 'utf8');
       }
 
       if (opts.json) {
@@ -98,7 +105,7 @@ export function buildCli(): Command {
           ) + '\n',
         );
       } else if (!shouldWrite) {
-        process.stdout.write(yaml);
+        process.stdout.write(yamlOut);
       } else {
         process.stdout.write(`✔ scaffolded ${result.chain_id} → ${outFile}\n`);
         process.stdout.write(`  phases: ${result.spec.phases.length}  provider: ${result.raw.provider}  attempts: ${result.attempts.length}\n`);
@@ -120,6 +127,109 @@ export function buildCli(): Command {
         process.stderr.write(`✘ ${path} is invalid:\n${(e as Error).message}\n`);
         process.exit(1);
       }
+    });
+
+  // Templated path (deterministic, zero-LLM). Takes a fully-structured
+  // backlog-item yaml and produces state.json + phases.yaml + runner.sh.
+  program
+    .command('from-template')
+    .description('Scaffold a chain from a fully-structured backlog-item yaml (no LLM)')
+    .argument('<yaml-file>', 'path to a backlog-item yaml file')
+    .option('--force', 'overwrite existing chain artifacts', false)
+    .option('--json', 'emit machine-readable output', false)
+    .action((yamlFile: string, opts: { force?: boolean; json?: boolean }) => {
+      let item: unknown;
+      try {
+        item = yaml.load(readFileSync(yamlFile, 'utf8'));
+      } catch (e) {
+        process.stderr.write(`error: cannot read ${yamlFile}: ${(e as Error).message}\n`);
+        process.exit(2);
+      }
+      try {
+        validateBacklogItem(item);
+      } catch (e) {
+        process.stderr.write(`error: ${(e as Error).message}\n`);
+        process.exit(4);
+      }
+      let result;
+      try {
+        const scaffoldOpts: { force?: boolean } = {};
+        if (opts.force) scaffoldOpts.force = true;
+        result = scaffoldFromBacklogItem(item as BacklogItem, scaffoldOpts);
+      } catch (e) {
+        const msg = (e as Error).message;
+        process.stderr.write(`error: ${msg}\n`);
+        process.exit(msg.includes('already exists') ? 3 : 1);
+      }
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(result)}\n`);
+      } else {
+        process.stdout.write(
+          `scaffolded chain=${result.chainId}\n` +
+            `  state:  ${result.stateFile}\n` +
+            `  phases: ${result.phasesYaml}\n` +
+            `  runner: ${result.runnerScript}\n` +
+            `chain is paused — \`caia-chain resume --chain-id ${result.chainId} --phases ${result.phasesYaml}\` to dispatch.\n`,
+        );
+      }
+    });
+
+  program
+    .command('next-available')
+    .description('Print the next dispatchable structured item (templated path); exit 1 if none')
+    .requiredOption('--backlog <path>', 'directory or file containing structured backlog items')
+    .option('--json', 'emit machine-readable output', false)
+    .action((opts: { backlog: string; json?: boolean }) => {
+      const next = nextAvailable(opts.backlog);
+      if (!next) {
+        if (opts.json) process.stdout.write(`null\n`);
+        else process.stderr.write('no dispatchable item available\n');
+        process.exit(1);
+      }
+      const out = {
+        id: next.item.id,
+        title: next.item.title,
+        machine: next.item.machine,
+        source: next.source,
+        phase_count: next.item.phase_count,
+      };
+      if (opts.json) process.stdout.write(`${JSON.stringify(out)}\n`);
+      else
+        process.stdout.write(
+          `${out.id}\t${out.machine}\tphases=${out.phase_count}\t${out.source}\n  ${out.title}\n`,
+        );
+    });
+
+  program
+    .command('list-pending')
+    .description('List structured backlog items that have not been scaffolded yet')
+    .requiredOption('--backlog <path>', 'directory or file containing structured backlog items')
+    .option('--json', 'emit machine-readable output', false)
+    .option('--strict', 'exit non-zero when there are zero pending items', false)
+    .action((opts: { backlog: string; json?: boolean; strict?: boolean }) => {
+      const pending = listPending(opts.backlog);
+      if (opts.json) {
+        process.stdout.write(
+          `${JSON.stringify(
+            pending.map((p) => ({
+              id: p.item.id,
+              title: p.item.title,
+              machine: p.item.machine,
+              depsResolved: p.depsResolved,
+              blockedReason: p.blockedReason ?? null,
+              source: p.source,
+            })),
+          )}\n`,
+        );
+      } else if (pending.length === 0) {
+        process.stdout.write('(no pending items)\n');
+      } else {
+        for (const p of pending) {
+          const status = p.depsResolved ? 'READY' : `BLOCKED (${p.blockedReason})`;
+          process.stdout.write(`${p.item.id}\t${p.item.machine}\t${status}\n  ${p.item.title}\n`);
+        }
+      }
+      if (opts.strict && pending.length === 0) process.exit(1);
     });
 
   return program;
