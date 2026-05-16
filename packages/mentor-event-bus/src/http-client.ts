@@ -16,6 +16,8 @@ import { request as httpRequest, type RequestOptions } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { hostname as osHostname } from 'node:os';
 
+import { createLogger } from '@chiefaia/logger';
+
 import { signRequest } from './auth.js';
 import { describeSchema, EVENT_SCHEMAS, validatePayload } from './schemas.js';
 import { EVENT_TYPES, type EventType, type PayloadOf } from './types.js';
@@ -49,10 +51,11 @@ export type HttpEmitResult =
   | { ok: true; status: number; ingestOffsets: number[] }
   | { ok: false; status?: number; error: string };
 
+const _defaultPinoLogger = createLogger({ name: 'mentor-event-bus/http-client' });
 const consoleLogger = {
   warn: (m: string, ctx?: unknown): void => {
-    if (ctx !== undefined) console.warn(m, ctx);
-    else console.warn(m);
+    if (ctx !== undefined) _defaultPinoLogger.warn(m, ctx as Record<string, unknown>);
+    else _defaultPinoLogger.warn(m);
   }
 };
 

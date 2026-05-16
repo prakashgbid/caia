@@ -21,6 +21,8 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
+import { createLogger } from '@chiefaia/logger';
+
 import {
   DEFAULT_REPLAY_WINDOW_MS,
   loadSecret,
@@ -48,7 +50,7 @@ export interface ServerOptions {
   secret?: string;
   /** Replay window in ms (default 5min). */
   replayWindowMs?: number;
-  /** Logger. Default: console. */
+  /** Logger. Default: `@chiefaia/logger` (pino-backed structured logs). */
   logger?: { info: (m: string) => void; warn: (m: string, ctx?: unknown) => void };
   /** Override the `now()` clock (for tests). */
   now?: () => number;
@@ -64,11 +66,12 @@ export interface RunningServer {
 const DEFAULT_PORT = 5180;
 const DEFAULT_HOST = '127.0.0.1';
 
+const _defaultPinoLogger = createLogger({ name: 'mentor-event-bus/server' });
 const consoleLogger = {
-  info: (m: string): void => console.log(m),
+  info: (m: string): void => _defaultPinoLogger.info(m),
   warn: (m: string, ctx?: unknown): void => {
-    if (ctx !== undefined) console.warn(m, ctx);
-    else console.warn(m);
+    if (ctx !== undefined) _defaultPinoLogger.warn(m, ctx as Record<string, unknown>);
+    else _defaultPinoLogger.warn(m);
   }
 };
 

@@ -19,6 +19,8 @@ import { hostname as osHostname } from 'node:os';
 import { customAlphabet } from 'nanoid';
 import type { Database as DatabaseInstance } from 'better-sqlite3';
 
+import { createLogger } from '@chiefaia/logger';
+
 import {
   countEvents,
   insertEvent,
@@ -57,7 +59,7 @@ export interface ClientOptions {
   hostname?: string;
   /** Process name (e.g., 'orchestrator', 'worker-coding'). */
   processName?: string;
-  /** Logger for non-throwing warnings. Default: console. */
+  /** Logger for non-throwing warnings. Default: `@chiefaia/logger` (pino-backed structured logs). */
   logger?: { warn: (m: string, ctx?: unknown) => void };
   /** Disable WAL (use only for tests with `:memory:`). */
   disableWal?: boolean;
@@ -76,10 +78,11 @@ export interface EmitOptions {
   emittedAt?: Date;
 }
 
+const _defaultPinoLogger = createLogger({ name: 'mentor-event-bus/client' });
 const consoleLogger = {
   warn: (m: string, ctx?: unknown): void => {
-    if (ctx !== undefined) console.warn(m, ctx);
-    else console.warn(m);
+    if (ctx !== undefined) _defaultPinoLogger.warn(m, ctx as Record<string, unknown>);
+    else _defaultPinoLogger.warn(m);
   }
 };
 

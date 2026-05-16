@@ -22,6 +22,8 @@ import { watch, statSync, existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 
+import { createLogger } from '@chiefaia/logger';
+
 import type { Client } from './client.js';
 import type { MemoryWrittenPayload } from './types.js';
 
@@ -34,7 +36,7 @@ export interface WatchMemoryOptions {
   debounceMs?: number;
   /** Filter — return false to skip emitting for a path. */
   filter?: (path: string) => boolean;
-  /** Logger. Default: console. */
+  /** Logger. Default: `@chiefaia/logger` (pino-backed structured logs). */
   logger?: { info: (m: string) => void; warn: (m: string, ctx?: unknown) => void };
   /** Test injection — overrides fs.watch. */
   watchFn?: typeof watch;
@@ -46,11 +48,12 @@ export interface MemoryWatcher {
 
 const DEFAULT_DEBOUNCE_MS = 500;
 
+const _defaultPinoLogger = createLogger({ name: 'mentor-event-bus/memory-watcher' });
 const consoleLogger = {
-  info: (m: string): void => console.log(m),
+  info: (m: string): void => _defaultPinoLogger.info(m),
   warn: (m: string, ctx?: unknown): void => {
-    if (ctx !== undefined) console.warn(m, ctx);
-    else console.warn(m);
+    if (ctx !== undefined) _defaultPinoLogger.warn(m, ctx as Record<string, unknown>);
+    else _defaultPinoLogger.warn(m);
   }
 };
 
