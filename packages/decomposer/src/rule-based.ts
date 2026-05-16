@@ -1,5 +1,10 @@
 import { nanoid } from 'nanoid';
+
+import { createLogger } from '@chiefaia/logger';
+
 import type { DecompositionNode, DecompositionResult, DecomposerConfig } from './types';
+
+const logger = createLogger({ name: 'decomposer/rule-based' });
 
 /**
  * Verb-intent classification used by the rule-based decomposer to pick
@@ -69,8 +74,13 @@ function applyMaxSections(sections: string[], cap: number): string[] {
   // Coalesce overflow into the last retained section so no content is lost.
   const head = sections.slice(0, cap - 1);
   const tail = sections.slice(cap - 1).join(' ');
-  console.warn(
-    `[decomposer] prompt produced ${String(sections.length)} sections; capped at ${String(cap)} (overflow merged into final section). Increase via DecomposerConfig.maxSections if intentional.`,
+  logger.warn(
+    'prompt produced more sections than cap; overflow merged into final section',
+    {
+      producedSections: sections.length,
+      cap,
+      hint: 'Increase via DecomposerConfig.maxSections if intentional.',
+    },
   );
   return [...head, tail];
 }

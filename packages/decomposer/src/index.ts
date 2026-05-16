@@ -1,6 +1,10 @@
+import { createLogger } from '@chiefaia/logger';
+
 export { decomposeRuleBased } from './rule-based';
 export { decomposeWithClaude } from './claude-decomposer';
 export type { DecompositionNode, DecompositionResult, DecomposerConfig } from './types';
+
+const logger = createLogger({ name: 'decomposer' });
 
 /**
  * Decompose a natural language prompt into a structured Initiative → Epic → Story → Task hierarchy.
@@ -19,7 +23,9 @@ export async function decompose(
       const { decomposeWithClaude } = await import('./claude-decomposer');
       return await decomposeWithClaude(prompt, config);
     } catch (e) {
-      console.warn('[decomposer] Claude decomposition failed, falling back to rule-based:', e);
+      logger.warn('Claude decomposition failed, falling back to rule-based', {
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 

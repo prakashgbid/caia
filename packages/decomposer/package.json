@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@chiefaia/logger": "workspace:*",
     "nanoid": "^5.0.0"
   },
   "devDependencies": {
