@@ -1,0 +1,39 @@
+{
+  "name": "@chiefaia/sqlite-utils",
+  "version": "0.1.0",
+  "description": "Shared SQLite helpers for CAIA packages — better-sqlite3 wrappers for opening WAL-mode databases, applying idempotent file-based migrations, running scoped transactions, and caching prepared statements. Lifted from @chiefaia/mentor-event-bus + @chiefaia/librarian so the dozen workspace packages that already speak better-sqlite3 stop re-implementing the same five lines of pragma + migration logic.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.6.2"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
