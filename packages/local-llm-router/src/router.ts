@@ -92,6 +92,17 @@ export function __setAdapters(
 }
 
 /**
+ * Install a specific OllamaAdapter as the routing singleton without touching
+ * the Claude slot. Used by server.ts (RR-3) so the /admin/warmup endpoint
+ * and the inference path share the same per-model warm-state set. Passing
+ * `null` resets the slot back to lazy default construction.
+ * @internal
+ */
+export function __setOllamaAdapter(ollama: OllamaAdapter | null): void {
+  _ollama = ollama;
+}
+
+/**
  * Route a prompt to the best available provider and return the response.
  *
  * @param taskType  One of the keys from ROUTING_RULES (e.g. 'domain-classification').
