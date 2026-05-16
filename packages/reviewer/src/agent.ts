@@ -9,6 +9,8 @@
  * its output is purely advisory. See DESIGN.md §1, §11 for the boundary.
  */
 
+import { createLogger } from '@chiefaia/logger';
+
 import type { ResolvedReviewerAgentConfig, ReviewerAgentConfig } from './config.js';
 import { resolveConfig } from './config.js';
 import { defaultFsReader } from './fs-reader.js';
@@ -25,6 +27,8 @@ import type {
   LlmReviewer,
   ScanContext
 } from './types.js';
+
+const logger = createLogger({ name: 'reviewer/agent' });
 
 export interface ReviewPRArgs {
   prNumber: number;
@@ -96,7 +100,11 @@ export class ReviewerAgent {
             detFindings.push(...detector.scan(hunk, ctx));
           } catch (e) {
             // Defensive — detector errors must not crash the agent.
-            console.error('detector %s threw on %s: %s', detector.id, hunk.file, (e as Error).message);
+            logger.error('detector threw during scan', {
+              detector_id: detector.id,
+              file: hunk.file,
+              error: (e as Error).message,
+            });
           }
         }
       }
