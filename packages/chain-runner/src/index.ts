@@ -34,3 +34,15 @@ export type {
 } from './pr-merge/index.js';
 export { createSafe } from './pr-create/index.js';
 export type { CreateSafeOpts, CreateSafeOutcome } from './pr-create/index.js';
+export {
+  checkAdoptionGate,
+  ADOPTION_PASS_STATES,
+  ADOPTION_BLOCK_STATES,
+  DEFAULT_STUCK_OPENED_DAYS,
+} from './gates/adoption-everywhere.js';
+export type {
+  AdoptionGateBlocker,
+  AdoptionGateResult,
+  BlockerReason,
+  CheckAdoptionGateOptions,
+} from './gates/adoption-everywhere.js';
