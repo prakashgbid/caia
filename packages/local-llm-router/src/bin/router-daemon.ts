@@ -15,6 +15,7 @@ import { join } from 'node:path';
 
 import { serve } from '@hono/node-server';
 import { buildApp, DEFAULT_ROUTER_PORT } from '../server.js';
+import { getRouterOllamaAdapter } from '../router.js';
 
 // Phase A2 --health-check shortcut. The post-merge gate (A1) invokes
 // `<bin> --health-check` after `launchctl kickstart` and expects exit 0
@@ -100,6 +101,32 @@ serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, (info) => {
   console.log(`caia-llm-router-daemon listening on http://${info.address}:${info.port}`);
   console.log(`  ollama_url=${args.ollamaUrl ?? process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434'}`);
   console.log(`  classifier_model=${args.classifierModel ?? process.env['ROUTER_CLASSIFIER_MODEL'] ?? 'qwen2.5-coder:7b'}`);
+
+  // RR-3 (2026-05-16): daemon-start async warmup. Comma-separated list of
+  // ollama tags in env ROUTER_WARMUP_MODELS gets fired-and-forgotten as
+  // soon as the listener is up. We do NOT await — the daemon stays
+  // responsive while warmup happens in the background. Per-model failures
+  // are logged but never crash the daemon (a missing weight should be an
+  // operator alert, not a service outage).
+  const warmupRaw = process.env['ROUTER_WARMUP_MODELS'] ?? '';
+  const warmupModels = warmupRaw
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+  if (warmupModels.length > 0) {
+    const adapter = getRouterOllamaAdapter();
+    console.log(`[router] daemon-start warmup queued for: ${warmupModels.join(', ')}`);
+    for (const model of warmupModels) {
+      adapter
+        .warmup(model)
+        .then(({ warmedMs }) => {
+          console.log(`[router] daemon-start warmup ok model=${model} warmed_ms=${warmedMs}`);
+        })
+        .catch((err: Error) => {
+          console.warn(`[router] daemon-start warmup FAILED model=${model} error=${err.message}`);
+        });
+    }
+  }
 });
 
 // Graceful exit handlers

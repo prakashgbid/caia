@@ -20,7 +20,7 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { optimize } from '@chiefaia/prompt-optimizer';
-import { route as routerRoute } from './router.js';
+import { route as routerRoute, getRouterOllamaAdapter } from './router.js';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { classify, type IntentResult as _IntentResultRef } from './classifier.js';
 import { classifyV2, loadRoutingRules } from './classifier-v2.js';
@@ -468,6 +468,70 @@ export function buildApp(opts: ServerOptions = {}): Hono {
     } catch (e) {
       return c.json({ error: 'optimize-failed', message: (e as Error).message }, 500);
     }
+  });
+
+  // ─── /admin/warmup (RR-3 — cold-start mitigation) ────────────────────
+  // POST body: { models: string[] }  → warm each tag, returns per-model status.
+  //            { model: string }     → single-tag convenience form.
+  //            (omitted)              → no-op; returns the currently-warm set.
+  //
+  // The endpoint touches the SAME OllamaAdapter singleton that /v1/chat/completions
+  // uses (via getRouterOllamaAdapter), so subsequent /v1/chat/completions calls to
+  // a freshly-warmed tag get the warm-timeout budget (default 30 s) instead of the
+  // cold one (60 s). On failure a per-model `error` is returned but the request
+  // doesn't 500 — partial warmup is still useful to the caller.
+  app.post('/admin/warmup', async (c: Context) => {
+    let body: { models?: string[]; model?: string } | undefined;
+    try {
+      const raw = await c.req.text();
+      body = raw === '' ? undefined : (JSON.parse(raw) as { models?: string[]; model?: string });
+    } catch {
+      return c.json({ error: 'invalid-json' }, 400);
+    }
+
+    const adapter = getRouterOllamaAdapter();
+
+    const requested: string[] = (() => {
+      if (body === undefined) return [];
+      if (Array.isArray(body.models)) {
+        return body.models.filter(m => typeof m === 'string' && m.length > 0);
+      }
+      if (typeof body.model === 'string' && body.model.length > 0) {
+        return [body.model];
+      }
+      return [];
+    })();
+
+    if (requested.length === 0) {
+      return c.json({
+        warmed: [],
+        already_warm: adapter.getWarmModels(),
+        currently_warm: adapter.getWarmModels(),
+      });
+    }
+
+    const results = await Promise.all(
+      requested.map(async (model) => {
+        if (adapter.isModelWarm(model)) {
+          return { model, status: 'already_warm' as const, warmed_ms: 0 };
+        }
+        try {
+          const { warmedMs } = await adapter.warmup(model);
+          return { model, status: 'warmed' as const, warmed_ms: warmedMs };
+        } catch (e) {
+          return {
+            model,
+            status: 'error' as const,
+            error: (e as Error).message,
+          };
+        }
+      }),
+    );
+
+    return c.json({
+      results,
+      currently_warm: adapter.getWarmModels(),
+    });
   });
 
   // ─── /v1/embeddings (OpenAI-compatible) ──────────────────────────────

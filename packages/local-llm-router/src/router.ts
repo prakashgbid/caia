@@ -74,6 +74,18 @@ function getOllama(): OllamaAdapter {
   return _ollama;
 }
 
+/**
+ * RR-3 (2026-05-16): expose the router's singleton OllamaAdapter so the
+ * HTTP daemon's /admin/warmup endpoint and the daemon-start prewarm hook
+ * touch the same warm-state Map that real /v1/chat/completions dispatch
+ * reads. Returning the singleton (not a fresh instance) is load-bearing:
+ * a separate adapter would have its own warmAt map and the warmup
+ * wouldn't actually affect production timeouts.
+ */
+export function getRouterOllamaAdapter(): OllamaAdapter {
+  return getOllama();
+}
+
 function getClaude(): ClaudeAdapter {
   _claude ??= new ClaudeAdapter();
   return _claude;
