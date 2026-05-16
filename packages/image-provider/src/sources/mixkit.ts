@@ -1,4 +1,8 @@
+import { createLogger } from '@chiefaia/logger';
+
 import type { SourceVideo } from './types.js';
+
+const logger = createLogger({ name: 'image-provider/sources/mixkit' });
 
 // Mixkit rate limit: 1 req / 3s
 let lastRequestTime = 0;
@@ -87,20 +91,28 @@ export async function searchMixkit(query: string): Promise<SourceVideo[]> {
     });
 
     if (!resp.ok) {
-      console.warn(`[mixkit] HTTP ${resp.status} for query "${query}" — returning empty`);
+      logger.warn('HTTP non-OK; returning empty', {
+        status: resp.status,
+        query,
+      });
       return [];
     }
 
     html = await resp.text();
   } catch (err) {
-    console.warn(`[mixkit] Fetch failed for query "${query}": ${err instanceof Error ? err.message : err} — returning empty`);
+    logger.warn('fetch failed; returning empty', {
+      query,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return [];
   }
 
   const jsonLdVideos = extractJsonLdVideos(html);
 
   if (jsonLdVideos.length === 0) {
-    console.warn(`[mixkit] No JSON-LD VideoObject found for query "${query}" — API may be unavailable`);
+    logger.warn('no JSON-LD VideoObject found; API may be unavailable', {
+      query,
+    });
     return [];
   }
 

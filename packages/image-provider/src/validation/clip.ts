@@ -3,6 +3,10 @@
 // On first run the model downloads automatically to ~/.cache/huggingface/hub/.
 // Falls back to a passing score if the model can't load (e.g. offline CI).
 
+import { createLogger } from '@chiefaia/logger';
+
+const logger = createLogger({ name: 'image-provider/validation/clip' });
+
 const MIN_RELEVANCE = 0.27;
 
 export interface ClipResult {
@@ -55,10 +59,9 @@ export async function checkClipRelevance(
     };
   } catch (err) {
     // Gracefully skip CLIP if the model can't load (no internet, CI, etc.)
-    console.warn(
-      '  [clip] Skipping: ',
-      err instanceof Error ? err.message : String(err),
-    );
+    logger.warn('CLIP load failed; skipping relevance check', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return { passed: true, score: 0.5 };
   }
 }
