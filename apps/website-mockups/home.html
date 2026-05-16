@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CAIA — The Chief AI Architect, automated.</title>
+  <meta name="description" content="CAIA is an AI-first development platform — autonomous chains, local-first models, and a multi-agent ecosystem that ships code while you sleep." />
+  <!-- nosemgrep: html.security.audit.missing-integrity.missing-integrity --><!-- Tailwind Play CDN is mutable and has no stable SRI hash; mockup is non-production. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink: { 950: '#0a0c12', 900: '#0f1117', 850: '#141823', 800: '#1a1f2e', 700: '#252a3a', 600: '#2d3748' },
+            chalk: { 50: '#f8fafc', 100: '#f0f4f8', 300: '#cbd5e1', 400: '#a0aec0', 500: '#64748b' },
+            brand: { 50: '#eef2ff', 100: '#e0e7ff', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' },
+            accent: { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed' },
+            mint: { 400: '#34d399', 500: '#10b981' },
+            amber: { 400: '#fbbf24', 500: '#f59e0b' },
+            rose: { 400: '#fb7185', 500: '#ef4444' },
+            sky: { 400: '#63b3ed' },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+          boxShadow: {
+            glow: '0 0 0 1px rgba(99,102,241,0.35), 0 8px 32px -8px rgba(99,102,241,0.45)',
+            card: '0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px -12px rgba(0,0,0,0.6)',
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    html, body { background: #0a0c12; color: #f0f4f8; }
+    .grid-bg {
+      background-image:
+        radial-gradient(ellipse at 50% -10%, rgba(99,102,241,0.18), transparent 55%),
+        radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.12), transparent 50%),
+        linear-gradient(rgba(99,102,241,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.06) 1px, transparent 1px);
+      background-size: auto, auto, 48px 48px, 48px 48px;
+    }
+    .text-gradient {
+      background: linear-gradient(90deg, #a5b4fc 0%, #c4b5fd 60%, #f0abfc 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .ring-soft { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 0 rgba(0,0,0,0.4); }
+    .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #252a3a; border-radius: 4px; }
+    .blinker { animation: blink 1.1s steps(2, start) infinite; }
+    @keyframes blink { to { visibility: hidden; } }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+  <!-- Top nav -->
+  <header class="sticky top-0 z-30 backdrop-blur bg-ink-950/70 border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="home.html" class="flex items-center gap-2 group">
+        <span class="inline-grid place-items-center h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 shadow-glow text-ink-950 font-bold">C</span>
+        <span class="font-semibold tracking-tight">CAIA</span>
+        <span class="text-chalk-500 text-xs hidden md:inline">/ Chief AI Architect</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-chalk-300">
+        <a href="architecture.html" class="hover:text-chalk-100">Architecture</a>
+        <a href="packages.html" class="hover:text-chalk-100">Packages</a>
+        <a href="#concepts" class="hover:text-chalk-100">Concepts</a>
+        <a href="dashboard-preview.html" class="hover:text-chalk-100">Dashboard</a>
+        <a href="#docs" class="hover:text-chalk-100">Docs</a>
+      </nav>
+      <div class="flex items-center gap-2">
+        <a href="https://github.com/prakashgbid/caia" class="hidden sm:inline-flex items-center gap-1.5 text-sm text-chalk-300 hover:text-chalk-100 px-3 py-1.5 rounded-md ring-1 ring-ink-600 hover:ring-ink-700">
+          <svg viewBox="0 0 16 16" class="h-4 w-4" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          GitHub
+        </a>
+        <a href="login.html" class="inline-flex items-center gap-1.5 text-sm font-medium bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white px-3.5 py-1.5 rounded-md shadow-glow">
+          Open dashboard
+          <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.293 3.293a1 1 0 0 1 1.414 0l5 5a1 1 0 0 1 0 1.414l-5 5a1 1 0 1 1-1.414-1.414L13.586 10H4a1 1 0 1 1 0-2h9.586l-3.293-3.293a1 1 0 0 1 0-1.414Z"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="grid-bg border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 pt-24 pb-28 md:pt-32 md:pb-36">
+      <div class="flex justify-center mb-8">
+        <span class="inline-flex items-center gap-2 text-xs font-medium text-chalk-300 bg-ink-800/70 ring-1 ring-ink-600 px-3 py-1.5 rounded-full">
+          <span class="h-1.5 w-1.5 rounded-full bg-mint-500"></span>
+          v2026.05 — autonomous chains in production
+        </span>
+      </div>
+      <h1 class="text-center font-bold tracking-tight text-5xl md:text-7xl leading-[1.05]">
+        Software that <span class="text-gradient">ships itself.</span>
+      </h1>
+      <p class="mx-auto mt-7 max-w-2xl text-center text-lg text-chalk-300 leading-relaxed">
+        CAIA is the Chief AI Architect — a multi-agent platform of <span class="text-chalk-100 font-medium">75+ composable packages</span> that decompose your intent, write the code, review themselves, and merge.
+        Local-first models, subscription-only Claude, zero API keys to leak.
+      </p>
+      <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="login.html" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 font-semibold shadow-glow text-white">
+          Open the operator dashboard
+          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.293 3.293a1 1 0 0 1 1.414 0l5 5a1 1 0 0 1 0 1.414l-5 5a1 1 0 1 1-1.414-1.414L13.586 10H4a1 1 0 1 1 0-2h9.586l-3.293-3.293a1 1 0 0 1 0-1.414Z"/></svg>
+        </a>
+        <a href="architecture.html" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-ink-800/80 ring-1 ring-ink-600 hover:ring-ink-700 text-chalk-100">
+          Read the architecture
+        </a>
+      </div>
+
+      <!-- Terminal preview -->
+      <div class="mx-auto mt-16 max-w-4xl rounded-xl ring-1 ring-ink-600 bg-ink-900/80 shadow-card overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-2.5 border-b border-ink-600 bg-ink-850">
+          <span class="h-2.5 w-2.5 rounded-full bg-rose-500/80"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-amber-500/80"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-mint-500/80"></span>
+          <span class="ml-3 text-xs text-chalk-500 font-mono">~/projects/caia</span>
+        </div>
+        <pre class="px-5 py-4 text-sm font-mono leading-7 text-chalk-300 overflow-x-auto"><span class="text-chalk-500">$</span> <span class="text-mint-400">caia</span> chain start <span class="text-chalk-100">"add OAuth login with Apple + Google"</span>
+<span class="text-chalk-500">›</span> <span class="text-sky-400">decomposer</span>      breaks intent → 1 epic, 3 stories, 11 tasks
+<span class="text-chalk-500">›</span> <span class="text-sky-400">librarian</span>       retrieves 4 precedent decisions
+<span class="text-chalk-500">›</span> <span class="text-sky-400">ea-architect</span>    drafts ticket-template + migration plan
+<span class="text-chalk-500">›</span> <span class="text-sky-400">coding-agent</span>    writes 14 files (router-local-7b, 38s)
+<span class="text-chalk-500">›</span> <span class="text-sky-400">verifier</span>        re-derives acceptance — <span class="text-mint-400">PASS</span>
+<span class="text-chalk-500">›</span> <span class="text-sky-400">critic + reviewer</span> file 3 findings → fix-it loop
+<span class="text-chalk-500">›</span> <span class="text-sky-400">steward</span>         opens PR <span class="text-brand-400">#4711</span> → CI green → <span class="text-mint-400">merged</span>
+<span class="text-mint-400">✓</span> done in <span class="text-chalk-100">9m 14s</span> · <span class="text-chalk-500">cost $0.00 (subscription-only)</span><span class="blinker text-chalk-100">▌</span></pre>
+      </div>
+
+      <!-- Stat strip -->
+      <dl class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="rounded-xl bg-ink-900/60 ring-1 ring-ink-600 p-5 ring-soft">
+          <dt class="text-xs uppercase tracking-wider text-chalk-500">Packages</dt>
+          <dd class="mt-1 text-3xl font-bold text-chalk-50">75</dd>
+          <p class="mt-1 text-xs text-chalk-400">composable, typed, fixture-tested</p>
+        </div>
+        <div class="rounded-xl bg-ink-900/60 ring-1 ring-ink-600 p-5 ring-soft">
+          <dt class="text-xs uppercase tracking-wider text-chalk-500">Agents</dt>
+          <dd class="mt-1 text-3xl font-bold text-chalk-50">18+</dd>
+          <p class="mt-1 text-xs text-chalk-400">PO · BA · EA · Coding · Critic · Steward · …</p>
+        </div>
+        <div class="rounded-xl bg-ink-900/60 ring-1 ring-ink-600 p-5 ring-soft">
+          <dt class="text-xs uppercase tracking-wider text-chalk-500">Local models</dt>
+          <dd class="mt-1 text-3xl font-bold text-chalk-50">7B–70B</dd>
+          <p class="mt-1 text-xs text-chalk-400">Ollama + MLX, zero cloud spend</p>
+        </div>
+        <div class="rounded-xl bg-ink-900/60 ring-1 ring-ink-600 p-5 ring-soft">
+          <dt class="text-xs uppercase tracking-wider text-chalk-500">API-key billing</dt>
+          <dd class="mt-1 text-3xl font-bold text-mint-400">$0</dd>
+          <p class="mt-1 text-xs text-chalk-400">subscription-only Claude, by design</p>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- Feature grid -->
+  <section id="features" class="border-b border-ink-600/60">
+    <div class="max-w-7xl mx-auto px-6 py-24">
+      <div class="max-w-2xl">
+        <p class="text-sm uppercase tracking-[0.18em] text-brand-400 font-semibold">The platform</p>
+        <h2 class="mt-3 text-4xl md:text-5xl font-bold tracking-tight">An operating system for autonomous engineering.</h2>
+        <p class="mt-4 text-lg text-chalk-300">Six pillars hold up every CAIA-built feature — from intent capture to merged PR. Each one is a versioned, testable package you can swap or extend.</p>
+      </div>
+      <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Card 1 -->
+        <article class="group rounded-2xl ring-1 ring-ink-600 bg-ink-900/60 p-6 hover:ring-brand-500/60 transition shadow-card">
+          <div class="h-10 w-10 grid place-items-center rounded-lg bg-brand-500/15 ring-1 ring-brand-500/30 text-brand-400">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold text-chalk-50">Autonomous chains</h3>
+          <p class="mt-2 text-sm text-chalk-400 leading-relaxed">Multi-phase state machines with atomic lock + heartbeat + audit log. A scheduled wake dispatches the next phase; phases can be paused, resumed, adjudicated, or replayed.</p>
+          <p class="mt-4 text-xs font-mono text-chalk-500">@chiefaia/chain-runner</p>
+        </article>
+        <!-- Card 2 -->
+        <article class="group rounded-2xl ring-1 ring-ink-600 bg-ink-900/60 p-6 hover:ring-brand-500/60 transition shadow-card">
+          <div class="h-10 w-10 grid place-items-center rounded-lg bg-accent-500/15 ring-1 ring-accent-500/30 text-accent-400">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold text-chalk-50">Local-first AI</h3>
+          <p class="mt-2 text-sm text-chalk-400 leading-relaxed">A routing layer dispatches every prompt to local Ollama models first, escalating to Claude only when complexity demands it. Two-tier semantic cache cuts replay cost to zero.</p>
+          <p class="mt-4 text-xs font-mono text-chalk-500">@chiefaia/local-llm-router</p>
+        </article>
+        <!-- Card 3 -->
+        <article class="group rounded-2xl ring-1 ring-ink-600 bg-ink-900/60 p-6 hover:ring-brand-500/60 transition shadow-card">
+          <div class="h-10 w-10 grid place-items-center rounded-lg bg-mint-500/15 ring-1 ring-mint-500/30 text-mint-400">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v16M19 4v16M5 12h14M9 4l3 4 3-4M9 20l3-4 3 4"/></svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold text-chalk-50">Apprentice loop</h3>
+          <p class="mt-2 text-sm text-chalk-400 leading-relaxed">Four-phase QLoRA pipeline: corpus → eval → train → serve. Trains a CAIA-flavoured 7B on Mac MLX from your own artifacts, with canary routing and auto-promotion gates.</p>
+          <p class="mt-4 text-xs font-mono text-chalk-500">@chiefaia/apprentice-*</p>
+        </article>
+        <!-- Card 4 -->
+        <article class="group rounded-2xl ring-1 ring-ink-600 bg-ink-900/60 p-6 hover:ring-brand-500/60 transition shadow-card">
+          <div class="h-10 w-10 grid place-items-center rounded-lg bg-amber-500/15 ring-1 ring-amber-500/30 text-amber-400">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold text-chalk-50">Defense in depth</h3>
+          <p class="mt-2 text-sm text-chalk-400 leading-relaxed">Four-layer safety stack: capability tokens for irreversible actions, input/output guardrails, tool-output sanitization, and HMAC-signed inter-service auth. Subscription-only — never sets <code class="font-mono text-chalk-300 text-xs">ANTHROPIC_API_KEY</code>.</p>
+          <p class="mt-4 text-xs font-mono text-chalk-500">capability-broker · guardrails-validator</p>
+        </article>
+        <!-- Card 5 -->
+        <article class="group rounded-2xl ring-1 ring-ink-600 bg-ink-900/60 p-6 hover:ring-brand-500/60 transition shadow-card">
+          <div class="h-10 w-10 grid place-items-center rounded-lg bg-sky-400/15 ring-1 ring-sky-400/30 text-sky-400">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v4M12 11l-5 6M12 11l5 6"/></svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold text-chalk-50">Multi-agent ecosystem</h3>
+          <p class="mt-2 text-sm text-chalk-400 leading-relaxed">PO, BA, EA, Coding, Fix-It, Steward, Mentor, Curator, Critic, Code-Reviewer, Reviewer, Verifier, Researcher, Surface, Librarian — each one a focused, fixture-tested specialist with a typed contract.</p>
+          <p class="mt-4 text-xs font-mono text-chalk-500">@chiefaia/claude-subagents</p>
+        </article>
+        <!-- Card 6 -->
+        <article class="group rounded-2xl ring-1 ring-ink-600 bg-ink-900/60 p-6 hover:ring-brand-500/60 transition shadow-card">
+          <div class="h-10 w-10 grid place-items-center rounded-lg bg-rose-500/15 ring-1 ring-rose-500/30 text-rose-400">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>
+          </div>
+          <h3 class="mt-4 text-lg font-semibold text-chalk-50">Event-driven memory</h3>
+          <p class="mt-2 text-sm text-chalk-400 leading-relaxed">An append-only Mentor event bus captures every correction, postmerge regression, and operator preference. Embedded retrieval prepends precedent into every spawned worker's prompt.</p>
+          <p class="mt-4 text-xs font-mono text-chalk-500">mentor-event-bus · librarian</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- What is CAIA -->
+  <section id="concepts" class="border-b border-ink-600/60 bg-ink-900/40">
+    <div class="max-w-7xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+      <div class="lg:col-span-5">
+        <p class="text-sm uppercase tracking-[0.18em] text-accent-400 font-semibold">What is CAIA?</p>
+        <h2 class="mt-3 text-4xl md:text-5xl font-bold tracking-tight">Not a chatbot. A factory.</h2>
+        <p class="mt-5 text-lg text-chalk-300 leading-relaxed">CAIA — the <span class="text-chalk-100 font-medium">Chief AI Architect</span> — is the operator's persistent organisational substrate. It captures intent, decomposes it into auditable work, runs autonomous chains across local and cloud models, and gates every output through a four-layer review.</p>
+        <p class="mt-4 text-chalk-400 leading-relaxed">It's the difference between asking an LLM "write this for me" and running an engineering org. You bring the judgement. CAIA brings the execution, the memory, and the gates.</p>
+        <div class="mt-8 flex flex-wrap gap-2 text-xs">
+          <span class="px-2.5 py-1 rounded-full bg-brand-500/10 ring-1 ring-brand-500/30 text-brand-400 font-mono">subscription-only</span>
+          <span class="px-2.5 py-1 rounded-full bg-mint-500/10 ring-1 ring-mint-500/30 text-mint-400 font-mono">local-first</span>
+          <span class="px-2.5 py-1 rounded-full bg-accent-500/10 ring-1 ring-accent-500/30 text-accent-400 font-mono">audit-by-default</span>
+          <span class="px-2.5 py-1 rounded-full bg-amber-500/10 ring-1 ring-amber-500/30 text-amber-400 font-mono">private workspace</span>
+        </div>
+      </div>
+      <div class="lg:col-span-7">
+        <ol class="space-y-4">
+          <li class="rounded-xl ring-1 ring-ink-600 bg-ink-900/70 p-5">
+            <div class="flex items-start gap-4">
+              <span class="h-8 w-8 grid place-items-center rounded-md bg-brand-500/15 text-brand-400 font-mono text-sm">01</span>
+              <div>
+                <h3 class="font-semibold text-chalk-50">Operator captures intent</h3>
+                <p class="mt-1 text-sm text-chalk-400">Free-form prose, a backlog item, or a chat message in the dashboard.</p>
+              </div>
+            </div>
+          </li>
+          <li class="rounded-xl ring-1 ring-ink-600 bg-ink-900/70 p-5">
+            <div class="flex items-start gap-4">
+              <span class="h-8 w-8 grid place-items-center rounded-md bg-accent-500/15 text-accent-400 font-mono text-sm">02</span>
+              <div>
+                <h3 class="font-semibold text-chalk-50">Decomposer + PO agent classify</h3>
+                <p class="mt-1 text-sm text-chalk-400">Initiative → Epic → Module → Story → Task. Feature registry checks if it's new or an enhancement.</p>
+              </div>
+            </div>
+          </li>
+          <li class="rounded-xl ring-1 ring-ink-600 bg-ink-900/70 p-5">
+            <div class="flex items-start gap-4">
+              <span class="h-8 w-8 grid place-items-center rounded-md bg-mint-500/15 text-mint-400 font-mono text-sm">03</span>
+              <div>
+                <h3 class="font-semibold text-chalk-50">Phase-1 agents draft the contract</h3>
+                <p class="mt-1 text-sm text-chalk-400">BA, EA, DBA, BFF, UI, Security, Testing, Release each fill a Zod-validated ticket-template section.</p>
+              </div>
+            </div>
+          </li>
+          <li class="rounded-xl ring-1 ring-ink-600 bg-ink-900/70 p-5">
+            <div class="flex items-start gap-4">
+              <span class="h-8 w-8 grid place-items-center rounded-md bg-amber-500/15 text-amber-400 font-mono text-sm">04</span>
+              <div>
+                <h3 class="font-semibold text-chalk-50">Coding agent executes in a worktree</h3>
+                <p class="mt-1 text-sm text-chalk-400">Spawned via the subscription-only claude-spawner. Output passes through tool-output-sanitizer before re-entering context.</p>
+              </div>
+            </div>
+          </li>
+          <li class="rounded-xl ring-1 ring-ink-600 bg-ink-900/70 p-5">
+            <div class="flex items-start gap-4">
+              <span class="h-8 w-8 grid place-items-center rounded-md bg-rose-500/15 text-rose-400 font-mono text-sm">05</span>
+              <div>
+                <h3 class="font-semibold text-chalk-50">Four reviewers gate the PR</h3>
+                <p class="mt-1 text-sm text-chalk-400">Code-Reviewer (correctness), Critic (adversarial), Reviewer (craft), Verifier (fresh-worktree re-derivation). Steward enforces the merge contract.</p>
+              </div>
+            </div>
+          </li>
+          <li class="rounded-xl ring-1 ring-ink-600 bg-ink-900/70 p-5">
+            <div class="flex items-start gap-4">
+              <span class="h-8 w-8 grid place-items-center rounded-md bg-sky-400/15 text-sky-400 font-mono text-sm">06</span>
+              <div>
+                <h3 class="font-semibold text-chalk-50">Mentor remembers</h3>
+                <p class="mt-1 text-sm text-chalk-400">Every correction, postmerge regression, and operator preference lands in an append-only event bus that prepends precedent into the next spawn.</p>
+              </div>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quote / proof -->
+  <section class="border-b border-ink-600/60">
+    <div class="max-w-5xl mx-auto px-6 py-20 text-center">
+      <p class="text-xl md:text-2xl text-chalk-200 leading-relaxed">
+        "The interesting thing about CAIA isn't that it writes code — most tools do.
+        It's that the writing, the review, and the merge are all the <span class="text-gradient">same auditable system</span>."
+      </p>
+      <p class="mt-6 text-sm text-chalk-500 font-mono">— Operator notebook, 2026-05</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-ink-950/80">
+    <div class="max-w-7xl mx-auto px-6 py-16 grid grid-cols-2 md:grid-cols-5 gap-10">
+      <div class="col-span-2">
+        <a href="home.html" class="flex items-center gap-2">
+          <span class="inline-grid place-items-center h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 shadow-glow text-ink-950 font-bold">C</span>
+          <span class="font-semibold tracking-tight">CAIA</span>
+        </a>
+        <p class="mt-4 text-sm text-chalk-400 max-w-xs leading-relaxed">The Chief AI Architect. A private-workspace, local-first platform for autonomous engineering.</p>
+        <p class="mt-6 text-xs text-chalk-500 font-mono">© 2026 · MIT (where applicable)</p>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-chalk-500">Platform</p>
+        <ul class="mt-4 space-y-2 text-sm text-chalk-300">
+          <li><a href="architecture.html" class="hover:text-chalk-100">Architecture</a></li>
+          <li><a href="packages.html" class="hover:text-chalk-100">Packages</a></li>
+          <li><a href="#concepts" class="hover:text-chalk-100">Concepts</a></li>
+          <li><a href="dashboard-preview.html" class="hover:text-chalk-100">Dashboard preview</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-chalk-500">Resources</p>
+        <ul class="mt-4 space-y-2 text-sm text-chalk-300">
+          <li><a href="#docs" class="hover:text-chalk-100">Documentation</a></li>
+          <li><a href="#changelog" class="hover:text-chalk-100">Changelog</a></li>
+          <li><a href="#runbooks" class="hover:text-chalk-100">Runbooks</a></li>
+          <li><a href="https://github.com/prakashgbid/caia" class="hover:text-chalk-100">GitHub</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-chalk-500">Operator</p>
+        <ul class="mt-4 space-y-2 text-sm text-chalk-300">
+          <li><a href="login.html" class="hover:text-chalk-100">Sign in</a></li>
+          <li><a href="dashboard-preview.html" class="hover:text-chalk-100">Preview the dashboard</a></li>
+          <li><a href="#status" class="hover:text-chalk-100">System status</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-ink-600/60">
+      <div class="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-chalk-500">
+        <p>Built with subscription-only Claude · Ollama · MLX · no API keys.</p>
+        <p class="font-mono">caia · dashboard at <code class="text-chalk-300">localhost:7777</code></p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
