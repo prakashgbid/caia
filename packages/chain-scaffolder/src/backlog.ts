@@ -22,8 +22,12 @@ import {
 import { homedir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import yaml from 'js-yaml';
-import type { BacklogItem } from './templated.js';
-import { validateBacklogItem, chainPaths } from './templated.js';
+import type { BacklogItem, ScaffoldOptions, ScaffoldResult } from './templated.js';
+import {
+  scaffoldFromBacklogItem,
+  validateBacklogItem,
+  chainPaths,
+} from './templated.js';
 
 export interface BacklogIndexEntry {
   source: string;
@@ -153,4 +157,31 @@ export function nextAvailable(
 ): BacklogIndexEntry | null {
   const pending = listPending(backlogPath, opts);
   return pending.find((e) => e.depsResolved) ?? null;
+}
+
+export interface ScaffoldNextResult {
+  entry: BacklogIndexEntry;
+  scaffolded: ScaffoldResult;
+}
+
+/**
+ * Combined `nextAvailable` + `scaffoldFromBacklogItem` for the orchestrator's
+ * top-up loop. Returns null when there is no dispatchable item; throws
+ * `Error("…already exists…")` on scaffold conflicts (caller handles exit-3
+ * mapping in the CLI layer).
+ */
+export function scaffoldNext(
+  backlogPath: string,
+  opts: ParseOpts & ScaffoldOptions = {},
+): ScaffoldNextResult | null {
+  const parseOpts: ParseOpts = {};
+  if (opts.home !== undefined) parseOpts.home = opts.home;
+  const next = nextAvailable(backlogPath, parseOpts);
+  if (!next) return null;
+  const scaffoldOpts: ScaffoldOptions = {};
+  if (opts.home !== undefined) scaffoldOpts.home = opts.home;
+  if (opts.generatedAt !== undefined) scaffoldOpts.generatedAt = opts.generatedAt;
+  if (opts.force !== undefined) scaffoldOpts.force = opts.force;
+  const result = scaffoldFromBacklogItem(next.item, scaffoldOpts);
+  return { entry: next, scaffolded: result };
 }

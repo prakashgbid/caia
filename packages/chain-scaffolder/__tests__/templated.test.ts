@@ -23,7 +23,7 @@ import {
   renderRunnerScript,
   type BacklogItem,
 } from '../src/templated.js';
-import { parseBacklog, listPending, nextAvailable } from '../src/backlog.js';
+import { parseBacklog, listPending, nextAvailable, scaffoldNext } from '../src/backlog.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_PATH = resolve(__dirname, '..', 'tests', 'fixtures', 'sample-item.yaml');
@@ -355,5 +355,43 @@ describe('backlog discovery', () => {
     expect(idx.entries.map((e) => e.item.id)).toEqual(['good']);
     expect(idx.errors).toHaveLength(1);
     expect(idx.errors[0]?.source.endsWith('bad.yaml')).toBe(true);
+  });
+
+  it('scaffoldNext returns null when nothing is dispatchable', () => {
+    const dir = join(tmpHome, 'backlog');
+    mkdirSync(dir, { recursive: true });
+    expect(scaffoldNext(dir, { home: tmpHome })).toBeNull();
+  });
+
+  it('scaffoldNext scaffolds the first available item and skips it on subsequent calls', () => {
+    const dir = join(tmpHome, 'backlog');
+    writeItem(dir, 'a.yaml', { id: 'thing-a' });
+    writeItem(dir, 'b.yaml', { id: 'thing-b' });
+    const first = scaffoldNext(dir, { home: tmpHome });
+    expect(first?.entry.item.id).toBe('thing-a');
+    expect(existsSync(first!.scaffolded.stateFile)).toBe(true);
+
+    const second = scaffoldNext(dir, { home: tmpHome });
+    expect(second?.entry.item.id).toBe('thing-b');
+
+    const third = scaffoldNext(dir, { home: tmpHome });
+    expect(third).toBeNull();
+  });
+
+  it('scaffoldNext throws on conflict when --force is not set', () => {
+    const dir = join(tmpHome, 'backlog');
+    writeItem(dir, 'a.yaml', { id: 'thing-a' });
+    // Pre-scaffold by hand, then trip the duplicate-yaml race by re-marking
+    // it as pending (delete sentinel state.json marker only after scaffold)
+    const aSpec = yaml.load(readFileSync(join(dir, 'a.yaml'), 'utf8')) as BacklogItem;
+    const aResult = scaffoldFromBacklogItem(aSpec, { home: tmpHome });
+    // Re-create the chain dir as if it were a partial scaffold + simulate
+    // backlog item still pending by deleting only the state file's marker:
+    // simplest fixture is to point scaffoldNext at a fresh yaml that targets
+    // an already-scaffolded id.
+    writeItem(dir, 'a-dup.yaml', { id: 'thing-a', title: 'dup' });
+    // Manually remove the state.json so scaffoldNext picks the dup back up.
+    rmSync(aResult.stateFile);
+    expect(() => scaffoldNext(dir, { home: tmpHome })).toThrow(/already exists/);
   });
 });
