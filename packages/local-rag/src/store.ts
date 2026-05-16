@@ -11,8 +11,8 @@
 // index the manual cosine path is simpler and has no extra moving parts.
 // LAI-008 can swap to sqlite-vec if the index ever grows past ~1M chunks.
 
-import BetterSqlite3 from 'better-sqlite3';
 import type { Database } from 'better-sqlite3';
+import { openDb } from '@chiefaia/sqlite-utils';
 import type { EmbeddedChunk, RagHit } from './types.js';
 
 interface StoredRow {
@@ -49,8 +49,10 @@ export class VectorStore {
   private readonly countStmt: ReturnType<Database['prepare']>;
 
   constructor(dbPath: string) {
-    this.db = new BetterSqlite3(dbPath);
-    this.db.pragma('journal_mode = WAL');
+    // D3 (2026-05-15): db open + WAL pragma routed through
+    // @chiefaia/sqlite-utils. Schema (CREATE TABLE IF NOT EXISTS) still
+    // applies inline since it isn't a file-backed migration set.
+    this.db = openDb(dbPath);
     this.db.exec(SCHEMA);
 
     this.insertStmt = this.db.prepare(
