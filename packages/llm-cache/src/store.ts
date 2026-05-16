@@ -17,8 +17,8 @@
 // semantic path is the slow path; keeping it split makes the cost model
 // obvious in profiles.
 
-import BetterSqlite3 from 'better-sqlite3';
 import type { Database } from 'better-sqlite3';
+import { openDb } from '@chiefaia/sqlite-utils';
 import type { CachedResponse } from './types.js';
 
 const SCHEMA = `
@@ -69,8 +69,13 @@ export class CacheStore {
   private readonly evictSemantic: ReturnType<Database['prepare']>;
 
   constructor(dbPath: string) {
-    this.db = new BetterSqlite3(dbPath);
-    this.db.pragma('journal_mode = WAL');
+    // D3 (2026-05-15): db open + WAL pragma now flow through
+    // @chiefaia/sqlite-utils. Behaviour is unchanged: WAL on (for disk
+    // paths), foreign_keys ON (a non-event on a schema with no FKs),
+    // synchronous=NORMAL added (latency win, same fsync guarantee with
+    // WAL). The inline schema is still applied directly because it's
+    // not a file-backed migration.
+    this.db = openDb(dbPath);
     this.db.exec(SCHEMA);
 
     this.insertExact = this.db.prepare(
