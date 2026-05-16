@@ -12,10 +12,11 @@
  * package root via `package.json#files`.
  */
 
-import Database, { type Database as DatabaseInstance } from 'better-sqlite3';
-import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import type { Database as DatabaseInstance } from 'better-sqlite3';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { openDb, migrate } from '@chiefaia/sqlite-utils';
 
 import type { EventRow } from './types.js';
 
@@ -24,6 +25,15 @@ const __dirname = dirname(__filename);
 
 /**
  * Open + migrate a database. Returns a connected handle. Idempotent.
+ *
+ * D3 (2026-05-15): the low-level pragma constellation (WAL,
+ * synchronous=NORMAL, foreign_keys=ON) + the file-backed migrations
+ * runner moved to `@chiefaia/sqlite-utils`. This function is now a
+ * thin shim that wires the package's default `migrations/` folder
+ * into the shared helper. Wire format is unchanged: the
+ * `_migrations` tracking table, the lex-sort file order, and the
+ * idempotent re-run semantics are byte-identical to the pre-D3
+ * implementation.
  *
  * @param dbPath - Absolute path or `:memory:` for tests.
  * @param migrationsDir - Override migrations dir (default: package's migrations/).
@@ -34,20 +44,8 @@ export function openDatabase(
   migrationsDir?: string,
   wal = true
 ): DatabaseInstance {
-  if (dbPath !== ':memory:') {
-    const dir = dirname(dbPath);
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-  }
-
-  const db = new Database(dbPath);
-  if (wal && dbPath !== ':memory:') {
-    db.pragma('journal_mode = WAL');
-  }
-  db.pragma('foreign_keys = ON');
-
-  applyMigrations(db, migrationsDir ?? defaultMigrationsDir());
+  const db = openDb(dbPath, { wal });
+  migrate(db, migrationsDir ?? defaultMigrationsDir());
   return db;
 }
 
@@ -55,45 +53,6 @@ function defaultMigrationsDir(): string {
   // dist layout: dist/sqlite.js → ../migrations/
   // src layout (vitest):   src/sqlite.ts → ../migrations/
   return resolve(__dirname, '..', 'migrations');
-}
-
-/**
- * Track applied migrations in a small table so re-opening the database
- * doesn't re-run them. Migration files are sorted by filename.
- */
-function applyMigrations(db: DatabaseInstance, migrationsDir: string): void {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS _migrations (
-      filename TEXT PRIMARY KEY,
-      applied_at TEXT NOT NULL
-    );
-  `);
-
-  if (!existsSync(migrationsDir)) {
-    // No migrations dir (tests using ':memory:' with manual schema). Skip.
-    return;
-  }
-
-  const applied = new Set<string>(
-    db.prepare('SELECT filename FROM _migrations').all().map((r) => (r as { filename: string }).filename)
-  );
-
-  const files = readdirSync(migrationsDir)
-    .filter((f) => f.endsWith('.sql'))
-    .sort();
-
-  const insertMigration = db.prepare(
-    'INSERT INTO _migrations(filename, applied_at) VALUES(?, ?)'
-  );
-
-  for (const f of files) {
-    if (applied.has(f)) continue;
-    const sql = readFileSync(join(migrationsDir, f), 'utf-8');
-    db.transaction(() => {
-      db.exec(sql);
-      insertMigration.run(f, new Date().toISOString());
-    })();
-  }
 }
 
 // ─── CRUD primitives ──────────────────────────────────────────────────────
