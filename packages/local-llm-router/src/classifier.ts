@@ -6,6 +6,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { OllamaAdapter as _OllamaAdapterRef } from './ollama-adapter.js';
+import { buildClassifierUserMessage } from './prompt-template.js';
 
 export type Intent =
   | 'classify'
@@ -128,7 +129,11 @@ export async function classify(
   const baseUrl = opts.ollamaBaseUrl ?? process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434';
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  const userPrompt = `Task spec:\n"""\n${taskSpec}\n"""\n\nClassify this task. Output only the JSON.`;
+  // R-3 fix: route through the byte-stable, sanitising prompt template
+  // rather than concatenating raw user input. CLASSIFIER_SYSTEM_PROMPT is
+  // the byte-stable preamble; buildClassifierUserMessage() owns the user
+  // envelope (prefix + sanitised input + suffix).
+  const userPrompt = buildClassifierUserMessage(taskSpec);
 
   // Use Ollama /api/chat with format=json for constrained JSON output
   const controller = new AbortController();
