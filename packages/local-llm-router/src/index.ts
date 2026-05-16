@@ -24,6 +24,12 @@ export {
   buildClassifierUserMessage,
 } from './prompt-template.js';
 export {
+  BE_TERSE_INSTRUCTION,
+  injectBeTerse,
+  stripBeTerse,
+} from './be-terse-preamble.js';
+export type { BeTerseOptions } from './be-terse-preamble.js';
+export {
   ClaudeAdapter,
   ClaudeBinaryError,
   ClaudeRateLimitedError,

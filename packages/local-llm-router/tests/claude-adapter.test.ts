@@ -30,6 +30,7 @@ import {
   type HeadroomSidecarRequest,
   type HeadroomSidecarResponse,
 } from '../src/claude-adapter.js';
+import { BE_TERSE_INSTRUCTION } from '../src/be-terse-preamble.js';
 import type { OptimizerMetrics } from '../src/types.js';
 
 // ─── fake child_process.spawn ───────────────────────────────────────────
@@ -321,7 +322,87 @@ describe('ClaudeAdapter (binary spawn)', () => {
     });
     const args = invocations[0]!.args;
     expect(args).toContain('--append-system-prompt');
-    expect(args).toContain('you are a poet');
+    // GC-1: the system prompt is now wrapped with the be-terse preamble,
+    // so the arg is `<preamble>\n\nyou are a poet` rather than the bare
+    // user input. Locate the arg by its trailing caller-supplied bytes.
+    const appendIdx = args.indexOf('--append-system-prompt');
+    expect(appendIdx).toBeGreaterThanOrEqual(0);
+    const systemArg = args[appendIdx + 1];
+    expect(systemArg).toContain('you are a poet');
+    expect(systemArg!.endsWith('you are a poet')).toBe(true);
+  });
+
+  // ─── GC-1 (be-terse preamble) integration ───────────────────────────
+  it('injects the be-terse preamble into the system prompt', async () => {
+    const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+    const adapter = new ClaudeAdapter({ spawnFn: fn, optimizerDisabled: true });
+    await adapter.generate('claude-sonnet-4-6', {
+      taskType: 't',
+      prompt: 'user',
+      systemPrompt: 'you are a poet',
+    });
+    const args = invocations[0]!.args;
+    const appendIdx = args.indexOf('--append-system-prompt');
+    const systemArg = args[appendIdx + 1];
+    // The wrapped system prompt begins with the canonical be-terse
+    // instruction, followed by the caller's original system prompt.
+    expect(systemArg!.startsWith(BE_TERSE_INSTRUCTION)).toBe(true);
+    expect(systemArg!.endsWith('you are a poet')).toBe(true);
+  });
+
+  it('injects the be-terse preamble even when the caller passes no system prompt', async () => {
+    const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+    const adapter = new ClaudeAdapter({ spawnFn: fn, optimizerDisabled: true });
+    await adapter.generate('claude-sonnet-4-6', {
+      taskType: 't',
+      prompt: 'user-side body',
+    });
+    const args = invocations[0]!.args;
+    const appendIdx = args.indexOf('--append-system-prompt');
+    expect(appendIdx).toBeGreaterThanOrEqual(0);
+    const systemArg = args[appendIdx + 1];
+    expect(systemArg).toBe(BE_TERSE_INSTRUCTION);
+  });
+
+  it('honours BE_TERSE_PREAMBLE_DISABLE=1 (back-compat passthrough)', async () => {
+    const orig = process.env['BE_TERSE_PREAMBLE_DISABLE'];
+    process.env['BE_TERSE_PREAMBLE_DISABLE'] = '1';
+    try {
+      const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({ spawnFn: fn, optimizerDisabled: true });
+      await adapter.generate('claude-sonnet-4-6', {
+        taskType: 't',
+        prompt: 'user',
+        systemPrompt: 'you are a poet',
+      });
+      const args = invocations[0]!.args;
+      const appendIdx = args.indexOf('--append-system-prompt');
+      const systemArg = args[appendIdx + 1];
+      expect(systemArg).toBe('you are a poet');
+      // No preamble bytes leak through when disabled.
+      expect(systemArg!.includes(BE_TERSE_INSTRUCTION)).toBe(false);
+    } finally {
+      if (orig === undefined) delete process.env['BE_TERSE_PREAMBLE_DISABLE'];
+      else process.env['BE_TERSE_PREAMBLE_DISABLE'] = orig;
+    }
+  });
+
+  it('omits --append-system-prompt entirely when the kill switch + no caller prompt', async () => {
+    const orig = process.env['BE_TERSE_PREAMBLE_DISABLE'];
+    process.env['BE_TERSE_PREAMBLE_DISABLE'] = '1';
+    try {
+      const { fn, invocations } = makeFakeSpawn({ stdout: HAPPY_PATH_JSON });
+      const adapter = new ClaudeAdapter({ spawnFn: fn, optimizerDisabled: true });
+      await adapter.generate('claude-sonnet-4-6', {
+        taskType: 't',
+        prompt: 'p',
+      });
+      const args = invocations[0]!.args;
+      expect(args).not.toContain('--append-system-prompt');
+    } finally {
+      if (orig === undefined) delete process.env['BE_TERSE_PREAMBLE_DISABLE'];
+      else process.env['BE_TERSE_PREAMBLE_DISABLE'] = orig;
+    }
   });
 
   it('reports usage tokens from the binary JSON output', async () => {
@@ -496,7 +577,11 @@ describe('ClaudeAdapter (binary spawn)', () => {
       });
       const args = invocations[0]!.args;
       expect(args).toContain('--append-system-prompt');
-      expect(args).toContain('you are a poet');
+      // GC-1: the system prompt is now wrapped with the be-terse preamble.
+      const appendIdx = args.indexOf('--append-system-prompt');
+      const systemArg = args[appendIdx + 1];
+      expect(systemArg).toContain('you are a poet');
+      expect(systemArg!.endsWith('you are a poet')).toBe(true);
       // The system prompt must not be duplicated on stdin.
       expect(invocations[0]!.stdinChunks.join('')).toBe('the user-side body');
     });

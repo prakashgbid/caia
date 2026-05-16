@@ -36,6 +36,7 @@ import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process'
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { stage1Prepass, estimateTokens } from '@chiefaia/prompt-optimizer';
+import { injectBeTerse } from './be-terse-preamble.js';
 import {
   ClaudeBudgetExceededError,
   claudeCallBudget,
@@ -442,8 +443,15 @@ export class ClaudeAdapter {
   }): Promise<LLMResponse> {
     const { model, request, promptForBinary, optimizerMetrics, start } = opts;
     const args = ['--print', '--output-format', 'json', '--model', model];
-    if (request.systemPrompt) {
-      args.push('--append-system-prompt', request.systemPrompt);
+    // GC-1: inject the be-terse preamble into the system prompt so the
+    // model produces less boilerplate. Kill switch: BE_TERSE_PREAMBLE_DISABLE=1.
+    // The preamble is byte-stable so it shares the prefix-cache with R-3's
+    // sanitised user-message envelope. When the caller provides no system
+    // prompt, we still inject the instruction alone (cheaper to ask
+    // up-front than to strip after).
+    const systemPromptWithPreamble = injectBeTerse(request.systemPrompt);
+    if (systemPromptWithPreamble.length > 0) {
+      args.push('--append-system-prompt', systemPromptWithPreamble);
     }
 
     // Build env for the child. Clearing ANTHROPIC_API_KEY is the
