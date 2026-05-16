@@ -305,13 +305,21 @@ export function buildProgram(): Command {
       '--skip-acceptance',
       'H-15: skip success_criteria enforcement (escape hatch for adjudication tooling)',
     )
+    .option(
+      '--adoption-pending-ok',
+      'G10: explicitly override the adoption-everywhere gate. Records an adoption_gate_override audit event with the supplied --reason.',
+    )
+    .option(
+      '--reason <text>',
+      'G10: human-readable justification for --adoption-pending-ok. Required when that flag is set.',
+    )
     .description(
-      'Transition a phase to done and clear the lock. H-15: validates success_criteria per phase/chain enforce mode (default warn).',
+      'Transition a phase to done and clear the lock. H-15: validates success_criteria per phase/chain enforce mode (default warn). G10: --adoption-pending-ok + --reason record an audit-only override of the adoption gate.',
     )
     .action(
       (
         phaseId: string,
-        cmdOpts: { skipAcceptance?: boolean },
+        cmdOpts: { skipAcceptance?: boolean; adoptionPendingOk?: boolean; reason?: string },
         cmd: Command,
       ) => {
         const opts = cmd.optsWithGlobals() as BaseOptions;
@@ -319,6 +327,25 @@ export function buildProgram(): Command {
         // H-13 (phase 9, 2026-05-14). Snapshot state.json before the mutation
         // so a botched mark-done can be rolled back from .backups/.
         takeStateBackup(ctx);
+        // G10 override: emit the audit event BEFORE markDone so a downstream
+        // acceptance refusal still leaves the override trail. The mark-done
+        // itself proceeds normally — the override is purely an audit-only
+        // acknowledgement that an open adoption opportunity was knowingly
+        // bypassed (the shell-level gate-mark-done.sh is the enforcement
+        // chokepoint; this flag is for the worker that consciously skipped it).
+        if (cmdOpts.adoptionPendingOk) {
+          const reason = (cmdOpts.reason ?? '').trim();
+          if (reason === '') {
+            fail(
+              '--adoption-pending-ok requires --reason "<justification>" (G10 audit-trail contract)',
+              2,
+            );
+          }
+          appendAudit(ctx.paths.auditFile, 'adoption_gate_override', {
+            phase_id: Number(phaseId),
+            reason,
+          });
+        }
         const markDoneOpts: Parameters<typeof markDone>[2] = {};
         if (cmdOpts.skipAcceptance) markDoneOpts.skipAcceptance = true;
         try {

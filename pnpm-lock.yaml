@@ -510,6 +510,10 @@ importers:
         version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
 
   packages/adoption-enforcement:
+    dependencies:
+      '@chiefaia/chain-runner':
+        specifier: workspace:*
+        version: link:../chain-runner
     devDependencies:
       '@chiefaia/eslint-config':
         specifier: workspace:*

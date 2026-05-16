@@ -20,7 +20,8 @@
   "files": ["dist", "README.md"],
   "bin": {
     "caia-adoption-verify": "./bin/caia-adoption-verify.mjs",
-    "caia-adoption-run": "./bin/caia-adoption-run.mjs"
+    "caia-adoption-run": "./bin/caia-adoption-run.mjs",
+    "caia-adopt": "./bin/caia-adopt.mjs"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -29,7 +30,9 @@
     "lint": "eslint src",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
-  "dependencies": {},
+  "dependencies": {
+    "@chiefaia/chain-runner": "workspace:*"
+  },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
     "@chiefaia/tsconfig": "workspace:*",
