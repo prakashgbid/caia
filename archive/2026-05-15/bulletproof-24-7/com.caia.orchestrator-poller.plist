@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LaunchAgent that runs the local-poller.sh every 60 seconds on Mac.
+  Place at: ~/Library/LaunchAgents/com.caia.orchestrator-poller.plist
+  Load:     launchctl load -w ~/Library/LaunchAgents/com.caia.orchestrator-poller.plist
+  Verify:   launchctl list | grep orchestrator-poller
+  Logs:     ~/.cache/orchestrator/poller.log
+
+  KeepAlive=true ensures the agent restarts if the script exits.
+  StartInterval=60 fires the script every 60 seconds.
+  StandardErrorPath / StandardOutPath capture failures for debugging.
+
+  ZERO Claude tokens consumed by this LaunchAgent. The script it runs is
+  pure bash + grep + awk + find.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.orchestrator-poller</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>/Users/MAC/Documents/projects/caia/scripts/orchestrator/local-poller.sh &amp;&amp; /Users/MAC/Documents/projects/caia/scripts/orchestrator/idle-detector.sh</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>60</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/MAC/.cache/orchestrator/poller.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/MAC/.cache/orchestrator/poller.err</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>
