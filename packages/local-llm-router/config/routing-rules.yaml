@@ -397,6 +397,16 @@ intents:
   - name: refactor-complex
     default_tier: claude
     min_confidence: 0.45
+    # SPS T2.5 Phase 4 §5a (2026-05-16): broadened with 6 paraphrases drawn
+    # from the missed-escalation corpus
+    # (`sps_t2.5_real_traffic_baseline_2026-05-13.md` §5a, prompts
+    # #17 / #21 / #22 / #31 / #32 / #40). All 6 fell through to
+    # `route-default → rule-default-local` in Phase 4. Adding their
+    # distinctive phrases here forces a prepass match (or — if collisions
+    # with new-design / architect raise the match count above 1 — a
+    # null fallthrough to the LLM-path, which is itself restored by the
+    # run_canonical_suite_v2.py `model: auto` fix shipped in the same
+    # change-set).
     keywords:
       - refactor
       - multi-file refactor
@@ -404,6 +414,13 @@ intents:
       - buffered json
       - preserving all
       - add an integration test
+      # ── Phase 4 §5a paraphrases ──
+      - split persistence              # #17 — "split persistence into a dedicated OrdersRepository"
+      - public rest contract           # #17 — "preserve the existing public REST contract"
+      - negative tests proving         # #21 — "three negative tests proving the guard fires"
+      - rollback file                  # #22 — "Keep v1 alongside as a rollback file"
+      - multi-tenant routing           # #32 — "multi-tenant routing-rules service"
+      - shadow-eval                    # #40 — "shadow-eval phase"
 
   - name: architecture
     default_tier: local-32b

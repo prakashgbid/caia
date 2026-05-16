@@ -73,18 +73,28 @@ def execute_local(task_spec: str, recommended_tier: str,
                   base_url: str = DEFAULT_BASE_URL,
                   timeout: float = 60.0) -> Optional[str]:
     """Execute a task on the local model via /v1/chat/completions. Returns the
-    response string, or None on failure (caller falls back to claude binary)."""
-    # Map tier to model
-    model = {
-        "local-7b": "qwen2.5-coder:7b",
-        "local-14b": "qwen2.5-coder:14b",
-        "local-32b": "qwen2.5-coder:32b",
-    }.get(recommended_tier, "qwen2.5-coder:7b")
+    response string, or None on failure (caller falls back to claude binary).
+
+    SPS T2.5 Phase 4 (2026-05-13/16): post-2026-05-15 the router's R-2
+    model-pinning guard rejects any caller-supplied `model` that is not an
+    advisory hint (`auto`, `prefer-*`). The previous tier→tag dict here
+    therefore caused every spawner-routed request to 400 on a fresh
+    daemon. We drop the `model` field entirely and let the router pick
+    based on `caia_task_type=spawner-routed` plus the daemon's
+    routing-rules. `recommended_tier` is still threaded through so callers
+    have visibility into what the classifier said, but it no longer pins
+    the dispatch.
+    """
     body = json.dumps({
-        "model": model,
+        # No `model` field — the router resolves tier→tag server-side under
+        # the R-2 guard (server.ts ADVISORY_MODEL_HINTS). `recommended_tier`
+        # is intentionally NOT forwarded as a hint — the server's classifier
+        # has its own view and a stale or out-of-band tier from the client
+        # could fight with the cascade.
         "messages": [{"role": "user", "content": task_spec}],
         "caia_task_type": "spawner-routed",
     }).encode("utf-8")
+    _ = recommended_tier  # kept in the public signature for caller observability
     req = urllib.request.Request(
         f"{base_url}/v1/chat/completions",
         data=body,

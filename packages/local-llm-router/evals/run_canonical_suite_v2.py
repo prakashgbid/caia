@@ -313,8 +313,14 @@ If the task is ambiguous, pick "unknown" with confidence < 0.5 and needs_escalat
 Output ONLY the JSON. No prose, no fences."""
 
 
-def classify_llm(prompt: str, router_base: str, model: str = "qwen2.5-coder:7b",
+def classify_llm(prompt: str, router_base: str, model: str = "auto",
                  timeout: int = 30) -> dict:
+    # R-2 (2026-05-15): caller-supplied `model` on /v1/chat/completions is
+    # rejected unless it's an advisory hint (`auto`, `prefer-*`). Pinning a
+    # concrete tag like `qwen2.5-coder:7b` returned 400 across the v2 eval and
+    # forced every prompt to abstain → drove the canonical-suite displacement
+    # to 64.3 % (n=126). The classifier model on the daemon is configured
+    # via the ROUTER_CLASSIFIER_MODEL env var, not the wire request.
     body = json.dumps({
         "model": model,
         "messages": [
