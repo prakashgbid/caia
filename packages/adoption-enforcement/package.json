@@ -1,0 +1,41 @@
+{
+  "name": "@chiefaia/adoption-enforcement",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Adoption enforcement substrate: scan new artefacts from a merged PR, cross-reference adoption sites, generate adoption PRs, verify them, and gate DoD v2. See agent-memory/decisions/p3_adoption_enforcement_substrate_2026_05_16.md.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./verify": {
+      "types": "./dist/verify/index.d.ts",
+      "default": "./dist/verify/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "bin": {
+    "caia-adoption-verify": "./bin/caia-adoption-verify.mjs"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT"
+}
