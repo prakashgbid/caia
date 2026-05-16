@@ -10,11 +10,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./claude-wrap": {
+      "types": "./dist/claude-wrap.d.ts",
+      "default": "./dist/claude-wrap.js"
     }
   },
-  "files": ["dist"],
+  "bin": {
+    "claude-wrap": "./bin/claude-wrap.js"
+  },
+  "files": ["dist", "bin"],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node -e \"import('node:fs').then(fs=>{fs.chmodSync('bin/claude-wrap.js','755');})\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src",

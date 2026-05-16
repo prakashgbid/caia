@@ -46,7 +46,14 @@ if [ ! -r "$PROMPT_FILE" ]; then
 fi
 
 # Subscription billing + bypassPermissions (standing rules).
-claude \
+#
+# GB-3 (2026-05-16): prefer `claude-wrap` over raw `claude` so prompts pass
+# through the local-llm-router at :7411 first and only escalate to the real
+# claude binary on cascade fall-through. The wrapper is interface-compatible
+# with `claude --print`; if it isn't installed, we fall back to vanilla
+# `claude` so a missing wrapper doesn't break in-flight dispatch.
+CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude-wrap || command -v claude)}"
+"$CLAUDE_BIN" \
   --permission-mode bypassPermissions \
   --print \
   --output-format text \
