@@ -49,6 +49,8 @@ export type Intent =
   | 'corpus-distill'
   | 'long-context-reason'
   | 'embedding-generate'
+  // GB-12 (2026-05-15) — deep multi-file review at stolution-batch tier.
+  | 'complex-review'
   | 'unknown';
 
 export type RecommendedTier = 'local-7b' | 'local-14b' | 'local-32b' | 'claude' | 'stolution-batch';
@@ -71,7 +73,10 @@ export const INTENT_VALUES: ReadonlyArray<Intent> = [
   'architecture-review', 'research-summary',
   'reason-over-context', 'new-design', 'architect', 'research-synthesis',
   'batch-summarize', 'corpus-distill', 'long-context-reason',
-  'embedding-generate', 'unknown',
+  'embedding-generate',
+  // GB-12 (2026-05-15).
+  'complex-review',
+  'unknown',
 ];
 
 export const TIER_VALUES: ReadonlyArray<RecommendedTier> = [
@@ -96,7 +101,7 @@ Tier guidance:
 - local-14b: medium-code, doc-write, spec-check, review-prose
 - local-32b: hard-code requiring deep reasoning over multiple files
 - claude: reason-over-context, new-design, architect, or anything where confidence < 0.6 on a non-code task
-- stolution-batch: batch-summarize, corpus-distill, embedding-generate (CPU-OK batch work)
+- stolution-batch: batch-summarize, corpus-distill, embedding-generate, complex-review, long-context-reason (CPU-OK batch work)
 
 If the task is ambiguous, pick "unknown" with confidence < 0.5 and needs_escalation: true.
 

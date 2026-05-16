@@ -35,6 +35,19 @@ export interface IntentRule {
   keywords: string[];
 }
 
+/**
+ * GB-12 (2026-05-15) — per-tier model + timeout config. Lets the runtime resolve
+ * `{tier, intent} → {model, timeout_ms}` without a code change for tag rotations.
+ */
+export interface TierModelConfig {
+  /** Per-request CPU latency budget in ms. */
+  timeout_ms: number;
+  /** Fallback model when no per_intent override applies. */
+  default_model: string;
+  /** Intent name → ollama tag served by this tier. */
+  per_intent: Record<string, string>;
+}
+
 export interface RoutingRules {
   version: number;
   default_confidence_threshold: number;
@@ -42,6 +55,8 @@ export interface RoutingRules {
   cascade_thresholds: Record<string, number>;
   tier_order: RecommendedTier[];
   intents: IntentRule[];
+  /** GB-12 (2026-05-15) — optional per-tier model+timeout block. */
+  tier_models: Record<string, TierModelConfig>;
 }
 
 export interface IntentResultV2 {
@@ -276,7 +291,38 @@ export function parseRoutingRulesYaml(text: string): RoutingRules {
     }
   }
 
-  return { version, default_confidence_threshold, escalation_threshold, cascade_thresholds, tier_order, intents };
+  // GB-12 (2026-05-15) — optional `tier_models` block. Shape:
+  //   tier_models:
+  //     <tier-name>:
+  //       timeout_ms: <int>
+  //       default_model: <string>
+  //       per_intent:
+  //         <intent>: <model-tag>
+  // Unknown tiers are accepted (forward-compat); invalid scalar types are dropped.
+  const tier_models: Record<string, TierModelConfig> = {};
+  const tmRaw = root['tier_models'];
+  if (typeof tmRaw === 'object' && tmRaw !== null && !Array.isArray(tmRaw)) {
+    for (const [tier, cfgRaw] of Object.entries(tmRaw)) {
+      if (typeof cfgRaw !== 'object' || cfgRaw === null || Array.isArray(cfgRaw)) continue;
+      const cfg = cfgRaw as Record<string, YamlNode>;
+      const timeout_ms = typeof cfg['timeout_ms'] === 'number' ? cfg['timeout_ms'] as number : 0;
+      const default_model = typeof cfg['default_model'] === 'string' ? cfg['default_model'] as string : '';
+      const per_intent: Record<string, string> = {};
+      const piRaw = cfg['per_intent'];
+      if (typeof piRaw === 'object' && piRaw !== null && !Array.isArray(piRaw)) {
+        for (const [intent, model] of Object.entries(piRaw)) {
+          if (typeof model === 'string' && model.length > 0) per_intent[intent] = model;
+        }
+      }
+      // Require at least timeout_ms or default_model to register the tier;
+      // an empty block is treated as absent.
+      if (timeout_ms > 0 || default_model !== '' || Object.keys(per_intent).length > 0) {
+        tier_models[tier] = { timeout_ms, default_model, per_intent };
+      }
+    }
+  }
+
+  return { version, default_confidence_threshold, escalation_threshold, cascade_thresholds, tier_order, intents, tier_models };
 }
 
 function numberAt(obj: Record<string, YamlNode>, key: string, fallback: number): number {
