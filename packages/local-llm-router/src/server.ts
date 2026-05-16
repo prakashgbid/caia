@@ -20,15 +20,14 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { optimize } from '@chiefaia/prompt-optimizer';
-import { route as routerRoute } from './router.js';
+import { route as routerRoute, __setOllamaAdapter } from './router.js';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { classify, type IntentResult as _IntentResultRef } from './classifier.js';
 import { classifyV2, loadRoutingRules } from './classifier-v2.js';
 // GB-12 (2026-05-15) — tier-model resolver, lives in router-policy.ts so the
 // merge surface with sps-router-critical-fixes R-2 is the single import line.
 import { resolveTierModel } from './router-policy.js';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { OllamaAdapter as _OllamaAdapterRef2 } from './ollama-adapter.js';
+import { OllamaAdapter } from './ollama-adapter.js';
 import { llmMetrics } from './llm-metrics.js';
 import { ROUTING_RULES } from './routing-config.js';
 import { ragEnabled, runRag } from './rag/middleware.js';
@@ -76,12 +75,25 @@ function isAdvisoryHint(s: string): s is AdvisoryModelHint {
 export interface ServerOptions {
   ollamaBaseUrl?: string;
   classifierModel?: string;
+  /**
+   * RR-3 (2026-05-15): adapter used by the /admin/warmup endpoint. The same
+   * instance is shared with router.ts via __setAdapters so the warm-model
+   * set is visible to the inference path. Tests pass a stub here; the daemon
+   * leaves this undefined and we build one against `ollamaBaseUrl`.
+   */
+  ollamaAdapter?: OllamaAdapter;
 }
 
 export function buildApp(opts: ServerOptions = {}): Hono {
   const app = new Hono();
   const ollamaBaseUrl = opts.ollamaBaseUrl ?? process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434';
   const classifierModel = opts.classifierModel ?? process.env['ROUTER_CLASSIFIER_MODEL'] ?? 'qwen2.5-coder:7b';
+  const ollamaAdapter = opts.ollamaAdapter ?? new OllamaAdapter({ baseUrl: ollamaBaseUrl });
+  // Pin the server-built adapter as the routing-layer singleton so the
+  // /admin/warmup endpoint warms the same instance that routerRoute()
+  // dispatches against. Without this the warm-model set would be split
+  // across two adapter instances (RR-3, 2026-05-15).
+  __setOllamaAdapter(ollamaAdapter);
 
   // ─── /healthz ─────────────────────────────────────────────────────────
   app.get('/healthz', async (c: Context) => {
@@ -206,6 +218,64 @@ export function buildApp(opts: ServerOptions = {}): Hono {
     } catch (e) {
       return c.json({ error: 'search-memory-failed', message: (e as Error).message }, 502);
     }
+  });
+
+  // ─── POST /admin/warmup — RR-3 cold-start preload (2026-05-15) ───────
+  // Preloads a named ollama model into memory so the next inference call
+  // skips the 10-30s cold-load. Used by:
+  //   - the router-daemon-start hook (warms canonical local models on boot)
+  //   - operator runbooks (`curl -X POST .../admin/warmup -d '{"model":...}'`)
+  //
+  // Body: { model: string, models?: string[] }
+  //   `model`  warm a single model
+  //   `models` warm an array (best-effort; aggregates per-model status)
+  //
+  // Response: 200 with per-model { ok, durationMs?, error? } items.
+  // Returns 400 on missing model and 502 if every requested warmup failed.
+  app.post('/admin/warmup', async (c: Context) => {
+    let body: { model?: string; models?: string[] };
+    try { body = await c.req.json(); } catch { return c.json({ error: 'invalid-json' }, 400); }
+    const requested: string[] = [];
+    if (typeof body.model === 'string' && body.model.trim() !== '') {
+      requested.push(body.model.trim());
+    }
+    if (Array.isArray(body.models)) {
+      for (const m of body.models) {
+        if (typeof m === 'string' && m.trim() !== '') requested.push(m.trim());
+      }
+    }
+    if (requested.length === 0) {
+      return c.json({ error: 'model-required', message: 'pass { model } or { models }' }, 400);
+    }
+    // De-dup while preserving order.
+    const uniq = Array.from(new Set(requested));
+    const startMs = Date.now();
+    const results = await Promise.all(uniq.map(async (model) => {
+      try {
+        const r = await ollamaAdapter.warmup(model);
+        return { model, ok: true, duration_ms: r.durationMs } as const;
+      } catch (e) {
+        return { model, ok: false, error: (e as Error).message.slice(0, 240) } as const;
+      }
+    }));
+    const anyOk = results.some(r => r.ok);
+    const status = anyOk ? 200 : 502;
+    return c.json({
+      results,
+      ok: anyOk,
+      wall_ms: Date.now() - startMs,
+      warm_models: ollamaAdapter.warmModelList(),
+    }, status);
+  });
+
+  // ─── GET /admin/warmup/status — RR-3 visibility (2026-05-15) ─────────
+  // Returns the adapter's current warm-model set so operators can confirm
+  // which models will skip the cold-load timeout boost on next dispatch.
+  app.get('/admin/warmup/status', (c: Context) => {
+    return c.json({
+      warm_models: ollamaAdapter.warmModelList(),
+      ollama_base_url: ollamaBaseUrl,
+    });
   });
 
   // ─── /v1/budget/claude — A.9.5 budget snapshot ───────────────────────

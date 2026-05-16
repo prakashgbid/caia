@@ -15,6 +15,8 @@ import { join } from 'node:path';
 
 import { serve } from '@hono/node-server';
 import { buildApp, DEFAULT_ROUTER_PORT } from '../server.js';
+import { OllamaAdapter } from '../ollama-adapter.js';
+import { ROUTING_RULES } from '../routing-config.js';
 
 // Phase A2 --health-check shortcut. The post-merge gate (A1) invokes
 // `<bin> --health-check` after `launchctl kickstart` and expects exit 0
@@ -89,8 +91,14 @@ Endpoints:
   process.exit(0);
 }
 
+// Build ONE adapter and share it between buildApp() and the warmup-on-start
+// hook below — same instance, same warm-model set (RR-3, 2026-05-15).
+const ollamaBaseUrl = args.ollamaUrl ?? process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434';
+const sharedOllamaAdapter = new OllamaAdapter({ baseUrl: ollamaBaseUrl });
+
 const app = buildApp({
-  ...(args.ollamaUrl !== undefined ? { ollamaBaseUrl: args.ollamaUrl } : {}),
+  ollamaBaseUrl,
+  ollamaAdapter: sharedOllamaAdapter,
   ...(args.classifierModel !== undefined ? { classifierModel: args.classifierModel } : {}),
 });
 
@@ -98,8 +106,49 @@ const port = Number.isFinite(args.port) ? args.port : DEFAULT_ROUTER_PORT;
 
 serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, (info) => {
   console.log(`caia-llm-router-daemon listening on http://${info.address}:${info.port}`);
-  console.log(`  ollama_url=${args.ollamaUrl ?? process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434'}`);
+  console.log(`  ollama_url=${ollamaBaseUrl}`);
   console.log(`  classifier_model=${args.classifierModel ?? process.env['ROUTER_CLASSIFIER_MODEL'] ?? 'qwen2.5-coder:7b'}`);
+
+  // ── RR-3 (2026-05-15): async warmup of canonical local models ─────
+  // Fire-and-forget so the daemon binds the port immediately. Each model
+  // is warmed independently — one slow/failed warmup doesn't block the
+  // others. Disable with ROUTER_DISABLE_STARTUP_WARMUP=1 (useful for
+  // local-dev when Ollama isn't running, or in CI). Override the list
+  // with comma-separated ROUTER_STARTUP_WARMUP_MODELS=qwen2.5-coder:7b,…
+  if (process.env['ROUTER_DISABLE_STARTUP_WARMUP'] === '1') {
+    console.log('  startup_warmup=disabled (ROUTER_DISABLE_STARTUP_WARMUP=1)');
+    return;
+  }
+  const override = process.env['ROUTER_STARTUP_WARMUP_MODELS'];
+  let warmModels: string[];
+  if (override !== undefined && override.trim() !== '') {
+    warmModels = override.split(',').map(s => s.trim()).filter(s => s !== '');
+  } else {
+    // Distinct local model tags across all routing rules — usually 2-3 of
+    // them (qwen2.5-coder:7b, qwen2.5-coder:14b, llama3.1:8b, …). We skip
+    // the embedding model: nomic-embed-text is small and warm-loads in
+    // <100 ms; the cold-load grace window doesn't help it.
+    const seen = new Set<string>();
+    for (const r of ROUTING_RULES) {
+      if (!r.useLocal) continue;
+      if (r.localModel.startsWith('nomic-embed-text')) continue;
+      seen.add(r.localModel);
+    }
+    warmModels = Array.from(seen);
+  }
+  console.log(`  startup_warmup=${warmModels.length === 0 ? 'none' : warmModels.join(',')}`);
+  for (const model of warmModels) {
+    sharedOllamaAdapter
+      .warmup(model)
+      .then((r) => {
+        console.log(`  warmup ok: ${model} (${r.durationMs} ms)`);
+      })
+      .catch((e: unknown) => {
+        // Warmup failure is non-fatal — the inference path will retry
+        // with the first-request timeout boost on the next dispatch.
+        console.warn(`  warmup failed: ${model}: ${(e as Error).message.slice(0, 200)}`);
+      });
+  }
 });
 
 // Graceful exit handlers
