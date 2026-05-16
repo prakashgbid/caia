@@ -246,10 +246,13 @@ const SPAN_RULES: SpanRule[] = [
   { name: 'path', pattern: /\.{1,2}\/[A-Za-z0-9._/-]+/g },
   // Email addresses.
   { name: 'email', pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
+  // @chiefaia/* package names — MUST run before the generic GitHub
+  // @handle rule below, otherwise `@chiefaia/foo` is tagged as a handle
+  // (the handle regex stops at the slash) and the pkg rule sees a
+  // sentinel-wrapped `@chiefaia` it can't extend over.
+  { name: 'pkg', pattern: /@chiefaia\/[a-z][a-z0-9-]*/g },
   // GitHub-shaped @handles.
   { name: 'handle', pattern: /(?<![\w])@[A-Za-z0-9-]{1,39}(?![\w@])/g },
-  // @chiefaia/* package names.
-  { name: 'pkg', pattern: /@chiefaia\/[a-z][a-z0-9-]*/g },
   // IPv4 addresses.
   { name: 'ip', pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g },
   // Hostnames matching stolution / caia / tail<hex>.
@@ -282,9 +285,23 @@ export function tagProtectedSpans(s: string): { text: string; count: number } {
   let count = 0;
 
   for (const rule of SPAN_RULES) {
-    working = working.replace(rule.pattern, (match) => {
-      // Skip if already inside a protected span (cheap check: surrounded
-      // by sentinels).
+    // Snapshot the set of already-tagged regions BEFORE applying this
+    // rule. We re-derive these per-rule because previous rules in the
+    // loop may have added new tags. `String.prototype.replace` with a
+    // global regex passes the offset relative to the pre-replace string,
+    // so the range coordinates line up.
+    const protectedRanges = findProtectedRanges(working);
+    working = working.replace(rule.pattern, (match, offset) => {
+      // Skip if this match falls inside an existing `«protected:…»`
+      // span. This makes tagProtectedSpans idempotent — a second call on
+      // already-tagged input is a no-op.
+      if (
+        typeof offset === 'number' &&
+        isIndexProtected(offset, protectedRanges)
+      ) {
+        return match;
+      }
+      // Cheap guard for within-call double-tagging: sentinels.
       if (match.includes(SENTINEL_BEFORE) || match.includes(SENTINEL_AFTER)) return match;
       count++;
       return `${SENTINEL_BEFORE}${PROTECT_OPEN}${rule.name}:${match}${PROTECT_CLOSE}${SENTINEL_AFTER}`;
