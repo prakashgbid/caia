@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@chiefaia/librarian": "workspace:*",
+    "@chiefaia/logger": "workspace:*",
     "@chiefaia/mentor-retrieval": "workspace:*",
     "@chiefaia/prompt-optimizer": "workspace:*",
     "@opentelemetry/api": "^1.9.1",

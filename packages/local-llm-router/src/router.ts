@@ -17,6 +17,8 @@
 // The span is the substrate the obs-foundation feedback loop reads
 // (see proposal section 7).
 
+import { createLogger } from '@chiefaia/logger';
+
 import {
   ClaudeAdapter,
   ClaudeBinaryError,
@@ -55,6 +57,8 @@ type DisplacementClass =
   | 'fallback';
 
 type RouterEventProvider = 'ollama' | 'apprentice' | 'claude' | 'cache' | 'other';
+
+const logger = createLogger({ name: 'local-llm-router/router' });
 
 function providerForEvent(
   llmProvider: LLMProvider,
@@ -252,11 +256,12 @@ export async function route(
             usedFallback = true;
             fallbackFrom = 'local';
             fallbackReason = String(localErr).slice(0, 200);
-            console.warn(
-              `[local-llm-router] Local model "${rule.localModel}" failed ` +
-                `for task "${taskType}"; falling back to Claude binary (${rule.claudeModel}). ` +
-                `Error: ${String(localErr)}`,
-            );
+            logger.warn('local model failed; falling back to Claude binary', {
+              local_model: rule.localModel,
+              task_type: taskType,
+              claude_model: rule.claudeModel,
+              error: String(localErr).slice(0, 500),
+            });
             result = await dispatchClaude(rule.claudeModel, request);
           } else {
             throw localErr;
@@ -284,11 +289,15 @@ export async function route(
             usedFallback = true;
             fallbackFrom = 'local';
             fallbackReason = `cascade-escalation:${triggerLabel}:${reasonLabel}`.slice(0, 200);
-            console.warn(
-              `[local-llm-router] Local model "${rule.localModel}" returned ` +
-                `low-confidence output for task "${taskType}" ` +
-                `(trigger=${triggerLabel}, reason=${reasonLabel}); ` +
-                `escalating to Claude binary (${rule.claudeModel}).`,
+            logger.warn(
+              'local model returned low-confidence output; escalating to Claude binary',
+              {
+                local_model: rule.localModel,
+                task_type: taskType,
+                trigger: triggerLabel,
+                reason: reasonLabel,
+                claude_model: rule.claudeModel,
+              },
             );
             result = await dispatchClaude(rule.claudeModel, request);
           }
@@ -307,9 +316,12 @@ export async function route(
               usedFallback = true;
               fallbackFrom = 'claude';
               fallbackReason = 'rate-limited';
-              console.warn(
-                `[local-llm-router] Claude binary rate-limited for task "${taskType}"; ` +
-                  `falling back to Ollama (${rule.localModel}). Spend-guard should pause / rotate.`,
+              logger.warn(
+                'Claude binary rate-limited; falling back to Ollama. Spend-guard should pause / rotate.',
+                {
+                  task_type: taskType,
+                  local_model: rule.localModel,
+                },
               );
               result = await dispatchLocal(localModelForRequest, request);
             } else {
@@ -320,9 +332,13 @@ export async function route(
               usedFallback = true;
               fallbackFrom = 'claude';
               fallbackReason = `binary-error: ${claudeErr.message}`.slice(0, 200);
-              console.warn(
-                `[local-llm-router] Claude binary failed (${claudeErr.message}) for task "${taskType}"; ` +
-                  `falling back to Ollama (${rule.localModel}). NO API-key fallback (rule).`,
+              logger.warn(
+                'Claude binary failed; falling back to Ollama. NO API-key fallback (rule).',
+                {
+                  task_type: taskType,
+                  local_model: rule.localModel,
+                  error: claudeErr.message,
+                },
               );
               result = await dispatchLocal(localModelForRequest, request);
             } else {
@@ -334,9 +350,13 @@ export async function route(
               usedFallback = true;
               fallbackFrom = 'claude';
               fallbackReason = `unknown: ${String(claudeErr)}`.slice(0, 200);
-              console.warn(
-                `[local-llm-router] Claude path failed (${String(claudeErr)}) for task "${taskType}"; ` +
-                  `falling back to Ollama (${rule.localModel}).`,
+              logger.warn(
+                'Claude path failed; falling back to Ollama',
+                {
+                  task_type: taskType,
+                  local_model: rule.localModel,
+                  error: String(claudeErr).slice(0, 500),
+                },
               );
               result = await dispatchLocal(localModelForRequest, request);
             } else {
@@ -533,18 +553,19 @@ function emitDispatchLog(args: {
     } else {
       reason = args.rule.useLocal ? 'rule-claude-override' : 'rule-claude';
     }
-    const apprentice = args.apprenticeSlot
-      ? ` apprentice=${args.apprenticeSlot}`
-      : '';
     const ruleStatus = hasExplicitRule ? 'registered' : 'unregistered';
     // intent= is the taxonomy key (== taskType when the caller routes by
     // classifier-v2 intent name). model= is what the dispatcher will hand
     // to ollama/claude. reason= is one of the labels above.
-    console.warn(
-      `[router] dispatch intent=${args.taskType} model=${args.chosenModel} ` +
-        `provider=${args.preferredProvider} reason=${reason} ` +
-        `rule=${ruleStatus} useLocal=${args.rule.useLocal}${apprentice}`,
-    );
+    logger.warn('dispatch', {
+      intent: args.taskType,
+      model: args.chosenModel,
+      provider: args.preferredProvider,
+      reason,
+      rule_status: ruleStatus,
+      use_local: args.rule.useLocal,
+      apprentice_slot: args.apprenticeSlot ?? null,
+    });
   } catch {
     /* logging must never break dispatch */
   }

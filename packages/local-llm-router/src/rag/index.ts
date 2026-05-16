@@ -24,7 +24,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import { createLogger } from '@chiefaia/logger';
+
 import { cosineSim } from './embed.js';
+
+const logger = createLogger({ name: 'local-llm-router/rag' });
 
 export interface IndexEntry {
   path: string;       // absolute path on disk
@@ -70,14 +74,20 @@ export function loadIndex(path: string = defaultIndexPath()): FileIndex | null {
     const raw = readFileSync(path, 'utf8');
     const parsed = JSON.parse(raw) as FileIndex;
     if (parsed.version !== 1 || !Array.isArray(parsed.entries)) {
-      console.error(`[rag] index at ${path} has unexpected shape (version=${parsed.version})`);
+      logger.error('rag index has unexpected shape', {
+        path,
+        version: parsed.version,
+      });
       return null;
     }
     _cached = parsed;
     _cachedPath = path;
     return parsed;
   } catch (e) {
-    console.error(`[rag] failed to parse index at ${path}: ${(e as Error).message}`);
+    logger.error('failed to parse rag index', {
+      path,
+      error: (e as Error).message,
+    });
     return null;
   }
 }
