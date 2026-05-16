@@ -12,7 +12,7 @@ import {
   validateBacklogItem,
   type BacklogItem,
 } from './templated.js';
-import { listPending, nextAvailable } from './backlog.js';
+import { listPending, nextAvailable, scaffoldNext } from './backlog.js';
 
 const DEFAULT_AGENT_MEMORY_DIR = resolve(homedir(), 'Documents/projects/agent-memory');
 const DEFAULT_CHAIN_BASE_DIR = resolve(homedir(), '.caia/chain');
@@ -197,6 +197,51 @@ export function buildCli(): Command {
       else
         process.stdout.write(
           `${out.id}\t${out.machine}\tphases=${out.phase_count}\t${out.source}\n  ${out.title}\n`,
+        );
+    });
+
+  program
+    .command('scaffold-next')
+    .description(
+      'Atomically claim and scaffold the next dispatchable structured item (templated path); exit 1 if none, exit 3 if conflict',
+    )
+    .requiredOption('--backlog <path>', 'directory or file containing structured backlog items')
+    .option('--force', 'overwrite existing chain artifacts', false)
+    .option('--json', 'emit machine-readable output', false)
+    .action((opts: { backlog: string; force?: boolean; json?: boolean }) => {
+      let result;
+      try {
+        const scaffoldOpts: { force?: boolean } = {};
+        if (opts.force) scaffoldOpts.force = true;
+        result = scaffoldNext(opts.backlog, scaffoldOpts);
+      } catch (e) {
+        const msg = (e as Error).message;
+        process.stderr.write(`error: ${msg}\n`);
+        process.exit(msg.includes('already exists') ? 3 : 1);
+      }
+      if (!result) {
+        if (opts.json) process.stdout.write(`null\n`);
+        else process.stderr.write('no dispatchable item available\n');
+        process.exit(1);
+      }
+      const out = {
+        id: result.entry.item.id,
+        title: result.entry.item.title,
+        machine: result.entry.item.machine,
+        source: result.entry.source,
+        phase_count: result.entry.item.phase_count,
+        scaffolded: result.scaffolded,
+      };
+      if (opts.json) process.stdout.write(`${JSON.stringify(out)}\n`);
+      else
+        process.stdout.write(
+          `scaffolded chain=${out.id}\n` +
+            `  machine: ${out.machine}\n` +
+            `  source:  ${out.source}\n` +
+            `  state:   ${result.scaffolded.stateFile}\n` +
+            `  phases:  ${result.scaffolded.phasesYaml}\n` +
+            `  runner:  ${result.scaffolded.runnerScript}\n` +
+            `chain is paused — orchestrator unpauses on next tick.\n`,
         );
     });
 
