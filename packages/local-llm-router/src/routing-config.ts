@@ -773,6 +773,51 @@ export const ROUTING_RULES: RoutingRule[] = [
     estimatedCostLocal: '$0.00',
     estimatedCostClaude: '$0.20',
   },
+
+  // ─── RR-2 (2026-05-16) — intent-vocab gap closers ────────────────────────
+  // Two classifier-v2 intents (`complex-review`, `unknown`) were defined in
+  // src/classifier.ts INTENT_VALUES + config/routing-rules.yaml but had no
+  // ROUTING_RULES entry. getRoute() therefore returned its unknown-task
+  // default (qwen2.5-coder:7b, useLocal:true) for both — the same silent
+  // tier-collapse pattern that B1 fixed for the 36 other intents. RR-2
+  // closes the gap so every classifier output now has an explicit rule.
+  //
+  // complex-review → stolution-batch (per YAML + classifier system prompt
+  //   tier guidance). The tier_models block in routing-rules.yaml further
+  //   pins this intent to llama3.3:70b when the batch dispatch path lands;
+  //   until then the rule follows the same 14B-fallback + Claude-fallback
+  //   shape as the other stolution-batch intents (batch-summarize etc).
+  // unknown → claude (per YAML + classifier system prompt: "intent='unknown'
+  //   means abstain / out-of-vocab / adversarial — escalate"). useLocal:false
+  //   ensures the dispatcher does NOT silently serve 7b for the abstain
+  //   bucket, which is exactly the displacement-bias smoking gun captured
+  //   in router_unknown_task_type_default_local.md.
+  {
+    taskType: 'complex-review',
+    description:
+      'classifier-v2 intent: deep multi-file review at stolution-batch tier. ' +
+      'Cascade tier=stolution-batch — Claude fallback until batch dispatch lands.',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: false,
+    maxTokens: 8000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$2.00',
+  },
+  {
+    taskType: 'unknown',
+    description:
+      'classifier-v2 abstain bucket — intent could not be classified ' +
+      '(low confidence, adversarial, out-of-vocab). Escalates to Claude so ' +
+      'the displacement metric reflects the honest cost of the abstain path ' +
+      'instead of silently routing to local-7b (RR-2 fix, 2026-05-16).',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: false,
+    maxTokens: 8000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$2.00',
+  },
 ];
 
 // ─── B1 (2026-05-15) — tier-routing invariants ───────────────────────────

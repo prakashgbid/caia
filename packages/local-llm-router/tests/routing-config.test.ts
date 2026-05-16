@@ -9,6 +9,7 @@ import {
   TIER_EXPECTATIONS,
   verifyTierRouting,
 } from '../src/routing-config.js';
+import { INTENT_VALUES } from '../src/classifier.js';
 import { getModel } from '../src/model-catalog.js';
 
 describe('routing-config', () => {
@@ -171,8 +172,12 @@ describe('routing-config', () => {
       const intents = loadIntentsFromYaml();
       // Sanity: YAML parsed something (drift guard).
       expect(intents.length).toBeGreaterThan(20);
+      // RR-2 (2026-05-16): `unknown` used to be excluded here because it had
+      // no routing rule and the dispatcher fell through to qwen2.5-coder:7b.
+      // That fall-through *was* the displacement-bias bug — closing the gap
+      // means `unknown` is now a first-class taskType (default_tier=claude)
+      // and the filter is no longer needed.
       const missing = intents
-        .filter((i) => i.name !== 'unknown') // `unknown` is the fall-through, not a real intent
         .filter((i) => ROUTING_RULES.find((r) => r.taskType === i.name) === undefined);
       expect(
         missing,
@@ -182,7 +187,7 @@ describe('routing-config', () => {
     });
 
     it('verifyTierRouting() returns no violations for the current taxonomy', () => {
-      const intents = loadIntentsFromYaml().filter((i) => i.name !== 'unknown');
+      const intents = loadIntentsFromYaml();
       const violations = verifyTierRouting(intents);
       // Format the failure message so a regression names the exact intent
       // and the model it silently collapsed to.
@@ -260,6 +265,59 @@ describe('routing-config', () => {
             `verifyTierRouting() will silently skip it`,
         ).toBeDefined();
       }
+    });
+  });
+
+  describe('RR-2 intent-vocab gap closure (2026-05-16)', () => {
+    // Asserts every entry in classifier.ts INTENT_VALUES has a corresponding
+    // ROUTING_RULES entry. This is the structural invariant the RR-2 fix
+    // institutionalises: when the classifier emits an intent name, the
+    // dispatcher MUST find a registered rule for it. The pre-RR-2 bug was
+    // that `complex-review` + `unknown` were in INTENT_VALUES but absent
+    // from ROUTING_RULES, so getRoute() returned its unknown-task default
+    // (qwen2.5-coder:7b, useLocal:true) — silently routing the abstain
+    // bucket + the heaviest review intent to local-7b. That same gap can
+    // re-open any time a new intent is added to classifier.ts without a
+    // matching ROUTING_RULES entry; this test fails when it does.
+    it('every INTENT_VALUES entry has a ROUTING_RULES rule', () => {
+      const taskTypes = new Set(ROUTING_RULES.map((r) => r.taskType));
+      const missing = INTENT_VALUES.filter((intent) => !taskTypes.has(intent));
+      expect(
+        missing,
+        `INTENT_VALUES entries missing from ROUTING_RULES (silent tier-collapse risk): ` +
+          missing.join(', '),
+      ).toEqual([]);
+    });
+
+    it('complex-review routes to claude fallback (stolution-batch tier, useLocal:false)', () => {
+      const rule = ROUTING_RULES.find((r) => r.taskType === 'complex-review');
+      expect(rule, 'complex-review rule missing — RR-2 regression').toBeDefined();
+      expect(rule?.useLocal).toBe(false);
+      expect(rule?.claudeModel).toBeDefined();
+      // Matches TIER_EXPECTATIONS['stolution-batch'].
+      expect(rule?.localModel).toBe('qwen2.5-coder:14b');
+    });
+
+    it('unknown abstain bucket routes to claude (not silent local-7b)', () => {
+      const rule = ROUTING_RULES.find((r) => r.taskType === 'unknown');
+      expect(rule, 'unknown rule missing — RR-2 regression').toBeDefined();
+      // The displacement-bias smoking gun: the abstain bucket MUST NOT
+      // silently serve qwen2.5-coder:7b. useLocal:false escalates to Claude
+      // so /metrics reflects the honest cost of the abstain path.
+      expect(rule?.useLocal).toBe(false);
+      expect(rule?.claudeModel).toBeDefined();
+      expect(rule?.localModel).toBe('qwen2.5-coder:14b');
+    });
+
+    it('classifier-emitted `unknown` no longer falls through to the unknown-task default', () => {
+      // Pre-RR-2: getRoute('unknown') returned the unknown-task fallback
+      //   (qwen2.5-coder:7b, useLocal:true).
+      // Post-RR-2: getRoute('unknown') resolves the explicit rule above.
+      const rule = getRoute('unknown');
+      expect(rule.taskType).toBe('unknown');
+      expect(rule.useLocal).toBe(false);
+      expect(rule.localModel).toBe('qwen2.5-coder:14b');
+      expect(rule.description).not.toMatch(/Unknown task type/i);
     });
   });
 
