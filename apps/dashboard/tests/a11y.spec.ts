@@ -24,9 +24,19 @@ for (const route of ROUTES) {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(`page error: ${e.message}`));
     page.on('requestfailed', (req) => {
-      // Ignore aborted requests on navigation, log everything else for debugging.
+      // Ignore environmental failures we don't care about for a11y:
+      //   1. ABORTED — RSC <Link> prefetches superseded by the next navigation.
+      //      Playwright reports `net::ERR_ABORTED` (uppercase), hence the
+      //      case-insensitive match.
+      //   2. CONNECTION_REFUSED — the orchestrator at :7776 isn't running in
+      //      CI or in the playwright test-server; the dashboard fetches from
+      //      it fail-soft (catch -> render empty state), so this is not an
+      //      a11y or page-error signal.
+      //   3. NAME_NOT_RESOLVED — analogue for any externally-hosted asset.
       const f = req.failure();
-      if (f && !f.errorText.includes('aborted')) {
+      const text = (f?.errorText ?? '').toLowerCase();
+      const ignorable = ['aborted', 'connection_refused', 'name_not_resolved'];
+      if (f && !ignorable.some((s) => text.includes(s))) {
         errors.push(`request failed: ${req.url()} (${f.errorText})`);
       }
     });

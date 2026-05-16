@@ -297,7 +297,7 @@ export default function BucketsPage() {
       {/* Legend */}
       <div style={{
         background: '#1a1f2e', border: '1px solid #2d3748', borderRadius: 6,
-        padding: '10px 14px', marginBottom: 16, color: '#718096', fontSize: 12,
+        padding: '10px 14px', marginBottom: 16, color: '#cbd5e1', fontSize: 12,
       }}>
         <span style={{ color: '#63b3ed', fontWeight: 700, marginRight: 8 }}>parallel</span>
         tickets with no cross-domain upstream — execute concurrently.
@@ -316,7 +316,7 @@ export default function BucketsPage() {
             <BucketCard key={b.id} b={b} onClick={setSelected} selected={selected === b.id} />
           ))}
           {(data?.grouped.parallel.length ?? 0) === 0 && (
-            <div style={{ color: '#4a5568', fontSize: 12, fontStyle: 'italic' }}>no parallel buckets yet</div>
+            <div style={{ color: '#cbd5e1', fontSize: 12, fontStyle: 'italic' }}>no parallel buckets yet</div>
           )}
         </div>
 
@@ -336,7 +336,7 @@ export default function BucketsPage() {
             </div>
           ))}
           {sequentialByDomain.size === 0 && (
-            <div style={{ color: '#4a5568', fontSize: 12, fontStyle: 'italic', padding: 16 }}>no sequential buckets yet</div>
+            <div style={{ color: '#cbd5e1', fontSize: 12, fontStyle: 'italic', padding: 16 }}>no sequential buckets yet</div>
           )}
         </div>
 
@@ -344,7 +344,7 @@ export default function BucketsPage() {
         <div style={{ background: '#0f1117', border: '1px solid #2d3748', borderRadius: 8, padding: 16, position: 'sticky', top: 0 }}>
           {selected
             ? <BucketDetailPanel id={selected} />
-            : <div style={{ color: '#4a5568', fontSize: 12, fontStyle: 'italic' }}>Select a bucket to see its tickets</div>
+            : <div style={{ color: '#cbd5e1', fontSize: 12, fontStyle: 'italic' }}>Select a bucket to see its tickets</div>
           }
         </div>
       </div>

@@ -74,7 +74,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm-mono
 
       - name: Build verifier
-        run: pnpm --filter @chiefaia/verifier build
+        run: pnpm --filter '@chiefaia/verifier...' build
 
       - name: Fetch SPS task spec
         env:
