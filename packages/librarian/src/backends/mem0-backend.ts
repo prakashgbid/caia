@@ -43,6 +43,8 @@ import { createHash } from 'node:crypto';
 import { dirname, join, resolve as pathResolve } from 'node:path';
 import { existsSync, mkdirSync } from 'node:fs';
 
+import { createLogger } from '@chiefaia/logger';
+
 import {
   defaultFsReader,
   pathToSlug
@@ -142,6 +144,8 @@ export const DEFAULT_MEM0_MIN_SIMILARITY = 0.25;
 
 /** Default top-N for retrieval. Same as Librarian Phase-1. */
 export const DEFAULT_MEM0_TOP_N = 5;
+
+const _defaultLogger = createLogger({ name: 'librarian/mem0-backend' });
 
 export interface Mem0BackendOptions {
   /** memoryDir — root for the index DB filename when `vectorStoreDbPath` is unset. Required. */
@@ -262,7 +266,12 @@ export interface BuildMem0IndexOptions {
   reportsDir?: string;
   /** Override fs reader (tests). */
   fsReader?: FsReader;
-  /** Logger sink. Defaults to console.error. */
+  /**
+   * Logger sink. Defaults to a `@chiefaia/logger` instance writing
+   * structured `info` lines under `name: 'librarian/mem0-backend'`.
+   * Pass `() => {}` to silence; pass a custom callback to keep
+   * diagnostics on stderr without going through pino.
+   */
   log?: (msg: string) => void;
   /** Clock injection. */
   now?: () => number;
@@ -289,7 +298,7 @@ export interface BuildMem0IndexOptions {
  */
 export async function buildMem0Index(opts: BuildMem0IndexOptions): Promise<BuildIndexStats> {
   const fsReader = opts.fsReader ?? defaultFsReader;
-  const log = opts.log ?? ((m: string) => console.error(m));
+  const log = opts.log ?? ((m: string) => _defaultLogger.info(m));
   const now = opts.now ?? (() => Date.now());
   const inputCap = opts.embedInputMaxBytes ?? DEFAULT_EMBED_INPUT_MAX_BYTES;
   const backend = opts.backend ?? new Mem0Backend({ memoryDir: opts.memoryDir, ...(opts.backendOptions ?? {}) });

@@ -36,6 +36,8 @@
 
 import { createHash } from 'node:crypto';
 
+import { createLogger } from '@chiefaia/logger';
+
 import { vectorToBlob } from './embed.js';
 import {
   defaultFsReader,
@@ -69,6 +71,8 @@ import type {
  */
 export const DEFAULT_EMBED_INPUT_MAX_BYTES = 4096;
 
+const _defaultLogger = createLogger({ name: 'librarian/index-builder' });
+
 export interface BuildIndexOptions {
   /** Memory directory containing the agent's markdowns. Required. */
   memoryDir: string;
@@ -80,7 +84,13 @@ export interface BuildIndexOptions {
   fsReader?: FsReader;
   /** Override the index DB path entirely (tests). */
   dbPath?: string;
-  /** Logger sink. Defaults to console.error. Pass `() => {}` to silence. */
+  /**
+   * Logger sink. Defaults to a `@chiefaia/logger` instance writing
+   * structured `info` lines under `name: 'librarian/index-builder'`.
+   * Pass `() => {}` to silence; pass a custom callback (e.g. the
+   * `caia-librarian-index` CLI's `stderr` writer) to keep diagnostics on
+   * stderr without going through pino.
+   */
   log?: (msg: string) => void;
   /** Override `Date.now`. */
   now?: () => number;
@@ -96,7 +106,7 @@ export interface BuildIndexOptions {
 
 export async function buildIndex(opts: BuildIndexOptions): Promise<BuildIndexStats> {
   const fsReader = opts.fsReader ?? defaultFsReader;
-  const log = opts.log ?? ((m: string) => console.error(m));
+  const log = opts.log ?? ((m: string) => _defaultLogger.info(m));
   const now = opts.now ?? (() => Date.now());
   const inputCap = opts.embedInputMaxBytes ?? DEFAULT_EMBED_INPUT_MAX_BYTES;
 
