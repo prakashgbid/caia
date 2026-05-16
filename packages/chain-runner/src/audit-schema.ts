@@ -150,6 +150,20 @@ export const AUDIT_EVENTS = {
     required: [{ name: 'phase_id', type: 'number' }],
     description: 'success_criteria failed in strict mode — mark-done refused.',
   },
+  // DoD v2 Guardrail #10 — operator-issued override of the adoption-everywhere
+  // gate. Recorded when `caia-chain mark-done --adoption-pending-ok --reason
+  // <text>` is invoked. The override does NOT change the gate's verdict; the
+  // event is the audit-trail proof that an operator (or automated escape
+  // hatch) consciously bypassed an open adoption opportunity.
+  adoption_gate_override: {
+    category: 'operator',
+    required: [
+      { name: 'phase_id', type: 'number' },
+      { name: 'reason', type: 'string' },
+    ],
+    description:
+      'mark-done invoked with --adoption-pending-ok; adoption gate verdict ignored.',
+  },
 
   // Attempts (sub-phase loop counters)
   attempt_started: {
