@@ -497,3 +497,80 @@ intents:
     default_tier: claude
     min_confidence: 0.0
     keywords: []
+
+  # ─── RR-2 (2026-05-15) — canonical-suite-v2 coarse-intent aliases ────────
+  # The canonical eval suite (evals/canonical-suite-v2.yaml) uses the coarse
+  # intent labels below as `expected_intent`. They were missing here, so the
+  # classifier's INTENT_VALUES guard coerced model output that picked these
+  # names to `unknown` → claude. Registered here so:
+  #   1. keyword-prepass can short-circuit on obvious matches
+  #   2. parseClassifierV2Output recognises the intent + applies the tier
+  #   3. canonical-suite-v2 displacement no longer suffers silent default-tier
+  #      falls on the code-edit-*, code-review, code-explain, prose-draft,
+  #      search-memory categories.
+  # Keywords are deliberately narrow — the fine-grained variants above
+  # (small-code-edit / code-review / code-explain / draft-prose / memory-search)
+  # remain the preferred match when the spec is unambiguous.
+  - name: edit
+    default_tier: local-7b
+    min_confidence: 0.5
+    keywords:
+      - edit this code
+      - modify this snippet
+      - update this function to
+      - add a null-check
+      - add a default parameter
+
+  - name: explain
+    default_tier: local-7b
+    min_confidence: 0.5
+    keywords:
+      - explain what this code
+      - explain this snippet
+      - explain this function
+      - what does this code do
+      - walk me through this code
+
+  - name: review
+    default_tier: local-14b
+    min_confidence: 0.5
+    keywords:
+      - review this code
+      - review this pr
+      - review this diff
+      - code review for
+      - review the following
+
+  - name: prose-draft
+    default_tier: local-7b
+    min_confidence: 0.5
+    keywords:
+      - draft a short
+      - draft a paragraph
+      - write a short blurb
+      - write a one-paragraph
+      - draft prose for
+
+  - name: search
+    default_tier: local-7b
+    min_confidence: 0.5
+    keywords:
+      - search the agent-memory
+      - lookup in memory
+      - find the note about
+      - search caia memory
+
+  - name: ambiguous
+    default_tier: claude
+    min_confidence: 0.0
+    keywords: []
+
+  - name: empty
+    default_tier: claude
+    min_confidence: 0.0
+    keywords: []
+
+  - name: prompt-injection
+    default_tier: claude
+    min_confidence: 0.0
+    keywords: []

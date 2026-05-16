@@ -773,6 +773,132 @@ export const ROUTING_RULES: RoutingRule[] = [
     estimatedCostLocal: '$0.00',
     estimatedCostClaude: '$0.20',
   },
+
+  // ─── RR-2 (2026-05-15) — canonical-suite-v2 coarse-intent aliases ────────
+  // The canonical eval suite uses *coarse* intent labels (edit / review /
+  // explain / prose-draft / search) where the classifier-v2 vocabulary uses
+  // *fine-grained* variants (small-code-edit, code-review, code-explain,
+  // draft-prose, memory-search). Until RR-2 these coarse labels were rejected
+  // by parseClassifierOutput → coerced to `unknown` → claude. That caused
+  // every canonical-suite-v2 row in the code-edit-*, code-review, code-explain,
+  // prose-draft, search-memory categories to silently fall to the default
+  // (escalate-to-claude) tier, suppressing displacement on the suite the
+  // displacement floor was measured against. Each alias is registered here
+  // as a first-class taskType so getRoute() returns the right model.
+  //
+  // The three safety/edge intents (`ambiguous`, `empty`, `prompt-injection`)
+  // route to claude (= eval's reject / cloud-haiku conservative-escalate).
+  // `prompt-injection` should rarely reach this codepath — adversarial-prefilter
+  // (src/adversarial-prefilter.ts) catches them upstream and routes to claude
+  // with reason=adversarial-rejected. The entry exists for the case where the
+  // prefilter misses and the classifier picks up the residue.
+  {
+    taskType: 'edit',
+    description:
+      'classifier-v2 / canonical-suite-v2 intent: coarse code-edit. ' +
+      'Default tier local-7b for code-edit-small; cascade-escalation handles ' +
+      'promotion to local-14b/claude for code-edit-medium/large.',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 2000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.20',
+  },
+  {
+    taskType: 'explain',
+    description:
+      'classifier-v2 / canonical-suite-v2 intent: coarse code-explain. ' +
+      'Default tier local-7b; cascade-escalation promotes for multi-language ' +
+      'or deeply-nested explanations.',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 2000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.30',
+  },
+  {
+    taskType: 'review',
+    description:
+      'classifier-v2 / canonical-suite-v2 intent: coarse review (code or ' +
+      'prose). Default tier local-14b — review tasks in the canonical suite ' +
+      'consistently expect local-13b. Distinct from `code-review-light` ' +
+      'which is a first-pass smell check.',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-sonnet-4-6',
+    useLocal: true,
+    maxTokens: 4000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$1.00',
+  },
+  {
+    taskType: 'prose-draft',
+    description:
+      'classifier-v2 / canonical-suite-v2 intent: prose-draft (coarse alias ' +
+      'of draft-prose). Default tier local-7b. Note the word-order: the ' +
+      'canonical eval uses `prose-draft`; the classifier still emits ' +
+      '`draft-prose` for legacy callers — both are valid.',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 2000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.30',
+  },
+  {
+    taskType: 'search',
+    description:
+      'classifier-v2 / canonical-suite-v2 intent: coarse search/lookup ' +
+      '(alias of memory-search). Default tier local-7b.',
+    localModel: 'qwen2.5-coder:7b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: true,
+    maxTokens: 1500,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.15',
+  },
+  {
+    taskType: 'ambiguous',
+    description:
+      'classifier-v2 / canonical-suite-v2 intent: ambiguous prompt. The ' +
+      'canonical suite routes these to cloud-haiku for clarification; we ' +
+      'route to claude as the conservative escalate. Distinct from `unknown` ' +
+      'which is the abstain/parse-failure label.',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: false,
+    maxTokens: 1000,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.10',
+  },
+  {
+    taskType: 'empty',
+    description:
+      'classifier-v2 / canonical-suite-v2 intent: empty / placeholder input. ' +
+      'Canonical suite expected_tier=reject; we conservatively route to claude.',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: false,
+    maxTokens: 500,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.05',
+  },
+  {
+    taskType: 'prompt-injection',
+    description:
+      'classifier-v2 / canonical-suite-v2 intent: prompt-injection attempt. ' +
+      'Adversarial-prefilter (src/adversarial-prefilter.ts) normally catches ' +
+      'these upstream — this entry handles the case where the prefilter ' +
+      'misses. Canonical suite expected_tier=reject; we route to claude as ' +
+      'the conservative defense-in-depth escalate.',
+    localModel: 'qwen2.5-coder:14b',
+    claudeModel: 'claude-haiku-4-5-20251001',
+    useLocal: false,
+    maxTokens: 500,
+    estimatedCostLocal: '$0.00',
+    estimatedCostClaude: '$0.05',
+  },
 ];
 
 // ─── B1 (2026-05-15) — tier-routing invariants ───────────────────────────
