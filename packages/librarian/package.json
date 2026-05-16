@@ -53,6 +53,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@chiefaia/sqlite-utils": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "mem0ai": "^3.0.2"
   },

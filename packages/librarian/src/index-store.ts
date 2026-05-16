@@ -39,10 +39,10 @@
  * concurrently with writes. Only the index builder opens read-write.
  */
 
-import { existsSync, mkdirSync } from 'node:fs';
-import { dirname, join, resolve as pathResolve } from 'node:path';
+import { join, resolve as pathResolve } from 'node:path';
 
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
+import { openDb } from '@chiefaia/sqlite-utils';
 
 import type { IndexedPrecedent, PrecedentKind } from './types.js';
 import { isPrecedentKind } from './types.js';
@@ -96,20 +96,18 @@ export interface IndexStore {
  */
 export function openIndexStore(opts: IndexStoreOptions): IndexStore {
   const dbPath = opts.dbPath ?? indexDbPath(opts.memoryDir);
-  const parent = dirname(dbPath);
-  if (!existsSync(parent)) {
-    mkdirSync(parent, { recursive: true });
-  }
+  // D3 (2026-05-15): db open + parent-dir creation + the WAL /
+  // synchronous=NORMAL / foreign_keys=ON pragma block now flow through
+  // @chiefaia/sqlite-utils.openDb. Read-only handles get the same
+  // { readonly, fileMustExist } shape from the helper. The pre-D3
+  // behaviour is byte-identical — the helper sets the exact same
+  // three pragmas on the writable path, and the read-only handle
+  // intentionally skips them (raw SQLite forbids pragma writes
+  // through a readonly handle).
+  const readonly = opts.readonly === true;
+  const db = openDb(dbPath, { readonly });
 
-  const dbOptions: Database.Options = opts.readonly === true
-    ? { readonly: true, fileMustExist: true }
-    : {};
-  const db = new Database(dbPath, dbOptions);
-
-  if (opts.readonly !== true) {
-    db.pragma('journal_mode = WAL');
-    db.pragma('synchronous = NORMAL');
-    db.pragma('foreign_keys = ON');
+  if (!readonly) {
     initSchema(db);
   }
 
