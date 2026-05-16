@@ -1,0 +1,4 @@
+{
+  "first": "```yaml\nphases:\n  - id: 1\n    name: missing_prompt\n    success_criteria:\n      output_file: ~/Documents/projects/reports/x.md\n```\n",
+  "second": "```yaml\ndefaults:\n  max_retries: 2\nchain_config:\n  alert_channels: [handoff]\n  max_concurrent: 1\nphases:\n  - id: 1\n    name: fixed_phase\n    description: 'Now has a prompt_template.'\n    deps: []\n    max_minutes: 90\n    success_criteria:\n      output_file: '~/Documents/projects/reports/fixed_p1_2026-05-16.md'\n      min_bytes: 800\n      requires_merged_pr: true\n    prompt_template: |\n      Phase 1 — fixed. This is a long-enough prompt template to satisfy the\n      schema validator's 40-character minimum, with concrete file paths under\n      caia/packages/... and a PR / Report section.\n```\n"
+}

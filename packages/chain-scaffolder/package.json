@@ -1,0 +1,58 @@
+{
+  "name": "@chiefaia/chain-scaffolder",
+  "version": "0.1.0",
+  "description": "Chain scaffolder for @chiefaia/chain-runner — converts backlog items (structured YAML or loose markdown lines) into chain definitions (state.json + phases.yaml + runner script). LLM-assisted path uses claude or local-llm-router with schema-validated retry.",
+  "type": "module",
+  "bin": {
+    "caia-scaffold": "./bin/caia-scaffold.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./llm": {
+      "import": "./dist/llm.js",
+      "types": "./dist/llm.d.ts"
+    },
+    "./schema": {
+      "import": "./dist/schema.js",
+      "types": "./dist/schema.d.ts"
+    },
+    "./context": {
+      "import": "./dist/context.js",
+      "types": "./dist/context.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"import('node:fs').then(fs=>fs.chmodSync('bin/caia-scaffold.js','755'))\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/chain-runner": "workspace:*",
+    "commander": "^12.0.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
