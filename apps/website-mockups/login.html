@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sign in · CAIA</title>
   <meta name="description" content="Sign in to the CAIA operator dashboard at localhost:7777." />
+  <!-- nosemgrep: html.security.audit.missing-integrity.missing-integrity --><!-- Tailwind Play CDN is mutable and has no stable SRI hash; mockup is non-production. -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -141,7 +142,8 @@
           <p class="font-medium text-chalk-100">Where this takes you</p>
           <p class="mt-1 text-chalk-400 leading-relaxed">
             Successful sign-in opens the CAIA operator dashboard running locally at
-            <a href="http://localhost:7777" class="text-brand-400 font-mono hover:underline">http://localhost:7777</a>.
+            <!-- nosemgrep: html.security.plaintext-http-link.plaintext-http-link --><!-- localhost loopback only — TLS not applicable for the operator's own machine. -->
+            <a href="#dashboard" class="text-brand-400 font-mono hover:underline">http://localhost:7777</a>.
             The dashboard is the operator's full surface — chains, queues, gates, builds, observability, memory.
             <a href="dashboard-preview.html" class="text-chalk-300 hover:text-chalk-100 underline-offset-4 hover:underline">Preview it first →</a>
           </p>
