@@ -12,12 +12,18 @@ import {
 
 describe('ClaudeCallBudget', () => {
   const ORIG_ENV = process.env['CLAUDE_CALLS_PER_HOUR_CAP'];
+  const ORIG_ENV_ALIAS = process.env['CLAUDE_CALLS_PER_HOUR_MAX'];
 
   afterEach(() => {
     if (ORIG_ENV === undefined) {
       delete process.env['CLAUDE_CALLS_PER_HOUR_CAP'];
     } else {
       process.env['CLAUDE_CALLS_PER_HOUR_CAP'] = ORIG_ENV;
+    }
+    if (ORIG_ENV_ALIAS === undefined) {
+      delete process.env['CLAUDE_CALLS_PER_HOUR_MAX'];
+    } else {
+      process.env['CLAUDE_CALLS_PER_HOUR_MAX'] = ORIG_ENV_ALIAS;
     }
   });
 
@@ -32,6 +38,42 @@ describe('ClaudeCallBudget', () => {
     process.env['CLAUDE_CALLS_PER_HOUR_CAP'] = '5';
     const b = new ClaudeCallBudget();
     expect(b.configuredCap).toBe(5);
+  });
+
+  it('reads CLAUDE_CALLS_PER_HOUR_MAX as a GB-9 alias when canonical key is unset', () => {
+    delete process.env['CLAUDE_CALLS_PER_HOUR_CAP'];
+    process.env['CLAUDE_CALLS_PER_HOUR_MAX'] = '17';
+    const b = new ClaudeCallBudget();
+    expect(b.configuredCap).toBe(17);
+  });
+
+  it('canonical CLAUDE_CALLS_PER_HOUR_CAP wins over the GB-9 MAX alias when both are set', () => {
+    process.env['CLAUDE_CALLS_PER_HOUR_CAP'] = '11';
+    process.env['CLAUDE_CALLS_PER_HOUR_MAX'] = '99';
+    const b = new ClaudeCallBudget();
+    expect(b.configuredCap).toBe(11);
+  });
+
+  it('refuses the (cap+1)th consume — 51st of 50/hr is rejected per the GB-9 contract', () => {
+    let t = 1_000_000;
+    const b = new ClaudeCallBudget({ cap: 50, now: () => t });
+    for (let i = 0; i < 50; i++) {
+      b.consume();
+      t += 100;
+    }
+    expect(() => b.consume()).toThrow(ClaudeBudgetExceededError);
+    try {
+      b.consume();
+      expect.fail('expected ClaudeBudgetExceededError on the 51st consume');
+    } catch (e) {
+      const err = e as ClaudeBudgetExceededError;
+      expect(err.cap).toBe(50);
+      expect(err.callsInLastHour).toBe(50);
+      // retry-after derived in seconds = (resetAt - now) / 1000
+      const retryAfterSec = Math.max(1, Math.ceil((err.resetAt - t) / 1000));
+      expect(retryAfterSec).toBeGreaterThan(0);
+      expect(retryAfterSec).toBeLessThanOrEqual(60 * 60);
+    }
   });
 
   it('cap of 0 disables the guard', () => {

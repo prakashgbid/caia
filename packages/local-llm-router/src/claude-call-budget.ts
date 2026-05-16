@@ -1,4 +1,4 @@
-// A.9.5 — claude_calls_per_hour budget guard.
+// A.9.5 / GB-9 — claude_calls_per_hour budget guard.
 //
 // Hard cap on the number of `claude`-binary dispatches per rolling hour, to
 // stop a runaway loop from burning the Max-20x subscription. Triggered for
@@ -6,7 +6,11 @@
 // thousands of Claude calls inside a single chain phase.
 //
 // Default cap is 60/hour. Operators can override via env
-// `CLAUDE_CALLS_PER_HOUR_CAP`. Setting it to `0` (or any value <= 0)
+// `CLAUDE_CALLS_PER_HOUR_CAP` (canonical name; A.9.5 wire contract).
+// The alias `CLAUDE_CALLS_PER_HOUR_MAX` is also read as a fallback so the
+// GB-9 backlog spec spelling works without a second runtime knob — see
+// the chain-phase report router_gb9_calls_per_hour_budget_guard_2026-05-15.md
+// for the deduplication trail. Setting either to `0` (or any value <= 0)
 // disables the guard, useful for one-off bulk decomposition runs where
 // the operator has explicitly accepted the spend.
 //
@@ -15,6 +19,7 @@
 // state-leaking.
 
 const ENV_CAP_KEY = 'CLAUDE_CALLS_PER_HOUR_CAP';
+const ENV_CAP_ALIAS = 'CLAUDE_CALLS_PER_HOUR_MAX';
 const DEFAULT_CAP = 60;
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -115,7 +120,11 @@ export class ClaudeCallBudget {
 }
 
 function parseCapFromEnv(): number {
-  const raw = process.env[ENV_CAP_KEY];
+  // Canonical key (`CLAUDE_CALLS_PER_HOUR_CAP`) wins; the GB-9 alias
+  // (`CLAUDE_CALLS_PER_HOUR_MAX`) is the fallback so both spellings
+  // resolve to the same enforcement seam without operators having to
+  // memorise which doc set is current.
+  const raw = process.env[ENV_CAP_KEY] ?? process.env[ENV_CAP_ALIAS];
   if (raw === undefined || raw.trim() === '') return DEFAULT_CAP;
   const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n)) return DEFAULT_CAP;
