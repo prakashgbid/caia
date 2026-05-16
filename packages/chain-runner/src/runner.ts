@@ -8,6 +8,11 @@ import { classifyEarlyExit } from './classify.js';
 import { findPhase } from './spec.js';
 import { markFailed, markInProgress, type StateContext } from './state.js';
 import type { LockFile, PhaseFailure } from './types.js';
+import {
+  canonicalTemplateFingerprint,
+  loadCanonicalTemplate,
+} from './dispatcher-generator.js';
+import { verifyDispatcherFingerprint } from './dispatcher-fingerprint.js';
 
 export interface DispatchOptions {
   command: string;
@@ -32,6 +37,19 @@ export interface DispatchResult {
   early_exit_signal?: string | null;
   /** Set when an early exit triggered classification + markFailed. */
   early_failure?: PhaseFailure;
+  /**
+   * B3 (2026-05-15). When the pre-spawn fingerprint guardrail rejects the
+   * dispatcher, dispatchPhase returns *without* mutating state (no
+   * markInProgress, no lock acquisition) and surfaces the reason here.
+   * The CLI uses this to exit non-zero and print a fix-it hint.
+   */
+  dispatcher_fingerprint_error?: {
+    reason: string;
+    detail: string;
+    expected?: string;
+    embedded?: string | null;
+    resolved?: string;
+  };
 }
 
 const DEFAULT_EARLY_EXIT_WINDOW_MS = 5000;
@@ -169,6 +187,34 @@ export async function dispatchPhase(
   phaseId: number,
   dispatch?: DispatchOptions,
 ): Promise<DispatchResult> {
+  // B3 (2026-05-15). Fingerprint guardrail. Before mutating any state, if the
+  // caller passed a spawn command that resolves to a known CAIA dispatcher
+  // script (i.e. has the `# CAIA_DISPATCHER_FINGERPRINT:` marker, possibly
+  // via a `# CAIA_DISPATCHER_WRAPPER target=` indirection), verify the
+  // embedded hash matches the canonical template currently bundled with
+  // this chain-runner. On mismatch, refuse to dispatch.
+  //
+  // Scope is intentionally narrow: third-party / ad-hoc spawn targets that
+  // don't carry the marker get a single `dispatch_fingerprint_skipped`
+  // audit entry and run unimpeded. The guardrail only catches *partial*
+  // drift in our own generated dispatchers.
+  //
+  // The check can be bypassed with CAIA_DISABLE_DISPATCHER_FINGERPRINT_CHECK=1
+  // for emergency dispatch when an operator is mid-template-update and
+  // can't regen all chains yet — emits a loud audit when this happens.
+  if (dispatch?.command) {
+    const fpError = preflightDispatcherFingerprint(ctx, dispatch.command);
+    if (fpError) {
+      return {
+        phaseId,
+        sessionId: genSessionId(phaseId),
+        promptFile: '',
+        pid: null,
+        dispatcher_fingerprint_error: fpError,
+      };
+    }
+  }
+
   const sessionId = genSessionId(phaseId);
   const promptFile = buildPromptFile(ctx, phaseId, ctx.spec.phases.length);
 
@@ -312,3 +358,94 @@ export async function dispatchPhase(
     early_failure: failure,
   };
 }
+
+/**
+ * B3 (2026-05-15). Resolve the spawn command to a dispatcher path and
+ * verify its embedded fingerprint matches the bundled canonical template.
+ *
+ * Returns:
+ *   - undefined when the check passes OR the script does not look like a
+ *     CAIA-generated dispatcher (no marker → operator-spawned ad-hoc,
+ *     audited and allowed).
+ *   - a `dispatcher_fingerprint_error` payload when the script *is* a CAIA
+ *     dispatcher and the hash mismatches. Caller refuses to mutate state.
+ *
+ * The spawn command may be a shell phrase ("/path/to/script.sh"), an
+ * argv-style string ("/path/to/script.sh --extra"), or anything `exec`
+ * can run. We treat the first whitespace-separated token as the path.
+ * If that token doesn't resolve to a readable file, the check is skipped
+ * (matches the existing dispatchPhase behavior of letting `spawn` fail
+ * naturally with ENOENT).
+ */
+export function preflightDispatcherFingerprint(
+  ctx: StateContext,
+  spawnCommand: string,
+): DispatchResult['dispatcher_fingerprint_error'] | undefined {
+  if (process.env['CAIA_DISABLE_DISPATCHER_FINGERPRINT_CHECK'] === '1') {
+    appendAudit(ctx.paths.auditFile, 'dispatch_fingerprint_bypassed', {
+      spawn_command: spawnCommand,
+      reason: 'CAIA_DISABLE_DISPATCHER_FINGERPRINT_CHECK=1 in env',
+    });
+    return undefined;
+  }
+
+  // First token wins. Quoting / shell pipelines are not supported here —
+  // operators who use those bypass the guardrail intentionally.
+  const path = spawnCommand.split(/\s+/)[0];
+  if (!path) return undefined;
+
+  let expected: string;
+  try {
+    expected = canonicalTemplateFingerprint();
+  } catch (err) {
+    // Template missing → cannot enforce; audit but allow. This is the
+    // pathological case where the chain-runner install itself is broken.
+    appendAudit(ctx.paths.auditFile, 'dispatch_fingerprint_skipped', {
+      spawn_command: spawnCommand,
+      reason: 'cannot_load_template',
+      error: (err as Error).message,
+    });
+    return undefined;
+  }
+
+  const verdict = verifyDispatcherFingerprint(path, expected, { strict: false });
+  if (verdict.ok) {
+    appendAudit(ctx.paths.auditFile, 'dispatch_fingerprint_ok', {
+      spawn_command: spawnCommand,
+      resolved: verdict.resolved,
+      fingerprint: verdict.embedded,
+    });
+    return undefined;
+  }
+  if (verdict.reason === 'not_a_caia_dispatcher' || verdict.reason === 'unreadable') {
+    // Operator-spawned ad-hoc command (or path-missing). Audit and allow —
+    // we don't gate non-CAIA dispatchers because that would block ops use.
+    appendAudit(ctx.paths.auditFile, 'dispatch_fingerprint_skipped', {
+      spawn_command: spawnCommand,
+      resolved: verdict.resolved,
+      reason: verdict.reason,
+      detail: verdict.detail,
+    });
+    return undefined;
+  }
+  appendAudit(ctx.paths.auditFile, 'dispatch_fingerprint_drift', {
+    spawn_command: spawnCommand,
+    resolved: verdict.resolved,
+    reason: verdict.reason,
+    detail: verdict.detail,
+    embedded: verdict.embedded ?? null,
+    expected: verdict.expected ?? null,
+  });
+  const out: NonNullable<DispatchResult['dispatcher_fingerprint_error']> = {
+    reason: verdict.reason,
+    detail: verdict.detail,
+    embedded: verdict.embedded ?? null,
+  };
+  if (verdict.expected !== undefined) out.expected = verdict.expected;
+  if (verdict.resolved !== undefined) out.resolved = verdict.resolved;
+  return out;
+}
+
+// Re-export for the CLI / tests so they can show the operator what the
+// canonical template path is.
+export { loadCanonicalTemplate };

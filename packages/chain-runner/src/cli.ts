@@ -757,6 +757,22 @@ export function buildProgram(): Command {
             }
           : undefined;
         const result = await dispatchPhase(ctx, Number(phaseId), dispatchOpts);
+        // B3 (2026-05-15): fingerprint guardrail. When the dispatcher
+        // script's embedded hash does not match the bundled canonical
+        // template, dispatchPhase returns *without* mutating state and
+        // surfaces the reason in `dispatcher_fingerprint_error`. Exit 8
+        // (distinct from H-3's exit 7) so wake scripts can react.
+        if (result.dispatcher_fingerprint_error) {
+          const err = result.dispatcher_fingerprint_error;
+          process.stderr.write(
+            `DISPATCHER_FINGERPRINT_DRIFT reason=${err.reason} resolved=${err.resolved ?? ''} expected=${err.expected ?? ''} embedded=${err.embedded ?? ''}\n`,
+          );
+          process.stderr.write(`${err.detail}\n`);
+          process.stderr.write(
+            'Fix: regenerate via `node packages/chain-runner/bin/generate-run-phase.js --chain-id <id> --phases <yaml> --force` (or set CAIA_DISABLE_DISPATCHER_FINGERPRINT_CHECK=1 to bypass for one dispatch — emergency use only).\n',
+          );
+          process.exit(8);
+        }
         process.stdout.write(
           `dispatched phase=${result.phaseId} session=${result.sessionId} prompt=${result.promptFile}` +
             (result.pid ? ` pid=${result.pid}` : '') +
