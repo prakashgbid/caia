@@ -15,24 +15,30 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
+      "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./cli": {
       "import": "./dist/cli.js",
+      "require": "./dist/cli.js",
       "types": "./dist/cli.d.ts"
     },
     "./retrieve": {
       "import": "./dist/retrieve.js",
+      "require": "./dist/retrieve.js",
       "types": "./dist/retrieve.d.ts"
     },
     "./prepend": {
       "import": "./dist/prepend.js",
+      "require": "./dist/prepend.js",
       "types": "./dist/prepend.d.ts"
     },
     "./backends": {
       "import": "./dist/backends/index.js",
+      "require": "./dist/backends/index.js",
       "types": "./dist/backends/index.d.ts"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
