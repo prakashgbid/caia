@@ -1,0 +1,309 @@
+<!--
+  CAIA Public Website — Pseudo-HTML Component Examples (v1.0)
+
+  These are reference snippets for implementers. They are not a fully
+  working page — they assume the sibling tailwind.config.ts is loaded
+  and that Geist Sans + Geist Mono are wired via next/font.
+
+  Snippets cover the 5 highest-touch components from README §5:
+    1. Hero
+    2. Primary button group
+    3. Surface card with hover-lift link
+    4. Code block (with header bar)
+    5. Callout (tip variant)
+    6. Stat card grid (bonus — appears on landing page)
+-->
+
+<!-- ────────────────────────────────────────────────────────────── -->
+<!-- 1. HERO — landing page top                                     -->
+<!-- ────────────────────────────────────────────────────────────── -->
+<section
+  class="bg-slate-0 dark:bg-slate-950 pt-4xl pb-3xl border-b border-slate-200 dark:border-slate-800"
+>
+  <div class="container max-w-content">
+    <div class="mx-auto max-w-prose text-center">
+      <!-- Eyebrow -->
+      <p class="text-caption uppercase text-mint-500 mb-md">
+        v1.2 — autonomous review now in public beta
+      </p>
+
+      <!-- Headline -->
+      <h1 class="text-display-lg md:text-display-2xl text-slate-900 dark:text-slate-100 mb-lg">
+        Engineering, autonomously.
+      </h1>
+
+      <!-- Subhead -->
+      <p class="text-body-lg text-slate-600 dark:text-slate-400 mb-xl">
+        CAIA is a platform for autonomous AI engineering — agents that plan,
+        write, review, and ship code with full audit trails and a human in the
+        loop where it matters.
+      </p>
+
+      <!-- CTA pair -->
+      <div class="flex items-center justify-center gap-md">
+        <a
+          href="/get-started"
+          class="inline-flex items-center justify-center h-12 px-lg rounded-md
+                 bg-ember-500 text-slate-0 font-medium
+                 hover:bg-ember-600 transition-colors duration-fast ease-standard
+                 focus-ring"
+        >
+          Get started
+        </a>
+        <a
+          href="/docs"
+          class="inline-flex items-center justify-center h-12 px-lg rounded-md
+                 bg-transparent text-slate-800 dark:text-slate-100
+                 border border-slate-300 dark:border-slate-700
+                 hover:bg-slate-50 dark:hover:bg-slate-800
+                 transition-colors duration-fast ease-standard focus-ring"
+        >
+          Read the docs &rarr;
+        </a>
+      </div>
+    </div>
+
+    <!-- Hero media frame -->
+    <div class="mx-auto mt-4xl max-w-[1100px]">
+      <div
+        class="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg
+               bg-slate-900"
+      >
+        <!-- code block or product screenshot lives here -->
+        <img src="/hero/dashboard.png" alt="CAIA dashboard" class="block w-full" />
+      </div>
+      <p class="mt-sm text-caption text-slate-500 text-center">
+        The CAIA dashboard, mid-run.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────────── -->
+<!-- 2. BUTTON GROUP — all three variants + sizes                   -->
+<!-- ────────────────────────────────────────────────────────────── -->
+<div class="flex flex-wrap items-center gap-md p-xl bg-slate-50 dark:bg-slate-900">
+  <!-- Primary (md) -->
+  <button
+    type="button"
+    class="inline-flex h-10 items-center justify-center px-lg rounded-md
+           bg-ember-500 text-slate-0 text-body font-medium
+           hover:bg-ember-600 active:bg-ember-700
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-colors duration-fast ease-standard focus-ring"
+  >
+    Run agent
+  </button>
+
+  <!-- Secondary (md) -->
+  <button
+    type="button"
+    class="inline-flex h-10 items-center justify-center px-lg rounded-md
+           bg-slate-0 dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-body font-medium
+           border border-slate-300 dark:border-slate-700
+           hover:bg-slate-50 dark:hover:bg-slate-800
+           transition-colors duration-fast ease-standard focus-ring"
+  >
+    Cancel
+  </button>
+
+  <!-- Ghost (md) -->
+  <button
+    type="button"
+    class="inline-flex h-10 items-center justify-center px-md rounded-md
+           bg-transparent text-slate-700 dark:text-slate-300 text-body font-medium
+           hover:bg-slate-100 dark:hover:bg-slate-800
+           transition-colors duration-fast ease-standard focus-ring"
+  >
+    Learn more
+  </button>
+
+  <!-- Primary (sm) — secondary tier action -->
+  <button
+    type="button"
+    class="inline-flex h-8 items-center justify-center px-md rounded-md
+           bg-ember-500 text-slate-0 text-body-sm font-medium
+           hover:bg-ember-600 transition-colors duration-fast ease-standard focus-ring"
+  >
+    Save
+  </button>
+
+  <!-- Primary (lg) — hero CTA -->
+  <button
+    type="button"
+    class="inline-flex h-12 items-center justify-center px-xl rounded-md
+           bg-ember-500 text-slate-0 text-body-lg font-medium
+           hover:bg-ember-600 transition-colors duration-fast ease-standard focus-ring"
+  >
+    Start your first run
+  </button>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────── -->
+<!-- 3. SURFACE CARD — hover-lifted link card                       -->
+<!-- ────────────────────────────────────────────────────────────── -->
+<a
+  href="/docs/agents/coding-agent"
+  class="group block rounded-lg p-lg
+         bg-slate-50 dark:bg-slate-900
+         border border-slate-200 dark:border-slate-800
+         hover:-translate-y-0.5 hover:shadow-md
+         transition-all duration-base ease-standard focus-ring"
+>
+  <p class="text-caption uppercase text-mint-500 mb-xs">Agent</p>
+  <h3 class="text-h3 text-slate-900 dark:text-slate-100 mb-sm">Coding Agent</h3>
+  <p class="text-body-sm text-slate-600 dark:text-slate-400">
+    Writes, refactors, and tests code with a full plan / verify loop and a
+    human approval gate for risky operations.
+  </p>
+  <p
+    class="mt-md text-body-sm font-medium text-ember-600 dark:text-ember-300
+           group-hover:underline"
+  >
+    Read the spec &rarr;
+  </p>
+</a>
+
+<!-- ────────────────────────────────────────────────────────────── -->
+<!-- 4. CODE BLOCK — with header bar and copy button                -->
+<!-- ────────────────────────────────────────────────────────────── -->
+<figure class="my-xl">
+  <!-- Container -->
+  <div
+    class="rounded-lg overflow-hidden border border-slate-800
+           bg-slate-900 font-mono text-code text-slate-100"
+  >
+    <!-- Header bar -->
+    <div
+      class="flex items-center justify-between px-lg py-sm
+             border-b border-slate-800 bg-slate-900/60"
+    >
+      <span class="text-code-sm text-slate-400">apps/dashboard/app/page.tsx</span>
+      <div class="flex items-center gap-md">
+        <span class="text-caption uppercase text-mint-300">tsx</span>
+        <button
+          type="button"
+          class="text-body-sm text-slate-400 hover:text-slate-100
+                 transition-colors duration-fast ease-standard focus-ring"
+          aria-label="Copy code"
+        >
+          Copy
+        </button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <pre class="px-xl py-lg overflow-x-auto leading-[1.55]"><span class="text-syntax-keyword">export</span> <span class="text-syntax-keyword">default</span> <span class="text-syntax-keyword">function</span> <span class="text-syntax-function">Page</span>() {
+  <span class="text-syntax-keyword">return</span> (
+    &lt;<span class="text-syntax-function">main</span>&gt;
+      &lt;<span class="text-syntax-function">h1</span>&gt;Engineering, autonomously.&lt;/<span class="text-syntax-function">h1</span>&gt;
+    &lt;/<span class="text-syntax-function">main</span>&gt;
+  )
+}</pre>
+  </div>
+
+  <!-- Optional caption -->
+  <figcaption class="mt-sm text-caption text-slate-500">
+    The root of the CAIA dashboard, post-migration to App Router.
+  </figcaption>
+</figure>
+
+<!-- ────────────────────────────────────────────────────────────── -->
+<!-- 5. CALLOUT — tip variant                                       -->
+<!-- ────────────────────────────────────────────────────────────── -->
+<aside
+  role="note"
+  class="my-xl flex items-start gap-sm
+         rounded-md border-l-4 border-mint-500
+         bg-mint-50 dark:bg-slate-800
+         p-lg"
+>
+  <span
+    aria-hidden="true"
+    class="flex-shrink-0 w-6 h-6 mt-0.5 inline-flex items-center justify-center
+           rounded-full bg-mint-500 text-slate-0 text-body-sm font-bold"
+  >★</span>
+  <div>
+    <p class="text-body font-semibold text-slate-900 dark:text-slate-100 mb-2xs">
+      Tip — agents inherit guardrails
+    </p>
+    <p class="text-body-sm text-slate-700 dark:text-slate-300">
+      You don't have to re-declare permissions for child agents. The parent's
+      <code class="font-mono text-code-sm bg-slate-100 dark:bg-slate-900
+                   text-slate-800 dark:text-slate-100 px-1.5 rounded-sm">
+        permission_mode
+      </code>
+      is the default ceiling for every spawn it makes.
+    </p>
+  </div>
+</aside>
+
+<!-- ────────────────────────────────────────────────────────────── -->
+<!-- 6. STAT CARD GRID — landing-page "by the numbers" section       -->
+<!-- ────────────────────────────────────────────────────────────── -->
+<section class="bg-slate-50 dark:bg-slate-900 py-4xl">
+  <div class="container max-w-content">
+    <p class="text-caption uppercase text-mint-500 text-center mb-md">
+      By the numbers
+    </p>
+    <h2
+      class="text-h1 md:text-display-lg text-slate-900 dark:text-slate-100
+             text-center mb-3xl"
+    >
+      What autonomous engineering looks like at scale.
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-xl">
+      <!-- Stat 1 -->
+      <div
+        class="rounded-lg p-2xl bg-slate-0 dark:bg-slate-800
+               border border-slate-200 dark:border-slate-800"
+      >
+        <p class="text-caption uppercase text-mint-500 mb-md">Records ingested</p>
+        <p
+          class="font-mono tabular-nums text-display-xl text-slate-900 dark:text-slate-100
+                 mb-sm"
+        >
+          55M+
+        </p>
+        <p class="text-body-sm text-slate-600 dark:text-slate-400">
+          Across the canonical-entity index — businesses, locations, deals.
+        </p>
+      </div>
+
+      <!-- Stat 2 -->
+      <div
+        class="rounded-lg p-2xl bg-slate-0 dark:bg-slate-800
+               border border-slate-200 dark:border-slate-800"
+      >
+        <p class="text-caption uppercase text-mint-500 mb-md">Live agents</p>
+        <p
+          class="font-mono tabular-nums text-display-xl text-slate-900 dark:text-slate-100
+                 mb-sm"
+        >
+          16
+        </p>
+        <p class="text-body-sm text-slate-600 dark:text-slate-400">
+          Each running in an isolated workspace with auditable boundaries.
+        </p>
+      </div>
+
+      <!-- Stat 3 -->
+      <div
+        class="rounded-lg p-2xl bg-slate-0 dark:bg-slate-800
+               border border-slate-200 dark:border-slate-800"
+      >
+        <p class="text-caption uppercase text-mint-500 mb-md">Storage footprint</p>
+        <p
+          class="font-mono tabular-nums text-display-xl text-slate-900 dark:text-slate-100
+                 mb-sm"
+        >
+          491 GB
+        </p>
+        <p class="text-body-sm text-slate-600 dark:text-slate-400">
+          PostgreSQL primary; cold-tier replica retained at S3 parity.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
