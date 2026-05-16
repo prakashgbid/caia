@@ -53,11 +53,15 @@ jobs:
       # ts-jest's type resolution and runtime require both succeed.
       - name: Build prerequisite packages
         run: |
-          pnpm --filter @chiefaia/logger build
-          pnpm --filter @chiefaia/local-llm-router build
-          pnpm --filter @chiefaia/feature-registry build || true
-          pnpm --filter @chiefaia/architecture-registry build || true
-          pnpm --filter @chiefaia/agent-contract-registry build || true
+          # Trailing `...` builds each filtered package PLUS its workspace
+          # deps in topological order. local-llm-router pulls in
+          # @chiefaia/prompt-optimizer, librarian, mentor-retrieval — their
+          # dist/ files must exist before tsc resolves the imports.
+          pnpm --filter '@chiefaia/logger...' build
+          pnpm --filter '@chiefaia/local-llm-router...' build
+          pnpm --filter '@chiefaia/feature-registry...' build || true
+          pnpm --filter '@chiefaia/architecture-registry...' build || true
+          pnpm --filter '@chiefaia/agent-contract-registry...' build || true
 
       - name: Run pipeline E2E suite
         working-directory: apps/orchestrator
@@ -82,11 +86,15 @@ jobs:
 
       - name: Build prerequisite packages
         run: |
-          pnpm --filter @chiefaia/logger build
-          pnpm --filter @chiefaia/local-llm-router build
-          pnpm --filter @chiefaia/feature-registry build || true
-          pnpm --filter @chiefaia/architecture-registry build || true
-          pnpm --filter @chiefaia/agent-contract-registry build || true
+          # Trailing `...` builds each filtered package PLUS its workspace
+          # deps in topological order. local-llm-router pulls in
+          # @chiefaia/prompt-optimizer, librarian, mentor-retrieval — their
+          # dist/ files must exist before tsc resolves the imports.
+          pnpm --filter '@chiefaia/logger...' build
+          pnpm --filter '@chiefaia/local-llm-router...' build
+          pnpm --filter '@chiefaia/feature-registry...' build || true
+          pnpm --filter '@chiefaia/architecture-registry...' build || true
+          pnpm --filter '@chiefaia/agent-contract-registry...' build || true
 
       - name: Run per-agent regression suite
         working-directory: apps/orchestrator

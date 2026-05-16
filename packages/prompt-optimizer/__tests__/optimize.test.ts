@@ -113,11 +113,14 @@ describe('optimize — protected spans preserved end-to-end', () => {
         userQuestion: 'what changed?',
         budget: { skipStagesUnderTokens: 50 },
       });
-      const body = lastRouterCallBody as { messages: Array<{ content: string }> };
-      const userMsg = body.messages.find((m) =>
-        (m.content || '').includes('protected:'),
-      );
-      expect(userMsg, 'router prompt should contain protected markers').toBeTruthy();
+      const body = lastRouterCallBody as {
+        messages: Array<{ role: string; content: string }>;
+      };
+      // The system prompt also contains the literal string "protected:"
+      // (it instructs the model to preserve «protected:…» markers), so
+      // filter by role to pick out the user blob.
+      const userMsg = body.messages.find((m) => m.role === 'user');
+      expect(userMsg, 'router prompt should contain a user message').toBeTruthy();
       expect(userMsg!.content).toContain('«protected:path:/src/foo.ts»');
       expect(userMsg!.content).toContain('«protected:sha:deadbeef1234»');
     } finally {

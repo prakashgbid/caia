@@ -60,9 +60,10 @@ export default function PromptsPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
         <h2 style={{ margin: 0 }}>Prompts</h2>
         <select
+          aria-label="Filter prompts by status"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          style={{ fontSize: 13, padding: '3px 8px', borderRadius: 6, border: '1px solid #d1d5db' }}
+          style={{ fontSize: 13, padding: '3px 8px', borderRadius: 6, border: '1px solid #d1d5db', color: '#111827', background: '#fff' }}
         >
           <option value="">All statuses</option>
           <option value="received">received</option>
@@ -71,7 +72,7 @@ export default function PromptsPage() {
           <option value="answered">answered</option>
           <option value="failed">failed</option>
         </select>
-        <Link href="/reports/prompts" style={{ marginLeft: 'auto', color: '#6b7280', fontSize: 12 }}>
+        <Link href="/reports/prompts" style={{ marginLeft: 'auto', color: '#90cdf4', fontSize: 12, textDecoration: 'underline' }}>
           Reports →
         </Link>
       </div>
@@ -84,7 +85,7 @@ export default function PromptsPage() {
         </div>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, color: '#111827' }}>
         <thead>
           <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
             <th style={{ padding: '8px 10px', textAlign: 'left' }}>ID</th>

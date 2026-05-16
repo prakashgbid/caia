@@ -135,11 +135,11 @@ export default function ContractsPage() {
   }, [scope]);
 
   return (
-    <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
+    <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif', color: '#e5e7eb' }}>
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
         Agent Section Contract Registry
       </h1>
-      <p style={{ color: '#6b7280', marginBottom: 24, maxWidth: 720 }}>
+      <p style={{ color: '#cbd5e1', marginBottom: 24, maxWidth: 720 }}>
         Each ticket-writing agent (PO, BA, EA, Test-Design) declares a SectionContract
         listing the sections + per-scope rubrics it owns. The Story Validator composes
         contracts at runtime per a story&apos;s scope. New agent? Just register a contract.
@@ -167,7 +167,7 @@ export default function ContractsPage() {
           ))}
         </select>
         {composed && (
-          <span style={{ marginLeft: 16, color: '#6b7280', fontSize: 13 }}>
+          <span style={{ marginLeft: 16, color: '#cbd5e1', fontSize: 13 }}>
             {composed.sectionCount} sections · signature{' '}
             <code style={{ fontSize: 11 }}>{composed.signature.slice(0, 12)}…</code>
           </span>
@@ -199,7 +199,7 @@ export default function ContractsPage() {
         </h2>
         {loading && <p>Loading…</p>}
         {!loading && composed && composed.sections.length === 0 && (
-          <p style={{ color: '#6b7280' }}>
+          <p style={{ color: '#cbd5e1' }}>
             No sections for scope <strong>{scope}</strong>.
           </p>
         )}

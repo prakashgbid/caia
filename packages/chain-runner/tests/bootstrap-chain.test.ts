@@ -164,7 +164,12 @@ describe('bootstrapNewChain', () => {
     const runner = readFileSync(result.runnerScript, 'utf8');
     expect(runner).toContain('CHAIN_ID="bootstrap-test"');
     expect(runner).toContain('source "$HOME/.caia/chain-watchdog/_dispatcher_helpers.sh"');
-    expect(runner).toContain('claude \\');
+    // GB-3 (2026-05-16): the dispatcher now resolves the claude binary
+    // through `$CLAUDE_BIN` (preferring `claude-wrap` over raw `claude`)
+    // so prompts can route through the local-llm-router at :7411 first.
+    expect(runner).toContain('CLAUDE_BIN=');
+    expect(runner).toMatch(/command -v claude-wrap \|\| command -v claude/);
+    expect(runner).toContain('"$CLAUDE_BIN" \\');
 
     const plist = readFileSync(result.plist, 'utf8');
     expect(plist).toContain('<string>com.caia.chain-runner.bootstrap-test</string>');

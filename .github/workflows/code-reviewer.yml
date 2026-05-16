@@ -65,7 +65,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm-mono
 
       - name: Build code-reviewer
-        run: pnpm --filter @chiefaia/code-reviewer build
+        run: pnpm --filter '@chiefaia/code-reviewer...' build
 
       - name: Fetch PR diff
         env:

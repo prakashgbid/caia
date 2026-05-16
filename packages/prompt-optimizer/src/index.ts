@@ -73,17 +73,26 @@ export async function optimize(input: OptimizerInput): Promise<OptimizerResult> 
     stage1Prepass(r),
   );
 
+  // The user-question carries the operator's instructions and often
+  // names entities (paths, idents, SHAs) that downstream stages MUST
+  // preserve verbatim. Run the same prepass over it so its protected
+  // spans get tagged just like the rest of the prompt.
+  const stage1UserQuestion = input.userQuestion
+    ? stage1Prepass(input.userQuestion)
+    : { text: '', protectedSpans: 0 };
+
   const protectedSpanCount =
     stage1SystemPrompt.protectedSpans +
     stage1Blobs.reduce((acc, b) => acc + b.prepass.protectedSpans, 0) +
-    stage1ReasoningPrepass.reduce((acc, p) => acc + p.protectedSpans, 0);
+    stage1ReasoningPrepass.reduce((acc, p) => acc + p.protectedSpans, 0) +
+    stage1UserQuestion.protectedSpans;
 
   const stage1Out =
     [
       stage1SystemPrompt.text,
       ...stage1Blobs.map((b) => b.prepass.text),
       ...stage1ReasoningPrepass.map((p) => p.text),
-      input.userQuestion,
+      stage1UserQuestion.text,
     ]
       .filter(Boolean)
       .join('\n');

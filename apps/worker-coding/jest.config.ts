@@ -9,6 +9,13 @@ const config: Config = {
   moduleNameMapper: {
     '^@chiefaia/ticket-template$': '<rootDir>/../../packages/ticket-template/src/index.ts',
     '^@chiefaia/capability-broker$': '<rootDir>/../../packages/capability-broker/src/index.ts',
+    // capability-broker pulls in hmac-auth, and worker-coding's logger
+    // imports @chiefaia/logger directly. Both of those packages are
+    // built as ESM (tsup --format esm), which ts-jest cannot parse with
+    // `module: 'commonjs'`. Redirect them to their .ts source so Jest
+    // never crosses the ESM boundary.
+    '^@chiefaia/hmac-auth$': '<rootDir>/../../packages/hmac-auth/src/index.ts',
+    '^@chiefaia/logger$': '<rootDir>/../../packages/logger/src/index.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {

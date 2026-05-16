@@ -168,15 +168,15 @@ export default function ArchitecturePage() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <h1 style={{ margin: 0 }}>Architecture Registry</h1>
-          <p style={{ color: '#666', margin: '4px 0' }}>
+          <p style={{ color: '#cbd5e1', margin: '4px 0' }}>
             AKG (Architecture Knowledge Graph). Auto-extracted via ts-morph + drizzle introspect + package scanner.
             Powers the EA Agent's per-domain architecturalInstructions[]. Polls every {POLL_INTERVAL_MS / 1000}s.
           </p>
-          <p style={{ color: '#888', margin: '4px 0', fontSize: 12 }}>
-            See also: <Link href="/registry">/registry</Link> (Feature Registry — sister track at user-feature granularity)
+          <p style={{ color: '#cbd5e1', margin: '4px 0', fontSize: 12 }}>
+            See also: <Link href="/registry" style={{ textDecoration: 'underline' }}>/registry</Link> (Feature Registry — sister track at user-feature granularity)
           </p>
         </div>
-        <div style={{ color: '#888', fontSize: 12 }}>
+        <div style={{ color: '#cbd5e1', fontSize: 12 }}>
           Last loaded: {loadedAt ? relTime(loadedAt) : '—'}
         </div>
       </header>
@@ -289,9 +289,10 @@ const panelStyle: React.CSSProperties = {
   borderRadius: 8,
   padding: 16,
   marginBottom: 16,
+  color: '#1a202c',
 };
-const panelTitle: React.CSSProperties = { margin: '0 0 12px 0', fontSize: 18 };
-const emptyStyle: React.CSSProperties = { color: '#888', fontStyle: 'italic', padding: 12 };
+const panelTitle: React.CSSProperties = { margin: '0 0 12px 0', fontSize: 18, color: '#1a202c' };
+const emptyStyle: React.CSSProperties = { color: '#4a5568', fontStyle: 'italic', padding: 12 };
 const th: React.CSSProperties = { textAlign: 'left', padding: '6px 8px', fontWeight: 600, borderBottom: '2px solid #e2e8f0' };
 const td: React.CSSProperties = { padding: '6px 8px', verticalAlign: 'top' };
 

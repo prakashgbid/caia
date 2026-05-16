@@ -1,0 +1,74 @@
+name: Visual baselines
+
+# Bootstrap / regenerate the dashboard's Playwright visual baselines on the
+# same Linux runner image the `visual` evidence-gate job uses, then commit
+# them back to the triggering branch. Baselines are platform-sensitive
+# (Mac-generated baselines won't pass on the Ubuntu runner because of font
+# rendering differences), so this workflow is the canonical seed path.
+#
+# When to run:
+#   - First time, after `__visual_baselines__/` is empty (the visual.spec.ts
+#     suite skips when baselines are missing — running this workflow seeds
+#     them so the suite starts comparing).
+#   - After an intentional dashboard visual change. Trigger this workflow,
+#     review the resulting commit, merge.
+#
+# Trigger: workflow_dispatch only — never auto-runs. Inputs:
+#   - branch: which branch to commit the regenerated baselines back to
+#     (defaults to the workflow's ref).
+#
+# Reference:
+#   - caia/docs/evidence-gate.md
+#   - apps/dashboard/tests/visual.spec.ts
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to commit the regenerated baselines to
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: visual-baselines-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    name: regenerate-baselines
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref_name }}
+          # Need a real token (not GITHUB_TOKEN) for the commit-back to fire
+          # any downstream workflows; if the operator wants that, they can
+          # swap PAT in. For now the bot push is fine — visual updates are
+          # reviewed via the resulting commit on the branch.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ./.github/actions/setup-pnpm-mono
+
+      - name: Build dashboard
+        run: pnpm --filter @caia-app/dashboard build
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @caia-app/dashboard exec playwright install --with-deps chromium
+
+      - name: Regenerate baselines
+        run: pnpm --filter @caia-app/dashboard exec playwright test tests/visual.spec.ts --update-snapshots
+
+      - name: Commit baselines
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/dashboard/tests/__visual_baselines__/
+          if git diff --cached --quiet; then
+            echo "No baseline changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(dashboard): regenerate visual baselines via workflow_dispatch"
+          git push

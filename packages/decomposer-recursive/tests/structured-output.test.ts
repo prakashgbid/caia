@@ -230,8 +230,14 @@ describe('callStructured — retry semantics', () => {
   });
 
   it('respects a maxRetries=0 setting (single attempt only)', async () => {
+    // The local-llm-router escalates to Claude when the local response is
+    // < MIN_RESPONSE_CHARS (=8 chars, see cascade-escalation.ts). The
+    // previous fixture, `malformedResponse('no json')` (7 chars), tripped
+    // that path and broke the test's assumption of a single
+    // local-only attempt. Use a long-enough malformed body so we stay on
+    // the local model and the parse failure is what propagates.
     const ollama = fakeOllama({
-      responses: [malformedResponse('no json')],
+      responses: [malformedResponse('this is definitely not json output')],
     });
     installFakeAdapters(ollama, fakeClaude({ responses: [] }));
 
