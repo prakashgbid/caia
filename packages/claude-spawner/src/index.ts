@@ -21,3 +21,17 @@ export type {
   ClaudeJsonEnvelope,
   ParsedClaudeEnvelope,
 } from './spawn.js';
+
+export {
+  runClaudeWrap,
+  parseArgs as parseClaudeWrapArgs,
+  decideRoute,
+  synthesiseClaudeJsonEnvelope,
+  buildLogLine,
+  hashPrompt,
+  DEFAULT_LOG_DIR,
+  DEFAULT_ROUTER_URL,
+  DEFAULT_REAL_CLAUDE,
+} from './claude-wrap.js';
+
+export type { ClaudeWrapDeps, ClaudeWrapResult, ParsedArgs, RouteDecision } from './claude-wrap.js';
