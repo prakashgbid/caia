@@ -21,6 +21,8 @@
 import Database from 'better-sqlite3';
 import type { Database as DatabaseInstance } from 'better-sqlite3';
 
+import { createLogger } from '@chiefaia/logger';
+
 import { writeProposal } from '../memory-writer.js';
 import {
   countProcessed,
@@ -71,7 +73,7 @@ export interface PostMergeConsumerOptions {
   batchSize?: number;
   /** AbortSignal for graceful shutdown. */
   abortSignal?: AbortSignal;
-  /** Logger. Default console. */
+  /** Logger. Default: `@chiefaia/logger` (pino-backed structured logs). */
   logger?: { info: (m: string) => void; warn: (m: string) => void };
   /** Override sleep fn (tests). */
   sleepFn?: (ms: number) => Promise<void>;
@@ -106,9 +108,10 @@ interface EvidenceGateFailurePayload {
   failedJobs: string[];
 }
 
+const _defaultPinoLogger = createLogger({ name: 'mentor-fastpath/postmerge/consumer' });
 const consoleLogger = {
-  info: (m: string): void => console.log(m),
-  warn: (m: string): void => console.warn(m)
+  info: (m: string): void => _defaultPinoLogger.info(m),
+  warn: (m: string): void => _defaultPinoLogger.warn(m)
 };
 
 const defaultSleep = (ms: number): Promise<void> =>

@@ -29,6 +29,8 @@
 import Database from 'better-sqlite3';
 import type { Database as DatabaseInstance } from 'better-sqlite3';
 
+import { createLogger } from '@chiefaia/logger';
+
 import { classifyCorrection } from './classifier.js';
 import {
   countProcessed,
@@ -76,7 +78,7 @@ export interface ConsumerOptions {
   ) => Promise<string | undefined> | string | undefined;
   /** AbortSignal for graceful shutdown. */
   abortSignal?: AbortSignal;
-  /** Logger. Default: console. */
+  /** Logger. Default: `@chiefaia/logger` (pino-backed structured logs). */
   logger?: { info: (m: string) => void; warn: (m: string) => void };
   /**
    * Override the sleep function. Test injection — production sleeps via
@@ -85,9 +87,10 @@ export interface ConsumerOptions {
   sleepFn?: (ms: number) => Promise<void>;
 }
 
+const _defaultPinoLogger = createLogger({ name: 'mentor-fastpath/consumer' });
 const consoleLogger = {
-  info: (m: string): void => console.log(m),
-  warn: (m: string): void => console.warn(m)
+  info: (m: string): void => _defaultPinoLogger.info(m),
+  warn: (m: string): void => _defaultPinoLogger.warn(m)
 };
 
 const defaultSleep = (ms: number): Promise<void> =>

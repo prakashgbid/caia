@@ -30,6 +30,7 @@
 import { hostname as osHostname } from 'node:os';
 import type { Database as DatabaseInstance } from 'better-sqlite3';
 
+import { createLogger } from '@chiefaia/logger';
 import { Client } from '@chiefaia/mentor-event-bus';
 
 import {
@@ -73,7 +74,7 @@ export interface ProducerOptions {
   pollIntervalMs?: number;
   /** AbortSignal for graceful shutdown. */
   abortSignal?: AbortSignal;
-  /** Logger. Default console. */
+  /** Logger. Default: `@chiefaia/logger` (pino-backed structured logs). */
   logger?: { info: (m: string) => void; warn: (m: string) => void };
   /** Override sleep (test injection). */
   sleepFn?: (ms: number) => Promise<void>;
@@ -87,9 +88,10 @@ export interface ProducerOptions {
   skipFailedJobLookup?: boolean;
 }
 
+const _defaultPinoLogger = createLogger({ name: 'mentor-fastpath/postmerge/watcher/producer' });
 const consoleLogger = {
-  info: (m: string): void => console.log(m),
-  warn: (m: string): void => console.warn(m)
+  info: (m: string): void => _defaultPinoLogger.info(m),
+  warn: (m: string): void => _defaultPinoLogger.warn(m)
 };
 
 const defaultSleep = (ms: number): Promise<void> =>

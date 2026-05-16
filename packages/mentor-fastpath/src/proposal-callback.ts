@@ -25,6 +25,8 @@
  * onClassified, but defence in depth).
  */
 
+import { createLogger } from '@chiefaia/logger';
+
 import type {
   ClassificationResult,
   EventRow,
@@ -39,7 +41,7 @@ export interface ProposalCallbackOptions {
    * `<memoryDir>/proposals/`.
    */
   memoryDir: string;
-  /** Logger. Default: console. */
+  /** Logger. Default: `@chiefaia/logger` (pino-backed structured logs). */
   logger?: { info: (m: string) => void; warn: (m: string) => void };
   /**
    * Optional clock injection — tests pass a fixed Date so the filename
@@ -48,9 +50,10 @@ export interface ProposalCallbackOptions {
   now?: () => Date;
 }
 
+const _defaultPinoLogger = createLogger({ name: 'mentor-fastpath/proposal-callback' });
 const consoleLogger = {
-  info: (m: string): void => console.log(m),
-  warn: (m: string): void => console.warn(m)
+  info: (m: string): void => _defaultPinoLogger.info(m),
+  warn: (m: string): void => _defaultPinoLogger.warn(m)
 };
 
 /**

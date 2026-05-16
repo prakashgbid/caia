@@ -45,6 +45,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@chiefaia/logger": "workspace:*",
     "@chiefaia/mentor-event-bus": "workspace:*",
     "better-sqlite3": "^12.6.2"
   },
