@@ -753,6 +753,10 @@ importers:
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/behavior-suite:
+    dependencies:
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.10.2
@@ -1075,6 +1079,9 @@ importers:
 
   packages/decomposer:
     dependencies:
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       nanoid:
         specifier: ^5.0.0
         version: 5.1.9
@@ -1325,6 +1332,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.600.0
         version: 3.1037.0
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@fal-ai/client':
         specifier: ^1.0.0
         version: 1.10.0
@@ -1408,6 +1418,9 @@ importers:
 
   packages/librarian:
     dependencies:
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -1464,6 +1477,9 @@ importers:
       '@chiefaia/librarian':
         specifier: workspace:*
         version: link:../librarian
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@chiefaia/mentor-retrieval':
         specifier: workspace:*
         version: link:../mentor-retrieval
@@ -1624,6 +1640,9 @@ importers:
       '@chiefaia/hmac-auth':
         specifier: workspace:*
         version: link:../hmac-auth
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -1661,6 +1680,9 @@ importers:
 
   packages/mentor-fastpath:
     dependencies:
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
@@ -1845,6 +1867,9 @@ importers:
       '@chiefaia/claude-spawner':
         specifier: workspace:*
         version: link:../claude-spawner
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@chiefaia/mentor-event-bus':
         specifier: workspace:*
         version: link:../mentor-event-bus
