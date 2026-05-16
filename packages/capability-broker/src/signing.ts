@@ -4,9 +4,17 @@
  * The broker signs a canonical JSON of (tokenId, name, scope, agentRole,
  * taskId, issuedAt, expiresAt, singleUse) so neither the issuer nor the
  * executor can mutate any field without invalidating the signature.
+ *
+ * The HMAC primitives (compute + constant-time compare) live in
+ * `@chiefaia/hmac-auth`. This module composes them with the
+ * canonical-payload layer and the `SigningKeyProvider` abstraction used
+ * for key rotation.
  */
 
-import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
+
+import { hmacSignHex, hmacVerify } from '@chiefaia/hmac-auth';
+
 import type { CapabilityToken } from './types.js';
 
 export interface SigningKeyProvider {
@@ -79,27 +87,22 @@ export function signTokenPayload(
   provider: SigningKeyProvider,
 ): string {
   const key = provider.getActiveKey();
-  return createHmac('sha256', key).update(payloadCanonical(payload)).digest('hex');
+  return hmacSignHex(key, payloadCanonical(payload));
 }
 
 export function verifyTokenSignature(
   token: CapabilityToken,
   provider: SigningKeyProvider,
 ): boolean {
-  const expected = Buffer.from(token.signature, 'hex');
   const canonical = payloadCanonical(token);
-
   const candidates =
     provider.getAcceptedKeys?.() ?? [provider.getActiveKey()];
 
   for (const key of candidates) {
-    const candidate = createHmac('sha256', key).update(canonical).digest();
-    if (
-      candidate.length === expected.length &&
-      timingSafeEqual(candidate, expected)
-    ) {
+    if (hmacVerify(key, canonical, token.signature)) {
       return true;
     }
   }
   return false;
 }
+

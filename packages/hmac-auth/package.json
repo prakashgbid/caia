@@ -1,7 +1,7 @@
 {
-  "name": "@chiefaia/capability-broker",
+  "name": "@chiefaia/hmac-auth",
   "version": "0.1.0",
-  "description": "Capability-token broker for irreversible agent actions (cf api, supabase admin, npm publish, git push, gh pr merge). Issues short-lived signed tokens and records every privileged execution to an append-only ledger.",
+  "description": "Shared HMAC-SHA256 primitives and timestamped request signing for CAIA services. Lifted from @chiefaia/mentor-event-bus auth so the same hardened implementation backs both event-bus HTTP request signing and the capability-broker token signatures. Mandatory auth: callers refuse to run without a configured secret.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -12,24 +12,15 @@
       "default": "./dist/index.js"
     }
   },
-  "bin": {
-    "caia-broker-hook": "./dist/bin/broker-hook.js"
-  },
-  "files": [
-    "dist",
-    "migrations"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src",
-    "clean": "rm -rf dist"
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
-  "dependencies": {
-    "@chiefaia/hmac-auth": "workspace:*",
-    "zod": "^3.23.8"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
     "@chiefaia/tsconfig": "workspace:*",
