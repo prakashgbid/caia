@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<!--
+  prakash-tiwari.com — Component examples v1.0
+  ===============================================
+  These are pseudo-HTML examples of the design system in action. They are
+  meant to be read as a reference, not rendered as a production page —
+  inline <style> blocks are illustrative and would normally live in
+  Tailwind classes / globals.css.
+
+  Examples included (6 total):
+    1. Button (4 variants × 3 sizes)
+    2. Card (default and quiet)
+    3. Hero block
+    4. Top navigation
+    5. Footer
+    6. Callout (note, info, warning)
+
+  Tokens referenced match `./tailwind.config.ts` and `./README.md`.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>prakash-tiwari.com — Component examples</title>
+
+  <!-- Self-hosted fonts (illustrative) -->
+  <link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/source-serif-4-variable.woff2" as="font" type="font/woff2" crossorigin>
+
+  <!--
+    In production: the styles below are emitted by Tailwind + globals.css.
+    Inlined here purely so reviewers can read each component standalone.
+  -->
+  <style>
+    :root {
+      --color-paper: #FAF8F4;
+      --color-paper-elevated: #FFFFFF;
+      --color-paper-sunken: #F2EFE9;
+      --color-ink: #13131A;
+      --color-ink-muted: #4A4A55;
+      --color-ink-subtle: #7A7A85;
+      --color-line: #E5E1D8;
+      --color-line-strong: #C8C2B4;
+      --color-accent: #B14C26;
+      --color-accent-hover: #8F3B1B;
+      --color-accent-subtle: #FAEDE6;
+      --color-info: #3A5DA8;
+      --color-info-subtle: #E0E8F5;
+      --color-warning: #A65D00;
+      --color-warning-subtle: #FBEFD8;
+    }
+    body {
+      margin: 0;
+      background: var(--color-paper);
+      color: var(--color-ink);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 48px; }
+    .doc-section { padding: 96px 0; border-bottom: 1px solid var(--color-line); }
+    .doc-section:last-child { border-bottom: 0; }
+    .doc-label { font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ink-muted); margin-bottom: 16px; }
+    .doc-title { font-size: 36px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.15; margin: 0 0 8px; }
+    .doc-subtitle { font-size: 15px; color: var(--color-ink-muted); margin: 0 0 40px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!--
+  ====================================================================
+  Example 1 — BUTTONS
+  ====================================================================
+  Four variants (primary, secondary, ghost, link) × three sizes (sm, md, lg)
+  Notes:
+    - Primary is ink-on-paper inverse (dark fill, light text)
+    - Secondary is paper fill + 1px ink border
+    - Ghost is text-only with hover-fill
+    - Link is genuinely an <a>, sized to match buttons
+    - Radius is `radius-md` (6px) — NEVER pill
+    - Focus ring is 2px accent, offset 2px
+-->
+<section class="doc-section">
+  <div class="container">
+    <div class="doc-label">Component 1</div>
+    <h2 class="doc-title">Buttons</h2>
+    <p class="doc-subtitle">Primary · Secondary · Ghost · Link · in three sizes</p>
+
+    <style>
+      .btn {
+        font-family: inherit; font-weight: 500; line-height: 1;
+        letter-spacing: -0.005em; cursor: pointer;
+        border-radius: 6px; border: 1px solid transparent;
+        display: inline-flex; align-items: center; gap: 8px;
+        transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+                    color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--color-paper), 0 0 0 4px var(--color-accent);
+      }
+      .btn-sm { height: 32px; padding: 0 16px; font-size: 14px; }
+      .btn-md { height: 40px; padding: 0 20px; font-size: 14px; }
+      .btn-lg { height: 48px; padding: 0 24px; font-size: 15px; }
+
+      .btn-primary   { background: var(--color-ink); color: var(--color-paper); }
+      .btn-primary:hover   { background: #2A2A33; }
+
+      .btn-secondary { background: var(--color-paper); color: var(--color-ink); border-color: var(--color-line-strong); }
+      .btn-secondary:hover { border-color: var(--color-ink-muted); }
+
+      .btn-ghost     { background: transparent; color: var(--color-ink); }
+      .btn-ghost:hover     { background: var(--color-paper-sunken); }
+
+      .btn-link {
+        background: transparent; color: var(--color-accent);
+        text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px;
+        padding: 0; height: auto; border-radius: 0;
+      }
+      .btn-link:hover { color: var(--color-accent-hover); text-decoration-thickness: 2px; }
+
+      .btn-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 20px; }
+      .btn-row-label { font-size: 13px; color: var(--color-ink-subtle); width: 80px; flex-shrink: 0; }
+    </style>
+
+    <div class="btn-row">
+      <span class="btn-row-label">Small</span>
+      <button class="btn btn-sm btn-primary">Read essay</button>
+      <button class="btn btn-sm btn-secondary">View source</button>
+      <button class="btn btn-sm btn-ghost">Dismiss</button>
+      <a class="btn btn-sm btn-link" href="#">Read more</a>
+    </div>
+
+    <div class="btn-row">
+      <span class="btn-row-label">Medium</span>
+      <button class="btn btn-md btn-primary">Get in touch</button>
+      <button class="btn btn-md btn-secondary">Download CV</button>
+      <button class="btn btn-md btn-ghost">Cancel</button>
+      <a class="btn btn-md btn-link" href="#">View archive</a>
+    </div>
+
+    <div class="btn-row">
+      <span class="btn-row-label">Large</span>
+      <button class="btn btn-lg btn-primary">Start reading</button>
+      <button class="btn btn-lg btn-secondary">See projects</button>
+      <button class="btn btn-lg btn-ghost">Maybe later</button>
+      <a class="btn btn-lg btn-link" href="#">All writing →</a>
+    </div>
+  </div>
+</section>
+
+
+<!--
+  ====================================================================
+  Example 2 — CARDS
+  ====================================================================
+  Two variants: default (elevated, bordered) and quiet (flat).
+  Notes:
+    - NO drop shadow — separation by border + color only
+    - Radius is `radius-lg` (12px)
+    - Hover: border softens to line-strong; title shifts to accent
+    - Padding: 24px mobile, 32px desktop
+-->
+<section class="doc-section">
+  <div class="container">
+    <div class="doc-label">Component 2</div>
+    <h2 class="doc-title">Cards</h2>
+    <p class="doc-subtitle">Default (elevated, bordered) and quiet (flat)</p>
+
+    <style>
+      .card-grid {
+        display: grid; gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      }
+      .card {
+        border-radius: 12px; padding: 32px;
+        transition: border-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none; color: inherit; display: block;
+      }
+      .card-default { background: var(--color-paper-elevated); border: 1px solid var(--color-line); }
+      .card-default:hover { border-color: var(--color-line-strong); }
+      .card-default:hover .card-title { color: var(--color-accent); }
+
+      .card-quiet { background: var(--color-paper); border: 1px solid transparent; padding: 24px; }
+      .card-quiet:hover { border-color: var(--color-line); }
+
+      .card-meta {
+        font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--color-ink-muted); margin-bottom: 12px;
+      }
+      .card-title {
+        font-size: 20px; font-weight: 600; line-height: 1.30; letter-spacing: -0.005em;
+        margin: 0 0 8px;
+        transition: color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .card-body {
+        font-family: 'Source Serif 4', Iowan Old Style, Baskerville, serif;
+        font-size: 16px; line-height: 1.7; color: var(--color-ink-muted);
+        margin: 0;
+      }
+      .card-date { font-size: 13px; color: var(--color-ink-subtle); margin-top: 16px; }
+    </style>
+
+    <div class="card-grid">
+      <a class="card card-default" href="#">
+        <div class="card-meta">Essay</div>
+        <h3 class="card-title">Notes on craft, not output</h3>
+        <p class="card-body">
+          A short argument for valuing the process of work over the artifact it produces — and what
+          that means for how one chooses what to spend a decade on.
+        </p>
+        <div class="card-date">Jan 2026 · 8 min read</div>
+      </a>
+
+      <a class="card card-default" href="#">
+        <div class="card-meta">Project</div>
+        <h3 class="card-title">A small library for slow software</h3>
+        <p class="card-body">
+          The artifact of a multi-year experiment in writing the same module four different ways. The
+          fourth one is the simplest, and the only one I would still ship.
+        </p>
+        <div class="card-date">Released Nov 2025</div>
+      </a>
+
+      <a class="card card-quiet" href="#">
+        <div class="card-meta">Talk</div>
+        <h3 class="card-title">On the discipline of not shipping</h3>
+        <p class="card-body">
+          A 30-minute talk on knowing when a piece of work is not ready, given to a small audience in
+          Bangalore. Slides and transcript inside.
+        </p>
+        <div class="card-date">Sep 2025</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+
+<!--
+  ====================================================================
+  Example 3 — HERO BLOCK
+  ====================================================================
+  The home-page hero. Key pattern: small eyebrow, display headline (sans
+  Medium 500, NOT bold), serif lead paragraph, two CTAs side-by-side.
+  Headshot lives to the side at desktop, below at mobile.
+-->
+<section class="doc-section" style="padding-top: 160px; padding-bottom: 192px;">
+  <div class="container">
+    <div class="doc-label">Component 3</div>
+    <h2 class="doc-title" style="margin-bottom: 40px;">Hero block</h2>
+
+    <style>
+      .hero {
+        display: grid; gap: 64px;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 1024px) {
+        .hero { grid-template-columns: 1.4fr 1fr; align-items: center; }
+      }
+      .hero-eyebrow {
+        font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--color-ink-muted); margin-bottom: 24px;
+      }
+      .hero-headline {
+        font-size: 72px; font-weight: 500; line-height: 1.05; letter-spacing: -0.025em;
+        margin: 0 0 24px;
+      }
+      @media (max-width: 768px) { .hero-headline { font-size: 48px; line-height: 1.1; } }
+      .hero-lead {
+        font-family: 'Source Serif 4', Iowan Old Style, Baskerville, serif;
+        font-size: 20px; line-height: 1.65; color: var(--color-ink);
+        margin: 0 0 40px; max-width: 580px;
+      }
+      .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+
+      .hero-portrait {
+        aspect-ratio: 4 / 5;
+        border-radius: 12px;
+        background: linear-gradient(140deg, #D5C7B4 0%, #B3A28A 100%);
+        /* In production: <img src="/portrait.avif" /> with width/height set */
+      }
+    </style>
+
+    <div class="hero">
+      <div>
+        <div class="hero-eyebrow">Prakash Tiwari</div>
+        <h1 class="hero-headline">
+          Writing, building, and thinking <br>about software done slowly.
+        </h1>
+        <p class="hero-lead">
+          I'm a generalist who has spent the last decade making software, mostly the kind that
+          asks more questions than it answers. This is a small archive of the writing, the work,
+          and the ideas I'm still figuring out.
+        </p>
+        <div class="hero-ctas">
+          <a class="btn btn-lg btn-primary" href="#writing">Start reading</a>
+          <a class="btn btn-lg btn-secondary" href="#about">More about me</a>
+        </div>
+      </div>
+      <div class="hero-portrait" role="img" aria-label="Portrait of Prakash Tiwari"></div>
+    </div>
+  </div>
+</section>
+
+
+<!--
+  ====================================================================
+  Example 4 — TOP NAVIGATION
+  ====================================================================
+  Single sticky bar, ~64px tall. Text wordmark only — NO logo image.
+  On scroll past hero, transparent background fades to paper with 1px line.
+  Mobile: collapses to hamburger at <md>, opens FULL-SCREEN overlay (not drawer).
+-->
+<section class="doc-section">
+  <div class="container">
+    <div class="doc-label">Component 4</div>
+    <h2 class="doc-title">Top navigation</h2>
+    <p class="doc-subtitle">Sticky bar, text wordmark, fade-on-scroll, theme toggle at right</p>
+
+    <style>
+      .nav-demo {
+        background: var(--color-paper);
+        border: 1px solid var(--color-line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .nav-bar {
+        height: 64px;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 32px;
+        border-bottom: 1px solid var(--color-line);
+      }
+      .nav-wordmark {
+        font-size: 15px; font-weight: 500; letter-spacing: -0.005em;
+        color: var(--color-ink); text-decoration: none;
+      }
+      .nav-links { display: flex; align-items: center; gap: 32px; }
+      .nav-link {
+        font-size: 15px; color: var(--color-ink-muted); text-decoration: none;
+        transition: color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .nav-link:hover { color: var(--color-ink); }
+      .nav-link[aria-current="page"] { color: var(--color-accent); }
+      .nav-toggle {
+        background: transparent; border: 1px solid var(--color-line);
+        border-radius: 6px; padding: 6px 8px; cursor: pointer;
+        color: var(--color-ink-muted);
+        transition: border-color 200ms, color 200ms;
+      }
+      .nav-toggle:hover { border-color: var(--color-line-strong); color: var(--color-ink); }
+      .nav-toggle svg { display: block; width: 18px; height: 18px; }
+
+      .nav-content { padding: 40px 32px; color: var(--color-ink-subtle); font-size: 14px; }
+    </style>
+
+    <div class="nav-demo">
+      <nav class="nav-bar" aria-label="Primary">
+        <a class="nav-wordmark" href="/">Prakash Tiwari</a>
+        <div class="nav-links">
+          <a class="nav-link" href="/writing" aria-current="page">Writing</a>
+          <a class="nav-link" href="/projects">Projects</a>
+          <a class="nav-link" href="/about">About</a>
+          <a class="nav-link" href="/contact">Contact</a>
+          <button class="nav-toggle" aria-label="Toggle dark mode">
+            <!-- Lucide moon icon, 1.5px stroke, rounded caps -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </div>
+      </nav>
+      <div class="nav-content">
+        (Page content begins here, with `space-section-desktop` separation from the nav)
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!--
+  ====================================================================
+  Example 5 — FOOTER
+  ====================================================================
+  Two-row, restrained, paper-sunken background.
+  Row 1: contact + social (TEXT labels, not icons).
+  Row 2: copyright + colophon.
+-->
+<section class="doc-section">
+  <div class="container">
+    <div class="doc-label">Component 5</div>
+    <h2 class="doc-title">Footer</h2>
+
+    <style>
+      .footer-demo {
+        background: var(--color-paper-sunken);
+        border-radius: 12px;
+        padding: 48px 32px;
+      }
+      .footer-row {
+        display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline;
+        gap: 24px;
+      }
+      .footer-row + .footer-row { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--color-line); }
+      .footer-contact a {
+        font-size: 14px; color: var(--color-ink); text-decoration: underline;
+        text-decoration-thickness: 1px; text-underline-offset: 3px;
+      }
+      .footer-contact a:hover { color: var(--color-accent); text-decoration-thickness: 2px; }
+      .footer-socials { display: flex; gap: 24px; }
+      .footer-socials a {
+        font-size: 14px; color: var(--color-ink-muted); text-decoration: none;
+        transition: color 200ms;
+      }
+      .footer-socials a:hover { color: var(--color-ink); }
+      .footer-meta { font-size: 13px; color: var(--color-ink-subtle); }
+      .footer-meta a { color: var(--color-ink-muted); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    </style>
+
+    <footer class="footer-demo">
+      <div class="footer-row">
+        <div class="footer-contact">
+          <a href="mailto:hello@prakash-tiwari.com">hello@prakash-tiwari.com</a>
+        </div>
+        <div class="footer-socials">
+          <a href="#" rel="me">Twitter</a>
+          <a href="#" rel="me">GitHub</a>
+          <a href="#" rel="me">LinkedIn</a>
+          <a href="/rss.xml">RSS</a>
+        </div>
+      </div>
+      <div class="footer-row">
+        <div class="footer-meta">© Prakash Tiwari · 2026</div>
+        <div class="footer-meta">
+          <a href="/colophon">Colophon</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</section>
+
+
+<!--
+  ====================================================================
+  Example 6 — CALLOUTS
+  ====================================================================
+  Three variants: note (accent), info (blue), warning (amber).
+  4px left border, tinted background, smaller body type (15px sans).
+-->
+<section class="doc-section">
+  <div class="container">
+    <div class="doc-label">Component 6</div>
+    <h2 class="doc-title">Callouts</h2>
+    <p class="doc-subtitle">Note · Info · Warning — used sparingly inside long-form</p>
+
+    <style>
+      .callout {
+        border-left: 4px solid;
+        padding: 20px 24px;
+        margin: 24px 0;
+        border-radius: 0 6px 6px 0;
+        max-width: 760px;
+      }
+      .callout p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--color-ink); }
+      .callout p + p { margin-top: 12px; }
+      .callout-label {
+        font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+        margin-bottom: 8px; display: block;
+      }
+      .callout-note    { border-color: var(--color-accent);  background: var(--color-accent-subtle); }
+      .callout-note    .callout-label { color: var(--color-accent); }
+      .callout-info    { border-color: var(--color-info);    background: var(--color-info-subtle); }
+      .callout-info    .callout-label { color: var(--color-info); }
+      .callout-warning { border-color: var(--color-warning); background: var(--color-warning-subtle); }
+      .callout-warning .callout-label { color: var(--color-warning); }
+    </style>
+
+    <aside class="callout callout-note" role="note">
+      <span class="callout-label">Note</span>
+      <p>
+        This site has no analytics. If you'd like me to know you've read something, the only way
+        is to write to me. That's the entire feedback loop, and it's working as intended.
+      </p>
+    </aside>
+
+    <aside class="callout callout-info" role="note">
+      <span class="callout-label">Heads up</span>
+      <p>
+        The essays under <code style="font-family: 'JetBrains Mono', monospace; background: var(--color-paper-sunken); padding: 1px 6px; border-radius: 4px; font-size: 0.9em;">/writing/notebook</code>
+        are working drafts I publish before they're done. Some are wrong, some are incomplete, some
+        will be deleted. Reading them is reading me think.
+      </p>
+    </aside>
+
+    <aside class="callout callout-warning" role="note">
+      <span class="callout-label">Caveat</span>
+      <p>
+        Opinions on this site are personal, dated, and frequently retired. Quoting them as
+        present-tense positions without checking the publication date is on you.
+      </p>
+    </aside>
+  </div>
+</section>
+
+
+<!--
+  ====================================================================
+  End of components.html
+  ====================================================================
+  Cross-references:
+    - Spec: ./README.md
+    - Tokens: ./tailwind.config.ts
+-->
+
+</body>
+</html>
