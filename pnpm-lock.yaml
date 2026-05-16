@@ -1408,6 +1408,9 @@ importers:
 
   packages/librarian:
     dependencies:
+      '@chiefaia/sqlite-utils':
+        specifier: workspace:*
+        version: link:../sqlite-utils
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -1433,6 +1436,9 @@ importers:
 
   packages/llm-cache:
     dependencies:
+      '@chiefaia/sqlite-utils':
+        specifier: workspace:*
+        version: link:../sqlite-utils
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -1534,6 +1540,9 @@ importers:
 
   packages/local-rag:
     dependencies:
+      '@chiefaia/sqlite-utils':
+        specifier: workspace:*
+        version: link:../sqlite-utils
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -1624,6 +1633,9 @@ importers:
       '@chiefaia/hmac-auth':
         specifier: workspace:*
         version: link:../hmac-auth
+      '@chiefaia/sqlite-utils':
+        specifier: workspace:*
+        version: link:../sqlite-utils
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -1686,6 +1698,9 @@ importers:
 
   packages/mentor-retrieval:
     dependencies:
+      '@chiefaia/sqlite-utils':
+        specifier: workspace:*
+        version: link:../sqlite-utils
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -1973,6 +1988,34 @@ importers:
       '@chiefaia/vitest-config':
         specifier: workspace:*
         version: link:../../configs/vitest-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/sqlite-utils:
+    dependencies:
+      better-sqlite3:
+        specifier: ^12.6.2
+        version: 12.9.0
+    devDependencies:
+      '@chiefaia/eslint-config':
+        specifier: workspace:*
+        version: link:../../configs/eslint-config
+      '@chiefaia/tsconfig':
+        specifier: workspace:*
+        version: link:../../configs/tsconfig
+      '@chiefaia/vitest-config':
+        specifier: workspace:*
+        version: link:../../configs/vitest-config
+      '@types/better-sqlite3':
+        specifier: ^7.6.12
+        version: 7.6.13
       '@types/node':
         specifier: ^20
         version: 20.19.39
