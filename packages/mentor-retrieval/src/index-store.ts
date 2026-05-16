@@ -33,10 +33,10 @@
  * PR-2 retrieval CLI) can run concurrently without blocking writes.
  */
 
-import { existsSync, mkdirSync } from 'node:fs';
-import { dirname, join, resolve as pathResolve } from 'node:path';
+import { join, resolve as pathResolve } from 'node:path';
 
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
+import { openDb } from '@chiefaia/sqlite-utils';
 
 import type { IndexedLesson, LessonKind } from './types.js';
 
@@ -87,20 +87,16 @@ export interface IndexStore {
  */
 export function openIndexStore(opts: IndexStoreOptions): IndexStore {
   const dbPath = opts.dbPath ?? indexDbPath(opts.memoryDir);
-  const parent = dirname(dbPath);
-  if (!existsSync(parent)) {
-    mkdirSync(parent, { recursive: true });
-  }
+  // D3 (2026-05-15): db open + parent-dir creation + the WAL /
+  // synchronous=NORMAL / foreign_keys=ON pragma block now flow through
+  // @chiefaia/sqlite-utils.openDb. The read-only path still uses the
+  // same `{ readonly, fileMustExist }` shape (the helper switches on
+  // the `readonly` flag). Pre-D3 behaviour is byte-identical — same
+  // three pragmas, same file-must-exist semantics on readers.
+  const readonly = opts.readonly === true;
+  const db = openDb(dbPath, { readonly });
 
-  const dbOptions: Database.Options = opts.readonly === true
-    ? { readonly: true, fileMustExist: true }
-    : {};
-  const db = new Database(dbPath, dbOptions);
-
-  if (opts.readonly !== true) {
-    db.pragma('journal_mode = WAL');
-    db.pragma('synchronous = NORMAL');
-    db.pragma('foreign_keys = ON');
+  if (!readonly) {
     initSchema(db);
   }
 
