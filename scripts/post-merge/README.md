@@ -45,6 +45,97 @@ for institutionalized deploy tags (e.g. `ROUTER-DAEMON-RELOAD-REQUIRED`)
 without an extra `gh pr view` round-trip. v1 rows still parse — body
 just resolves to empty.
 
+## Adoption scan stage
+
+After the per-repo deploy hook fires for `prakashgbid/caia`, the deploy
+script also runs the **adoption-enforcement substrate** for the merge:
+
+```
+~/.caia/post-merge/post-merge-deploy.sh <row>
+    │
+    ├── (existing) router-daemon kickstart, if title/body matches
+    │
+    ├── dispatch_adoption_scan         ← p3-adoption-scan-engine phase 5
+    │     │   30 s budget, runs in background, idempotent.
+    │     │   Writes scan.json + scan.log under ~/.caia/post-merge/work/<sha>/.
+    │     │   On success, chains directly into the xref step (60 s budget)
+    │     │   so a single merge produces both scan.json and xref.json.
+    │     │
+    │     ▼
+    │   caia-adoption-run scan --pr <num> --sha <sha> \
+    │       --out ~/.caia/post-merge/work/<sha>/ \
+    │       --repo $CAIA_REPO_ROOT
+    │
+    └── dispatch_adoption_xref         ← p3-adoption-cross-ref phase 4
+          fallback path — only runs xref when scan.json was dropped
+          out-of-band (i.e. the chained xref above did not produce it).
+```
+
+`scan.json` is a small JSON document the substrate uses as its
+canonical "what's new in this merge" surface:
+
+```json
+{
+  "version": 1,
+  "sha": "5c077f4...",
+  "pr": 451,
+  "generated_at": "2026-05-17T16:50:00Z",
+  "summary": {
+    "artefact_count": 3,
+    "new_package_count": 1,
+    "new_export_count": 2,
+    "new_external_agent_count": 0
+  },
+  "artefacts": [
+    { "kind": "new_package",  "package": "@chiefaia/foo", "identifier": "@chiefaia/foo", "source_path": "packages/foo/package.json" },
+    { "kind": "new_export",   "package": "@chiefaia/foo", "identifier": "frobnicate",    "source_path": "packages/foo/src/index.ts", "decl_kind": "function", "isTypeOnly": false },
+    { "kind": "new_export",   "package": "@chiefaia/foo", "identifier": "FooConfig",     "source_path": "packages/foo/src/index.ts", "decl_kind": "interface", "isTypeOnly": true }
+  ]
+}
+```
+
+The detectors that produce these rows live in
+`packages/adoption-enforcement/src/scan/` and are stitched together by
+`src/cli/scan.ts`:
+
+| Row kind              | Detector                                  | Triggers when                                                  |
+|-----------------------|-------------------------------------------|----------------------------------------------------------------|
+| `new_package`         | `detectNewPackages(pr)`                   | PR adds `packages/<X>/package.json` with name `@chiefaia/*`.   |
+| `new_export`          | `detectNewExports(indexPath)`             | PR modifies an existing `packages/<X>/src/index.ts`, OR a new package is added (every export is then "new" by definition). |
+| `new_external_agent`  | `detectNewExternalAgents(repoRoot)`       | PR touches `<repo>/.adoption/external-agents.yaml`.            |
+
+**Idempotency.** `dispatch_adoption_scan` short-circuits when
+`scan.json` already exists in the per-sha work dir. Same for the
+chained xref step (`xref.json`). Re-runs against the same merge_sha
+are safe and cheap.
+
+**Docs-only PRs are a no-op.** A merge that doesn't touch any
+`packages/<X>/src/index.ts`, doesn't add any `packages/<X>/package.json`,
+and doesn't touch `.adoption/external-agents.yaml` produces a
+`scan.json` with `summary.artefact_count = 0` and no downstream rows
+reach the cross-reference or PR-generator stages. Hand-tested against
+PR #492 (the DoD-v2 addendum, docs-only) to confirm this behaviour.
+
+**Ledger.** Each background run appends one row to
+`~/.caia/post-merge/adoption.jsonl`:
+
+```
+{"ts":"...","event":"scan_done","sha":"...","artefact_count":3}
+{"ts":"...","event":"xref_done","sha":"...","artefact_count":3,"candidate_count":12}
+```
+
+(or `scan_failed` / `xref_failed` with `rc` on failure.) This is the
+minimum-viable surface that the future DoD-v2 adoption gate's reader
+will consume.
+
+**Environment overrides.**
+
+| Variable          | Default                                        | Used by                  |
+|-------------------|------------------------------------------------|--------------------------|
+| `CAIA_REPO_ROOT`  | `$HOME/Documents/projects/caia`                | scan + xref `--repo`     |
+| `NODE_BIN`        | `/opt/homebrew/opt/node@22/bin/node`           | runs `caia-adoption-run` |
+| `POSTMERGE_HOME`  | `$HOME/.caia/post-merge`                       | work-dir root + ledger   |
+
 ## Institutionalized deploy tags
 
 | Tag | Effect |
