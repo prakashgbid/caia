@@ -1,0 +1,4 @@
+version: 2
+mcp_servers:
+  - repo: github.com/some/repo
+    capabilities: [foo]

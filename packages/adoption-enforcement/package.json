@@ -31,7 +31,9 @@
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "@chiefaia/chain-runner": "workspace:*"
+    "@chiefaia/chain-runner": "workspace:*",
+    "yaml": "^2.4.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",

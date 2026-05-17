@@ -5,6 +5,8 @@
  * Companion design: agent-memory/decisions/p3_adoption_enforcement_substrate_2026_05_16.md.
  */
 
+import type { ExternalAgentEntry, ExternalAgentKind } from './external-agents-schema.js';
+
 export type DeclKind =
   | 'function'
   | 'class'
@@ -89,9 +91,9 @@ export interface DetectNewPackagesOptions {
 
 /**
  * Detector output row tagged for the post-merge `caia-adoption-run scan`
- * pipeline. Two row kinds share the discriminator `kind`.
+ * pipeline. Row kinds share the discriminator `kind`.
  */
-export type ScanRow = NewPackageRow | NewExportRow;
+export type ScanRow = NewPackageRow | NewExportRow | NewExternalAgentRow;
 
 export interface NewPackageRow {
   readonly kind: 'new_package';
@@ -123,4 +125,56 @@ export interface NewPackageDetail {
 export interface DetectNewPackagesResult {
   readonly rows: readonly ScanRow[];
   readonly newPackages: readonly NewPackageDetail[];
+}
+
+export interface NewExternalAgentRow {
+  readonly kind: 'new_external_agent';
+  /** Distinguishes the two sections of `external-agents.yaml`. */
+  readonly agent_kind: ExternalAgentKind;
+  readonly name: string;
+  readonly repo: string;
+  readonly capabilities: readonly string[];
+  readonly suggested_call_sites: readonly string[];
+}
+
+export interface ExternalAgentsSnapshot {
+  readonly version: 1;
+  readonly configPath: string;
+  readonly capturedAt: string;
+  readonly mcp_servers: readonly ExternalAgentEntry[];
+  readonly agent_manifests: readonly ExternalAgentEntry[];
+}
+
+export interface DetectNewExternalAgentsOptions {
+  /**
+   * Override the default config path (`<repoRoot>/.adoption/external-agents.yaml`).
+   * Useful for tests.
+   */
+  readonly configPath?: string;
+  /**
+   * Override the default snapshot path
+   * (`<repoRoot>/.adoption/external-agents-snapshot.json`).
+   */
+  readonly snapshotPath?: string;
+  /** When false, skip writing the snapshot back. Defaults to true. */
+  readonly writeSnapshot?: boolean;
+}
+
+export interface DetectNewExternalAgentsResult {
+  /** Detector output rows for the scan pipeline (one per added entry). */
+  readonly rows: readonly NewExternalAgentRow[];
+  /** Absolute path to the config file the detector inspected. */
+  readonly configPath: string;
+  /** Absolute path to the snapshot file (read and rewritten). */
+  readonly snapshotPath: string;
+  /**
+   * True when `external-agents.yaml` is absent. The detector emits zero rows
+   * and is a no-op — see design §12 (priority #4 forward-compat).
+   */
+  readonly configMissing: boolean;
+  /**
+   * True when no snapshot existed before this call (every parsed entry is
+   * treated as new). Only meaningful when `configMissing` is false.
+   */
+  readonly firstRun: boolean;
 }
