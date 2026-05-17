@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "path": "packages/random/package.json",
+      "additions": 10,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "packages/random/src/index.ts",
+      "additions": 2,
+      "deletions": 0,
+      "changeType": "ADDED"
+    }
+  ]
+}

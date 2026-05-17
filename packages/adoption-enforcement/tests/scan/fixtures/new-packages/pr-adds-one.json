@@ -1,0 +1,22 @@
+{
+  "files": [
+    {
+      "path": "packages/widget/package.json",
+      "additions": 18,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "packages/widget/src/index.ts",
+      "additions": 4,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "packages/widget/tsconfig.json",
+      "additions": 6,
+      "deletions": 0,
+      "changeType": "ADDED"
+    }
+  ]
+}

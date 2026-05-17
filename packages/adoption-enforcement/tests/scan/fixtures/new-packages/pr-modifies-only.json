@@ -1,0 +1,22 @@
+{
+  "files": [
+    {
+      "path": "packages/existing/package.json",
+      "additions": 2,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "packages/existing/src/index.ts",
+      "additions": 8,
+      "deletions": 0,
+      "changeType": "MODIFIED"
+    },
+    {
+      "path": "packages/other/src/util.ts",
+      "additions": 1,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    }
+  ]
+}

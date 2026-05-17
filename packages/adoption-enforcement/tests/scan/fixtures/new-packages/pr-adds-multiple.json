@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "path": "packages/alpha/package.json",
+      "additions": 12,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "packages/alpha/src/index.ts",
+      "additions": 3,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "packages/beta/package.json",
+      "additions": 12,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "packages/beta/src/index.ts",
+      "additions": 2,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "packages/existing/src/util.ts",
+      "additions": 4,
+      "deletions": 1,
+      "changeType": "MODIFIED"
+    }
+  ]
+}
