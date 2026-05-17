@@ -1,0 +1,25 @@
+{
+  "name": "@caia-app/mesh-supervisor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "P5 Agent-Mesh supervisor — LangGraph 1.2 + A2A v1 + PostgresSaver. Hosts the LangGraph supervisor graph and dispatches A2A tasks to specialist agents (XiYanSQL, Qwen-Coder, Granite Guardian, etc.). Per p4_agent_mesh_implementation_plan_2026_05_16.md §3 M0 + §4.",
+  "main": "src/server.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "node --import tsx src/server.ts",
+    "test": "echo 'no tests yet'",
+    "py:install": ".venv/bin/pip install -r python/requirements.txt",
+    "py:smoke": ".venv/bin/python python/smoke_test.py"
+  },
+  "dependencies": {
+    "hono": "^4.12.0",
+    "@hono/node-server": "^1.13.0",
+    "@a2a-js/sdk": "^0.3.13",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@chiefaia/sql-helper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Natural-language → SQL helper. Per p4_agent_mesh_implementation_plan_2026_05_16.md §3 M0 chain #6 (sql-helper-wrap). Routes to XiYanSQL via @chiefaia/a2a-adapter when MESH_SQL=on.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "bin": {
+    "chiefaia-sql-helper": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test --import tsx tests/*.test.ts"
+  },
+  "dependencies": {
+    "@chiefaia/a2a-adapter": "workspace:^0.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
