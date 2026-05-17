@@ -57,3 +57,70 @@ export interface ExportsSnapshot {
   readonly capturedAt: string;
   readonly exports: readonly ExportRow[];
 }
+
+/**
+ * One row in a `gh pr view <pr> --json files` response. Only the fields the
+ * scan layer consumes are typed — extra fields are tolerated.
+ */
+export interface GhPrFile {
+  readonly path: string;
+  readonly additions: number;
+  readonly deletions: number;
+  /** `ADDED` | `MODIFIED` | `RENAMED` | `REMOVED` | `COPIED` — exact set varies by gh version. */
+  readonly changeType: string;
+}
+
+export interface GhPrFilesResponse {
+  readonly files: readonly GhPrFile[];
+}
+
+export interface DetectNewPackagesOptions {
+  /** Repo root the gh paths are relative to. Defaults to `process.cwd()`. */
+  readonly repoRoot?: string;
+  /** Package-name prefix that qualifies a "@chiefaia/" workspace. Defaults to `@chiefaia/`. */
+  readonly prefix?: string;
+  /**
+   * Injection point for tests. When supplied, replaces the real
+   * `gh pr view <pr> --json files` invocation. Receives the PR number,
+   * must return a parsed `GhPrFilesResponse`.
+   */
+  readonly runGh?: (pr: number) => GhPrFilesResponse;
+}
+
+/**
+ * Detector output row tagged for the post-merge `caia-adoption-run scan`
+ * pipeline. Two row kinds share the discriminator `kind`.
+ */
+export type ScanRow = NewPackageRow | NewExportRow;
+
+export interface NewPackageRow {
+  readonly kind: 'new_package';
+  /** Repo-root-relative dir, e.g. `packages/foo`. */
+  readonly packagePath: string;
+  /** `name` field from the added `package.json`. */
+  readonly name: string;
+}
+
+export interface NewExportRow {
+  readonly kind: 'new_export';
+  /** Repo-root-relative dir, e.g. `packages/foo`. */
+  readonly packagePath: string;
+  /** Owning package name (the `name` field from `package.json`). */
+  readonly packageName: string;
+  readonly identifier: string;
+  readonly decl_kind: DeclKind;
+  readonly isTypeOnly: boolean;
+}
+
+export interface NewPackageDetail {
+  readonly packagePath: string;
+  readonly name: string;
+  /** Absolute path to the package's `src/index.ts` — `null` if missing. */
+  readonly indexPath: string | null;
+  readonly exports: readonly ExportRow[];
+}
+
+export interface DetectNewPackagesResult {
+  readonly rows: readonly ScanRow[];
+  readonly newPackages: readonly NewPackageDetail[];
+}

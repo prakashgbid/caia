@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "path": "packages/scaffold-only/package.json",
+      "additions": 8,
+      "deletions": 0,
+      "changeType": "ADDED"
+    },
+    {
+      "path": "packages/scaffold-only/README.md",
+      "additions": 3,
+      "deletions": 0,
+      "changeType": "ADDED"
+    }
+  ]
+}
