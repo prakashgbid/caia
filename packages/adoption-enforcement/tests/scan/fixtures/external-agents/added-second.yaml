@@ -1,0 +1,23 @@
+version: 1
+mcp_servers:
+  - name: filesystem-mcp
+    repo: github.com/modelcontextprotocol/servers/tree/main/src/filesystem
+    capabilities: [read_file, write_file, list_dir]
+    suggested_call_sites:
+      - '\bfs\.readFile(Sync)?\b'
+  - name: postgres-mcp
+    repo: github.com/modelcontextprotocol/servers/tree/main/src/postgres
+    capabilities: [query]
+    suggested_call_sites:
+      - '\bpg\.Client\b'
+agent_manifests:
+  - name: ext-coder
+    repo: github.com/paul-gauthier/aider
+    capabilities: [implement_change, review_diff]
+    suggested_call_sites:
+      - '\bworker-coding/implementation-engine\b'
+  - name: ext-reviewer
+    repo: github.com/example/reviewer
+    capabilities: [review_diff]
+    suggested_call_sites:
+      - '\bworker-review\b'

@@ -1,0 +1,5 @@
+version: 1
+mcp_servers:
+  - name: filesystem-mcp
+    repo: [unterminated
+    capabilities: : :

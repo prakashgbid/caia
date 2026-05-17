@@ -1,0 +1,19 @@
+version: 1
+mcp_servers:
+  - name: filesystem-mcp
+    repo: github.com/modelcontextprotocol/servers/tree/main/src/filesystem
+    capabilities: [read_file, write_file, list_dir]
+    suggested_call_sites:
+      - '\bfs\.readFile(Sync)?\b'
+      - '\bfs\.writeFile(Sync)?\b'
+  - name: sqlite-mcp
+    repo: github.com/modelcontextprotocol/servers/tree/main/src/sqlite
+    capabilities: [query, schema]
+    suggested_call_sites:
+      - '\bbetter-sqlite3\b'
+agent_manifests:
+  - name: ext-coder
+    repo: github.com/paul-gauthier/aider
+    capabilities: [implement_change, review_diff]
+    suggested_call_sites:
+      - '\bworker-coding/implementation-engine\b'
