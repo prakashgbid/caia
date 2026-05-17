@@ -53,31 +53,34 @@ export class A2AClient {
         signal: ctrl.signal,
       });
       if (!res.ok) {
-        return {
+        const errResp: A2ATaskResponse = {
           taskId: req.taskId,
           contextId: req.contextId,
           status: 'error',
           error: { code: res.status, message: `HTTP ${res.status}` },
         };
+        return errResp;
       }
       const json = (await res.json()) as {
         result?: { status: 'done' | 'streaming'; artifact?: A2AArtifact };
         error?: { code: number; message: string };
       };
       if (json.error) {
-        return {
+        const errResp: A2ATaskResponse = {
           taskId: req.taskId,
           contextId: req.contextId,
           status: 'error',
           error: json.error,
         };
+        return errResp;
       }
-      return {
+      const okResp: A2ATaskResponse = {
         taskId: req.taskId,
         contextId: req.contextId,
         status: json.result?.status ?? 'done',
-        artifact: json.result?.artifact,
       };
+      if (json.result?.artifact) okResp.artifact = json.result.artifact;
+      return okResp;
     } finally {
       clearTimeout(timer);
     }

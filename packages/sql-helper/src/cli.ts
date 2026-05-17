@@ -13,7 +13,7 @@
 import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 
-import { composeSql, meshSqlHealth } from './index.js';
+import { composeSql, meshSqlHealth, type ComposeSqlInput } from './index.js';
 
 async function main(): Promise<number> {
   const { values } = parseArgs({
@@ -69,13 +69,15 @@ Env:
     return 2;
   }
 
-  const result = await composeSql({
+  const input: ComposeSqlInput = {
     task: values.task,
     schemaSql,
     dialect: (values.dialect as 'postgres' | 'mysql' | 'sqlite' | undefined) ?? 'postgres',
-    caiaChainRunId: values['chain-run-id'],
-    caiaPhaseStepId: values['phase-step-id'],
-  });
+  };
+  if (values['chain-run-id']) input.caiaChainRunId = values['chain-run-id'];
+  if (values['phase-step-id']) input.caiaPhaseStepId = values['phase-step-id'];
+
+  const result = await composeSql(input);
 
   console.log('-- producer:', result.producerModel);
   console.log('-- artifact:', result.artifactId);
