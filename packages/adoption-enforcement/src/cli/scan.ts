@@ -35,7 +35,6 @@ import {
 } from '../scan/index.js';
 import type {
   GhPrFile,
-  GhPrFilesResponse,
   NewExportRow,
   NewExternalAgentRow,
   NewPackageRow,
@@ -129,7 +128,6 @@ export interface RunScanResult {
 // ---------------------------------------------------------------------------
 
 const PACKAGE_INDEX_PATTERN = /^packages\/([^/]+)\/src\/index\.ts$/;
-const PACKAGE_JSON_PATTERN = /^packages\/([^/]+)\/package\.json$/;
 
 export function runScan(opts: ScanOptions): RunScanResult {
   if (!Number.isInteger(opts.pr) || opts.pr <= 0) {
