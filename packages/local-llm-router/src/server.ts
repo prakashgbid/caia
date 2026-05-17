@@ -21,6 +21,7 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { optimize } from '@chiefaia/prompt-optimizer';
 import { route as routerRoute, getRouterOllamaAdapter } from './router.js';
+import { mountClientRoutes } from './messages-api.js';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { classify, type IntentResult as _IntentResultRef } from './classifier.js';
 import { classifyV2, loadRoutingRules } from './classifier-v2.js';
@@ -82,6 +83,16 @@ export function buildApp(opts: ServerOptions = {}): Hono {
   const app = new Hono();
   const ollamaBaseUrl = opts.ollamaBaseUrl ?? process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434';
   const classifierModel = opts.classifierModel ?? process.env['ROUTER_CLASSIFIER_MODEL'] ?? 'qwen2.5-coder:7b';
+
+  // ─── SPS gateway client routes (2026-05-17) ──────────────────────
+  // Path-based client identification:
+  //   POST /cowork/v1/messages          Anthropic Messages, conditional policy
+  //   POST /cowork/v1/chat/completions  OpenAI Chat,        conditional policy
+  //   POST /openclaw/v1/messages        Anthropic Messages, local-only policy
+  //   POST /openclaw/v1/chat/completions OpenAI Chat,       local-only policy
+  // The cowork cloud-path forwards to Headroom (127.0.0.1:8787) with
+  // inbound Authorization header preserved (subscription-only billing).
+  mountClientRoutes(app, { ollamaBaseUrl, classifierModel });
 
   // ─── /healthz ─────────────────────────────────────────────────────────
   app.get('/healthz', async (c: Context) => {
