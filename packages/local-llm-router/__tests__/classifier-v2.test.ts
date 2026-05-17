@@ -220,6 +220,58 @@ intents:
       const result = keywordPrepass('SUMMARIZE this', TEST_RULES);
       expect(result?.intent).toBe('summarize');
     });
+
+    // SPS T2.5 follow-up (2026-05-16): when multiple intents match, prefer
+    // the one whose longest matched keyword is a dominant multi-word phrase.
+    // Built from the canonical-eval `classify` category prompts which used
+    // to fall through to the LLM path and abstain.
+    it('breaks multi-match ties in favour of a dominant multi-word match', () => {
+      const tieBreakRules: RoutingRules = {
+        ...TEST_RULES,
+        intents: [
+          { name: 'classify', default_tier: 'local-7b', min_confidence: 0.6,
+            keywords: ['classify', 'classify the intent of this user message'] },
+          // Single-word collisions on the cls-001 prompt body.
+          { name: 'rename', default_tier: 'local-7b', min_confidence: 0.65, keywords: ['rename'] },
+          { name: 'summarize', default_tier: 'local-7b', min_confidence: 0.6,
+            keywords: ['summarize', 'tldr'] },
+          { name: 'code-explain', default_tier: 'local-7b', min_confidence: 0.55,
+            keywords: ['explain'] },
+          { name: 'unknown', default_tier: 'claude', min_confidence: 0.0, keywords: [] },
+        ],
+      };
+      const prompt =
+        'Classify the intent of this user message into one of:\n' +
+        '[rename, edit, review, explain, test-gen, doc-write, doc-update, summarize, search, other].\n' +
+        'Message: "can you change the variable tmp to temp here?"';
+      const result = keywordPrepass(prompt, tieBreakRules);
+      expect(result).not.toBeNull();
+      expect(result!.intent).toBe('classify');
+      expect(result!.source).toBe('keyword-prepass');
+      expect(result!.recommended_tier).toBe('local-7b');
+    });
+
+    it('does not break ties when no match is a multi-word phrase', () => {
+      const result = keywordPrepass('classify summarize tldr', TEST_RULES);
+      expect(result).toBeNull();
+    });
+
+    it('does not break ties when the top match is not dominant (<1.5x next)', () => {
+      const closeRules: RoutingRules = {
+        ...TEST_RULES,
+        intents: [
+          { name: 'classify', default_tier: 'local-7b', min_confidence: 0.6,
+            keywords: ['classify the intent'] },         // 19 chars, 3 words
+          { name: 'summarize', default_tier: 'local-7b', min_confidence: 0.6,
+            keywords: ['summarize this paragraph'] },    // 23 chars, 3 words — dominates classify
+          { name: 'unknown', default_tier: 'claude', min_confidence: 0.0, keywords: [] },
+        ],
+      };
+      // Both multi-word phrases match — neither dominates by >=1.5x.
+      const result = keywordPrepass(
+        'classify the intent summarize this paragraph', closeRules);
+      expect(result).toBeNull();
+    });
   });
 
   describe('parseClassifierV2Output', () => {

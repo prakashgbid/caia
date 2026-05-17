@@ -390,27 +390,58 @@ export function intentRule(rules: RoutingRules, intent: Intent): IntentRule | un
 
 /**
  * If the task spec contains a keyword for exactly one intent, short-circuit
- * the LLM call. Returns null if zero or multiple intents match.
+ * the LLM call. Returns null if zero matches.
+ *
+ * SPS T2.5 follow-up (2026-05-16): when multiple intents match, apply a
+ * specificity tie-breaker rather than falling through to the LLM path:
+ * if the top match's longest matched keyword is (a) >=3 whitespace-separated
+ * tokens AND (b) at least 1.5x the next-longest matched keyword, prefer
+ * that intent. This disambiguates prompts whose body contains short single-
+ * word tokens that incidentally collide with other intents' keyword lists
+ * (e.g. classify-category prompts that enumerate `[rename, edit, review,
+ * explain, summarize, ...]` as the label set). Without the tie-breaker,
+ * those fell through to the LLM path which then mis-interprets the meta
+ * task and returns a bare-string label, abstaining at JSON parse.
  */
 export function keywordPrepass(taskSpec: string, rules: RoutingRules): IntentResultV2 | null {
   const spec = taskSpec.toLowerCase();
-  const matches: IntentRule[] = [];
+  const matches: Array<{ rule: IntentRule; longestKw: string }> = [];
   for (const rule of rules.intents) {
     if (rule.keywords.length === 0) continue;
-    if (rule.keywords.some(kw => spec.includes(kw.toLowerCase()))) {
-      matches.push(rule);
+    let longest = '';
+    for (const kw of rule.keywords) {
+      const lk = kw.toLowerCase();
+      if (spec.includes(lk) && lk.length > longest.length) longest = lk;
+    }
+    if (longest !== '') matches.push({ rule, longestKw: longest });
+  }
+  if (matches.length === 0) return null;
+  let chosen: { rule: IntentRule; longestKw: string };
+  if (matches.length === 1) {
+    chosen = matches[0]!;
+  } else {
+    // Sort by matched-keyword length descending and try the specificity
+    // tie-breaker. Top must be a multi-word phrase (>=3 tokens) AND
+    // >=1.5x the next-longest matched keyword.
+    const sorted = [...matches].sort((a, b) => b.longestKw.length - a.longestKw.length);
+    const top = sorted[0]!;
+    const next = sorted[1]!;
+    const topWordCount = top.longestKw.split(/\s+/).filter(Boolean).length;
+    const dominates = top.longestKw.length >= Math.ceil(next.longestKw.length * 1.5);
+    if (topWordCount >= 3 && dominates) {
+      chosen = top;
+    } else {
+      return null;
     }
   }
-  if (matches.length !== 1) return null;
-  const rule = matches[0]!;
   return {
-    intent: rule.name,
+    intent: chosen.rule.name,
     confidence: 0.92,
     needs_escalation: false,
-    recommended_tier: rule.default_tier,
-    next_tier: nextTier(rule.default_tier, rules.tier_order),
+    recommended_tier: chosen.rule.default_tier,
+    next_tier: nextTier(chosen.rule.default_tier, rules.tier_order),
     needs_cascade: false,
-    reasoning: `keyword-prepass: matched ${rule.keywords.find(k => spec.includes(k.toLowerCase())) ?? ''}`,
+    reasoning: `keyword-prepass: matched ${chosen.longestKw}`,
     source: 'keyword-prepass',
     rules_version: rules.version,
   };

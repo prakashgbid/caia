@@ -252,22 +252,48 @@ def _yaml_fallback(text: str) -> Any:
 # ─── Keyword prepass (mirrors classifier-v2.ts) ───────────────────────────
 
 def keyword_prepass(spec: str, rules: dict) -> dict | None:
+    """Cheap keyword-prepass mirroring classifier-v2.ts::keywordPrepass.
+
+    SPS T2.5 follow-up (2026-05-16): on multiple intent matches, apply the
+    same specificity tie-breaker as the TS path — the top match must be a
+    multi-word phrase (>=3 tokens) AND >=1.5x the next-longest matched
+    keyword, else fall back to the LLM path. Kept in lock-step so the eval
+    measures what the daemon actually executes.
+    """
     s = spec.lower()
-    matches: list[dict] = []
+    matches: list[tuple[dict, str]] = []
     for rule in rules.get("intents", []):
         kws = rule.get("keywords") or []
         if not kws:
             continue
-        if any(kw.lower() in s for kw in kws):
-            matches.append(rule)
-    if len(matches) != 1:
+        longest = ""
+        for kw in kws:
+            lk = kw.lower()
+            if lk in s and len(lk) > len(longest):
+                longest = lk
+        if longest:
+            matches.append((rule, longest))
+    if not matches:
         return None
-    rule = matches[0]
+    if len(matches) == 1:
+        rule, kw = matches[0]
+    else:
+        sorted_m = sorted(matches, key=lambda m: len(m[1]), reverse=True)
+        top_rule, top_kw = sorted_m[0]
+        _, next_kw = sorted_m[1]
+        top_word_count = len([t for t in re.split(r"\s+", top_kw) if t])
+        import math as _math
+        dominates = len(top_kw) >= _math.ceil(len(next_kw) * 1.5)
+        if top_word_count >= 3 and dominates:
+            rule, kw = top_rule, top_kw
+        else:
+            return None
     return {
         "intent": rule["name"],
         "confidence": 0.92,
         "recommended_tier": rule["default_tier"],
         "source": "keyword-prepass",
+        "reasoning": f"keyword-prepass: matched {kw}",
     }
 
 

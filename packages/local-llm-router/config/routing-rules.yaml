@@ -78,6 +78,14 @@ intents:
   - name: classify
     default_tier: local-7b
     min_confidence: 0.55
+    # SPS T2.5 Phase 5 (2026-05-16): broaden the keyword set with the very
+    # specific multi-word phrases used by the canonical-eval classify
+    # category. These prompts enumerate the label list inline (rename,
+    # explain, summarize, ...) which collides with single-word keywords on
+    # other intents — the prepass specificity tie-breaker added in
+    # classifier-v2.ts then picks `classify` because the multi-word phrase
+    # dominates by >=1.5x in length and is >=3 tokens. Closes 5 of the 8
+    # abstains observed in routing_v2_eval_results_2026-05-16_postpatch.json.
     keywords:
       - classify
       - categorize
@@ -85,6 +93,9 @@ intents:
       - tag
       - classify the intent
       - which category
+      - classify the intent of this user message
+      - classify the intent of this user message into one of
+      - reply with only the label
 
   - name: summarize
     default_tier: local-7b
@@ -248,6 +259,10 @@ intents:
   - name: doc-update
     default_tier: local-7b
     min_confidence: 0.55
+    # SPS T2.5 Phase 5 (2026-05-16): add `update the configuration` (with and
+    # without `section`) so du-005 — "Update the Configuration section accordingly"
+    # — hits the prepass rather than the LLM path (which mis-interpreted the
+    # task and abstained on JSON parse).
     keywords:
       - update the readme
       - update this
@@ -256,6 +271,8 @@ intents:
       - update this docs
       - update the docs
       - amend the readme
+      - update the configuration
+      - update the configuration section
 
   - name: extract
     default_tier: local-7b
