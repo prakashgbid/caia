@@ -3,6 +3,7 @@
  * caia-adoption-run — adoption-enforcement substrate runner.
  *
  * Subcommands:
+ *   scan --pr <num>         Detect new artefacts from a merged PR; emit scan.json.
  *   xref --work-dir <dir>   Read scan.json from work-dir, write xref.json beside it.
  *
  * Companion design: agent-memory/decisions/p3_adoption_enforcement_substrate_2026_05_16.md.

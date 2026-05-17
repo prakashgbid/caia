@@ -10,11 +10,17 @@
 #                        router LaunchAgent so the new binary is loaded.
 #                        (Closes the "stale binary" gap from 2026-05-15
 #                        — see reports/integration_a1_post_merge_signal_2026-05-15.md.)
-#                        Then fires `dispatch_adoption_xref`, which runs
-#                        `caia-adoption-run xref` in the background if
-#                        scan.json exists in ~/.caia/post-merge/work/<sha>/
-#                        and xref.json doesn't (p3-adoption-cross-ref
-#                        phase 4 — Adoption Enforcement Substrate MVP-A).
+#                        Then fires `dispatch_adoption_scan` (p3-adoption-
+#                        scan-engine phase 5), which runs `caia-adoption-run
+#                        scan --pr <num>` in the background, writes
+#                        scan.json into ~/.caia/post-merge/work/<sha>/, and
+#                        chains directly into `caia-adoption-run xref` so a
+#                        single merge produces both scan.json and xref.json.
+#                        A separate `dispatch_adoption_xref` follow-up call
+#                        is a no-op when the scan-chain already produced
+#                        xref.json — it only fires when scan.json was
+#                        produced out-of-band (e.g. a manual scan dropped a
+#                        file but xref hasn't been run yet).
 #   - prakashgbid/stolution : stub (extend with K3s rollout / ssh deploy).
 #
 # Operator extension point: add a new `case "$repo" in` branch, or add
@@ -92,11 +98,96 @@ kickstart_daemon() {
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$label" "$rc" "${before_pid:-none}" "${after_pid:-none}" "$pr" "$repo"
 }
 
+# Adoption-enforcement scan stage. Runs `caia-adoption-run scan --pr <num>`
+# against the merge in the background, hard-capped at 30 s. Idempotent —
+# skips when scan.json is already present in the per-sha work dir. On a
+# successful scan, immediately chains into `caia-adoption-run xref` so a
+# single merge produces both scan.json and xref.json (no second-merge
+# round-trip required). Both legs share a 30 + 60 = 90 s outer budget.
+#
+# Ledger appends:
+#   {ts, event:"scan_done",   sha, artefact_count}
+#   {ts, event:"scan_failed", sha, rc}
+# xref ledger appends are emitted by the chained xref step (matching the
+# `dispatch_adoption_xref` semantics).
+dispatch_adoption_scan() {
+  local work_dir="$POSTMERGE_HOME/work/$sha"
+  local scan_path="$work_dir/scan.json"
+  local xref_path="$work_dir/xref.json"
+  local log_path="$work_dir/scan.log"
+  local xref_log_path="$work_dir/xref.log"
+  local ledger_path="$POSTMERGE_HOME/adoption.jsonl"
+  local repo_root="${CAIA_REPO_ROOT:-$HOME/Documents/projects/caia}"
+  local run_bin="$repo_root/packages/adoption-enforcement/bin/caia-adoption-run.mjs"
+  local node_bin="${NODE_BIN:-/opt/homebrew/opt/node@22/bin/node}"
+  [[ -x "$node_bin" ]] || node_bin="$(command -v node 2>/dev/null || echo /opt/homebrew/bin/node)"
+
+  if [[ "$sha" == "unknown" || "$sha" == "null" || -z "$sha" ]]; then return 0; fi
+  if [[ "$pr" == "unknown" || "$pr" == "null" || -z "$pr" ]]; then
+    printf '{"ts":"%s","level":"info","event":"adoption_scan_skipped","sha":"%s","reason":"pr_unknown"}\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sha"
+    return 0
+  fi
+  if [[ -f "$scan_path" ]]; then
+    printf '{"ts":"%s","level":"info","event":"adoption_scan_skipped","sha":"%s","reason":"scan_present"}\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sha"
+    return 0
+  fi
+  if [[ ! -x "$node_bin" || ! -f "$run_bin" ]]; then
+    printf '{"ts":"%s","level":"warn","event":"adoption_scan_skipped","sha":"%s","reason":"runner_unavailable","node":"%s","bin":"%s"}\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sha" "$node_bin" "$run_bin"
+    return 0
+  fi
+
+  mkdir -p "$work_dir"
+  (
+    set +e
+    perl -e 'alarm shift; exec @ARGV' 30 \
+      "$node_bin" "$run_bin" scan --pr "$pr" --sha "$sha" --out "$work_dir" --repo "$repo_root" \
+      >> "$log_path" 2>&1
+    local_rc=$?
+    if [[ $local_rc -eq 0 && -f "$scan_path" ]]; then
+      a=$(jq -r '.summary.artefact_count // 0' "$scan_path" 2>/dev/null)
+      [[ -z "$a" ]] && a=0
+      printf '{"ts":"%s","event":"scan_done","sha":"%s","artefact_count":%s}\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sha" "$a" >> "$ledger_path"
+
+      # Chain into xref so a single merge produces both scan.json + xref.json.
+      if [[ ! -f "$xref_path" ]]; then
+        perl -e 'alarm shift; exec @ARGV' 60 \
+          "$node_bin" "$run_bin" xref --work-dir "$work_dir" --repo "$repo_root" \
+          >> "$xref_log_path" 2>&1
+        xref_rc=$?
+        if [[ $xref_rc -eq 0 && -f "$xref_path" ]]; then
+          xa=$(jq -r '.summary.artefact_count // 0' "$xref_path" 2>/dev/null)
+          xc=$(jq -r '.summary.candidate_count // 0' "$xref_path" 2>/dev/null)
+          [[ -z "$xa" ]] && xa=0
+          [[ -z "$xc" ]] && xc=0
+          printf '{"ts":"%s","event":"xref_done","sha":"%s","artefact_count":%s,"candidate_count":%s}\n' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sha" "$xa" "$xc" >> "$ledger_path"
+        else
+          printf '{"ts":"%s","event":"xref_failed","sha":"%s","rc":%d}\n' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sha" "$xref_rc" >> "$ledger_path"
+        fi
+      fi
+    else
+      printf '{"ts":"%s","event":"scan_failed","sha":"%s","rc":%d}\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sha" "$local_rc" >> "$ledger_path"
+    fi
+  ) >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+
+  printf '{"ts":"%s","level":"info","event":"adoption_scan_dispatched","sha":"%s","pr":"%s","work_dir":"%s"}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$sha" "$pr" "$work_dir"
+}
+
 # Adoption-enforcement xref stage. Runs `caia-adoption-run xref` after the
-# scan stage (p3-adoption-scan-engine, future MVP-A) has produced scan.json
-# in the per-sha work dir. Background, hard-capped at 60 s. Idempotent —
-# skips when xref.json is already present. Until the scan stage lands,
-# scan.json never exists and this is a no-op.
+# scan stage has produced scan.json in the per-sha work dir. Background,
+# hard-capped at 60 s. Idempotent — skips when xref.json is already
+# present. Most of the time the scan-chain in `dispatch_adoption_scan` has
+# already produced xref.json by the time we reach here and this is a
+# no-op; it remains as a fallback for the case where scan.json was dropped
+# out-of-band.
 #
 # On a successful xref the ledger gets one append:
 #   { ts, event:"xref_done", sha, artefact_count, candidate_count }
@@ -171,6 +262,7 @@ case "$repo" in
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$pr" "$(printf '%s' "$title" | jq -Rs .)"
       kickstart_daemon "com.chiefaia.local-llm-router"
     fi
+    dispatch_adoption_scan
     dispatch_adoption_xref
     ;;
   prakashgbid/stolution)
