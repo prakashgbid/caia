@@ -1545,6 +1545,9 @@ importers:
 
   packages/llm-cache:
     dependencies:
+      '@chiefaia/local-llm-router':
+        specifier: workspace:*
+        version: link:../local-llm-router
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0
@@ -1652,6 +1655,9 @@ importers:
 
   packages/local-rag:
     dependencies:
+      '@chiefaia/local-llm-router':
+        specifier: workspace:*
+        version: link:../local-llm-router
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.9.0

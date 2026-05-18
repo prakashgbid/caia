@@ -65,3 +65,13 @@ export type {
   LlmMetricsSnapshot,
   LlmMetricsSnapshotTask,
 } from './llm-metrics.js';
+
+// P3 Adoption Audit v2 Section 5 #4 — canonical Ollama embeddings client
+// for the CAIA stack. Consumers downstream of librarian/mentor-retrieval
+// should adopt this rather than rolling their own /api/embeddings POST.
+export {
+  embedText,
+  DEFAULT_OLLAMA_URL as EMBED_DEFAULT_OLLAMA_URL,
+  DEFAULT_EMBED_MODEL,
+} from './embed-client.js';
+export type { EmbedTextOptions, EmbedTextResult } from './embed-client.js';

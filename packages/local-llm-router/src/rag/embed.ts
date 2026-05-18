@@ -1,12 +1,15 @@
 // embed.ts — thin wrapper around Ollama's /api/embeddings endpoint.
 //
-// We hard-code `nomic-embed-text` as the default since (a) it's already
-// pulled on the dev box (verified via /healthz) and (b) the file index is
-// embedded with the same model — querying with a different one would yield
-// useless distances. The env override exists for experiment runs.
+// P3 ADOPTION (2026-05-18, Audit v2 Section 5 #4): the wire-level POST is
+// now delegated to `../embed-client.js#embedText` so this internal helper
+// shares the canonical implementation with downstream consumers
+// (feature-registry, llm-cache, local-rag). The exported function shape
+// (`embedOne`, `embedMany`, `cosineSim`) is kept so the existing internal
+// callers don't need to change.
+
+import { embedText } from '../embed-client.js';
 
 const DEFAULT_MODEL = process.env['ROUTER_RAG_EMBED_MODEL'] ?? 'nomic-embed-text';
-const DEFAULT_OLLAMA_URL = process.env['OLLAMA_BASE_URL'] ?? 'http://127.0.0.1:11434';
 const DEFAULT_TIMEOUT_MS = Number(process.env['ROUTER_RAG_EMBED_TIMEOUT_MS'] ?? 15_000);
 
 export interface EmbedOptions {
@@ -27,24 +30,28 @@ export async function embedOne(
   opts: EmbedOptions = {},
 ): Promise<number[]> {
   const model = opts.model ?? DEFAULT_MODEL;
-  const baseUrl = opts.ollamaBaseUrl ?? DEFAULT_OLLAMA_URL;
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  const res = await fetch(`${baseUrl}/api/embeddings`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, prompt: text }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!res.ok) {
-    throw new EmbedError(`ollama embeddings returned ${res.status}`, res.status);
+  let result: { vector: readonly number[]; model: string };
+  try {
+    result = await embedText(text, {
+      model,
+      timeoutMs,
+      ...(opts.ollamaBaseUrl !== undefined ? { baseUrl: opts.ollamaBaseUrl } : {}),
+    });
+  } catch (err) {
+    const msg = (err as Error).message;
+    const statusMatch = msg.match(/Embed call failed: (\d+)/);
+    const status = statusMatch ? Number(statusMatch[1]) : undefined;
+    throw new EmbedError(
+      `ollama embeddings failed: ${msg}`,
+      status,
+    );
   }
-  const body = (await res.json()) as { embedding?: number[] };
-  const v = body.embedding;
-  if (!Array.isArray(v) || v.length === 0) {
+  if (result.vector.length === 0) {
     throw new EmbedError('ollama embeddings returned empty vector');
   }
-  return v;
+  return Array.from(result.vector);
 }
 
 // Convenience for the index-builder (sequential — Ollama serializes anyway
