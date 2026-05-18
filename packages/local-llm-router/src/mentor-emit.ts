@@ -15,18 +15,17 @@
 //      router is the primary serving path and must run even on machines that
 //      haven't been provisioned with mentor-event-bus credentials.
 //
-// HMAC scheme matches packages/mentor-event-bus/src/auth.ts exactly:
+// HMAC scheme delegated to @chiefaia/hmac-auth (PR #478 completion gate).
+// signRequest() produces canonical headers identical to those previously
+// hand-rolled here:
 //   X-Caia-Timestamp: <ms>
 //   X-Caia-Signature: hex(hmac-sha256(secret, "<ts>:<body>"))
 
-import { createHmac } from 'node:crypto';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { hostname as osHostname } from 'node:os';
 import { existsSync, readFileSync } from 'node:fs';
-
-const TIMESTAMP_HEADER = 'x-caia-timestamp';
-const SIGNATURE_HEADER = 'x-caia-signature';
+import { signRequest } from '@chiefaia/hmac-auth';
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:5180';
 
@@ -200,10 +199,7 @@ function dispatch(
     return;
   }
 
-  const ts = String(now);
-  const signature = createHmac('sha256', cfg.secret)
-    .update(`${ts}:${body}`)
-    .digest('hex');
+  const sigHeaders = signRequest(cfg.secret, body, now);
 
   const req = cfg.requestFn(
     {
@@ -216,8 +212,7 @@ function dispatch(
       headers: {
         'content-type': 'application/json; charset=utf-8',
         'content-length': Buffer.byteLength(body).toString(),
-        [TIMESTAMP_HEADER]: ts,
-        [SIGNATURE_HEADER]: signature,
+        ...sigHeaders,
       },
       timeout: cfg.timeoutMs,
     },

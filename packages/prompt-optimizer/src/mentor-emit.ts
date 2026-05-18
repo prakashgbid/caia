@@ -7,15 +7,17 @@
 // Fire-and-forget HTTP POST to the mentor-event-bus `/v1/events` endpoint.
 // Used by `optimize()` to emit one `PromptOptimizerStage` per stage. Never
 // throws, never blocks.
+//
+// HMAC request signing delegated to @chiefaia/hmac-auth (PR #478 completion
+// gate). Header names and canonical "<ts>:<body>" scheme are the canonical
+// constants exported by that package; this module no longer hand-rolls them.
 
-import { createHmac } from 'node:crypto';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { hostname as osHostname } from 'node:os';
 import { existsSync, readFileSync } from 'node:fs';
+import { signRequest } from '@chiefaia/hmac-auth';
 
-const TIMESTAMP_HEADER = 'x-caia-timestamp';
-const SIGNATURE_HEADER = 'x-caia-signature';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:5180';
 
 export type OptimizerEventType = 'PromptOptimizerStage' | 'Compression';
@@ -154,10 +156,7 @@ function dispatch(
     return;
   }
 
-  const ts = String(now);
-  const signature = createHmac('sha256', cfg.secret)
-    .update(`${ts}:${body}`)
-    .digest('hex');
+  const sigHeaders = signRequest(cfg.secret, body, now);
 
   const req = cfg.requestFn(
     {
@@ -170,8 +169,7 @@ function dispatch(
       headers: {
         'content-type': 'application/json; charset=utf-8',
         'content-length': Buffer.byteLength(body).toString(),
-        [TIMESTAMP_HEADER]: ts,
-        [SIGNATURE_HEADER]: signature,
+        ...sigHeaders,
       },
       timeout: cfg.timeoutMs,
     },
