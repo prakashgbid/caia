@@ -16,6 +16,7 @@ const config: Config = {
     // never crosses the ESM boundary.
     '^@chiefaia/hmac-auth$': '<rootDir>/../../packages/hmac-auth/src/index.ts',
     '^@chiefaia/logger$': '<rootDir>/../../packages/logger/src/index.ts',
+    '^@chiefaia/tool-output-sanitizer$': '<rootDir>/../../packages/tool-output-sanitizer/src/index.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {

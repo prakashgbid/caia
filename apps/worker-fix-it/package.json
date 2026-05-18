@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@chiefaia/ticket-template": "workspace:*",
+    "@chiefaia/tool-output-sanitizer": "workspace:*",
     "zod": "^4.1.12"
   },
   "devDependencies": {

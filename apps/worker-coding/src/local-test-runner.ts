@@ -19,6 +19,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawnSync, type SpawnSyncOptions } from 'child_process';
+import { sanitizeToolResult } from '@chiefaia/tool-output-sanitizer';
 import type { Worktree } from './worktree-manager';
 import type { Bundle } from './bundle-reader';
 
@@ -202,8 +203,19 @@ export class LocalTestRunner {
   }
 
   private tail(s: string): string {
-    if (Buffer.byteLength(s, 'utf8') <= this.tailBytes) return s;
-    return '...[truncated]...\n' + s.slice(-this.tailBytes);
+    const truncated =
+      Buffer.byteLength(s, 'utf8') <= this.tailBytes
+        ? s
+        : '...[truncated]...\n' + s.slice(-this.tailBytes);
+    // SAFETY-003 expansion (P3 audit Section 5 #5): run captured test
+    // stdout/stderr through the sanitizer before surfacing it back to
+    // the orchestrator. Test runs spawn arbitrary user code with the
+    // worker's env (which may include CONDUCTOR_API tokens, npm tokens,
+    // etc.); the sanitizer redacts known secret-shaped strings and
+    // prompt-injection markers. Lenient strictness because the source
+    // (test runner under our control) is first-party but its output
+    // shape isn't constrained.
+    return sanitizeToolResult(truncated, { strictness: 'lenient' }).payload;
   }
 
   private writeLog(filePath: string, contents: string): void {

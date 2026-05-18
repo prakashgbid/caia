@@ -6,6 +6,18 @@ import { taskRuns, taskSubtasks, taskRunEvents, promptPipelineStages } from '../
 import { bus } from '../../ws/bus';
 import { nanoid } from 'nanoid';
 import { eventBus } from '../../events/bus-adapter';
+import { sanitizeToolResult } from '@chiefaia/tool-output-sanitizer';
+
+/** SAFETY-003 expansion (P3 audit Section 5 #5): inbound completion
+ *  summaries / excerpts from executors are written to a SQLite column
+ *  the dashboard reads back. Treat them as untrusted (the body is
+ *  attacker-controlled if the executor's claude run was prompt-injected)
+ *  and redact known secret-shaped strings before persisting. Paranoid
+ *  strictness because the dashboard renders these to the human operator. */
+function sanitizeInbound(s: unknown): unknown {
+  if (typeof s !== 'string') return s;
+  return sanitizeToolResult(s, { strictness: 'paranoid' }).payload;
+}
 
 function subtaskProgress(db: Db, taskRunId: number): { done: number; total: number } {
   const sqlite = getSqliteRaw();
@@ -125,7 +137,7 @@ export function registerTaskRunRoutes(app: Hono, db: Db): void {
     if (body['status'] !== undefined) update['status'] = body['status'];
     if (body['turn_count'] !== undefined) update['turnCount'] = body['turn_count'];
     if (body['last_activity_at'] !== undefined) update['lastActivityAt'] = body['last_activity_at'];
-    if (body['completion_summary'] !== undefined) update['completionSummary'] = body['completion_summary'];
+    if (body['completion_summary'] !== undefined) update['completionSummary'] = sanitizeInbound(body['completion_summary']);
     if (body['ended_at'] !== undefined) update['endedAt'] = body['ended_at'];
     if (body['result_ok'] !== undefined) update['resultOk'] = body['result_ok'];
 
@@ -137,7 +149,7 @@ export function registerTaskRunRoutes(app: Hono, db: Db): void {
     if (body['output_tokens'] !== undefined) update['outputTokens'] = body['output_tokens'];
     if (body['files_changed'] !== undefined) update['filesChanged'] = body['files_changed'];
     if (body['duration_ms'] !== undefined) update['durationMs'] = body['duration_ms'];
-    if (body['raw_claude_output'] !== undefined) update['rawClaudeOutput'] = body['raw_claude_output'];
+    if (body['raw_claude_output'] !== undefined) update['rawClaudeOutput'] = sanitizeInbound(body['raw_claude_output']);
 
     if (!update['lastActivityAt']) update['lastActivityAt'] = now;
 
@@ -338,7 +350,7 @@ export function registerTaskRunRoutes(app: Hono, db: Db): void {
       at: now,
       turnCount: body['turn_count'] as number | undefined,
       eventKind: body['event_kind'] as string,
-      excerpt: body['excerpt'] ? String(body['excerpt']).slice(0, 500) : undefined,
+      excerpt: body['excerpt'] ? (sanitizeInbound(String(body['excerpt']).slice(0, 500)) as string) : undefined,
       payload: JSON.stringify(body['payload'] ?? {}),
     };
     db.insert(taskRunEvents).values(row).run();

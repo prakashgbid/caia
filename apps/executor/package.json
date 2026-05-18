@@ -16,6 +16,7 @@
     "@chiefaia/claude-spawner": "workspace:*",
     "@chiefaia/event-bus-internal": "workspace:*",
     "@chiefaia/logger": "workspace:*",
+    "@chiefaia/tool-output-sanitizer": "workspace:*",
     "nanoid": "^5.0.0"
   },
   "devDependencies": {

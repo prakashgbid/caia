@@ -138,6 +138,9 @@ importers:
       '@chiefaia/logger':
         specifier: workspace:*
         version: link:../../packages/logger
+      '@chiefaia/tool-output-sanitizer':
+        specifier: workspace:*
+        version: link:../../packages/tool-output-sanitizer
       nanoid:
         specifier: ^5.0.0
         version: 5.1.9
@@ -465,6 +468,9 @@ importers:
       '@chiefaia/ticket-template':
         specifier: workspace:*
         version: link:../../packages/ticket-template
+      '@chiefaia/tool-output-sanitizer':
+        specifier: workspace:*
+        version: link:../../packages/tool-output-sanitizer
       zod:
         specifier: ^4.1.12
         version: 4.3.6
@@ -490,6 +496,9 @@ importers:
       '@chiefaia/ticket-template':
         specifier: workspace:*
         version: link:../../packages/ticket-template
+      '@chiefaia/tool-output-sanitizer':
+        specifier: workspace:*
+        version: link:../../packages/tool-output-sanitizer
       zod:
         specifier: ^4.1.12
         version: 4.3.6

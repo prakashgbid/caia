@@ -37,6 +37,7 @@
 
 import { spawn } from 'child_process';
 import { readFileSync } from 'fs';
+import { sanitizeToolResult } from '@chiefaia/tool-output-sanitizer';
 
 import type {
   GeneratedSpec,
@@ -423,5 +424,9 @@ export class SubprocessTestRunner implements TestRunner {
 }
 
 function tail(s: string, n: number): string {
-  return s.length <= n ? s : s.slice(-n);
+  const truncated = s.length <= n ? s : s.slice(-n);
+  // SAFETY-003 expansion (P3 audit Section 5 #5): captured stdout/stderr
+  // from spawned test runners can contain env-bleed secrets; redact known
+  // patterns before storing as run-artefacts that the dashboard renders.
+  return sanitizeToolResult(truncated, { strictness: 'lenient' }).payload;
 }
