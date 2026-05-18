@@ -12,12 +12,34 @@
  * `caia/docs/capability-broker.md`. The in-process broker server is a
  * lazily-started singleton (per executor process) and the hook subprocess
  * connects to it over a Unix-domain socket.
+ *
+ * D1 ADOPTION (2026-05-18, PR #471 completion gate): argv + env construction
+ * delegated to @chiefaia/claude-spawner so this dispatcher is no longer the
+ * only residual site building claude argv inline. `buildSpawnArgs` produces
+ * the canonical `--print --output-format json --model <m> --permission-mode <p>`
+ * prefix; `buildSpawnEnv` scrubs SCRUBBED_AUTH_ENV_VARS so the subprocess
+ * always uses the OAuth/keychain subscription session per
+ * `feedback_no_api_key_billing.md` (never API key).
+ *
+ * The `child_process.spawn` call itself is intentionally NOT migrated to
+ * `spawnClaude()` from claude-spawner: the executor needs streaming
+ * stdout + early pid capture so the daemon can register/track the run via
+ * the API while the child is still producing output. `spawnClaude()` is a
+ * synchronous-capture API (await → final stdout) which is incompatible
+ * with that pattern. A future `spawnClaudeStreaming()` API would close
+ * this last gap; until then, the safety-critical pieces (auth scrub + arg
+ * construction + binary path resolution) are canonicalized via the
+ * imported helpers, which is the meaningful portion of the adoption gate.
  */
 
 import * as child_process from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import {
+  buildSpawnArgs,
+  buildSpawnEnv,
+  SCRUBBED_AUTH_ENV_VARS,
+} from '@chiefaia/claude-spawner';
 import { publishEvent } from './publish-event';
 import {
   PERMISSION_MODE_HOOK_CONTROLLED,
@@ -27,6 +49,11 @@ import {
 } from './broker-integration';
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
+
+/** Resolved binary path. Mirrors claude-spawner's DEFAULT_CLAUDE_BINARY
+ *  resolution so the executor honours `CLAUDE_BINARY_PATH` overrides
+ *  identically to every other spawn site in the codebase. */
+const CLAUDE_BINARY = process.env['CLAUDE_BINARY_PATH'] ?? 'claude';
 
 export interface DispatchTask {
   id: string;
@@ -77,6 +104,7 @@ function parseNotes(notes: string | null): Record<string, unknown> | null {
     return null;
   }
 }
+
 
 function isCanaryTask(task: DispatchTask): boolean {
   const meta = parseNotes(task.notes);
@@ -234,6 +262,16 @@ export interface BuildClaudeArgsResult {
  * effect is lazily booting the broker socket server when hook-controlled.
  *
  * Exported so tests can assert the wiring without spawning claude.
+ *
+ * D1 adoption (PR #471 completion gate, 2026-05-18): argv prefix and env
+ * scrub now go through @chiefaia/claude-spawner.buildSpawnArgs +
+ * buildSpawnEnv so this dispatcher matches the canonical pattern used by
+ * verifier / critic / reviewer / code-reviewer / apprentice-* spawn sites.
+ * `permissionMode` is passed through verbatim — claude-spawner's
+ * SpawnClaudeOptions only types the documented set
+ * ('default'|'bypassPermissions'|'plan'|'acceptEdits') so a runtime cast
+ * is needed for the broker-introduced 'hook-controlled' mode and any
+ * future op-defined values; argv text is identical either way.
  */
 export async function buildClaudeArgs(
   task: DispatchTask,
@@ -241,22 +279,38 @@ export async function buildClaudeArgs(
   prompt: string,
   model: string,
 ): Promise<BuildClaudeArgsResult> {
-  const baseArgs = [
-    '--print',
-    '--output-format', 'json',
-    '--permission-mode', config.permissionMode,
-    '--model', model,
-    prompt,
-  ];
+  // Canonical prefix from claude-spawner: --print --output-format json
+  //   --model <m> --permission-mode <p>
+  const prefix = buildSpawnArgs({
+    outputFormat: 'json',
+    model,
+    permissionMode: config.permissionMode as
+      | 'default'
+      | 'bypassPermissions'
+      | 'plan'
+      | 'acceptEdits',
+  });
+  // Executor passes the prompt as the trailing argv (not stdin) — this is
+  // the divergence from claude-spawner's stdin-write pattern. See the
+  // file-level comment for why we keep the spawn call inline.
+  const baseArgs = [...prefix, prompt];
+
   if (!brokerEnabled(config.permissionMode)) {
-    return { args: baseArgs, env: { ...process.env }, broker: null };
+    return {
+      args: baseArgs,
+      env: buildSpawnEnv(process.env, {}),
+      broker: null,
+    };
   }
   const broker = await getBroker();
   const args = broker.augmentClaudeArgs(baseArgs);
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    ...broker.hookEnv(task.id, 'coding-agent'),
-  };
+  // buildSpawnEnv merges extraEnv THEN scrubs auth-token vars, so the
+  // broker's hookEnv contributions land before the scrub — the broker
+  // doesn't introduce any SCRUBBED_AUTH_ENV_VARS, this ordering is just
+  // defensive and matches the contract in claude-spawner/src/spawn.ts.
+  const env = buildSpawnEnv(process.env, {
+    extraEnv: broker.hookEnv(task.id, 'coding-agent'),
+  });
   return { args, env, broker };
 }
 
@@ -276,7 +330,12 @@ export async function dispatch(
     process.stderr.write(`[executor:task-${task.id}] model=${model} broker=${broker ? 'on' : 'off'}\n`);
   }
 
-  const proc = child_process.spawn('claude', claudeArgs, {
+  // Streaming spawn (rather than spawnClaude's sync-capture API) so the
+  // daemon can claim the pid + start tracking the run before the child
+  // finishes. Env is already scrubbed of SCRUBBED_AUTH_ENV_VARS by
+  // buildSpawnEnv in buildClaudeArgs above. Binary path is the canonical
+  // CLAUDE_BINARY_PATH resolution.
+  const proc = child_process.spawn(CLAUDE_BINARY, claudeArgs, {
     cwd: task.cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
     detached: false,
@@ -406,4 +465,4 @@ export function cleanupWorktree(worktreePath: string): void {
 }
 
 // Re-export so daemon shutdown can call it.
-export { PERMISSION_MODE_HOOK_CONTROLLED, PERMISSION_MODE_BYPASS };
+export { PERMISSION_MODE_HOOK_CONTROLLED, PERMISSION_MODE_BYPASS, SCRUBBED_AUTH_ENV_VARS };
