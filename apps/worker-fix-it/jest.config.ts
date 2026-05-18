@@ -8,6 +8,8 @@ const config: Config = {
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '\\.bench\\.ts$'],
   moduleNameMapper: {
     '^@chiefaia/ticket-template$': '<rootDir>/../../packages/ticket-template/src/index.ts',
+    // tool-output-sanitizer is ESM-only; redirect to src so ts-jest (CJS) can parse it.
+    '^@chiefaia/tool-output-sanitizer$': '<rootDir>/../../packages/tool-output-sanitizer/src/index.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {

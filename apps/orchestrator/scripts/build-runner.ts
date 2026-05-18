@@ -9,6 +9,7 @@
 import { execSync, spawnSync } from 'child_process';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { sanitizeToolResult } from '@chiefaia/tool-output-sanitizer';
 
 const API = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 const TRIGGER = (() => {
@@ -76,7 +77,13 @@ async function runStep(name: string, command: string, order: number): Promise<St
   const exitCode = result.status ?? 1;
   const durationMs = Date.now() - start;
   const output = (result.stdout ?? '') + (result.stderr ?? '');
-  const stderrTail = output.split('\n').slice(-10).join('\n');
+  // SAFETY-003 expansion (P3 audit Section 5 #5): the last 10 lines of
+  // build-step stderr are persisted via PATCH and emitted as a bus event;
+  // they can contain CI env-bleed secrets (npm tokens, GH PATs). Redact
+  // known secret-shaped strings before surfacing. Lenient because the
+  // source (build subprocess) is first-party but env-leakable.
+  const rawStderrTail = output.split('\n').slice(-10).join('\n');
+  const stderrTail = sanitizeToolResult(rawStderrTail, { strictness: 'lenient' }).payload;
   const errorSignature = output.match(/(error TS\d+|Error:|FAIL |FAILED)/g)?.slice(0, 3).join(', ') ?? '';
   const status = exitCode === 0 ? 'success' : 'failed';
 

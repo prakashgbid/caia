@@ -11,6 +11,17 @@ import { checkAndBreak } from './breaker';
 import { publishEvent } from './publish-event';
 import { parseClaudeOutputRich } from './parse-claude-output-rich';
 import { logger } from './logger';
+import { sanitizeToolResult } from '@chiefaia/tool-output-sanitizer';
+
+/** SAFETY-003 expansion (P3 audit Section 5 #5): centralised redaction
+ *  helper used before any claude-produced string leaves the executor on
+ *  the user-visible publish/persist surface. Claude's output is an
+ *  untrusted source from the sanitizer's perspective (the model can be
+ *  prompt-injected into echoing secrets it saw in tool outputs), so we
+ *  default to 'paranoid' strictness on the executor boundary. */
+function redactClaude(s: string): string {
+  return sanitizeToolResult(s, { strictness: 'paranoid' }).payload;
+}
 
 const log = logger.child({ component: 'completion-hook' });
 
@@ -157,15 +168,17 @@ export async function handleCompletion(
     // ── Success path ──────────────────────────────────────────────────────────
     taskLog.info('task completed successfully', { duration_ms: durationMs });
 
+    const sanitizedSummary = redactClaude(parsed.summary);
+
     await finalizeExecutorRun(
       handle.executorRunId, parsed.sessionId, 'done',
-      parsed.summary, null, parsed.costUsd, parsed.turnCount,
+      sanitizedSummary, null, parsed.costUsd, parsed.turnCount,
     );
 
     await markTaskDone(handle.taskId, parsed.sessionId);
 
     // Legacy events (retained for existing consumers)
-    await publishEvent('task.completed', { task_id: handle.taskId, duration_ms: durationMs, result_summary: parsed.summary }, { correlationId: task.rootPromptId, entityType: 'task', entityId: handle.taskId });
+    await publishEvent('task.completed', { task_id: handle.taskId, duration_ms: durationMs, result_summary: sanitizedSummary }, { correlationId: task.rootPromptId, entityType: 'task', entityId: handle.taskId });
     await publishEvent('worker.completed', { executor_run_id: handle.executorRunId, task_id: handle.taskId, exit_code: outcome.exitCode ?? 0, turn_count: parsed.turnCount }, { correlationId: task.rootPromptId, entityType: 'task', entityId: handle.taskId });
 
     // Per-tool-call events (fire-and-forget — no await)
@@ -174,7 +187,7 @@ export async function handleCompletion(
         taskId: handle.taskId,
         executorRunId: handle.executorRunId,
         toolName: tc.name,
-        inputSummary: tc.inputSummary,
+        inputSummary: redactClaude(tc.inputSummary),
         sequenceIndex: tc.sequenceIndex,
       });
     }
@@ -271,17 +284,19 @@ export async function handleCompletion(
 
   } else {
     // ── Failure path ──────────────────────────────────────────────────────────
+    const sanitizedSummary = redactClaude(parsed.summary);
+    const sanitizedReasonTail = redactClaude(parsed.summary.slice(0, 200));
     const reason = outcome.kind === 'stalled'
       ? `stalled (no output for ${Math.round(outcome.lastOutputAge / 60000)}min)`
       : outcome.kind === 'dead'
       ? `process died (exit code: ${outcome.exitCode})`
-      : `exit code ${(outcome as { exitCode: number }).exitCode}: ${parsed.summary.slice(0, 200)}`;
+      : `exit code ${(outcome as { exitCode: number }).exitCode}: ${sanitizedReasonTail}`;
 
     taskLog.error('task failed', { reason, attempt_n: newAttemptCount });
 
     await finalizeExecutorRun(
       handle.executorRunId, parsed.sessionId, 'failed',
-      parsed.summary, reason, parsed.costUsd, parsed.turnCount,
+      sanitizedSummary, reason, parsed.costUsd, parsed.turnCount,
     );
 
     // Always update task status + attempt count first (moves out of 'running')
