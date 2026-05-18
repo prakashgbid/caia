@@ -126,6 +126,9 @@ importers:
       '@chiefaia/capability-broker':
         specifier: workspace:*
         version: link:../../packages/capability-broker
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../../packages/claude-spawner
       '@chiefaia/event-bus-internal':
         specifier: workspace:*
         version: link:../../packages/event-bus-internal
