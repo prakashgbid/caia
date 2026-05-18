@@ -291,7 +291,7 @@ export async function preflightDispatch(
         raw,
       });
     });
-    child.once('exit', (code) => {
+    child.once('close', (code) => {
       const elapsed = Date.now() - t0;
       // Decision tree: rate-limit FIRST (banner is the most specific), then
       // auth, then healthy, then everything else → unknown.
