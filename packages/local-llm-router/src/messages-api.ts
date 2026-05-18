@@ -11,6 +11,18 @@
 //     recommended_tier='claude' or needs_escalation=true, we return
 //     HTTP 503 with an explicit local-only error. NO cloud fallback.
 //
+//   2026-05-18 patch (Bug 1 — operator-observed cascade): the classifier's
+//   abstain path defaults novel/short prompts (e.g. "what is 2+2") to
+//   intent='unknown', confidence=0.3, recommended_tier='claude'. For
+//   openclaw that defaulted straight into 503 local-only-policy-block
+//   even on trivial prompts, then the failure cascade left empty
+//   assistant turns in the session JSONL which the TUI renders as
+//   '[object Object]' on subsequent turns (the operator-observed Bug 2
+//   was downstream of Bug 1). The 503 should only fire for HIGH-confidence
+//   cloud-required prompts. Low-confidence unknowns FALL BACK TO LOCAL —
+//   try the local model rather than block. See OPENCLAW_LOW_CONFIDENCE_*
+//   constants + decidePolicy() below.
+//
 //   cowork → conditional. Classifier picks:
 //     local-*  → serve locally via routerRoute(forceLocal:true)
 //     claude   → forward to Headroom proxy at 127.0.0.1:8787, which compresses
@@ -36,6 +48,29 @@ import { route as routerRoute } from './router.js';
 export type SpsClient = 'cowork' | 'openclaw';
 
 const HEADROOM_BASE_URL = process.env['SPS_HEADROOM_BASE_URL'] ?? 'http://127.0.0.1:8787';
+
+// 2026-05-18 (Bug 1): openclaw low-confidence fallback to local.
+//
+// When the classifier abstains on a novel/short prompt it emits
+// intent='unknown' with confidence ≤ 0.3 and recommended_tier='claude'
+// (see classifier.ts abstainResult / tierForIntent default). The local
+// model can almost always handle these — they're typically trivial
+// ("what is 2+2", "say hi", "ping") that the classifier just couldn't
+// label. Block ONLY when the classifier is genuinely confident the
+// prompt exceeds local capability. Threshold chosen so the classifier's
+// own "ambiguous → unknown + confidence < 0.5" hint (system-prompt
+// instruction) maps to "try local anyway".
+const OPENCLAW_LOW_CONFIDENCE_THRESHOLD = 0.5;
+const OPENCLAW_LOW_CONFIDENCE_FALLBACK_TIER = 'local-7b';
+
+// 2026-05-18 (Bug 2 — defensive): if upstream serialization bugs (TUI,
+// LiteLLM adapter, or our own JSON.stringify slips) inject the literal
+// '[object Object]' into a message content, the local model will start
+// hallucinating "JavaScript serialization artifact" explanations
+// instead of answering the actual prompt. Strip it before classify +
+// before dispatching to the local model. We log a warning so the source
+// can be traced — if this fires, there's a real upstream bug to fix.
+const OBJECT_OBJECT_LITERAL = /\[object Object\]/g;
 
 // Anthropic Messages request — minimal schema we care about.
 interface AnthropicContentBlock {
@@ -103,6 +138,83 @@ function joinMessagesAsPrompt(messages: AnthropicMessage[]): string {
   return messages.map((m) => flattenContent(m.content)).join('\n\n');
 }
 
+/**
+ * Strip the literal '[object Object]' from text content blocks across an
+ * Anthropic-shape messages array. Mutates the array in place. Returns the
+ * count of stripped occurrences (callers log when > 0 so upstream
+ * serialization bugs become visible).
+ */
+function sanitizeObjectObjectMessages(messages: AnthropicMessage[]): number {
+  let hits = 0;
+  for (const m of messages) {
+    if (typeof m.content === 'string') {
+      if (OBJECT_OBJECT_LITERAL.test(m.content)) {
+        const stripped = m.content.replace(OBJECT_OBJECT_LITERAL, '');
+        hits += m.content.length !== stripped.length ? 1 : 0;
+        m.content = stripped;
+      }
+      continue;
+    }
+    if (!Array.isArray(m.content)) continue;
+    for (const b of m.content) {
+      if (b.type === 'text' && typeof b.text === 'string' &&
+          OBJECT_OBJECT_LITERAL.test(b.text)) {
+        const before = b.text;
+        b.text = b.text.replace(OBJECT_OBJECT_LITERAL, '');
+        if (before.length !== b.text.length) hits += 1;
+      }
+    }
+  }
+  return hits;
+}
+
+/** Same defense for OpenAI-chat-shape messages. */
+function sanitizeObjectObjectChat(
+  messages: Array<{ role: string; content: string | AnthropicContentBlock[] }>,
+): number {
+  let hits = 0;
+  for (const m of messages) {
+    if (typeof m.content === 'string') {
+      if (OBJECT_OBJECT_LITERAL.test(m.content)) {
+        const stripped = m.content.replace(OBJECT_OBJECT_LITERAL, '');
+        if (m.content.length !== stripped.length) hits += 1;
+        m.content = stripped;
+      }
+      continue;
+    }
+    if (!Array.isArray(m.content)) continue;
+    for (const b of m.content) {
+      if (b.type === 'text' && typeof b.text === 'string' &&
+          OBJECT_OBJECT_LITERAL.test(b.text)) {
+        const before = b.text;
+        b.text = b.text.replace(OBJECT_OBJECT_LITERAL, '');
+        if (before.length !== b.text.length) hits += 1;
+      }
+    }
+  }
+  return hits;
+}
+
+function logSanitization(
+  client: SpsClient,
+  shape: 'messages' | 'chat',
+  hits: number,
+): void {
+  if (hits <= 0) return;
+  const line = JSON.stringify({
+    sps_gw: true,
+    ts: new Date().toISOString(),
+    client,
+    shape,
+    warning: 'object-object-literal-stripped',
+    hits,
+    note:
+      'Incoming message content contained literal "[object Object]". ' +
+      'Upstream serialization bug — trace TUI/LiteLLM/adapter chain.',
+  });
+  process.stderr.write(`${line}\n`);
+}
+
 type PolicyDecision =
   | { kind: 'local'; reason: string; tier: string }
   | { kind: 'cloud'; reason: string; tier: string }
@@ -114,9 +226,29 @@ function decidePolicy(client: SpsClient, intent: IntentResult): PolicyDecision {
   const tier = intent.recommended_tier;
   if (client === 'openclaw') {
     if (wantsCloud) {
+      // Bug 1 (2026-05-18): low-confidence-unknown override. The
+      // classifier's abstain path returns tier='claude' even when it
+      // means "I don't know" rather than "this needs Claude". Treat
+      // "unknown or low confidence" as a vote for local, not for the
+      // 503 block. The block stays for high-confidence cloud-required
+      // prompts (e.g. confident new-design/architect with confidence ≥
+      // OPENCLAW_LOW_CONFIDENCE_THRESHOLD).
+      const isLowConfidenceUnknown =
+        intent.intent === 'unknown' ||
+        intent.confidence < OPENCLAW_LOW_CONFIDENCE_THRESHOLD;
+      if (isLowConfidenceUnknown) {
+        return {
+          kind: 'local',
+          reason:
+            `openclaw low-confidence fallback to local ` +
+            `(was tier=${tier}, intent=${intent.intent}, ` +
+            `confidence=${intent.confidence}, threshold=${OPENCLAW_LOW_CONFIDENCE_THRESHOLD})`,
+          tier: OPENCLAW_LOW_CONFIDENCE_FALLBACK_TIER,
+        };
+      }
       return {
         kind: 'local-only-block',
-        reason: `tier=${tier}, needs_escalation=${intent.needs_escalation}`,
+        reason: `tier=${tier}, needs_escalation=${intent.needs_escalation}, high-confidence-cloud (confidence=${intent.confidence})`,
         tier,
       };
     }
@@ -464,6 +596,14 @@ async function handleMessagesPath(
       400,
     );
   }
+  // 2026-05-18 Bug 2 defensive sanitization (run BEFORE userText extraction
+  // so classifier + local-dispatch both see clean text). If upstream
+  // (TUI/LiteLLM/adapter) leaks '[object Object]' the local model would
+  // hallucinate JS-serialization explanations rather than answer the
+  // actual prompt; strip + warn so the upstream bug stays visible.
+  const sanitizedHits = sanitizeObjectObjectMessages(body.messages);
+  logSanitization(client, 'messages', sanitizedHits);
+
   const userText = joinMessagesAsPrompt(body.messages);
   if (userText.trim() === '') {
     return c.json(
@@ -518,6 +658,11 @@ async function handleChatPath(
   // Strip caller-supplied `model` (same defense-in-depth as /v1/chat/completions
   // r-2 guard: callers must not pin a model on the gateway path).
   delete body.model;
+
+  // 2026-05-18 Bug 2 defensive sanitization (see handleMessagesPath above).
+  const sanitizedHits = sanitizeObjectObjectChat(body.messages);
+  logSanitization(client, 'chat', sanitizedHits);
+
   const userText = body.messages
     .filter((m) => m.role !== 'system')
     .map((m) => (typeof m.content === 'string' ? m.content : flattenContent(m.content)))
