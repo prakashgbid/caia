@@ -1,0 +1,251 @@
+"""
+A2A-compliant agent shell that fronts XiYanSQL on http://127.0.0.1:8410.
+
+Per p4_agent_mesh_implementation_plan_2026_05_16.md §3 M0:
+  "A2A wrapping of XiYanSQL: agent card at http://m3:8410/a2a/agent-card.json;
+   JSON-RPC method `tasks/send`; SSE streaming on `tasks/sendSubscribe`."
+
+Three serving modes (selected via XIYAN_SQL_MODE):
+
+1. `mock`     — canned heuristic response so the supervisor + sql-helper
+                wiring can be smoke-tested with zero model footprint.
+2. `ollama`   — forwards to Ollama at http://127.0.0.1:11434 with model
+                `xiyansql-32b-q4km`. Lit up 2026-05-17 after the Q4_K_M
+                GGUF (18GB) landed on disk.
+3. `mlx-lm`   — forwards to mlx_lm.server (MLX-format weights). Reserved
+                for when an MLX quant is published; today we use ollama.
+
+The wiring (supervisor → A2AClient → this agent → SQL artifact → PostgresSaver
+→ artifact_provenance) is identical across modes. Flipping is one env var.
+
+Usage:
+    XIYAN_SQL_MODE=ollama python python/xiyansql_agent.py
+    # then in another shell:
+    curl -sX POST http://127.0.0.1:8410/a2a -H 'content-type: application/json' \\
+      -d '{"jsonrpc":"2.0","id":"t1","method":"tasks/send",
+           "params":{"taskId":"t1","contextId":"ctx1",
+                     "input":{"task":"top 10 by score","schema":"CREATE TABLE x(a int);"}}}'
+"""
+from __future__ import annotations
+
+import datetime as dt
+import json
+import os
+import re
+import sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
+from urllib.request import Request, urlopen
+
+
+MODE = os.environ.get("XIYAN_SQL_MODE", "mock")
+PORT = int(os.environ.get("XIYAN_SQL_PORT", "8410"))
+
+# Ollama backend (default for `ollama` mode)
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "xiyansql-32b-q4km")
+
+# mlx_lm.server backend (used in `mlx-lm` mode)
+MLX_LM_URL = os.environ.get("MLX_LM_URL", "http://127.0.0.1:8411")
+
+MODEL_ID_BY_MODE: dict[str, str] = {
+    "mock": "XiYanSQL-QwenCoder-32B-2504-MOCK",
+    "ollama": f"XGenerationLab/XiYanSQL-QwenCoder-32B-2504 (Q4_K_M via Ollama: {OLLAMA_MODEL})",
+    "mlx-lm": "XGenerationLab/XiYanSQL-QwenCoder-32B-2504 (MLX via mlx_lm.server)",
+}
+MODEL_VERSION_BY_MODE: dict[str, str] = {
+    "mock": "mock-0.1",
+    "ollama": "2504-Q4_K_M-gguf",
+    "mlx-lm": "2504-Q4-mlx",
+}
+MODEL_ID = MODEL_ID_BY_MODE.get(MODE, MODEL_ID_BY_MODE["mock"])
+MODEL_VERSION = MODEL_VERSION_BY_MODE.get(MODE, MODEL_VERSION_BY_MODE["mock"])
+
+
+AGENT_CARD: dict[str, Any] = {
+    "schemaVersion": "1.0",
+    "agentId": "xiyansql-32b",
+    "name": "XiYanSQL-QwenCoder-32B",
+    "description": (
+        "Natural-language → SQL specialist. BIRD EX 69.03% SOTA single-model. "
+        "Apache-2.0. Plan §3 M0 chain #5/6."
+    ),
+    "url": f"http://127.0.0.1:{PORT}",
+    "vendor": {"name": "XGenerationLab", "url": "https://huggingface.co/XGenerationLab"},
+    "provider": {"kind": "local", "model": MODEL_ID, "license": "apache-2.0"},
+    "skills": [
+        {
+            "id": "sql.compose",
+            "name": "Natural language to SQL",
+            "description": "Generate SQL from an NL task plus DDL schema.",
+            "tags": ["sql", "nl2sql"],
+        },
+        {
+            "id": "sql.review",
+            "name": "SQL review",
+            "description": "Review a SQL query for correctness + safety.",
+            "tags": ["sql", "review"],
+        },
+    ],
+    "auth": {"kind": "none"},
+}
+
+
+# ---------------------------------------------------------------------------
+# Prompt template
+# ---------------------------------------------------------------------------
+
+def _build_prompt(task: str, schema: str, dialect: str) -> str:
+    return (
+        "You are a SQL expert. Given the following DDL and a natural-language "
+        "task, output ONLY a valid " + dialect + " SQL query.\n\n"
+        "DDL:\n" + schema + "\n\nTask: " + task + "\n\nSQL:"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Inference paths
+# ---------------------------------------------------------------------------
+
+def _run_mock(task: str, schema: str, dialect: str) -> dict[str, str]:
+    m = re.search(r"create\s+table\s+(?:if\s+not\s+exists\s+)?[\"`]?(\w+)", schema, re.I)
+    table = m.group(1) if m else "your_table"
+    sql = f"-- mock NL→SQL\nSELECT *\nFROM {table}\n-- task: {task}\nLIMIT 10;"
+    rationale = (
+        "MOCK MODE — flip XIYAN_SQL_MODE=ollama to use real XiYanSQL "
+        f"(Q4_K_M weights at ~/.chiefaia/models/xiyansql-32b-q4km/)."
+    )
+    return {"sql": sql, "rationale": rationale}
+
+
+def _run_ollama(task: str, schema: str, dialect: str) -> dict[str, str]:
+    prompt = _build_prompt(task, schema, dialect)
+    payload = {
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "options": {"temperature": 0, "num_predict": 1024},
+    }
+    req = Request(
+        f"{OLLAMA_URL}/api/generate",
+        data=json.dumps(payload).encode(),
+        headers={"content-type": "application/json"},
+    )
+    with urlopen(req, timeout=180) as r:
+        body = json.loads(r.read())
+    sql = body.get("response", "").strip()
+    # Strip any leading whitespace / markdown fences XiYan emits.
+    if sql.startswith("```"):
+        sql = re.sub(r"^```[a-z]*\n?", "", sql)
+        sql = re.sub(r"\n?```$", "", sql)
+    return {
+        "sql": sql,
+        "rationale": f"XiYanSQL Q4_K_M via Ollama (model={OLLAMA_MODEL}, temp=0)",
+    }
+
+
+def _run_mlx_lm(task: str, schema: str, dialect: str) -> dict[str, str]:
+    """Forward to mlx_lm.server — chat-completions-compatible API."""
+    payload = {
+        "model": MODEL_ID,
+        "messages": [{"role": "user", "content": _build_prompt(task, schema, dialect)}],
+        "temperature": 0.0,
+        "max_tokens": 1024,
+    }
+    req = Request(
+        f"{MLX_LM_URL}/v1/chat/completions",
+        data=json.dumps(payload).encode(),
+        headers={"content-type": "application/json"},
+    )
+    with urlopen(req, timeout=180) as r:
+        body = json.loads(r.read())
+    sql = body["choices"][0]["message"]["content"].strip()
+    return {"sql": sql, "rationale": "XiYanSQL via mlx_lm.server (temp=0)"}
+
+
+def _infer(task: str, schema: str, dialect: str) -> dict[str, str]:
+    if MODE == "ollama":
+        return _run_ollama(task, schema, dialect)
+    if MODE == "mlx-lm":
+        return _run_mlx_lm(task, schema, dialect)
+    return _run_mock(task, schema, dialect)
+
+
+# ---------------------------------------------------------------------------
+# HTTP server
+# ---------------------------------------------------------------------------
+
+class A2AHandler(BaseHTTPRequestHandler):
+    def log_message(self, fmt: str, *args: Any) -> None:  # noqa: A003
+        sys.stderr.write(f"[xiyansql-agent {MODE}] {fmt % args}\n")
+
+    def _write_json(self, status: int, body: Any) -> None:
+        data = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header("content-type", "application/json")
+        self.send_header("content-length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self) -> None:  # noqa: N802
+        if self.path == "/a2a/agent-card.json":
+            return self._write_json(200, AGENT_CARD)
+        if self.path == "/health":
+            return self._write_json(200, {"ok": True, "mode": MODE, "model": MODEL_ID})
+        self._write_json(404, {"error": "not found"})
+
+    def do_POST(self) -> None:  # noqa: N802
+        if self.path != "/a2a":
+            return self._write_json(404, {"error": "not found"})
+        length = int(self.headers.get("content-length", "0"))
+        body = json.loads(self.rfile.read(length))
+        rpc_id = body.get("id")
+        method = body.get("method")
+        params = body.get("params") or {}
+        if method != "tasks/send":
+            return self._write_json(200, {
+                "jsonrpc": "2.0",
+                "id": rpc_id,
+                "error": {"code": -32601, "message": f"method not found: {method}"},
+            })
+        inp = params.get("input") or {}
+        try:
+            result = _infer(
+                task=inp.get("task", ""),
+                schema=inp.get("schema", ""),
+                dialect=inp.get("dialect", "postgres"),
+            )
+        except Exception as e:  # noqa: BLE001
+            return self._write_json(200, {
+                "jsonrpc": "2.0",
+                "id": rpc_id,
+                "error": {"code": -32000, "message": str(e)},
+            })
+        artifact = {
+            "artifactId": f"{params.get('taskId','t')}::sql",
+            "kind": "sql",
+            "body": result,
+            "producerModel": MODEL_ID,
+            "producerVersion": MODEL_VERSION,
+            "caiaChainRunId": params.get("contextId", ""),
+            "caiaPhaseStepId": "sql.compose",
+            "createdAt": dt.datetime.now(dt.timezone.utc).isoformat(),
+        }
+        self._write_json(200, {
+            "jsonrpc": "2.0",
+            "id": rpc_id,
+            "result": {"status": "done", "artifact": artifact},
+        })
+
+
+def main() -> None:
+    print(f"xiyansql-agent listening on 127.0.0.1:{PORT}  mode={MODE}  model={MODEL_ID}")
+    srv = ThreadingHTTPServer(("127.0.0.1", PORT), A2AHandler)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        srv.shutdown()
+
+
+if __name__ == "__main__":
+    main()

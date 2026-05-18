@@ -22,12 +22,14 @@ export type SpendVia = z.infer<typeof SpendViaSchema>;
  *   - `project`     : $30
  *   - `global-day`  : $25
  *   - `global-week` : $100
+ *   - `global-month`: $200 (P5 plan §3 M0)
  */
 export const SpendCapScopeSchema = z.enum([
   'task',
   'project',
   'global-day',
   'global-week',
+  'global-month',
 ]);
 export type SpendCapScope = z.infer<typeof SpendCapScopeSchema>;
 
@@ -92,6 +94,8 @@ export const DEFAULT_CAPS_USD: Readonly<Record<SpendCapScope, number>> = Object.
   'project': 30,
   'global-day': 25,
   'global-week': 100,
+  // Per P5 plan §3 M0: cloud cap extended to ≤$200/mo (2026-05-17).
+  'global-month': 200,
 });
 
 /**

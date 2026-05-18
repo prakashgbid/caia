@@ -1,0 +1,26 @@
+{
+  "name": "@chiefaia/a2a-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Thin TypeScript wrapper over @a2a-js/sdk — exposes A2A client/server primitives for CAIA agents. Per p4_agent_mesh_implementation_plan_2026_05_16.md §4.2. Used by apps/mesh-supervisor (dispatch) and by specialist-agent shells (server).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./server": "./src/server.ts",
+    "./agent-card": "./src/agent-card.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "echo 'a2a-adapter tests deferred to M0 chain #2 follow-up'"
+  },
+  "dependencies": {
+    "@a2a-js/sdk": "^0.3.13",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.6.0"
+  }
+}

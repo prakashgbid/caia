@@ -1,5 +1,5 @@
 /**
- * SpendGuard — checks per-task / per-project / global-day / global-week
+ * SpendGuard — checks per-task / per-project / global-day / global-week / global-month
  * caps before every Anthropic API call, records every spend,
  * and pauses the orchestrator when a cap is breached.
  *
@@ -28,6 +28,8 @@ import type { CapStore } from './cap-store.js';
 const SECOND = 1000;
 const DAY_SEC = 24 * 60 * 60;
 const WEEK_SEC = 7 * DAY_SEC;
+// Per P5 plan §3 M0: monthly cap = 30 days (2026-05-17).
+const MONTH_SEC = 30 * DAY_SEC;
 const TASK_PERIOD_SEC = DAY_SEC; // task caps roll daily
 const PROJECT_PERIOD_SEC = WEEK_SEC;
 
@@ -177,6 +179,7 @@ export class SpendGuard {
       { scope: 'task', resourceId: opts.taskId, periodSec: TASK_PERIOD_SEC },
       { scope: 'global-day', resourceId: 'global', periodSec: DAY_SEC },
       { scope: 'global-week', resourceId: 'global', periodSec: WEEK_SEC },
+      { scope: 'global-month', resourceId: 'global', periodSec: MONTH_SEC },
     ];
     if (opts.projectId) {
       checks.push({
@@ -261,6 +264,7 @@ export class SpendGuard {
       { scope: 'task', resourceId: opts.taskId, periodSec: TASK_PERIOD_SEC },
       { scope: 'global-day', resourceId: 'global', periodSec: DAY_SEC },
       { scope: 'global-week', resourceId: 'global', periodSec: WEEK_SEC },
+      { scope: 'global-month', resourceId: 'global', periodSec: MONTH_SEC },
     ];
     if (opts.projectId) {
       buckets.push({

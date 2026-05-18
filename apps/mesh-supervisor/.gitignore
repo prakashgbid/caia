@@ -1,0 +1,7 @@
+.venv/
+.venv-py314-old/
+node_modules/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc

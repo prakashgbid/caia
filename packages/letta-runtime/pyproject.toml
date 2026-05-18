@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chiefaia-letta-runtime"
+version = "0.1.0"
+description = "Letta runtime bootstrap for the P5 mesh. Per p4_agent_mesh_implementation_plan_2026_05_16.md §3 M0 + §4.2. SQLite backing in M0; Postgres backing in M4."
+requires-python = ">=3.11"
+dependencies = [
+  "letta>=0.6,<0.7",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chiefaia_letta_runtime"]
