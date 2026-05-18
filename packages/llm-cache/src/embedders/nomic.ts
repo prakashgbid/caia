@@ -1,15 +1,15 @@
 // Nomic-embed-text embedder factory.
 //
-// Returns an EmbeddingFn that hits a local Ollama instance at
-// `/api/embeddings`. The cache stays embedder-agnostic — this is just one
-// concrete implementation, kept in-package because nomic + ollama is the
-// canonical local pairing across the CAIA stack (mirrors the router's
-// rag/embed.ts but without that package's internals leaking into the cache).
+// P3 ADOPTION (2026-05-18, Audit v2 Section 5 #4): the raw
+// `/api/embeddings` POST is now delegated to
+// `@chiefaia/local-llm-router#embedText`. The cache still owns its own
+// embedder-factory shape, but the wire-level Ollama call is shared with
+// every other consumer in the stack.
 
+import { embedText, type EmbedTextOptions } from '@chiefaia/local-llm-router';
 import type { EmbeddingFn } from '../types.js';
 
 const DEFAULT_MODEL = 'nomic-embed-text';
-const DEFAULT_BASE_URL = 'http://127.0.0.1:11434';
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 export interface NomicEmbedderOptions {
@@ -40,30 +40,32 @@ export function createNomicEmbedder(
   opts: NomicEmbedderOptions = {},
 ): EmbeddingFn {
   const model = opts.model ?? DEFAULT_MODEL;
-  const baseUrl =
-    opts.baseUrl ?? process.env['OLLAMA_BASE_URL'] ?? DEFAULT_BASE_URL;
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return async (text: string): Promise<Float32Array> => {
-    const res = await fetch(`${baseUrl}/api/embeddings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt: text }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!res.ok) {
+    const embedOpts: EmbedTextOptions = { model, timeoutMs };
+    if (opts.baseUrl !== undefined) embedOpts.baseUrl = opts.baseUrl;
+
+    let result: { vector: readonly number[]; model: string };
+    try {
+      result = await embedText(text, embedOpts);
+    } catch (err) {
+      // The shared helper throws plain Errors with descriptive messages;
+      // wrap to preserve the NomicEmbedError contract callers depend on.
+      // We try to recover the HTTP status from the message when present.
+      const msg = (err as Error).message;
+      const statusMatch = msg.match(/Embed call failed: (\d+)/);
+      const status = statusMatch ? Number(statusMatch[1]) : undefined;
       throw new NomicEmbedError(
-        `ollama /api/embeddings returned ${res.status} for model ${model}`,
-        res.status,
+        `ollama /api/embeddings failed for model ${model}: ${msg}`,
+        status,
       );
     }
-    const body = (await res.json()) as { embedding?: number[] };
-    const v = body.embedding;
-    if (!Array.isArray(v) || v.length === 0) {
+    if (result.vector.length === 0) {
       throw new NomicEmbedError(
         `ollama /api/embeddings returned empty vector for model ${model}`,
       );
     }
-    return Float32Array.from(v);
+    return Float32Array.from(result.vector);
   };
 }
