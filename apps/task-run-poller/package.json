@@ -10,6 +10,7 @@
     "dev": "tsx index.ts"
   },
   "dependencies": {
+    "@chiefaia/logger": "workspace:*",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

@@ -1,9 +1,16 @@
+import { createLogger } from '@chiefaia/logger';
 import type { EntityRef, RunResult, CheckResult } from './types';
 import { verifyFiles } from './verifiers/file-verifier';
 import { verifyUrls } from './verifiers/url-verifier';
 import { verifyTests } from './verifiers/test-verifier';
 
 const CONDUCTOR_API = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
+
+// Structured logger (PR #478 logger first-wave migration).
+const log = createLogger({
+  name: 'completeness-sentinel',
+  level: (process.env['SENTINEL_LOG_LEVEL'] as 'debug' | 'info' | 'warn' | 'error' | undefined) ?? 'info',
+}).child({ component: 'sentinel' });
 
 async function fetchEntities(): Promise<EntityRef[]> {
   const entities: EntityRef[] = [];
@@ -123,7 +130,7 @@ async function reportRun(result: RunResult): Promise<void> {
       });
     }
   } catch (err) {
-    console.error('Failed to report run:', err);
+    log.error('failed to report run', { err: err instanceof Error ? err.message : String(err) });
   }
 }
 

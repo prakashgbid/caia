@@ -18,6 +18,12 @@ import { wireEventBus, eventBus } from '../events/bus-adapter';
 import { wirePhase2 } from '../agents/wire-phase2';
 import type { Phase2Context } from '../agents/wire-phase2';
 import { resumeStalledPrompts } from '../prompts/resume';
+import { logger as baseLogger } from '../observability/logger';
+
+// PR #478 logger first-wave migration: replace ad-hoc `console.error`
+// stderr lines with the orchestrator's structured logger (already wired with
+// the bus transport so warn/error/fatal fan onto `system.error` events).
+const log = baseLogger.child({ component: 'api-start' });
 // FREG-003: subscribe FeatureRegistryWriter to story.completed at boot.
 import { registerFeatureRegistryWriter } from '../agents/feature-registry-writer';
 import { subscribeToEvents as subscribePriorityEvents, scoreAll } from '../prioritization/reprioritizer';
@@ -86,7 +92,7 @@ export function emitExecutorHeartbeat(db: Db): void {
     });
   } catch (err) {
     // Heartbeat is best-effort observability — never crash the server over it.
-    console.error('[caia] executor.heartbeat emit failed:', err);
+    log.error('executor.heartbeat emit failed', { err: err instanceof Error ? err.message : String(err) });
   }
 }
 
@@ -108,12 +114,12 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
   const featResult = await seedFeatures(db);
   const sugResult = await seedSuggestions(db);
   if (featResult.inserted > 0 || sugResult.inserted > 0) {
-    console.error(`[conductor] Seeded ${featResult.inserted} features, ${sugResult.inserted} suggestions (${featResult.skipped} + ${sugResult.skipped} already present)`);
+    log.info('seeded features and suggestions', { features_inserted: featResult.inserted, suggestions_inserted: sugResult.inserted, features_skipped: featResult.skipped, suggestions_skipped: sugResult.skipped });
   }
 
   const { migrated } = await migrateFromJsonl(db, conductorDir);
   if (migrated > 0) {
-    console.error(`[conductor] Migrated ${migrated} records from JSONL to SQLite`);
+    log.info('migrated records from JSONL', { migrated });
   }
 
   // T-010: sweep prompts left non-terminal by a previous orchestrator
@@ -125,14 +131,12 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
     try {
       const sweep = resumeStalledPrompts(db);
       if (sweep.swept > 0) {
-        console.error(
-          `[conductor] in-flight resume: swept=${sweep.swept} cold=${sweep.coldRestart} warm=${sweep.warmRestart} answered=${sweep.markedAnswered}`,
-        );
+        log.info('in-flight resume sweep', { swept: sweep.swept, cold_restart: sweep.coldRestart, warm_restart: sweep.warmRestart, marked_answered: sweep.markedAnswered });
       }
     } catch (err) {
       // Boot must not fail because of a sweep error; the prompts will
       // still be visible via the normal listing endpoints.
-      console.error('[conductor] in-flight resume sweep failed:', err);
+      log.error('in-flight resume sweep failed', { err: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -145,7 +149,7 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
   let phase2: Phase2Context | undefined;
   if (!PHASE2_DISABLED) {
     phase2 = wirePhase2(db);
-    console.error('[conductor] Phase 2 task-manager wired (registry + consumer + monitor + emitter)');
+    log.info('phase 2 task-manager wired', { components: ['registry', 'consumer', 'monitor', 'emitter'] });
   }
 
   const app = createApp(db, { phase2 });
@@ -180,7 +184,7 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
     heartbeatTimer.unref?.();
   }
 
-  console.error(`[conductor] API + WS listening on port ${HTTP_PORT}`);
+  log.info('api+ws listening', { port: HTTP_PORT });
 
   return {
     stop: () => {

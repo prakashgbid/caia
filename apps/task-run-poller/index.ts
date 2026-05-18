@@ -2,6 +2,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { createLogger } from '@chiefaia/logger';
+
+// Structured logger (PR #478 logger first-wave migration). Wraps pino with
+// a `component=poller` binding so log aggregation can attribute these lines.
+const log = createLogger({
+  name: 'task-run-poller',
+  level: (process.env['POLLER_LOG_LEVEL'] as 'debug' | 'info' | 'warn' | 'error' | undefined) ?? 'info',
+}).child({ component: 'poller' });
 
 const API_BASE = process.env['CONDUCTOR_API'] ?? 'http://localhost:7776';
 const SESSIONS_DIR = process.env['CLAUDE_SESSIONS_DIR'] ??
@@ -363,17 +371,13 @@ async function processSession(sessionId: string, sessionPath: string): Promise<v
     }
   } catch (err) {
     // API might not be running — silently continue
-    if (process.env['DEBUG']) {
-      console.error(`[poller] Failed to process ${sessionId}:`, err instanceof Error ? err.message : err);
-    }
+    log.debug('failed to process session', { sessionId, err: err instanceof Error ? err.message : String(err) });
   }
 }
 
 async function scanAllSessions(): Promise<void> {
   if (!fs.existsSync(SESSIONS_DIR)) {
-    if (process.env['DEBUG']) {
-      console.log(`[poller] Sessions dir not found: ${SESSIONS_DIR}`);
-    }
+    log.debug('sessions dir not found', { sessions_dir: SESSIONS_DIR });
     return;
   }
 
@@ -393,12 +397,12 @@ async function scanAllSessions(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  console.log(`[conductor-task-run-poller] Starting. API: ${API_BASE}, Sessions: ${SESSIONS_DIR}`);
+  log.info('starting', { api_base: API_BASE, sessions_dir: SESSIONS_DIR });
 
   if (isBackfill) {
-    console.log('[conductor-task-run-poller] Running backfill...');
+    log.info('running backfill');
     await scanAllSessions();
-    console.log('[conductor-task-run-poller] Backfill complete.');
+    log.info('backfill complete');
     if (!isOnce) process.exit(0);
   }
 
@@ -412,9 +416,7 @@ async function main(): Promise<void> {
     try {
       await scanAllSessions();
     } catch (err) {
-      if (process.env['DEBUG']) {
-        console.error('[poller] Poll error:', err instanceof Error ? err.message : err);
-      }
+      log.debug('poll error', { err: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -427,6 +429,6 @@ async function main(): Promise<void> {
 }
 
 main().catch(err => {
-  console.error('[conductor-task-run-poller] Fatal:', err);
+  log.fatal('fatal error', { err: err instanceof Error ? err.message : String(err) });
   process.exit(1);
 });
