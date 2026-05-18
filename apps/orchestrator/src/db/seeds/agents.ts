@@ -6,6 +6,11 @@
 
 import { getDb } from '../connection';
 import { agentRegistry, agentSystemPrompts } from '../schema';
+import { logger as baseLogger } from '../../observability/logger';
+
+// PR #478 logger first-wave migration. The seed runs at server-start so
+// these lines need to land in the orchestrator's structured log stream.
+const log = baseLogger.child({ component: 'agents-seed' });
 
 const now = Date.now();
 
@@ -544,7 +549,7 @@ Produce an architecture-plan artifact in agent_artifacts with contentType 'appli
 export async function seedAgents(): Promise<void> {
   const db = getDb();
 
-  console.log('[agents-seed] Seeding agent registry...');
+  log.info('seeding agent registry');
 
   for (const agent of AGENTS) {
     try {
@@ -563,17 +568,17 @@ export async function seedAgents(): Promise<void> {
         createdAt: now,
         updatedAt: now,
       }).run();
-      console.log(`[agents-seed]   ✓ ${agent.name}`);
+      log.debug('agent inserted', { agent: agent.name });
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
-        console.log(`[agents-seed]   ~ ${agent.name} (already exists, skipping)`);
+        log.debug('agent already exists, skipping', { agent: agent.name });
       } else {
         throw err;
       }
     }
   }
 
-  console.log('[agents-seed] Seeding system prompts...');
+  log.info('seeding system prompts');
 
   for (const sp of SYSTEM_PROMPTS) {
     const promptId = `asp-${sp.agentName}-v${sp.version.replace(/\./g, '')}`;
@@ -586,10 +591,10 @@ export async function seedAgents(): Promise<void> {
         isActive: true,
         createdAt: now,
       }).run();
-      console.log(`[agents-seed]   ✓ system-prompt:${sp.agentName}@${sp.version}`);
+      log.debug('system-prompt inserted', { agent: sp.agentName, version: sp.version });
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
-        console.log(`[agents-seed]   ~ system-prompt:${sp.agentName}@${sp.version} (already exists)`);
+        log.debug('system-prompt already exists', { agent: sp.agentName, version: sp.version });
       } else {
         throw err;
       }
@@ -601,11 +606,11 @@ export async function seedAgents(): Promise<void> {
       .run();
   }
 
-  console.log('[agents-seed] Done.');
+  log.info('agent seeding done');
 }
 
 // Direct execution
 seedAgents().catch((err) => {
-  console.error('[agents-seed] Fatal:', err);
+  log.fatal('seedAgents fatal', { err: err instanceof Error ? err.message : String(err) });
   process.exit(1);
 });

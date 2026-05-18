@@ -32,6 +32,9 @@ importers:
 
   apps/completeness-sentinel:
     dependencies:
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       nanoid:
         specifier: ^3.3.7
         version: 3.3.11
@@ -434,6 +437,9 @@ importers:
 
   apps/task-run-poller:
     dependencies:
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       node-fetch:
         specifier: ^3.3.2
         version: 3.3.2
@@ -1573,6 +1579,9 @@ importers:
       '@chiefaia/librarian':
         specifier: workspace:*
         version: link:../librarian
+      '@chiefaia/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@chiefaia/mentor-retrieval':
         specifier: workspace:*
         version: link:../mentor-retrieval
