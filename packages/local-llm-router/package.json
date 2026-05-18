@@ -36,6 +36,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@chiefaia/hmac-auth": "workspace:*",
     "@chiefaia/librarian": "workspace:*",
     "@chiefaia/mentor-retrieval": "workspace:*",
     "@chiefaia/prompt-optimizer": "workspace:*",

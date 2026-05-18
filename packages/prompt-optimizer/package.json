@@ -33,6 +33,9 @@
     "lint": "eslint src",
     "clean": "rm -rf dist"
   },
+  "dependencies": {
+    "@chiefaia/hmac-auth": "workspace:*"
+  },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
     "@chiefaia/tsconfig": "workspace:*",

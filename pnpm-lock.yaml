@@ -1564,6 +1564,9 @@ importers:
 
   packages/local-llm-router:
     dependencies:
+      '@chiefaia/hmac-auth':
+        specifier: workspace:*
+        version: link:../hmac-auth
       '@chiefaia/librarian':
         specifier: workspace:*
         version: link:../librarian
@@ -1904,6 +1907,10 @@ importers:
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/prompt-optimizer:
+    dependencies:
+      '@chiefaia/hmac-auth':
+        specifier: workspace:*
+        version: link:../hmac-auth
     devDependencies:
       '@chiefaia/eslint-config':
         specifier: workspace:*
