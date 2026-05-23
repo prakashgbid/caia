@@ -1,125 +1,87 @@
 /**
- * Ticket ↔ DOM mapper — the bidirectional query layer.
+ * Ticket ↔ DOM bidirectional query layer.
  *
  * Given a `DomIdMap` (from `buildDomIdMap`) and a hierarchical
- * `TicketNode` tree (from the Principal-PO emit), this module returns
- * a `Mapper` with four query APIs:
+ * `TicketNode` tree, exposes the four query APIs the Atlas
+ * interaction model needs (spec §3):
  *
- *   - `ticketByDomId(domId)`         — which ticket scopes this element?
- *   - `domIdsByTicket(ticketId)`     — which elements does this ticket scope?
- *   - `nearestEnclosingTicket(domId)` — walk up the DOM ancestry until a
- *                                       ticket-bound element is found.
- *   - `descendantTickets(domId)`     — all tickets bound to elements
- *                                       inside the given DOM subtree, in
- *                                       depth-first order.
+ *   - `ticketByDomId(domId)`         — direct mapping
+ *   - `domIdsByTicket(ticketId)`     — reverse mapping
+ *   - `nearestEnclosingTicket(domId)`— drill-up ancestry walk
+ *   - `descendantTickets(domId)`     — drill-down subtree sweep
  *
- * All APIs are pure functions over the precomputed index tables.
- * Construction is O(D + T) where D = DOM entries and T = ticket nodes.
- * Query complexities are documented per-method below.
+ * All four are O(1) or O(depth)/O(subtree) lookups on precomputed
+ * indexes. Construction is O(D + T) where D=DOM entries, T=ticket nodes.
  *
  * # Binding model (atlas spec §2.4)
  *
- * The canonical contract is one ticket = one DOM-ID. We honour it via
- * `TicketNode.domId`. We also support `TicketNode.additionalDomIds` to
- * cover the legitimate case of a story that scopes a row of widgets
- * (e.g. `ST-home-hero-stats-row` scoping every stat-card inside it).
+ * Canonical: one ticket = one DOM-ID via `TicketNode.domId`. We also
+ * support `TicketNode.additionalDomIds` for stories scoping multiple
+ * elements (e.g. a `stats-row` story covering each stat-card).
  *
- * Both directions are indexed:
+ * # Failure modes
  *
- *   domToTicket : Map<domId, ticketId>     — many DOM-IDs → one ticket
- *                                            (lookup hot path)
- *   ticketToDom : Map<ticketId, domId[]>   — one ticket → many DOM-IDs
+ * - `invalid_ticket_tree`      — bad shape, missing id, duplicate id.
+ * - `cycle_detected`           — cycle in the ticket tree.
+ * - `duplicate_ticket_binding` — two tickets bind the same DOM-ID
+ *                                (violates spec §2.4 unique
+ *                                `(designVersionId, domId)`).
  *
- * A ticket binding to a DOM-ID that doesn't exist in the supplied map
- * is **not** an error — atlas spec §2.3 says ticket trees can outlive
- * a single design version (orphaned tickets are surfaced, not
- * deleted). We log the unbound DOM-IDs in `unboundDomIds` instead and
- * the queries gracefully return `null` / `[]`.
- *
- * A ticket id that appears twice in the tree IS an error — a tree
- * with duplicate ids is structurally broken.
+ * Tickets binding DOM-IDs that don't exist in the map are NOT errors —
+ * collected into `unboundDomIds` so the UI can show orphaned-ticket
+ * banners (spec §2.3).
  */
 
 import { AtlasMapperError } from './errors.js';
-import type { DomIdMap, DomIdEntry } from './dom-id-map.js';
+import type { DomIdMap } from './dom-id-map.js';
 import type { Ticket, TicketNode } from './ticket-tree.js';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
- * The public mapper interface returned by `buildMapper`. All methods
- * are bound functions — callers can destructure them safely.
+ * Public mapper interface. All methods are bound functions —
+ * destructure freely.
  */
-export interface Mapper<TExtra = Record<string, any>> {
-  /**
-   * Find the ticket that directly binds this DOM-ID. Returns `null`
-   * when the DOM-ID isn't bound to any ticket.
-   *
-   * Complexity: O(1).
-   */
+export interface Mapper<TExtra = Record<string, unknown>> {
+  /** O(1). Returns null when the DOM-ID is not bound. */
   ticketByDomId: (domId: string) => Ticket<TExtra> | null;
 
-  /**
-   * Find every DOM-ID a ticket scopes (its `domId` plus any
-   * `additionalDomIds`). Returns `[]` when the ticket isn't found or
-   * scopes nothing.
-   *
-   * Result is sorted lexicographically for determinism.
-   *
-   * Complexity: O(k log k) where k is the result size.
-   */
+  /** O(k log k). Returns [] when the ticket scopes nothing. Result sorted. */
   domIdsByTicket: (ticketId: string) => string[];
 
   /**
-   * Walk up the DOM ancestry starting from `domId` and return the
-   * first ticket-bound DOM-ID's ticket. Returns `null` when neither
-   * the element nor any ancestor is bound.
-   *
-   * If `domId` itself is bound, returns that ticket — i.e. this
-   * method is inclusive of the starting node.
-   *
-   * Complexity: O(depth).
+   * O(depth). Inclusive of the starting node — if `domId` itself is
+   * bound, returns that ticket. Null when neither it nor any ancestor
+   * is bound, or when the DOM-ID is unknown to the map.
    */
   nearestEnclosingTicket: (domId: string) => Ticket<TExtra> | null;
 
   /**
-   * Return every ticket bound to a DOM-ID inside the subtree rooted at
-   * `domId`, in depth-first pre-order. The starting node itself is
-   * included if it's ticket-bound.
-   *
-   * Complexity: O(subtree-size).
+   * O(subtree-size). Pre-order. Inclusive of the starting node when
+   * it's ticket-bound. Empty when the DOM-ID is unknown.
    */
   descendantTickets: (domId: string) => Ticket<TExtra>[];
 
-  /**
-   * DOM-IDs that appeared in the ticket tree but don't exist in the
-   * supplied `DomIdMap`. Surfacing these is how atlas's UI builds the
-   * "orphaned tickets" banner per spec §2.3.
-   *
-   * Sorted lexicographically.
-   */
+  /** Lex-sorted DOM-IDs from the ticket tree that aren't in the map. */
   unboundDomIds: string[];
 
-  /**
-   * The full ticket index, keyed by ticket id. Exposed for callers
-   * that want to enumerate or build their own indices on top.
-   */
+  /** Ticket index for callers building their own structures. */
   ticketsById: ReadonlyMap<string, Ticket<TExtra>>;
 }
 
-/* ────────────────────────────────────────────────────────────────── */
-/* construction                                                        */
-/* ────────────────────────────────────────────────────────────────── */
+interface TicketBinding {
+  ticketId: string;
+  domId: string;
+}
 
 /**
- * Flatten a TicketNode tree into a Map<ticketId, Ticket>, recording
- * parent linkages. Detects duplicate ids and cycles.
+ * Flatten the ticket tree into a Map + a list of bindings. Detects
+ * cycles and duplicate ticket ids inside the tree itself; the §2.4
+ * binding-conflict check happens after collection.
  */
 function flattenTicketTree<TExtra>(
   roots: TicketNode<TExtra>[],
-): { byId: Map<string, Ticket<TExtra>>; bindings: Array<{ ticketId: string; domId: string }> } {
+): { byId: Map<string, Ticket<TExtra>>; bindings: TicketBinding[] } {
   const byId = new Map<string, Ticket<TExtra>>();
-  const bindings: Array<{ ticketId: string; domId: string }> = [];
+  const bindings: TicketBinding[] = [];
   const visitedOnPath = new Set<string>();
 
   function visit(node: TicketNode<TExtra>, parentId?: string): void {
@@ -130,7 +92,7 @@ function flattenTicketTree<TExtra>(
       throw new AtlasMapperError(
         'invalid_ticket_tree',
         'ticket node must have a non-empty string id',
-        { node },
+        {},
       );
     }
     if (visitedOnPath.has(node.id)) {
@@ -148,15 +110,12 @@ function flattenTicketTree<TExtra>(
       );
     }
 
-    const ticket: Ticket<TExtra> = {
-      id: node.id,
-      ...(node.domId !== undefined ? { domId: node.domId } : {}),
-      ...(node.additionalDomIds !== undefined
-        ? { additionalDomIds: [...node.additionalDomIds] }
-        : {}),
-      ...(parentId !== undefined ? { parentId } : {}),
-      ...(node.extra !== undefined ? { extra: node.extra } : {}),
-    };
+    const ticket: Ticket<TExtra> = { id: node.id };
+    if (node.domId !== undefined) ticket.domId = node.domId;
+    if (node.additionalDomIds !== undefined)
+      ticket.additionalDomIds = [...node.additionalDomIds];
+    if (parentId !== undefined) ticket.parentId = parentId;
+    if (node.extra !== undefined) ticket.extra = node.extra;
     byId.set(node.id, ticket);
 
     if (typeof node.domId === 'string' && node.domId.length > 0) {
@@ -173,27 +132,23 @@ function flattenTicketTree<TExtra>(
     visitedOnPath.add(node.id);
     if (Array.isArray(node.children)) {
       for (const child of node.children) {
-        visit(child, node.id);
+        if (child) visit(child, node.id);
       }
     }
     visitedOnPath.delete(node.id);
   }
 
   for (const root of roots) visit(root);
-
   return { byId, bindings };
 }
 
 /**
- * Build a Mapper from a DOM-ID map and a hierarchical ticket tree.
+ * Build a Mapper. `tickets` can be a single root or a forest.
  *
- * The `tickets` argument can be either a single root node or an array
- * of roots — many ticket emitters produce a forest (multiple Site-level
- * tickets) rather than a single root, so we accept both for ergonomics.
- *
- * @throws AtlasMapperError on invalid ticket tree (cycle, duplicate id)
+ * @throws AtlasMapperError on bad map, bad ticket tree, cycle,
+ *         duplicate ticket id, or two tickets binding the same DOM-ID.
  */
-export function buildMapper<TExtra = Record<string, any>>(
+export function buildMapper<TExtra = Record<string, unknown>>(
   domMap: DomIdMap,
   tickets: TicketNode<TExtra> | TicketNode<TExtra>[],
 ): Mapper<TExtra> {
@@ -213,17 +168,13 @@ export function buildMapper<TExtra = Record<string, any>>(
   const unboundSet = new Set<string>();
 
   for (const { ticketId, domId } of bindings) {
-    if (!domMap.byId.has(domId)) {
-      unboundSet.add(domId);
-    }
-    // Multiple tickets pointing at the same DOM-ID would violate spec
-    // §2.4 (unique (designVersionId, domId)). First binding wins; we
-    // attach a context-carrying error to surface the collision.
-    if (domToTicket.has(domId) && domToTicket.get(domId) !== ticketId) {
+    if (!domMap.byId.has(domId)) unboundSet.add(domId);
+    const existing = domToTicket.get(domId);
+    if (existing && existing !== ticketId) {
       throw new AtlasMapperError(
-        'invalid_ticket_tree',
-        `DOM-ID '${domId}' is bound by both '${domToTicket.get(domId)}' and '${ticketId}'`,
-        { domId, ticketIds: [domToTicket.get(domId), ticketId] },
+        'duplicate_ticket_binding',
+        `DOM-ID '${domId}' is bound by both '${existing}' and '${ticketId}'`,
+        { domId, ticketIds: [existing, ticketId] },
       );
     }
     domToTicket.set(domId, ticketId);
@@ -234,8 +185,6 @@ export function buildMapper<TExtra = Record<string, any>>(
     }
     set.add(domId);
   }
-
-  /* ─── query implementations ─────────────────────────────────── */
 
   const ticketByDomId = (domId: string): Ticket<TExtra> | null => {
     if (typeof domId !== 'string') return null;
@@ -254,18 +203,15 @@ export function buildMapper<TExtra = Record<string, any>>(
   const nearestEnclosingTicket = (domId: string): Ticket<TExtra> | null => {
     if (typeof domId !== 'string') return null;
     const entry = domMap.byId.get(domId);
-    if (!entry) {
-      // The DOM-ID doesn't exist; we can't walk an ancestry we don't
-      // have. Return null rather than guessing.
-      return null;
-    }
-    // Walk the ancestry from leaf → root. `ancestry` is inclusive of
-    // `domId` itself per dom-id-map.ts, so this naturally returns the
-    // ticket on the starting node if one exists.
+    if (!entry) return null;
+    // `ancestry` is inclusive of `domId` itself — so this returns the
+    // ticket on the starting node when present (drill-up Esc on a
+    // selected leaf should re-select that leaf's ticket, not its
+    // parent's).
     for (let i = entry.ancestry.length - 1; i >= 0; i--) {
-      const ancestorDomId = entry.ancestry[i];
-      if (ancestorDomId === undefined) continue;
-      const ticketId = domToTicket.get(ancestorDomId);
+      const ancestor = entry.ancestry[i];
+      if (ancestor === undefined) continue;
+      const ticketId = domToTicket.get(ancestor);
       if (ticketId) {
         const ticket = ticketsById.get(ticketId);
         if (ticket) return ticket;
@@ -281,18 +227,10 @@ export function buildMapper<TExtra = Record<string, any>>(
 
     const out: Ticket<TExtra>[] = [];
     const seenTickets = new Set<string>();
-
-    // Pre-order traversal: scan `entries` (which is in pre-order from
-    // buildDomIdMap) and pick those whose ancestry includes `domId`.
-    // This is O(n) once per call but n is bounded by the design size
-    // and stays well under the perf envelope; trading clarity for the
-    // ~equivalent recursion is the right call here.
+    // O(n) sweep — n bounded by design size, well under the perf budget.
+    // Pre-order property of `entries` makes the result deterministic.
     for (const e of domMap.entries) {
-      // Same component-tree gate: a DOM-ID's descendants must share
-      // its componentTreeId, otherwise we're mixing trees.
       if (e.componentTreeId !== startEntry.componentTreeId) continue;
-      // ancestry contains domId means e is inside the subtree (or is
-      // the start node itself, which we include per spec).
       if (!e.ancestry.includes(domId)) continue;
       const ticketId = domToTicket.get(e.domId);
       if (!ticketId) continue;

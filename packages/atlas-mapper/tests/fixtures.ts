@@ -1,268 +1,266 @@
 /**
- * Reusable fixture builders for atlas-mapper tests.
+ * Test fixtures shared across atlas-mapper tests.
  *
- * Keeping these in one file (and importing into every test file) gives
- * us deterministic, named building blocks that exercises tests can
- * assemble. Each builder returns a fresh deep clone so mutations in
- * one test never bleed into another.
+ * Single source of truth for the small, hand-curated designs we use
+ * to exercise determinism, mapping, and diff. The full prakash-tiwari
+ * fixture lives in the `golden-prakash-tiwari.test.ts` golden test.
+ *
+ * # Design note: per-tree root tags
+ *
+ * The fingerprint algorithm uses `tag + role + parent-path + sibling-
+ * position`. It does NOT include the `componentTreeId` in the
+ * derivation — so two roots with the same `(tag, role, position=0)`
+ * across trees would collide in the global uniqueness set. We avoid
+ * that here by giving each page tree a distinct component-name root
+ * (`HomePage`, `AboutPage`). In production this is also how adapters
+ * keep trees disjoint — they emit page-level components rather than
+ * raw `<div>`s, and the slugified names differ per page.
  */
 
 import type {
   RenderableDesign,
   RenderableNode,
-  TicketNode,
-} from '../src/index.js';
+} from '../src/renderable-design.js';
+import type { TicketNode } from '../src/ticket-tree.js';
 
-/** Build a leaf node with optional adapter-supplied domId. */
-export function leaf(
-  tag: string,
-  opts: Partial<RenderableNode> = {},
-): RenderableNode {
+/** The "home" page tree — small but representative. */
+export function homeTree(): RenderableNode {
   return {
-    tag,
-    role: opts.role ?? 'leaf',
-    ...(opts.domId !== undefined ? { domId: opts.domId } : {}),
-    ...(opts.attrs !== undefined ? { attrs: { ...opts.attrs } } : {}),
-    ...(opts.copyRefs !== undefined ? { copyRefs: [...opts.copyRefs] } : {}),
-    ...(opts.assetRefs !== undefined ? { assetRefs: [...opts.assetRefs] } : {}),
-    ...(opts.resolvedStyle !== undefined
-      ? { resolvedStyle: { ...opts.resolvedStyle } }
-      : {}),
-    ...(opts.bounds !== undefined ? { bounds: { ...opts.bounds } } : {}),
-    ...(opts.children !== undefined ? { children: [...opts.children] } : {}),
+    tag: 'HomePage',
+    role: 'page',
+    attrs: { className: 'pt' },
+    children: [
+      { tag: 'PtNav', role: 'widget', attrs: { active: '/' } },
+      {
+        tag: 'HomeHeroSlider',
+        role: 'widget',
+        children: [
+          { tag: 'div', role: 'leaf', attrs: { className: 'slide-1' } },
+          { tag: 'div', role: 'leaf', attrs: { className: 'slide-2' } },
+        ],
+      },
+      {
+        tag: 'section',
+        role: 'section',
+        attrs: { className: 'pt-band-cool' },
+        children: [
+          { tag: 'h2', role: 'leaf', copyRefs: ['copy:home-headline'] },
+          {
+            tag: 'div',
+            role: 'leaf',
+            attrs: { className: 'grid' },
+            children: [
+              { tag: 'a', role: 'leaf', attrs: { 'data-go': '/about' } },
+              { tag: 'a', role: 'leaf', attrs: { 'data-go': '/projects' } },
+              { tag: 'a', role: 'leaf', attrs: { 'data-go': '/writing' } },
+            ],
+          },
+        ],
+      },
+    ],
   };
 }
 
-/** Build a container node. */
-export function container(
-  tag: string,
-  role: RenderableNode['role'],
-  children: RenderableNode[],
-  opts: Partial<RenderableNode> = {},
-): RenderableNode {
-  return leaf(tag, { ...opts, role, children });
+/** The "about" page tree — distinct root tag to avoid root collision. */
+export function aboutTree(): RenderableNode {
+  return {
+    tag: 'AboutPage',
+    role: 'page',
+    attrs: { className: 'pt about' },
+    children: [
+      { tag: 'PtNav', role: 'widget', attrs: { active: '/about' } },
+      {
+        tag: 'section',
+        role: 'section',
+        attrs: { className: 'pt-band-warm' },
+        children: [{ tag: 'h1', role: 'leaf', copyRefs: ['copy:about-h1'] }],
+      },
+    ],
+  };
+}
+
+/** A canonical small `RenderableDesign` for tests. */
+export function smallDesign(designVersionId = 'dv_test_001'): RenderableDesign {
+  return {
+    designVersionId,
+    source: 'cd-zip',
+    routes: [
+      { path: '/', componentTreeId: 'tree:home' },
+      { path: '/about', componentTreeId: 'tree:about' },
+    ],
+    componentTrees: {
+      'tree:home': { node: homeTree() },
+      'tree:about': { node: aboutTree() },
+    },
+    copy: [
+      { domId: 'copy:home-headline', text: 'The vocabulary I show up with.' },
+      { domId: 'copy:about-h1', text: 'About me.' },
+    ],
+  };
 }
 
 /**
- * The canonical "simple home page" fixture used across most tests.
- *
- *   PG-home (section: page)
- *     SE-home-hero (section: section)
- *       WD-home-hero-rotator (section: widget)
- *         leaf cta-button
- *         leaf headline (with copyRef + style)
- *       leaf image (with assetRef)
- *     SE-home-footer (section: section)
- *       leaf copyright (with copyRef)
+ * V2 of the small design — only style + copy changes. Every DOM-ID
+ * should survive. Use for survival tests.
  */
-export function simpleHomeDesign(
-  overrides: Partial<RenderableDesign> = {},
-): RenderableDesign {
-  const home: RenderableNode = container(
-    'main',
-    'page',
-    [
-      container(
-        'section',
-        'section',
-        [
-          container(
-            'div',
-            'widget',
-            [
-              leaf('button', {
-                domId: 'WD-home-hero-cta',
-                role: 'leaf',
-                attrs: { href: '/contact', className: 'pt-card-i' },
-                copyRefs: ['copy:cta-text'],
-              }),
-              leaf('h1', {
-                domId: 'WD-home-hero-headline',
-                role: 'leaf',
-                attrs: { className: 'pt-hero-headline' },
-                copyRefs: ['copy:headline'],
-                resolvedStyle: { fontFamily: 'Source Serif Pro', color: '#1e2a35' },
-              }),
-            ],
-            {
-              domId: 'WD-home-hero-rotator',
-              attrs: { className: 'rotator' },
-            },
-          ),
-          leaf('img', {
-            domId: 'WD-home-hero-image',
-            attrs: { alt: 'headshot' },
-            assetRefs: ['/headshot.jpg'],
-          }),
-        ],
-        {
-          domId: 'SE-home-hero',
-          attrs: { className: 'pt-band-cool' },
-        },
-      ),
-      container(
-        'section',
-        'section',
-        [
-          leaf('p', {
-            domId: 'WD-home-footer-copyright',
-            copyRefs: ['copy:copyright'],
-          }),
-        ],
-        {
-          domId: 'SE-home-footer',
-          attrs: { className: 'pt-band-warm' },
-        },
-      ),
-    ],
-    {
-      domId: 'PG-home',
-      attrs: { className: 'page page-home' },
-    },
-  );
+export function smallDesignStyleOnly(designVersionId = 'dv_test_002'): RenderableDesign {
+  const home = homeTree();
+  home.attrs = { className: 'pt theme-dark' };
 
   return {
-    designVersionId: overrides.designVersionId ?? 'dv_simple_home_v1',
+    designVersionId,
     source: 'cd-zip',
-    routes: [{ path: '/', componentTreeId: 'tree:home' }],
+    routes: [
+      { path: '/', componentTreeId: 'tree:home' },
+      { path: '/about', componentTreeId: 'tree:about' },
+    ],
     componentTrees: {
-      'tree:home': { rootDomId: 'PG-home', node: home },
+      'tree:home': { node: home },
+      'tree:about': { node: aboutTree() },
     },
     copy: [
-      { domId: 'copy:cta-text', text: 'Get in touch', locale: 'en-US' },
-      { domId: 'copy:headline', text: 'Building CAIA', locale: 'en-US' },
-      { domId: 'copy:copyright', text: '© 2026', locale: 'en-US' },
+      { domId: 'copy:home-headline', text: 'Words I show up with.' },
+      { domId: 'copy:about-h1', text: 'About me.' },
     ],
-    assets: [
-      {
-        path: '/headshot.jpg',
-        kind: 'image',
-        alt: 'headshot',
-        contentHash: 'sha256:headshot-v1',
-        storageUrl: 's3://t/headshot-v1.jpg',
-      },
-    ],
-    ...overrides,
   };
 }
 
-/** Build the matching ticket tree for the simple home design. */
-export function simpleHomeTickets(): TicketNode[] {
-  return [
-    {
-      id: 'PG-home',
-      domId: 'PG-home',
-      children: [
-        {
-          id: 'SE-home-hero',
-          domId: 'SE-home-hero',
+/**
+ * V3 of the small design — structural changes that should flip IDs:
+ * one slide removed, one new anchor added.
+ */
+export function smallDesignStructural(designVersionId = 'dv_test_003'): RenderableDesign {
+  return {
+    designVersionId,
+    source: 'cd-zip',
+    routes: [
+      { path: '/', componentTreeId: 'tree:home' },
+      { path: '/about', componentTreeId: 'tree:about' },
+    ],
+    componentTrees: {
+      'tree:home': {
+        node: {
+          tag: 'HomePage',
+          role: 'page',
+          attrs: { className: 'pt' },
           children: [
+            { tag: 'PtNav', role: 'widget', attrs: { active: '/' } },
             {
-              id: 'WD-home-hero-rotator',
-              domId: 'WD-home-hero-rotator',
+              tag: 'HomeHeroSlider',
+              role: 'widget',
               children: [
-                { id: 'WD-home-hero-cta', domId: 'WD-home-hero-cta' },
-                { id: 'WD-home-hero-headline', domId: 'WD-home-hero-headline' },
+                // one slide removed (was slide-1 + slide-2; now only slide-1)
+                { tag: 'div', role: 'leaf', attrs: { className: 'slide-1' } },
               ],
             },
-            { id: 'WD-home-hero-image', domId: 'WD-home-hero-image' },
+            {
+              tag: 'section',
+              role: 'section',
+              attrs: { className: 'pt-band-cool' },
+              children: [
+                { tag: 'h2', role: 'leaf', copyRefs: ['copy:home-headline'] },
+                {
+                  tag: 'div',
+                  role: 'leaf',
+                  attrs: { className: 'grid' },
+                  children: [
+                    { tag: 'a', role: 'leaf', attrs: { 'data-go': '/about' } },
+                    { tag: 'a', role: 'leaf', attrs: { 'data-go': '/projects' } },
+                    { tag: 'a', role: 'leaf', attrs: { 'data-go': '/writing' } },
+                    { tag: 'a', role: 'leaf', attrs: { 'data-go': '/speaking' } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+      'tree:about': { node: aboutTree() },
+    },
+    copy: [
+      { domId: 'copy:home-headline', text: 'The vocabulary I show up with.' },
+      { domId: 'copy:about-h1', text: 'About me.' },
+    ],
+  };
+}
+
+/**
+ * Pre-computed derived DOM-IDs for the home tree.
+ *
+ * These are what `assignStableDomIds` will set on `homeTree()` —
+ * tests reference them so they don't have to be re-derived
+ * everywhere.
+ */
+export const HOME_DOM_IDS = {
+  page: 'home-page:page:0',
+  nav: 'home-page:page:0>pt-nav:widget:0',
+  hero: 'home-page:page:0>home-hero-slider:widget:1',
+  heroSlide1: 'home-page:page:0>home-hero-slider:widget:1>div:leaf:0',
+  heroSlide2: 'home-page:page:0>home-hero-slider:widget:1>div:leaf:1',
+  section: 'home-page:page:0>section:section:2',
+  h2: 'home-page:page:0>section:section:2>h2:leaf:0',
+  grid: 'home-page:page:0>section:section:2>div:leaf:1',
+  link0: 'home-page:page:0>section:section:2>div:leaf:1>a:leaf:0',
+  link1: 'home-page:page:0>section:section:2>div:leaf:1>a:leaf:1',
+  link2: 'home-page:page:0>section:section:2>div:leaf:1>a:leaf:2',
+} as const;
+
+export const ABOUT_DOM_IDS = {
+  page: 'about-page:page:0',
+  nav: 'about-page:page:0>pt-nav:widget:0',
+  section: 'about-page:page:0>section:section:1',
+  h1: 'about-page:page:0>section:section:1>h1:leaf:0',
+} as const;
+
+/**
+ * Ticket tree matching the canonical small design.
+ *
+ * Stories that span multiple DOM-IDs use `additionalDomIds`. The
+ * `S-site` root has no DOM-ID (organisational).
+ */
+export function smallTicketTree(): TicketNode[] {
+  return [
+    {
+      id: 'S-site',
+      children: [
+        {
+          id: 'PG-home',
+          domId: HOME_DOM_IDS.page,
+          children: [
+            { id: 'WD-home-nav', domId: HOME_DOM_IDS.nav },
+            {
+              id: 'WD-home-hero',
+              domId: HOME_DOM_IDS.hero,
+              children: [
+                { id: 'WD-home-hero-slide-01', domId: HOME_DOM_IDS.heroSlide1 },
+                { id: 'WD-home-hero-slide-02', domId: HOME_DOM_IDS.heroSlide2 },
+              ],
+            },
+            {
+              id: 'SE-home-cert-strip',
+              domId: HOME_DOM_IDS.section,
+              children: [
+                {
+                  id: 'ST-home-cert-row',
+                  additionalDomIds: [
+                    HOME_DOM_IDS.link0,
+                    HOME_DOM_IDS.link1,
+                    HOME_DOM_IDS.link2,
+                  ],
+                },
+              ],
+            },
           ],
         },
         {
-          id: 'SE-home-footer',
-          domId: 'SE-home-footer',
+          id: 'PG-about',
+          domId: ABOUT_DOM_IDS.page,
           children: [
-            { id: 'WD-home-footer-copyright', domId: 'WD-home-footer-copyright' },
+            { id: 'WD-about-nav', domId: ABOUT_DOM_IDS.nav },
+            { id: 'SE-about-intro', domId: ABOUT_DOM_IDS.section },
           ],
         },
       ],
     },
   ];
-}
-
-/**
- * Build a v2 of the simple home design with the modifications below.
- * Tests pass per-reason flags to scope which mutation to apply.
- */
-export interface ModifyV2Opts {
-  attrs?: boolean;
-  copy?: boolean;
-  asset?: boolean;
-  token?: boolean;
-  addNew?: boolean;
-  removeOne?: boolean;
-  positionShift?: boolean;
-}
-
-export function modifyHomeForV2(opts: ModifyV2Opts = {}): RenderableDesign {
-  const d = simpleHomeDesign({ designVersionId: 'dv_simple_home_v2' });
-
-  const tree = d.componentTrees['tree:home']!.node;
-  const heroSection = tree.children![0]!;
-  const rotator = heroSection.children![0]!;
-  const cta = rotator.children![0]!;
-  const headline = rotator.children![1]!;
-  const heroImage = heroSection.children![1]!;
-
-  if (opts.attrs) {
-    // Bump the CTA's href + class — these are attrs_changed.
-    cta.attrs = { ...(cta.attrs ?? {}), href: '/contact?ref=v2', className: 'pt-card-ii' };
-  }
-
-  if (opts.copy && Array.isArray(d.copy)) {
-    // Modify the headline copy text — copy_changed (refs same, text differs).
-    d.copy = d.copy.map((c) =>
-      c.domId === 'copy:headline' ? { ...c, text: 'Shipping CAIA' } : c,
-    );
-  }
-
-  if (opts.asset && Array.isArray(d.assets)) {
-    // Rotate the headshot asset content-hash — asset_changed.
-    d.assets = d.assets.map((a) =>
-      a.path === '/headshot.jpg'
-        ? { ...a, contentHash: 'sha256:headshot-v2', storageUrl: 's3://t/headshot-v2.jpg' }
-        : a,
-    );
-  }
-
-  if (opts.token) {
-    // Change resolvedStyle on the headline but keep attrs identical —
-    // token_changed.
-    headline.resolvedStyle = { fontFamily: 'Source Serif Pro', color: '#000000' };
-  }
-
-  if (opts.addNew) {
-    // Append a new widget under the hero section. Adapter-supplied id
-    // so the addition shows up cleanly even though there's a sibling
-    // already at position 2.
-    heroSection.children!.push(
-      leaf('span', {
-        domId: 'WD-home-hero-badge',
-        attrs: { className: 'badge' },
-      }),
-    );
-  }
-
-  if (opts.removeOne) {
-    // Drop the footer copyright. Both the SE node's child array and
-    // any unbound-ticket fallout should be detected.
-    const footer = tree.children![1]!;
-    footer.children = [];
-  }
-
-  if (opts.positionShift) {
-    // Swap CTA <-> headline order inside the rotator. Since both have
-    // adapter-supplied IDs, the IDs survive but `position` shifts.
-    rotator.children = [headline, cta];
-  }
-
-  if (opts.removeOne) {
-    // Touch up: removing the only child of the footer leaves its
-    // child empty; nothing else to do.
-  }
-
-  // mark useful unused-var fix
-  void heroImage;
-
-  return d;
 }

@@ -1,10 +1,10 @@
 /**
  * Atlas-mapper structured errors.
  *
- * The package is pure logic — all failure modes are predictable and have
- * a deterministic error code so downstream surfaces (the Atlas parent
- * shell, the step-5 adapter framework) can map them to user-facing
- * messages without parsing free-form strings.
+ * The package is pure logic — every failure mode is predictable and
+ * carries a stable `code` so downstream surfaces (Atlas parent shell,
+ * step-5 adapter framework) can map them to user-facing messages without
+ * parsing free-form strings.
  */
 
 export type AtlasMapperErrorCode =
@@ -13,14 +13,16 @@ export type AtlasMapperErrorCode =
   | 'missing_dom_id'
   | 'invalid_renderable_design'
   | 'invalid_ticket_tree'
-  | 'unknown_component_tree';
+  | 'duplicate_ticket_binding'
+  | 'unknown_component_tree'
+  | 'jsx_parse_error';
 
 /**
  * Base error class for all atlas-mapper failures.
  *
- * Carries a stable `code` field plus optional `context` (e.g. which DOM-ID
- * was duplicated). Code values are an exhaustive enum so callers can switch
- * on them.
+ * `code` is the stable enum; `context` carries structured details
+ * (e.g. which DOM-ID was duplicated). Code values exhaustively cover
+ * the failure surface so callers can switch on them.
  */
 export class AtlasMapperError extends Error {
   public readonly code: AtlasMapperErrorCode;
@@ -35,7 +37,6 @@ export class AtlasMapperError extends Error {
     this.name = 'AtlasMapperError';
     this.code = code;
     this.context = context;
-    // Preserve V8 stack trace cleanly.
     if (typeof Error.captureStackTrace === 'function') {
       Error.captureStackTrace(this, AtlasMapperError);
     }

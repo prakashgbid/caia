@@ -1,20 +1,21 @@
 /**
- * Type projection of the canonical `RenderableDesign` shape from
- * research/step5_design_ingest_spec_2026.md §1.
+ * TypeScript projection of the canonical `RenderableDesign` shape from
+ * `research/step5_design_ingest_spec_2026.md` §1 and the Atlas spec §7.
  *
- * This is the input contract for `buildDomIdMap` and `diffDesigns`.
- * Atlas's parent shell deserialises a `RenderableDesign` from object
- * storage and passes it into this package; nothing here reads the
- * filesystem or network.
+ * This is the input contract for `buildDomIdMap`, `assignStableDomIds`,
+ * and `diffDesigns`. Atlas's parent shell deserialises a
+ * `RenderableDesign` from object storage and passes it into this
+ * package; nothing here reads the filesystem or network at runtime
+ * (the JSX adapter in `parse-jsx.ts` does, but only when invoked
+ * explicitly — and even then only via ts-morph, no network).
  *
- * The §1 shape is broader than what atlas-mapper actually needs —
+ * The full §1 shape is broader than what atlas-mapper consumes —
  * adapters may carry `sourceMetadata`, `rawSourceArtifacts`,
  * `ingestDiagnostics`, etc. We declare only the fields atlas-mapper
- * touches, with everything else permitted via optional/any-record
- * extensions so adapters can pass full payloads without TS friction.
+ * touches; everything else is permitted via optional pass-through
+ * extensions so adapters can serialise a full §1 payload through
+ * atlas-mapper without losing data.
  */
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 /** A node role tag, mirroring the step-5 §1.1 enum. */
 export type NodeRole = 'page' | 'section' | 'widget' | 'story-host' | 'leaf' | 'shared-ref';
@@ -25,14 +26,14 @@ export type NodeLevel = 'page' | 'section' | 'widget' | 'leaf';
 /**
  * The recursive `Node` shape — the unit of a `componentTree`.
  *
- * `domId` MAY be supplied by the adapter (preferred — adapters that have
- * a stable source-derived ID should set it). When omitted, atlas-mapper
- * derives one deterministically from the AST shape (`tag + role +
- * parent-path + sibling-position`). Either way the result is canonical.
+ * `domId` MAY be supplied by the adapter (preferred when adapters have
+ * a stable source-derived ID — CD-ZIP via Babel transform, Figma via
+ * node-ids). When omitted, atlas-mapper derives one deterministically
+ * from the AST shape via the fingerprint algorithm.
  *
- * `attrs` is the verbatim props bag — `className`, `style`, `href`, etc.
- * It's preserved into the emitted `DomIdEntry` so downstream diff
- * comparisons can detect attribute changes.
+ * `attrs` is the verbatim props bag — `className`, `style`, `href`,
+ * etc. Preserved into the emitted `DomIdEntry` so diff can detect
+ * attribute deltas.
  */
 export interface RenderableNode {
   /**
@@ -52,10 +53,10 @@ export interface RenderableNode {
   level?: NodeLevel;
 
   /** Verbatim props bag. Adapters preserve the source attribute set. */
-  attrs?: Record<string, any>;
+  attrs?: Record<string, unknown>;
 
   /** Resolved style after token lookup. */
-  resolvedStyle?: Record<string, any>;
+  resolvedStyle?: Record<string, unknown>;
 
   /** FK references into the flat `copy[]` table. */
   copyRefs?: string[];
@@ -73,7 +74,7 @@ export interface RenderableNode {
   bounds?: { x: number; y: number; w: number; h: number };
 
   /** Provenance for traceability — passed through verbatim. */
-  provenance?: Record<string, any>;
+  provenance?: Record<string, unknown>;
 
   /** Children — recursive. */
   children?: RenderableNode[];
@@ -122,42 +123,48 @@ export interface RenderableRoute {
   title?: string;
   componentTreeId: string;
   breakpoints?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+}
+
+/** A shared-component declaration. */
+export interface RenderableSharedComponent {
+  id: string;
+  domIdPrefix?: string;
+  node: RenderableNode;
+  usedByDomIds?: string[];
+}
+
+/** An interactivity-table entry. */
+export interface RenderableInteractivity {
+  domId: string;
+  kind: string;
+  target?: string;
+  ariaLabel?: string;
+  rolesFromSource?: string[];
 }
 
 /**
- * The canonical `RenderableDesign` — exactly what step-5 adapters emit and
- * what atlas-mapper consumes. Only the fields atlas-mapper actually reads
- * are required; everything else is optional + pass-through so adapters can
- * round-trip a full §1 payload without losing data.
+ * The canonical `RenderableDesign` — exactly what step-5 adapters emit
+ * and what atlas-mapper consumes. Only the fields atlas-mapper actually
+ * reads are required; everything else is optional + pass-through so
+ * adapters can round-trip a full §1 payload without losing data.
  */
 export interface RenderableDesign {
   designVersionId: string;
   source?: string;
   routes: RenderableRoute[];
   componentTrees: Record<string, RenderableComponentTree>;
-  sharedComponents?: Array<{
-    id: string;
-    domIdPrefix?: string;
-    node: RenderableNode;
-    usedByDomIds?: string[];
-  }>;
+  sharedComponents?: RenderableSharedComponent[];
   copy?: RenderableCopy[];
   assets?: RenderableAsset[];
-  interactivity?: Array<{
-    domId: string;
-    kind: string;
-    target?: string;
-    ariaLabel?: string;
-    rolesFromSource?: string[];
-  }>;
+  interactivity?: RenderableInteractivity[];
   designTokens?: RenderableDesignTokens;
 
   /** Adapter-provided extras — pass-through. */
-  sourceMetadata?: Record<string, any>;
-  site?: Record<string, any>;
-  rawSourceArtifacts?: Record<string, any>;
-  ingestDiagnostics?: Record<string, any>;
+  sourceMetadata?: Record<string, unknown>;
+  site?: Record<string, unknown>;
+  rawSourceArtifacts?: Record<string, unknown>;
+  ingestDiagnostics?: Record<string, unknown>;
   tenantId?: string;
   businessProposalId?: string;
   uploadedAt?: string;

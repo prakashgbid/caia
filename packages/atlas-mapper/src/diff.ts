@@ -1,55 +1,32 @@
 /**
- * Design-level structural diff at the DOM-ID layer.
+ * `diff(v1, v2)` — structural diff at the DOM-ID level.
  *
- * Input: two `RenderableDesign` versions (v1, v2). Either the same
- * design at two points in time (re-upload), or two related but
- * distinct designs (rare).
+ * Inputs: two `RenderableDesign` versions. Typical use: v1 = previous
+ * upload, v2 = newly-ingested re-upload.
  *
- * Output: `{ added, removed, modified }` keyed by DOM-ID, where each
- * modified entry carries one or more structured `DiffReason` codes:
+ * Output: `{ added, removed, modified }` keyed by DOM-ID. Each
+ * modified entry carries one or more structured `DiffReason` codes.
  *
- *   - `attrs_changed`    — verbatim props bag differs (className,
- *                          style, href, etc.). Most common reason.
- *   - `position_changed` — sibling position under the same parent
- *                          changed, OR the parent itself changed.
- *                          (Note: a parent change usually shifts the
- *                          ID too because the ID's ancestor segment
- *                          includes the parent — so this reason
- *                          mostly fires when adapter-supplied IDs
- *                          decouple from structural position.)
- *   - `token_changed`    — `resolvedStyle` differs even when `attrs`
- *                          matches, indicating the upstream tokens
- *                          changed (`--ink: #1e2a35` → `#000`).
- *   - `copy_changed`     — the set of `copyRefs` differs OR the
- *                          referenced copy text differs in the
- *                          companion `copy[]` table.
- *   - `asset_changed`    — the set of `assetRefs` differs OR the
- *                          asset table's content-hash differs.
+ * # DiffReason taxonomy
  *
- * Output drives:
+ *   `attrs_changed`    — props bag (className, style, href) differs.
+ *   `position_changed` — sibling position OR parent changed.
+ *   `token_changed`    — `resolvedStyle` differs while `attrs` did not
+ *                        (upstream token map was remapped).
+ *   `copy_changed`     — `copyRefs` set or referenced text differs.
+ *   `asset_changed`    — `assetRefs` set or asset content-hash differs.
  *
- *   - Time Machine — replay v1→v2 as a per-DOM-ID animation.
- *   - UX Version Control — surface the diff in atlas's right panel
- *     so the operator approves changes per-element.
- *
- * # Determinism
- *
- * - `added` and `removed` are sorted lexicographically by `domId`.
- * - `modified` is sorted by `domId`; each entry's `reasons` array is
- *   sorted by the enum's canonical ordering.
- * - Reason detection is pure: equality is structural, no field
- *   ordering or whitespace games.
+ * # Determinism: added/removed/modified all sorted by `domId`; each
+ * modified entry's `reasons[]` sorted by canonical reason ordering.
  */
 
-import type { DomIdMap, DomIdEntry } from './dom-id-map.js';
-import type { RenderableDesign, RenderableCopy, RenderableAsset } from './renderable-design.js';
-import { buildDomIdMap } from './dom-id-map.js';
+import { buildDomIdMap, type DomIdEntry, type DomIdMap } from './dom-id-map.js';
+import type {
+  RenderableAsset,
+  RenderableCopy,
+  RenderableDesign,
+} from './renderable-design.js';
 
-/**
- * The reason an entry is in the `modified` bucket. Multiple reasons
- * can apply to one DOM-ID — e.g. a CTA whose copy AND href both
- * changed reports `['attrs_changed', 'copy_changed']`.
- */
 export type DiffReason =
   | 'attrs_changed'
   | 'position_changed'
@@ -57,7 +34,6 @@ export type DiffReason =
   | 'copy_changed'
   | 'asset_changed';
 
-/** Canonical reason ordering for deterministic output. */
 const REASON_ORDER: Record<DiffReason, number> = {
   attrs_changed: 0,
   position_changed: 1,
@@ -66,10 +42,6 @@ const REASON_ORDER: Record<DiffReason, number> = {
   asset_changed: 4,
 };
 
-/**
- * A single modified entry. Carries v1 and v2 snapshots so consumers
- * can render side-by-side without re-walking either map.
- */
 export interface ModifiedEntry {
   domId: string;
   reasons: DiffReason[];
@@ -77,40 +49,19 @@ export interface ModifiedEntry {
   after: DomIdEntry;
 }
 
-/** Top-level diff output. */
 export interface DesignDiff {
-  /** designVersionId of the v1 input. */
   fromDesignVersionId: string;
-  /** designVersionId of the v2 input. */
   toDesignVersionId: string;
-  /** DOM-IDs present in v2 but not in v1. */
   added: DomIdEntry[];
-  /** DOM-IDs present in v1 but not in v2. */
   removed: DomIdEntry[];
-  /** DOM-IDs present in both, with at least one structural difference. */
   modified: ModifiedEntry[];
-  /** Convenience summary counters — handy for snapshot tests + dashboards. */
-  summary: {
-    added: number;
-    removed: number;
-    modified: number;
-    unchanged: number;
-  };
+  summary: { added: number; removed: number; modified: number; unchanged: number };
 }
-
-/* ────────────────────────────────────────────────────────────────── */
-/* equality helpers                                                    */
-/* ────────────────────────────────────────────────────────────────── */
 
 /**
  * Deep structural equality for plain JSON-ish values. Sufficient for
- * comparing attr bags, resolved styles, and bounds objects emitted by
- * `buildDomIdMap`. Not a general-purpose deepEqual — doesn't handle
- * cyclic structures (the input shape forbids them by spec) or class
- * instances (entries are plain objects).
- *
- * Implementation: structural recursion with key-order normalisation
- * so `{a:1,b:2}` and `{b:2,a:1}` compare equal.
+ * `attrs`, `resolvedStyle`, `bounds` — not a general-purpose deepEqual
+ * (doesn't handle cycles or class instances; entries are plain objects).
  */
 function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -118,10 +69,14 @@ function deepEqual(a: unknown, b: unknown): boolean {
   if (typeof a !== typeof b) return false;
   if (typeof a !== 'object') return false;
 
-  if (Array.isArray(a) || Array.isArray(b)) {
-    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  const arrA = Array.isArray(a);
+  const arrB = Array.isArray(b);
+  if (arrA || arrB) {
+    if (!arrA || !arrB) return false;
     if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (!deepEqual(a[i], b[i])) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
     return true;
   }
 
@@ -139,7 +94,6 @@ function deepEqual(a: unknown, b: unknown): boolean {
   return true;
 }
 
-/** Are two string arrays equal as sets? */
 function sameSet(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
   const aSorted = [...a].sort();
@@ -150,9 +104,6 @@ function sameSet(a: string[], b: string[]): boolean {
   return true;
 }
 
-/**
- * Build a lookup table from the design's `copy[]` for diff comparison.
- */
 function indexCopy(design: RenderableDesign): Map<string, RenderableCopy> {
   const m = new Map<string, RenderableCopy>();
   if (Array.isArray(design.copy)) {
@@ -163,9 +114,6 @@ function indexCopy(design: RenderableDesign): Map<string, RenderableCopy> {
   return m;
 }
 
-/**
- * Build a lookup table from the design's `assets[]`. Keys by `path`.
- */
 function indexAssets(design: RenderableDesign): Map<string, RenderableAsset> {
   const m = new Map<string, RenderableAsset>();
   if (Array.isArray(design.assets)) {
@@ -176,33 +124,11 @@ function indexAssets(design: RenderableDesign): Map<string, RenderableAsset> {
   return m;
 }
 
-/* ────────────────────────────────────────────────────────────────── */
-/* reason detection                                                    */
-/* ────────────────────────────────────────────────────────────────── */
-
 /**
- * Compute the reasons two same-DOM-ID entries differ. Returns `[]`
- * when they're structurally identical (unchanged).
- *
- * Reason rules:
- *
- * - `attrs_changed`     — `entry.attrs` differs structurally.
- * - `position_changed`  — `entry.position` OR `entry.parentDomId`
- *                         differs. Same DOM-ID can have a different
- *                         position only when the adapter supplied
- *                         the ID explicitly — derived IDs encode
- *                         position, so position-shifts always show
- *                         up as add+remove instead.
- * - `token_changed`     — `entry.resolvedStyle` differs but `attrs`
- *                         doesn't (i.e. the source attrs are stable
- *                         but the token map points elsewhere). When
- *                         attrs ALSO changed, we only emit
- *                         `attrs_changed` to avoid double-counting.
- * - `copy_changed`      — `copyRefs` set differs, OR any referenced
- *                         copy entry's text/locale/richText differs
- *                         between the two designs.
- * - `asset_changed`     — `assetRefs` set differs, OR any referenced
- *                         asset's contentHash/storageUrl differs.
+ * Compute reasons two same-DOM-ID entries differ. `token_changed` is
+ * only reported when `attrs` matched — when attrs already changed,
+ * the resolved-style delta is conflated with that change and
+ * double-counting hurts diff readability.
  */
 function diffReasons(
   before: DomIdEntry,
@@ -214,34 +140,21 @@ function diffReasons(
 ): DiffReason[] {
   const reasons: DiffReason[] = [];
 
-  // Position / parent change
-  if (
-    before.parentDomId !== after.parentDomId ||
-    before.position !== after.position
-  ) {
+  if (before.parentDomId !== after.parentDomId || before.position !== after.position) {
     reasons.push('position_changed');
   }
 
-  // Attribute change
   const attrsEqual = deepEqual(before.attrs, after.attrs);
-  if (!attrsEqual) {
-    reasons.push('attrs_changed');
-  }
+  if (!attrsEqual) reasons.push('attrs_changed');
 
-  // Token change — only count when attrs matched but resolvedStyle didn't.
-  // (If attrs already changed, the resolved-style delta is conflated
-  //  with that and we don't want to double-report.)
   if (attrsEqual && !deepEqual(before.resolvedStyle, after.resolvedStyle)) {
     reasons.push('token_changed');
   }
 
-  // Copy change — refs differ, or any ref's text/locale differs.
   let copyChanged = !sameSet(before.copyRefs, after.copyRefs);
   if (!copyChanged) {
     for (const ref of before.copyRefs) {
-      const a = v1Copy.get(ref);
-      const b = v2Copy.get(ref);
-      if (!deepEqual(a, b)) {
+      if (!deepEqual(v1Copy.get(ref), v2Copy.get(ref))) {
         copyChanged = true;
         break;
       }
@@ -249,26 +162,17 @@ function diffReasons(
   }
   if (copyChanged) reasons.push('copy_changed');
 
-  // Asset change — refs differ, or any ref's content-hash/storageUrl differs.
   let assetChanged = !sameSet(before.assetRefs, after.assetRefs);
   if (!assetChanged) {
     for (const ref of before.assetRefs) {
       const a = v1Assets.get(ref);
       const b = v2Assets.get(ref);
-      // For assets, content equality means same contentHash + same
-      // storageUrl + same kind. Other fields (alt, byteSize, etc.)
-      // are surfaced as part of the same change but don't matter for
-      // detection — content-hash is the primary signal per spec §1.
       if (!a && !b) continue;
       if (!a || !b) {
         assetChanged = true;
         break;
       }
-      if (
-        a.contentHash !== b.contentHash ||
-        a.storageUrl !== b.storageUrl ||
-        a.kind !== b.kind
-      ) {
+      if (a.contentHash !== b.contentHash || a.storageUrl !== b.storageUrl || a.kind !== b.kind) {
         assetChanged = true;
         break;
       }
@@ -276,46 +180,21 @@ function diffReasons(
   }
   if (assetChanged) reasons.push('asset_changed');
 
-  // Sort by canonical reason ordering for deterministic output.
-  reasons.sort((a, b) => REASON_ORDER[a] - REASON_ORDER[b]);
+  reasons.sort((x, y) => REASON_ORDER[x] - REASON_ORDER[y]);
   return reasons;
 }
 
-/* ────────────────────────────────────────────────────────────────── */
-/* public entry                                                        */
-/* ────────────────────────────────────────────────────────────────── */
-
 /**
- * Diff two `RenderableDesign`s at the DOM-ID level.
- *
- * Equivalent to:
- *
- *   const m1 = buildDomIdMap(v1);
- *   const m2 = buildDomIdMap(v2);
- *   return diffMaps(m1, m2, v1, v2);
- *
- * but exposed as a single entry so callers don't have to manage the
- * intermediate maps when they don't need them otherwise.
- *
- * Both inputs MUST pass `buildDomIdMap` cleanly — cycles or duplicate
- * DOM-IDs propagate as `AtlasMapperError`. That's the right failure
- * mode: garbage in → loud error, not silent corruption.
+ * Top-level entry: diff two `RenderableDesign`s.
  */
-export function diffDesigns(v1: RenderableDesign, v2: RenderableDesign): DesignDiff {
-  const m1 = buildDomIdMap(v1);
-  const m2 = buildDomIdMap(v2);
-
-  return diffMaps(m1, m2, v1, v2);
+export function diff(v1: RenderableDesign, v2: RenderableDesign): DesignDiff {
+  return diffMaps(buildDomIdMap(v1), buildDomIdMap(v2), v1, v2);
 }
 
-/**
- * Lower-level variant for callers who already have the maps built
- * (e.g. atlas's storage layer caches them per `designVersionId`).
- *
- * Pass the source `RenderableDesign` payloads alongside the maps so
- * reason detection can resolve `copyRefs` / `assetRefs` against the
- * flat lookup tables on those designs.
- */
+/** Longer alias preserved for callers that prefer the explicit name. */
+export const diffDesigns = diff;
+
+/** Lower-level: diff already-built maps. */
 export function diffMaps(
   v1Map: DomIdMap,
   v2Map: DomIdMap,
@@ -335,40 +214,33 @@ export function diffMaps(
   const modified: ModifiedEntry[] = [];
   let unchanged = 0;
 
-  // Added — in v2, not in v1.
   for (const id of v2Ids) {
     if (!v1Ids.has(id)) {
       const entry = v2Map.byId.get(id);
       if (entry) added.push(entry);
     }
   }
-
-  // Removed — in v1, not in v2.
   for (const id of v1Ids) {
     if (!v2Ids.has(id)) {
       const entry = v1Map.byId.get(id);
       if (entry) removed.push(entry);
     }
   }
-
-  // Common — same DOM-ID in both. Check for modifications.
   for (const id of v1Ids) {
     if (!v2Ids.has(id)) continue;
     const before = v1Map.byId.get(id);
     const after = v2Map.byId.get(id);
     if (!before || !after) continue;
     const reasons = diffReasons(before, after, v1Copy, v2Copy, v1Assets, v2Assets);
-    if (reasons.length === 0) {
-      unchanged += 1;
-    } else {
-      modified.push({ domId: id, reasons, before, after });
-    }
+    if (reasons.length === 0) unchanged += 1;
+    else modified.push({ domId: id, reasons, before, after });
   }
 
-  // Deterministic ordering.
-  added.sort((a, b) => (a.domId < b.domId ? -1 : a.domId > b.domId ? 1 : 0));
-  removed.sort((a, b) => (a.domId < b.domId ? -1 : a.domId > b.domId ? 1 : 0));
-  modified.sort((a, b) => (a.domId < b.domId ? -1 : a.domId > b.domId ? 1 : 0));
+  const byDomId = (a: { domId: string }, b: { domId: string }): number =>
+    a.domId < b.domId ? -1 : a.domId > b.domId ? 1 : 0;
+  added.sort(byDomId);
+  removed.sort(byDomId);
+  modified.sort(byDomId);
 
   return {
     fromDesignVersionId: v1Map.designVersionId,

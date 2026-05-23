@@ -828,6 +828,9 @@ importers:
       '@chiefaia/ticket-template':
         specifier: workspace:*
         version: link:../ticket-template
+      ts-morph:
+        specifier: ^21.0.1
+        version: 21.0.1
     devDependencies:
       '@types/node':
         specifier: ^20

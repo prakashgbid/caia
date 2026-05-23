@@ -1,26 +1,25 @@
 /**
  * `@chiefaia/atlas-mapper` — public entry point.
  *
- * The core algorithm package for Atlas (CAIA Step 6). Pure-logic,
- * referentially-transparent functions over the canonical
- * `RenderableDesign` shape from step-5:
+ * The pure-logic core of Atlas (CAIA Step 6). Operates on the
+ * canonical `RenderableDesign` shape from step-5 and produces:
  *
- *   - `buildDomIdMap`  — flatten a design's component trees into a
- *                        deterministic `{ domId, parentDomId, role,
- *                        tag, bounds, attrs, … }` table.
- *   - `buildMapper`    — combine a DOM-ID map + a hierarchical ticket
- *                        tree into the four bidirectional query APIs
- *                        atlas's interaction layer needs.
- *   - `diffDesigns`    — structural v1↔v2 diff at the DOM-ID level
- *                        with structured `DiffReason` codes.
- *   - `diffMaps`       — lower-level diff for callers that already
- *                        have the maps materialised.
+ *   - stable, AST-shape-fingerprint DOM-IDs that survive style/copy/
+ *     asset changes but flip on structural changes
+ *   - a flat DOM-ID map for O(1) lookup
+ *   - a bidirectional ticket ↔ DOM-ID mapper
+ *   - a per-DOM-ID structural diff between two design versions
+ *
+ * No UI, no network, no LLM calls.
  *
  * Anchor docs:
- *   - research/atlas_module_spec_2026.md §2 (DOM-like uniqueness model)
- *   - research/atlas_module_spec_2026.md §7 (RenderableDesign contract)
- *   - research/step5_design_ingest_spec_2026.md §1 (canonical shape)
+ *   - research/atlas_module_spec_2026.md §2 (DOM-like uniqueness)
+ *   - research/atlas_module_spec_2026.md §3 (bidirectional selection)
+ *   - research/atlas_module_spec_2026.md §7 (multi-source adapter contract)
+ *   - research/step5_design_ingest_spec_2026.md §1 (RenderableDesign)
  */
+
+export { assignStableDomIds } from './assign-stable-dom-ids.js';
 
 export { buildDomIdMap } from './dom-id-map.js';
 export type { DomIdEntry, DomIdMap } from './dom-id-map.js';
@@ -28,22 +27,29 @@ export type { DomIdEntry, DomIdMap } from './dom-id-map.js';
 export { buildMapper } from './mapper.js';
 export type { Mapper } from './mapper.js';
 
-export { diffDesigns, diffMaps } from './diff.js';
+export { diff, diffDesigns, diffMaps } from './diff.js';
 export type { DesignDiff, DiffReason, ModifiedEntry } from './diff.js';
+
+export { composeDomId, nodeFingerprint, slugifyTag } from './fingerprint.js';
+
+export { parseJsxToRenderableDesign } from './parse-jsx.js';
+export type { ParseJsxFileInput, ParseJsxInput } from './parse-jsx.js';
 
 export { AtlasMapperError } from './errors.js';
 export type { AtlasMapperErrorCode } from './errors.js';
 
 export type {
-  RenderableDesign,
-  RenderableNode,
-  RenderableComponentTree,
-  RenderableRoute,
-  RenderableCopy,
-  RenderableAsset,
-  RenderableDesignTokens,
-  NodeRole,
   NodeLevel,
+  NodeRole,
+  RenderableAsset,
+  RenderableComponentTree,
+  RenderableCopy,
+  RenderableDesign,
+  RenderableDesignTokens,
+  RenderableInteractivity,
+  RenderableNode,
+  RenderableRoute,
+  RenderableSharedComponent,
 } from './renderable-design.js';
 
 export type { Ticket, TicketNode } from './ticket-tree.js';

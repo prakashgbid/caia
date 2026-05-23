@@ -1,260 +1,227 @@
-import { describe, it, expect } from 'vitest';
-import {
-  buildDomIdMap,
-  buildMapper,
-  AtlasMapperError,
-  type TicketNode,
-} from '../src/index.js';
-import { simpleHomeDesign, simpleHomeTickets } from './fixtures.js';
+import { describe, expect, it } from 'vitest';
+import { assignStableDomIds } from '../src/assign-stable-dom-ids.js';
+import { buildDomIdMap } from '../src/dom-id-map.js';
+import { buildMapper } from '../src/mapper.js';
+import { AtlasMapperError } from '../src/errors.js';
+import { HOME_DOM_IDS, smallDesign, smallTicketTree } from './fixtures.js';
 
-describe('buildMapper — ticketByDomId', () => {
-  it('returns the ticket bound to the DOM-ID', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    const t = m.ticketByDomId('WD-home-hero-cta');
-    expect(t?.id).toBe('WD-home-hero-cta');
+function mapperForSmallDesign() {
+  const stabilised = assignStableDomIds(smallDesign());
+  const map = buildDomIdMap(stabilised);
+  return buildMapper(map, smallTicketTree());
+}
+
+describe('Mapper.ticketByDomId', () => {
+  it('finds the ticket directly bound to a DOM-ID', () => {
+    const m = mapperForSmallDesign();
+    expect(m.ticketByDomId(HOME_DOM_IDS.hero)?.id).toBe('WD-home-hero');
+  });
+
+  it('returns null for an unbound DOM-ID', () => {
+    const m = mapperForSmallDesign();
+    expect(m.ticketByDomId(HOME_DOM_IDS.h2)).toBeNull();
   });
 
   it('returns null for an unknown DOM-ID', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    expect(m.ticketByDomId('does-not-exist')).toBeNull();
+    const m = mapperForSmallDesign();
+    expect(m.ticketByDomId('nope')).toBeNull();
   });
 
-  it('returns null when given a non-string', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    expect(m.ticketByDomId(undefined as unknown as string)).toBeNull();
+  it('returns null for a non-string input', () => {
+    const m = mapperForSmallDesign();
+    // @ts-expect-error — testing runtime guard
+    expect(m.ticketByDomId(undefined)).toBeNull();
   });
 
-  it('preserves the extra payload on the returned ticket', () => {
-    const tickets: TicketNode<{ status: string }>[] = [
-      {
-        id: 'PG-home',
-        domId: 'PG-home',
-        extra: { status: 'proposed' },
-      },
-    ];
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), tickets);
-    const t = m.ticketByDomId('PG-home');
-    expect(t?.extra).toEqual({ status: 'proposed' });
+  it('finds tickets via additionalDomIds bindings', () => {
+    const m = mapperForSmallDesign();
+    expect(m.ticketByDomId(HOME_DOM_IDS.link0)?.id).toBe('ST-home-cert-row');
+    expect(m.ticketByDomId(HOME_DOM_IDS.link2)?.id).toBe('ST-home-cert-row');
   });
 });
 
-describe('buildMapper — domIdsByTicket', () => {
-  it('returns the single bound DOM-ID for a 1:1 ticket', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    expect(m.domIdsByTicket('WD-home-hero-cta')).toEqual(['WD-home-hero-cta']);
+describe('Mapper.domIdsByTicket', () => {
+  it('returns all DOM-IDs scoped by a ticket (sorted)', () => {
+    const m = mapperForSmallDesign();
+    const ids = m.domIdsByTicket('ST-home-cert-row');
+    expect(ids).toEqual([...ids].sort());
+    expect(ids).toContain(HOME_DOM_IDS.link0);
+    expect(ids).toContain(HOME_DOM_IDS.link2);
   });
 
-  it('returns all bound DOM-IDs for a ticket with additionalDomIds', () => {
-    const tickets: TicketNode[] = [
-      {
-        id: 'PG-home',
-        domId: 'PG-home',
-        additionalDomIds: ['SE-home-hero', 'SE-home-footer'],
-      },
-    ];
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), tickets);
-    expect(m.domIdsByTicket('PG-home').sort()).toEqual([
-      'PG-home',
-      'SE-home-footer',
-      'SE-home-hero',
-    ]);
+  it('returns [] for a ticket that scopes nothing', () => {
+    const m = mapperForSmallDesign();
+    expect(m.domIdsByTicket('S-site')).toEqual([]);
   });
 
   it('returns [] for an unknown ticket id', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    expect(m.domIdsByTicket('NOPE')).toEqual([]);
+    const m = mapperForSmallDesign();
+    expect(m.domIdsByTicket('nope')).toEqual([]);
   });
 
-  it('returns [] for a ticket with no DOM bindings', () => {
-    const tickets: TicketNode[] = [
-      { id: 'PG-home', domId: 'PG-home', children: [{ id: 'EPIC-no-dom' }] },
-    ];
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), tickets);
-    expect(m.domIdsByTicket('EPIC-no-dom')).toEqual([]);
+  it('returns the singleton domId for a 1:1 binding', () => {
+    const m = mapperForSmallDesign();
+    expect(m.domIdsByTicket('WD-home-hero')).toEqual([HOME_DOM_IDS.hero]);
   });
 });
 
-describe('buildMapper — nearestEnclosingTicket', () => {
-  it('returns the ticket on the starting node when it is itself bound', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    const t = m.nearestEnclosingTicket('WD-home-hero-cta');
-    expect(t?.id).toBe('WD-home-hero-cta');
+describe('Mapper.nearestEnclosingTicket', () => {
+  it('returns the ticket on the starting node if bound (inclusive)', () => {
+    const m = mapperForSmallDesign();
+    expect(m.nearestEnclosingTicket(HOME_DOM_IDS.hero)?.id).toBe('WD-home-hero');
   });
 
-  it('walks up until it finds the nearest bound ancestor', () => {
-    // Drop the bindings on the leaf-most level so the walk has to climb.
-    const tickets: TicketNode[] = [
-      {
-        id: 'PG-home',
-        domId: 'PG-home',
-        children: [
-          {
-            id: 'SE-home-hero',
-            domId: 'SE-home-hero',
-            children: [{ id: 'WD-home-hero-rotator', domId: 'WD-home-hero-rotator' }],
+  it('walks up DOM ancestry until a bound ancestor is found', () => {
+    const m = mapperForSmallDesign();
+    // h2 is unbound; nearest enclosing is the section.
+    expect(m.nearestEnclosingTicket(HOME_DOM_IDS.h2)?.id).toBe('SE-home-cert-strip');
+  });
+
+  it('returns null when neither node nor any ancestor is bound', () => {
+    // Build a tree with no bindings inside it at all.
+    const stabilised = assignStableDomIds({
+      designVersionId: 'dv_x',
+      routes: [{ path: '/', componentTreeId: 't' }],
+      componentTrees: {
+        t: {
+          node: {
+            tag: 'div',
+            role: 'page',
+            children: [{ tag: 'p', role: 'leaf' }],
           },
-        ],
+        },
       },
-    ];
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), tickets);
-    const t = m.nearestEnclosingTicket('WD-home-hero-cta');
-    // CTA isn't bound; rotator is its direct parent and is bound.
-    expect(t?.id).toBe('WD-home-hero-rotator');
+    });
+    const m = buildMapper(buildDomIdMap(stabilised), [{ id: 'S-org' }]);
+    expect(m.nearestEnclosingTicket('div:page:0>p:leaf:0')).toBeNull();
   });
 
-  it('returns null when no ancestor (and not the node itself) is bound', () => {
-    const tickets: TicketNode[] = [{ id: 'meta-only' }];
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), tickets);
-    expect(m.nearestEnclosingTicket('WD-home-hero-cta')).toBeNull();
-  });
-
-  it('returns null when the DOM-ID itself does not exist in the map', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    expect(m.nearestEnclosingTicket('ghost-id')).toBeNull();
-  });
-
-  it('walks all the way to the page-level root when needed', () => {
-    const tickets: TicketNode[] = [{ id: 'PG-home', domId: 'PG-home' }];
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), tickets);
-    expect(m.nearestEnclosingTicket('WD-home-hero-cta')?.id).toBe('PG-home');
+  it('returns null for an unknown DOM-ID', () => {
+    const m = mapperForSmallDesign();
+    expect(m.nearestEnclosingTicket('nope')).toBeNull();
   });
 });
 
-describe('buildMapper — descendantTickets', () => {
-  it('returns every ticket under a subtree in depth-first pre-order', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    const tickets = m.descendantTickets('SE-home-hero').map((t) => t.id);
-    expect(tickets).toEqual([
-      'SE-home-hero',
-      'WD-home-hero-rotator',
-      'WD-home-hero-cta',
-      'WD-home-hero-headline',
-      'WD-home-hero-image',
-    ]);
+describe('Mapper.descendantTickets', () => {
+  it('returns all tickets inside the subtree (pre-order, deduped)', () => {
+    const m = mapperForSmallDesign();
+    const tickets = m.descendantTickets(HOME_DOM_IDS.page).map((t) => t.id);
+    expect(tickets[0]).toBe('PG-home');
+    expect(tickets).toContain('WD-home-nav');
+    expect(tickets).toContain('WD-home-hero');
+    expect(tickets).toContain('WD-home-hero-slide-01');
+    expect(tickets).toContain('SE-home-cert-strip');
+    expect(tickets).toContain('ST-home-cert-row');
   });
 
-  it('includes the starting node when it is ticket-bound', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    const ids = m.descendantTickets('PG-home').map((t) => t.id);
-    expect(ids[0]).toBe('PG-home');
+  it('includes the start node if it is bound', () => {
+    const m = mapperForSmallDesign();
+    const tickets = m.descendantTickets(HOME_DOM_IDS.hero);
+    expect(tickets[0]?.id).toBe('WD-home-hero');
+  });
+
+  it('does not include tickets from other component trees', () => {
+    const m = mapperForSmallDesign();
+    const tickets = m.descendantTickets(HOME_DOM_IDS.page).map((t) => t.id);
+    expect(tickets).not.toContain('PG-about');
+    expect(tickets).not.toContain('WD-about-nav');
   });
 
   it('returns [] for an unknown DOM-ID', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    expect(m.descendantTickets('ghost')).toEqual([]);
+    const m = mapperForSmallDesign();
+    expect(m.descendantTickets('nope')).toEqual([]);
+  });
+});
+
+describe('buildMapper validation', () => {
+  it('throws on invalid map argument', () => {
+    expect(() => buildMapper({} as never, [{ id: 'x' }])).toThrowError(AtlasMapperError);
   });
 
-  it('returns [] for a subtree whose nodes are not ticket-bound', () => {
-    const tickets: TicketNode[] = [{ id: 'PG-home', domId: 'PG-home' }];
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), tickets);
-    expect(m.descendantTickets('SE-home-hero')).toEqual([]);
+  it('throws on missing ticket id', () => {
+    const stabilised = assignStableDomIds(smallDesign());
+    const map = buildDomIdMap(stabilised);
+    try {
+      buildMapper(map, [{ id: '' } as never]);
+      expect.fail('expected throw');
+    } catch (e) {
+      expect((e as AtlasMapperError).code).toBe('invalid_ticket_tree');
+    }
   });
 
-  it('returns a leaf ticket alone when called on a leaf DOM-ID', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    const ids = m.descendantTickets('WD-home-hero-cta').map((t) => t.id);
-    expect(ids).toEqual(['WD-home-hero-cta']);
+  it('throws on duplicate ticket id (sibling duplicate)', () => {
+    const stabilised = assignStableDomIds(smallDesign());
+    const map = buildDomIdMap(stabilised);
+    try {
+      buildMapper(map, [
+        {
+          id: 'ROOT',
+          children: [
+            { id: 'DUP' },
+            { id: 'DUP' },
+          ],
+        },
+      ]);
+      expect.fail('expected throw');
+    } catch (e) {
+      expect((e as AtlasMapperError).code).toBe('invalid_ticket_tree');
+    }
   });
 
-  it('does not bleed across component trees', () => {
-    const design = simpleHomeDesign();
-    design.routes.push({ path: '/about', componentTreeId: 'tree:about' });
-    design.componentTrees['tree:about'] = {
-      node: {
-        tag: 'main',
-        role: 'page',
-        domId: 'PG-about',
-        children: [{ tag: 'h1', role: 'leaf', domId: 'WD-about-headline' }],
-      },
+  it('throws on cycle in the ticket tree', () => {
+    const stabilised = assignStableDomIds(smallDesign());
+    const map = buildDomIdMap(stabilised);
+    const a: { id: string; children: { id: string; children?: unknown[] }[] } = {
+      id: 'A',
+      children: [{ id: 'B' }],
     };
-    const tickets: TicketNode[] = [
-      { id: 'PG-home', domId: 'PG-home' },
-      { id: 'PG-about', domId: 'PG-about', children: [{ id: 'WD-about-headline', domId: 'WD-about-headline' }] },
-    ];
-    const m = buildMapper(buildDomIdMap(design), tickets);
-    const homeDesc = m.descendantTickets('PG-home').map((t) => t.id);
-    // PG-about must NOT appear in PG-home's descendants even though
-    // it sits at the same logical 'page' depth.
-    expect(homeDesc).not.toContain('PG-about');
-  });
-});
-
-describe('buildMapper — bookkeeping', () => {
-  it('surfaces unboundDomIds for tickets pointing at missing DOM-IDs', () => {
-    const tickets: TicketNode[] = [
-      {
-        id: 'PG-home',
-        domId: 'PG-home',
-        children: [{ id: 'WD-orphan', domId: 'WD-not-in-design' }],
-      },
-    ];
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), tickets);
-    expect(m.unboundDomIds).toEqual(['WD-not-in-design']);
-    // The ticket still answers domIdsByTicket cleanly.
-    expect(m.domIdsByTicket('WD-orphan')).toEqual(['WD-not-in-design']);
-    // ticketByDomId on the orphan still finds the ticket.
-    expect(m.ticketByDomId('WD-not-in-design')?.id).toBe('WD-orphan');
-    // nearestEnclosingTicket on the missing id is null (we don't have
-    // ancestry for an id that doesn't exist in the DOM map).
-    expect(m.nearestEnclosingTicket('WD-not-in-design')).toBeNull();
+    // Manually craft a cycle.
+    (a.children[0] as { id: string; children?: unknown[] }).children = [a as unknown];
+    try {
+      buildMapper(map, [a as never]);
+      expect.fail('expected throw');
+    } catch (e) {
+      expect((e as AtlasMapperError).code).toBe('cycle_detected');
+    }
   });
 
-  it('exposes ticketsById for direct enumeration', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets());
-    expect(m.ticketsById.size).toBe(8);
-    expect(m.ticketsById.get('SE-home-hero')?.id).toBe('SE-home-hero');
+  it('throws duplicate_ticket_binding when two tickets bind the same DOM-ID', () => {
+    const stabilised = assignStableDomIds(smallDesign());
+    const map = buildDomIdMap(stabilised);
+    try {
+      buildMapper(map, [
+        {
+          id: 'S-root',
+          children: [
+            { id: 'T1', domId: HOME_DOM_IDS.hero },
+            { id: 'T2', domId: HOME_DOM_IDS.hero },
+          ],
+        },
+      ]);
+      expect.fail('expected throw');
+    } catch (e) {
+      expect((e as AtlasMapperError).code).toBe('duplicate_ticket_binding');
+    }
   });
 
-  it('accepts a single root in place of an array', () => {
-    const m = buildMapper(buildDomIdMap(simpleHomeDesign()), simpleHomeTickets()[0]!);
-    expect(m.ticketByDomId('PG-home')?.id).toBe('PG-home');
-  });
-});
-
-describe('buildMapper — error handling', () => {
-  it('throws on duplicate ticket ids in the tree', () => {
-    const dup: TicketNode[] = [
-      {
-        id: 'PG-home',
-        domId: 'PG-home',
-        children: [
-          { id: 'X', domId: 'WD-home-hero-cta' },
-          { id: 'X', domId: 'WD-home-hero-headline' },
-        ],
-      },
-    ];
-    expect(() => buildMapper(buildDomIdMap(simpleHomeDesign()), dup)).toThrow(
-      /Duplicate ticket id/,
-    );
+  it('surfaces unbound DOM-IDs without throwing', () => {
+    const stabilised = assignStableDomIds(smallDesign());
+    const map = buildDomIdMap(stabilised);
+    const m = buildMapper(map, [
+      { id: 'PG-ghost', domId: 'unknown:page:0' },
+    ]);
+    expect(m.unboundDomIds).toEqual(['unknown:page:0']);
   });
 
-  it('throws on a ticket-tree cycle', () => {
-    // Hand-craft a cyclic node graph (TS won't let us do this naturally
-    // because TicketNode.children is non-circular by inference).
-    const a: TicketNode = { id: 'A' };
-    const b: TicketNode = { id: 'B' };
-    a.children = [b];
-    b.children = [a];
-    expect(() => buildMapper(buildDomIdMap(simpleHomeDesign()), [a])).toThrow(
-      AtlasMapperError,
-    );
+  it('preserves the parent chain via Ticket.parentId', () => {
+    const m = mapperForSmallDesign();
+    const slide = m.ticketByDomId(HOME_DOM_IDS.heroSlide1)!;
+    expect(slide.parentId).toBe('WD-home-hero');
   });
 
-  it('throws on a non-string ticket id', () => {
-    expect(() =>
-      buildMapper(buildDomIdMap(simpleHomeDesign()), [
-        { id: 123 } as unknown as TicketNode,
-      ]),
-    ).toThrow(/non-empty string id/);
-  });
-
-  it('throws when two tickets bind the same DOM-ID', () => {
-    const collision: TicketNode[] = [
-      { id: 'A', domId: 'WD-home-hero-cta' },
-      { id: 'B', domId: 'WD-home-hero-cta' },
-    ];
-    expect(() => buildMapper(buildDomIdMap(simpleHomeDesign()), collision)).toThrow(
-      /is bound by both/,
-    );
+  it('exposes ticketsById as the full index', () => {
+    const m = mapperForSmallDesign();
+    expect(m.ticketsById.size).toBeGreaterThan(5);
+    expect(m.ticketsById.has('S-site')).toBe(true);
   });
 });

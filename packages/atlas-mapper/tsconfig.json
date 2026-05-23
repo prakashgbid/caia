@@ -2,12 +2,18 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "bundler",
-    "esModuleInterop": true,
+    "moduleResolution": "Bundler",
     "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "noEmit": true
+    "isolatedModules": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": false,
+    "types": ["node"]
   },
   "include": ["src/**/*", "tests/**/*"]
 }
