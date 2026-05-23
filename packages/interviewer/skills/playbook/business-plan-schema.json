@@ -1,0 +1,995 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caia.dev/schemas/business-plan-v2.json",
+  "title": "BusinessPlanV2",
+  "description": "Output artifact of the CAIA Interviewer Agent V2. Investor-pitch + MVP-build dual deliverable. 20 sections, with three-horizon scope decomposition (MVP / 1-year / 5-year) explicitly modeled.",
+  "type": "object",
+  "version": "2.0.0",
+  "required": [
+    "schemaVersion",
+    "interviewId",
+    "operatorEmail",
+    "createdAt",
+    "lastUpdatedAt",
+    "executiveSummary",
+    "problemStatement",
+    "valueProposition",
+    "marketOpportunity",
+    "customerICP",
+    "competitiveLandscape",
+    "solutionScope",
+    "mvpScope",
+    "oneYearScope",
+    "fiveYearVision",
+    "businessModel",
+    "unitEconomics",
+    "financialPlan",
+    "technicalArchitecture",
+    "scalePerformance",
+    "brandVoiceDesign",
+    "contentSEOGrowth",
+    "operationsTeam",
+    "legalCompliance",
+    "riskPremortem",
+    "successMetrics",
+    "openUnknowns",
+    "rubricScores",
+    "criticPass",
+    "operatorDecisionsLog"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "2.0.0"
+    },
+    "interviewId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "operatorEmail": {
+      "type": "string",
+      "format": "email"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lastUpdatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "executiveSummary": {
+      "$ref": "#/$defs/section",
+      "description": "One-page narrative; AUTO-GENERATED last from other sections."
+    },
+    "problemStatement": {
+      "$ref": "#/$defs/section",
+      "description": "From pillar B.5. Problem articulation in customer's own words with quantified pain."
+    },
+    "valueProposition": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "required": ["customerSegment", "problem", "uniqueMethod", "outcome", "tagline"],
+              "properties": {
+                "customerSegment": { "type": "string" },
+                "problem": { "type": "string" },
+                "uniqueMethod": { "type": "string" },
+                "outcome": { "type": "string" },
+                "tagline": { "type": "string" },
+                "antiTagline": { "type": "string" },
+                "homepageHeadline": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "marketOpportunity": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "required": ["tam", "sam", "som", "whyNow"],
+              "properties": {
+                "tam": {
+                  "type": "object",
+                  "required": ["value", "currency", "method", "derivation"],
+                  "properties": {
+                    "value": { "type": "number" },
+                    "currency": { "type": "string", "default": "USD" },
+                    "method": { "type": "string", "enum": ["bottom_up", "top_down", "both"] },
+                    "derivation": { "type": "string" },
+                    "citations": { "type": "array", "items": { "$ref": "#/$defs/citation" } }
+                  }
+                },
+                "sam": {
+                  "type": "object",
+                  "required": ["value", "addressabilityCuts"],
+                  "properties": {
+                    "value": { "type": "number" },
+                    "addressabilityCuts": {
+                      "type": "object",
+                      "properties": {
+                        "geographic": { "type": "array", "items": { "type": "string" } },
+                        "channel": { "type": "array", "items": { "type": "string" } },
+                        "price": { "type": "array", "items": { "type": "string" } },
+                        "language": { "type": "array", "items": { "type": "string" } }
+                      }
+                    }
+                  }
+                },
+                "som": {
+                  "type": "object",
+                  "required": ["value", "year", "sharePercent"],
+                  "properties": {
+                    "value": { "type": "number" },
+                    "year": { "type": "integer", "enum": [1, 2, 3] },
+                    "sharePercent": { "type": "number" },
+                    "comparable": {
+                      "type": ["object", "null"],
+                      "properties": {
+                        "company": { "type": "string" },
+                        "achievedSharePercent": { "type": "number" },
+                        "atStage": { "type": "string" }
+                      }
+                    }
+                  }
+                },
+                "whyNow": { "type": "array", "items": { "type": "string" } },
+                "marketTimingRisk": { "type": "string", "enum": ["early", "on_time", "late"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "customerICP": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "required": ["firmographics", "primaryPersona", "jtbd"],
+              "properties": {
+                "firmographics": {
+                  "type": "object",
+                  "properties": {
+                    "industry": { "type": "string" },
+                    "employeeRange": { "type": "string" },
+                    "revenueRange": { "type": "string" },
+                    "geography": { "type": "array", "items": { "type": "string" } },
+                    "growthStage": { "type": "string" }
+                  }
+                },
+                "technographics": { "type": "array", "items": { "type": "string" } },
+                "primaryPersona": {
+                  "type": "object",
+                  "properties": {
+                    "roleTitle": { "type": "string" },
+                    "ageBand": { "type": "string" },
+                    "authorityLevel": { "type": "string" },
+                    "personalityTrait": { "type": "string" },
+                    "mediaDiet": { "type": "array", "items": { "type": "string" } },
+                    "communities": { "type": "array", "items": { "type": "string" } }
+                  }
+                },
+                "buyerVsUser": {
+                  "type": "object",
+                  "properties": {
+                    "buyer": { "type": "string" },
+                    "user": { "type": "string" },
+                    "sameOrDifferent": { "type": "string", "enum": ["same", "different"] }
+                  }
+                },
+                "negativePersona": { "type": "string" },
+                "jtbd": {
+                  "type": "object",
+                  "required": ["situation", "motivation", "outcome"],
+                  "properties": {
+                    "situation": { "type": "string" },
+                    "motivation": { "type": "string" },
+                    "outcome": { "type": "string" },
+                    "functional": { "type": "string" },
+                    "emotional": { "type": "string" },
+                    "social": { "type": "string" }
+                  }
+                },
+                "triggerEvent": { "type": "string" },
+                "acquisitionChannels": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "rank": { "type": "integer" },
+                      "channel": { "type": "string" },
+                      "rationale": { "type": "string" }
+                    }
+                  }
+                },
+                "customerDiscoveryDepth": {
+                  "type": "object",
+                  "properties": {
+                    "customersInterviewed": { "type": "integer" },
+                    "verbatimQuotes": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "competitiveLandscape": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "required": ["direct", "indirect", "substitutes", "doNothing", "unfairAdvantage", "fiveForces"],
+              "properties": {
+                "direct": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["name", "url", "pricingUrl", "theyDoBetter", "weDoBetter"],
+                    "properties": {
+                      "name": { "type": "string" },
+                      "url": { "type": "string", "format": "uri" },
+                      "pricingUrl": { "type": "string", "format": "uri" },
+                      "theyDoBetter": { "type": "string" },
+                      "weDoBetter": { "type": "string" }
+                    }
+                  }
+                },
+                "indirect": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "why": { "type": "string" }
+                    }
+                  }
+                },
+                "substitutes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "why": { "type": "string" }
+                    }
+                  }
+                },
+                "doNothing": {
+                  "type": "object",
+                  "properties": {
+                    "painLevel": { "type": "string", "enum": ["low", "medium", "high"] },
+                    "whyInsufficientToday": { "type": "string" }
+                  }
+                },
+                "differentiationWedge": { "type": "string", "enum": ["features", "price", "distribution", "brand", "integration", "customer_service", "speed_to_value"] },
+                "unfairAdvantage": { "type": "string" },
+                "fiveForces": {
+                  "type": "object",
+                  "properties": {
+                    "rivalry": { "type": "string", "enum": ["low", "medium", "high"] },
+                    "buyerPower": { "type": "string", "enum": ["low", "medium", "high"] },
+                    "supplierPower": { "type": "string", "enum": ["low", "medium", "high"] },
+                    "threatOfEntry": { "type": "string", "enum": ["low", "medium", "high"] },
+                    "threatOfSubstitutes": { "type": "string", "enum": ["low", "medium", "high"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "solutionScope": {
+      "$ref": "#/$defs/section",
+      "description": "Aggregate scope narrative across MVP / 1yr / 5yr (cross-references mvpScope, oneYearScope, fiveYearVision)."
+    },
+    "mvpScope": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "required": ["features", "happyPath", "successCriterion", "failureCriterion"],
+              "properties": {
+                "features": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 7,
+                  "items": {
+                    "type": "object",
+                    "required": ["name", "benefit", "hypothesisTested"],
+                    "properties": {
+                      "name": { "type": "string" },
+                      "benefit": { "type": "string" },
+                      "hypothesisTested": { "type": "string" }
+                    }
+                  }
+                },
+                "explicitlyOutOfScope": { "type": "array", "items": { "type": "string" } },
+                "happyPath": { "type": "array", "items": { "type": "string" } },
+                "successCriterion": {
+                  "type": "object",
+                  "properties": {
+                    "metric": { "type": "string" },
+                    "threshold": { "type": "number" },
+                    "horizon": { "type": "string" }
+                  }
+                },
+                "failureCriterion": {
+                  "type": "object",
+                  "properties": {
+                    "metric": { "type": "string" },
+                    "threshold": { "type": "number" },
+                    "horizon": { "type": "string" }
+                  }
+                },
+                "paywall": { "type": "string", "enum": ["free", "freemium", "trial", "paywall"] },
+                "polishFloor": { "type": "integer", "minimum": 1, "maximum": 10 },
+                "platform": { "type": "string", "enum": ["mobile_first", "web_first", "both"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "oneYearScope": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["feature", "gatedOn"],
+                    "properties": {
+                      "feature": { "type": "string" },
+                      "gatedOn": { "type": "string", "description": "MVP signal name OR 'unconditional'" },
+                      "rationale": { "type": "string" }
+                    }
+                  }
+                },
+                "firstPostMvpFeature": { "type": "string" },
+                "anti": { "type": "string", "description": "Worst thing you could do in year 1" },
+                "raiseCapital": { "type": "boolean" },
+                "raiseAmount": { "type": "number" },
+                "raiseMilestone": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "fiveYearVision": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "properties": {
+                "companyState": {
+                  "type": "object",
+                  "properties": {
+                    "revenueRange": { "type": "string" },
+                    "headcountRange": { "type": "string" },
+                    "customerCount": { "type": "string" },
+                    "marketPosition": { "type": "string" }
+                  }
+                },
+                "adjacentProducts": { "type": "array", "items": { "type": "string" } },
+                "companyShape": { "type": "string", "enum": ["product", "platform", "marketplace", "services_led"] },
+                "narrativeParagraph": { "type": "string" },
+                "famousForLine": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "businessModel": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "required": ["revenueModel", "salesMotion", "billingProvider"],
+              "properties": {
+                "revenueModel": { "type": "string", "enum": ["subscription", "transactional", "marketplace_take_rate", "ads", "lead_gen", "license", "services", "freemium_to_paid", "usage_based"] },
+                "publicComparable": { "type": "string" },
+                "unitOfValue": {
+                  "type": "object",
+                  "properties": {
+                    "thing": { "type": "string" },
+                    "pricePerUnit": { "type": "number" },
+                    "frequency": { "type": "string" }
+                  }
+                },
+                "pricingPublished": { "type": "boolean" },
+                "vanWestendorp": {
+                  "type": "object",
+                  "properties": {
+                    "tooExpensive": { "type": "number" },
+                    "expensive": { "type": "number" },
+                    "bargain": { "type": "number" },
+                    "tooCheap": { "type": "number" },
+                    "plannedPrice": { "type": "number" }
+                  }
+                },
+                "salesMotion": { "type": "string", "enum": ["self_serve", "inside_sales", "field_sales", "channel", "hybrid"] },
+                "contractLength": { "type": "string", "enum": ["monthly", "annual", "both"] },
+                "billingProvider": { "type": "string" },
+                "refundPolicy": { "type": "string" },
+                "freeTier": { "type": "string", "enum": ["none", "free_trial", "freemium", "both"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "unitEconomics": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "properties": {
+                "cac": {
+                  "type": "object",
+                  "properties": {
+                    "value": { "type": "number" },
+                    "methodology": { "type": "string" }
+                  }
+                },
+                "ltv": {
+                  "type": "object",
+                  "properties": {
+                    "value": { "type": "number" },
+                    "methodology": { "type": "string" },
+                    "assumptions": { "type": "array", "items": { "type": "string" } }
+                  }
+                },
+                "ltvCacRatio": { "type": "number", "description": "≥ 3 expected for SaaS" },
+                "cacPaybackMonths": { "type": "number", "description": "Ideally < 18 for SMB SaaS" },
+                "grossMarginPercentAtScale": { "type": "number" },
+                "rule40Score": { "type": ["number", "null"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "financialPlan": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "required": ["startingCapital", "monthlyBurn", "runwayMonths", "capitalStrategy"],
+              "properties": {
+                "startingCapital": {
+                  "type": "object",
+                  "properties": {
+                    "amount": { "type": "number" },
+                    "source": { "type": "string", "enum": ["bootstrap", "savings", "FF", "preseed", "seed"] }
+                  }
+                },
+                "monthlyBurn": { "type": "number" },
+                "runwayMonths": { "type": "number" },
+                "founderSalary": {
+                  "type": "object",
+                  "properties": {
+                    "year1": { "type": "number" },
+                    "year2": { "type": "number" }
+                  }
+                },
+                "capitalStrategy": { "type": "string", "enum": ["bootstrap_to_profit", "raise_preseed", "raise_seed", "raise_series_a"] },
+                "plannedRaise": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "round": { "type": "string" },
+                    "amount": { "type": "number" },
+                    "valuationCap": { "type": "number" },
+                    "instrument": { "type": "string", "enum": ["post_money_safe", "priced", "convertible_note"] }
+                  }
+                },
+                "projections": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "year": { "type": "integer", "enum": [1, 2, 3] },
+                      "revenue": { "type": "number" },
+                      "expenses": { "type": "number" },
+                      "headcount": { "type": "integer" }
+                    }
+                  }
+                },
+                "breakEvenMonth": { "type": ["integer", "null"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "technicalArchitecture": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "properties": {
+                "frontendStack": { "type": "string" },
+                "backendStack": { "type": "string" },
+                "database": { "type": "string", "enum": ["relational", "document", "graph", "time_series", "search_first", "hybrid"] },
+                "thirdPartyServices": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "capability": { "type": "string" },
+                      "provider": { "type": "string" }
+                    }
+                  }
+                },
+                "apiSurface": {
+                  "type": "object",
+                  "properties": {
+                    "internal": { "type": "string", "enum": ["REST", "GraphQL", "tRPC", "gRPC", "mixed"] },
+                    "externalAtMvp": { "type": "boolean" },
+                    "externalAtYear1": { "type": "boolean" }
+                  }
+                },
+                "clientPlatform": { "type": "string", "enum": ["native_mobile", "react_native", "web_pwa", "web_only"] },
+                "deployTopology": { "type": "string", "enum": ["monolith", "two_or_three_services", "microservices"] },
+                "cloudProvider": { "type": "string", "enum": ["aws", "gcp", "azure", "multi_cloud", "on_prem"] },
+                "tenancy": { "type": "string", "enum": ["multi_tenant_saas", "single_tenant_cloud", "on_prem"] },
+                "aiProvider": { "type": "string" },
+                "aiFallback": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "scalePerformance": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "properties": {
+                "day1Users": { "type": "integer" },
+                "month3Users": { "type": "integer" },
+                "month12Users": { "type": "integer" },
+                "peakConcurrent": { "type": "integer" },
+                "dataVolumeAt12mo": { "type": "string" },
+                "performanceSLOs": {
+                  "type": "object",
+                  "properties": {
+                    "ttfbMsP50": { "type": "number" },
+                    "ttfbMsP95": { "type": "number" },
+                    "ttiMs4G": { "type": "number" }
+                  }
+                },
+                "reliabilitySLOs": {
+                  "type": "object",
+                  "properties": {
+                    "errorRatePer1000": { "type": "number" },
+                    "rpoMinutes": { "type": "number" },
+                    "rtoMinutes": { "type": "number" },
+                    "uptimeTarget": { "type": "string" }
+                  }
+                },
+                "scaleTrigger": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "brandVoiceDesign": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "properties": {
+                "voiceAdjectives": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "string" } },
+                "antiVoiceAdjective": { "type": "string" },
+                "referenceBrands": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "url": { "type": "string", "format": "uri" } } } },
+                "antiReferenceBrands": { "type": "array", "items": { "type": "string" } },
+                "visualPoles": {
+                  "type": "object",
+                  "properties": {
+                    "editorialVsDense": { "type": "string" },
+                    "playfulVsSerious": { "type": "string" },
+                    "warmVsCool": { "type": "string" },
+                    "motionRichVsMotionFree": { "type": "string" }
+                  }
+                },
+                "colorDisposition": { "type": "string" },
+                "typography": { "type": "string" },
+                "logoStatus": { "type": "string", "enum": ["have", "needed_for_mvp", "text_mark_only"] },
+                "brandName": { "type": "string" },
+                "brandNameStatus": { "type": "string", "enum": ["locked", "working_title", "unresolved"] },
+                "domainOwned": { "type": "boolean" },
+                "darkMode": { "type": "boolean" },
+                "designSystemSource": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "contentSEOGrowth": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "properties": {
+                "launchContentTitles": { "type": "array", "items": { "type": "string" }, "minItems": 6, "maxItems": 6 },
+                "contentCadence": { "type": "string", "enum": ["daily", "weekly", "monthly", "ad_hoc"] },
+                "contentOwnership": { "type": "string" },
+                "seoTargetQueries": { "type": "array", "items": { "type": "string" } },
+                "seoGeography": { "type": "string" },
+                "paidAdsAtLaunch": { "type": "boolean" },
+                "paidChannel": { "type": "string" },
+                "paidMonthlyBudget": { "type": "number" },
+                "cpaTarget": { "type": "number" },
+                "emailCollectionStart": { "type": "string", "enum": ["day1", "day30", "never"] },
+                "referralMechanic": { "type": "string", "enum": ["affiliate", "in_product_invite", "share_card", "none"] },
+                "communityPresence": { "type": "array", "items": { "type": "string" } },
+                "prPlan": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "operationsTeam": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "properties": {
+                "founderCount": { "type": "integer" },
+                "founderRoles": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "role": { "type": "string" }
+                    }
+                  }
+                },
+                "cofounderGap": { "type": "string" },
+                "firstThreeHires": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "role": { "type": "string" },
+                      "timingTrigger": { "type": "string" },
+                      "targetComp": { "type": "string" }
+                    }
+                  }
+                },
+                "supportModel": { "type": "string" },
+                "supportSLA": {
+                  "type": "object",
+                  "properties": {
+                    "responseTime": { "type": "string" },
+                    "resolutionTime": { "type": "string" }
+                  }
+                },
+                "workStyle": { "type": "string", "enum": ["remote_only", "hybrid", "co_located"] },
+                "equityVesting": { "type": "string" },
+                "founderPersonalRunwayMonths": { "type": "number" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "legalCompliance": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "properties": {
+                "entityType": { "type": "string" },
+                "jurisdictionsServed": { "type": "array", "items": { "type": "string" } },
+                "dataResidency": { "type": "array", "items": { "type": "string" } },
+                "complianceRegimes": {
+                  "type": "object",
+                  "properties": {
+                    "gdpr": { "type": "boolean" },
+                    "ccpa": { "type": "boolean" },
+                    "hipaa": { "type": "boolean" },
+                    "pciDss": { "type": "boolean" },
+                    "coppa": { "type": "boolean" },
+                    "soc2Target": { "type": "string", "enum": ["mvp", "year1", "year2", "never"] }
+                  }
+                },
+                "trademark": {
+                  "type": "object",
+                  "properties": {
+                    "filed": { "type": "boolean" },
+                    "jurisdictions": { "type": "array", "items": { "type": "string" } }
+                  }
+                },
+                "patentStrategy": { "type": "string", "enum": ["file", "dont_file", "defensive_publication"] },
+                "openSourceLicenseAudit": { "type": "string" },
+                "insurancePosture": { "type": "string" },
+                "licensedIndustry": { "type": "string", "enum": ["apply", "partner", "avoid", "n_a"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "riskPremortem": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "required": ["premortemReasons", "topRisks", "killCriteria"],
+              "properties": {
+                "premortemReasons": {
+                  "type": "array",
+                  "minItems": 5,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "rank": { "type": "integer" },
+                      "reasonPastTense": { "type": "string" },
+                      "mitigationAction": { "type": "string" },
+                      "owner": { "type": "string" }
+                    }
+                  }
+                },
+                "topRisks": {
+                  "type": "array",
+                  "minItems": 5,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "rank": { "type": "integer" },
+                      "risk": { "type": "string" },
+                      "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+                      "likelihood": { "type": "integer", "minimum": 1, "maximum": 5 },
+                      "mitigation": { "type": "string" }
+                    }
+                  }
+                },
+                "killCriteria": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ifBy": { "type": "string", "description": "e.g. 'month 9'" },
+                      "condition": { "type": "string" },
+                      "action": { "type": "string", "enum": ["kill", "pivot"] }
+                    }
+                  }
+                },
+                "pivotTriggers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "signal": { "type": "string" },
+                      "action": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "successMetrics": {
+      "allOf": [
+        { "$ref": "#/$defs/section" },
+        {
+          "properties": {
+            "structured": {
+              "type": "object",
+              "required": ["northStar", "leadingIndicators"],
+              "properties": {
+                "northStar": {
+                  "type": "object",
+                  "properties": {
+                    "metric": { "type": "string" },
+                    "rationale": { "type": "string" }
+                  }
+                },
+                "leadingIndicators": { "type": "array", "items": { "type": "string" } },
+                "pmfMethodology": { "type": "string", "enum": ["sean_ellis_40", "retention_curve", "nps", "grr", "none"] },
+                "antiMetric": { "type": "string" },
+                "reportingCadence": { "type": "string", "enum": ["daily", "weekly", "monthly"] },
+                "thresholds": {
+                  "type": "object",
+                  "properties": {
+                    "week6": { "type": "object", "properties": { "good": { "type": "number" }, "great": { "type": "number" }, "bad": { "type": "number" } } },
+                    "month6": { "type": "object", "properties": { "good": { "type": "number" }, "great": { "type": "number" }, "bad": { "type": "number" } } },
+                    "month12": { "type": "object", "properties": { "good": { "type": "number" }, "great": { "type": "number" }, "bad": { "type": "number" } } }
+                  }
+                },
+                "wowMoment": { "type": "string" },
+                "disconfirmingEvidence": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "openUnknowns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pillar", "question_id", "question", "blocking", "reason"],
+        "properties": {
+          "pillar": { "type": "string" },
+          "question_id": { "type": "string" },
+          "question": { "type": "string" },
+          "suggestedDefault": { "type": "string" },
+          "blocking": { "type": "boolean" },
+          "reason": { "type": "string", "enum": ["founder_doesnt_know", "deferred_3x", "rubric_clamp", "operator_force_close"] }
+        }
+      }
+    },
+    "rubricScores": {
+      "type": "object",
+      "required": ["perPillarCoverage", "dimensions", "aggregateScore"],
+      "properties": {
+        "perPillarCoverage": {
+          "type": "object",
+          "patternProperties": {
+            "^B(1[0-6]|[1-9])$": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "dimensions": {
+          "type": "object",
+          "properties": {
+            "specificity": { "type": "number", "minimum": 1, "maximum": 5 },
+            "internalConsistency": { "type": "number", "minimum": 1, "maximum": 5 },
+            "decisionDensity": { "type": "number", "minimum": 1, "maximum": 5 },
+            "buildability": { "type": "number", "minimum": 1, "maximum": 5 },
+            "scopeFiniteness": { "type": "number", "minimum": 1, "maximum": 5 },
+            "audienceFocus": { "type": "number", "minimum": 1, "maximum": 5 },
+            "riskAwareness": { "type": "number", "minimum": 1, "maximum": 5 },
+            "marketEvidence": { "type": "number", "minimum": 1, "maximum": 5 },
+            "horizonDiscipline": { "type": "number", "minimum": 1, "maximum": 5 },
+            "investability": { "type": "number", "minimum": 1, "maximum": 5 }
+          }
+        },
+        "aggregateScore": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "criticPass": {
+      "type": "object",
+      "properties": {
+        "recommendation": { "type": "string", "enum": ["meeting", "pass_kind", "pass_no_note"] },
+        "top5DecisionFactors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "factor": { "type": "string" },
+              "quote": { "type": "string" },
+              "sentiment": { "type": "string", "enum": ["positive", "negative"] }
+            }
+          }
+        },
+        "meetingQuestions": { "type": "array", "items": { "type": "string" } },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "issue": { "type": "string" },
+              "planSection": { "type": "string" },
+              "severity": { "type": "string", "enum": ["blocker", "major", "minor"] }
+            }
+          }
+        },
+        "ranAtTurn": { "type": "integer" },
+        "passNumber": { "type": "integer", "minimum": 1, "maximum": 2 }
+      }
+    },
+    "operatorDecisionsLog": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "turn": { "type": "integer" },
+          "responderRole": { "type": "string", "enum": ["founder", "operator", "customer"] },
+          "decisionField": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "section": {
+      "type": "object",
+      "required": ["content", "confidence", "decisionedAtTurn"],
+      "properties": {
+        "content": { "type": "string", "minLength": 120, "description": "Narrative, minimum 120 words." },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 100 },
+        "decisionedAtTurn": { "type": "integer" },
+        "horizonDecomposition": {
+          "type": "object",
+          "properties": {
+            "mvp": { "type": "array", "items": { "type": "string" } },
+            "oneYear": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string" },
+                  "gatedOn": { "type": "string" }
+                }
+              }
+            },
+            "fiveYear": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "structured": { "type": "object" },
+        "rationale": { "type": "array", "items": { "type": "string" } },
+        "citations": { "type": "array", "items": { "$ref": "#/$defs/citation" } },
+        "operatorNotes": { "type": "array", "items": { "type": "string" } },
+        "pillarsCovered": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "citation": {
+      "type": "object",
+      "required": ["url", "title"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "title": { "type": "string" },
+        "fetchedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
