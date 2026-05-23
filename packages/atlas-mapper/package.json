@@ -1,0 +1,20 @@
+{
+  "name": "@chiefaia/atlas-mapper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Atlas core mapping algorithm — pure-logic engine for bidirectional DOM<->ticket mapping over RenderableDesign trees. DOM ID generation, hierarchical mapping APIs, and v1/v2 structural diff. No UI, no network, no LLM calls.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chiefaia/ticket-template": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
