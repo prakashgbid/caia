@@ -1,0 +1,52 @@
+{
+  "name": "@caia/state-machine",
+  "version": "0.1.0",
+  "description": "Typed pipeline-status finite-state machine for CAIA projects. Postgres-backed, with optimistic concurrency, atomic worker assignment, and LISTEN/NOTIFY → SSE realtime.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./states": {
+      "import": "./dist/states.js",
+      "types": "./dist/states.d.ts"
+    },
+    "./transitions": {
+      "import": "./dist/transitions.js",
+      "types": "./dist/transitions.d.ts"
+    },
+    "./test-support": {
+      "import": "./dist/test-support.js",
+      "types": "./dist/test-support.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
