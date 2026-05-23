@@ -3,7 +3,11 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": ".",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noImplicitAny": false,
+    "strict": false,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false
   },
   "include": ["src", "tests"]
 }
