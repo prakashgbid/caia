@@ -1,0 +1,21 @@
+{
+  "name": "@caia/architect-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SpecialistArchitect interface, BaseArchitect abstract class, shared types (ArchitectInput/Output, Ticket, BusinessPlan, RenderableDesign, TenantContext), precedence ladder, ArchitectRegistry with dependency-graph helpers, and the `caia-architect-new` scaffolder CLI. Every one of the 17 EA-phase architect packages depends on this kit.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "bin": {
+    "caia-architect-new": "./bin/caia-architect-new.mjs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
