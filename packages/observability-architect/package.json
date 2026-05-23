@@ -1,0 +1,38 @@
+{
+  "name": "@caia/observability-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Observability Architect — architect #9 of CAIA's 17-architect EA fan-out. Owns the `observability.*` slice of `tickets.architecture` (loggingStrategy, errorTrackingProvider, tracingStrategy, metricsEmitted, slis, slos, alertingRules, dashboardSpec, runbookReferences). Senior SRE/observability engineer focused on logs/metrics/traces/alerts. Produces per-ticket observability specs aligned with @chiefaia/tracing + @chiefaia/metrics + @chiefaia/logger. Does NOT write component code or backend logic — it specifies what gets logged, what metrics are emitted, what alerts fire. Depends on Backend Architect's `apiEndpoints` + `errorEnvelope`. Spawns Claude via @chiefaia/claude-spawner (subscription-only).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
