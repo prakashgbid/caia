@@ -1,0 +1,18 @@
+{
+  "ventureName": "Prakash Tiwari Studio",
+  "oneLiner": "Bespoke artist session booking for the Prakash Tiwari portrait studio.",
+  "audience": "High-intent prospective sitters in the artist's metropolitan area.",
+  "goals": [
+    "Drive contact-form submissions",
+    "Project warm + grounded brand voice",
+    "Rank for \"portrait artist <city>\""
+  ],
+  "brandVoice": "warm + grounded",
+  "brandKind": "person",
+  "constraints": ["No third-party fonts beyond next/font defaults"],
+  "brandImage": "https://cdn.prakash-tiwari.com/og/prakash-tiwari-1200x630.jpg",
+  "sameAs": [
+    "https://instagram.com/prakashtiwari",
+    "https://linkedin.com/in/prakashtiwari"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "name": "@caia/seo-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SEO Architect — architect #4 of CAIA's 17-architect EA fan-out. Owns the `seo.*` slice of `tickets.architecture` (schemaOrgJsonLd, canonicalUrl, metaTags, ogTags, twitterCard, sitemapEntry, robotsDirective, keywordTargets, pageType). Senior SEO engineer focused on schema.org JSON-LD + canonical URLs + sitemap discipline. Produces per-page SEO specs that validate against Google's Rich Results format. Does NOT write component code (Frontend) or backend endpoints (Backend). Spawns Claude via @chiefaia/claude-spawner (subscription-only). Mirrors the Frontend Architect canonical template (PR #537).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

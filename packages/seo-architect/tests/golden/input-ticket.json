@@ -1,0 +1,18 @@
+{
+  "id": "ticket-pt-page-001",
+  "type": "Page",
+  "scope": "page",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "Page emits valid schema.org JSON-LD that passes Google Rich Results.",
+    "Canonical URL is absolute and HTTPS.",
+    "OG image is exactly 1200×630.",
+    "Title length is 50–60 chars; description 140–160 chars."
+  ],
+  "business_requirements": {
+    "title": "Prakash Tiwari — Artist",
+    "description": "Hero page for the Prakash Tiwari portrait studio. Functions as the artist's primary search-landing surface.",
+    "canonicalPath": "/"
+  },
+  "quality_tags": ["seo"]
+}
