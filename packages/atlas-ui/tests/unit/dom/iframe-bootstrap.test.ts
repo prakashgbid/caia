@@ -23,6 +23,7 @@ function record(): Recorder {
       messages.push(e.data);
     }
   };
+  // nosemgrep: javascript.browser.security.insufficient-postmessage-origin-validation.insufficient-postmessage-origin-validation — Test harness: we record all messages to validate the bridge's wire protocol; the real consumer is `createBridge` which DOES enforce origin via `expectedOrigin`. The test is intentionally permissive so we can assert what the bootstrap posts.
   window.addEventListener('message', handler);
   return {
     messages,

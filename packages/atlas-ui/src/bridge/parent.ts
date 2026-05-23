@@ -173,6 +173,7 @@ export function createBridge(opts: CreateBridgeOptions): AtlasBridge {
     // For sandbox=allow-scripts (no allow-same-origin) the iframe's
     // origin is opaque; targetOrigin must be `"*"`. This is safe
     // because sandboxed iframes can't read parent state regardless.
+    // nosemgrep: javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration — Spec §1.3: same as bootstrap.ts. The iframe is sandboxed; its origin is opaque ('null'), so targetOrigin must be '*' for the message to be delivered. Inbound message validation happens in `handleMessage` via `originMatches`.
     target.postMessage(msg, '*');
   }
 

@@ -113,6 +113,7 @@ export function installIframeBridge(
   function postToParent(msg: unknown): void {
     try {
       // Sandboxed iframes have opaque origins; parent must accept "*".
+      // nosemgrep: javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration — Spec §1.3: sandboxed iframes have opaque origins ('null'); targetOrigin must be '*'. The iframe runs sandbox='allow-scripts' WITHOUT 'allow-same-origin' and therefore cannot access parent state.
       win.parent.postMessage(msg, '*');
     } catch {
       // Cross-origin parent access can throw in degenerate test
