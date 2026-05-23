@@ -1,0 +1,20 @@
+{
+  "name": "@caia/ea-reviewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Critic-style audit for the composed tickets.architecture JSONB. Runs three deterministic lenses (completeness, consistency, correctness) plus an LLM-judge for acceptance-criteria correctness. Emits {decision: 'ea-complete-verified' | 'ea-rejected', rerunArchitects, advisories}. The dispatcher consumes rerunArchitects to re-run only the named subset (max 3 iterations per ticket).",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
