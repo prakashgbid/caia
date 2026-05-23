@@ -1,0 +1,17 @@
+{
+  "id": "ticket-pt-001",
+  "type": "Widget",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "Hero CTA \"Book session\" is keyboard-reachable in <2 Tab presses from page load.",
+    "On <640px viewports, portrait stacks above bio text.",
+    "All design tokens trace back to the intake IR; no invented values.",
+    "Reduced-motion users see no animation on hover."
+  ],
+  "business_requirements": {
+    "title": "Artist hero bio widget",
+    "description": "Above-the-fold hero block for the artist profile page — portrait photo, name, tagline, primary CTA (\"Book session\"), secondary CTA (\"View portfolio\")."
+  },
+  "quality_tags": ["ui", "a11y"]
+}
