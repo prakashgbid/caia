@@ -1,0 +1,18 @@
+{
+  "id": "ticket-pt-002",
+  "type": "Form",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "Submitting the contact form persists a contacts row in the tenant schema.",
+    "Tenant isolation: tenant A cannot read tenant B's contacts even with SQL injection.",
+    "GDPR delete: when a user account is deleted, their contacts rows are anonymised within 30 days.",
+    "Email uniqueness is enforced per tenant.",
+    "A Postgres GIN index exists on the contacts.payload JSONB column."
+  ],
+  "business_requirements": {
+    "title": "Contact form persistence",
+    "description": "Schema, indexes, and RLS for the contact form on the artist profile page. One row per submission; tenant-scoped; queryable by id, by tenant (paginated), and by email."
+  },
+  "quality_tags": ["persists", "database", "gdpr"]
+}

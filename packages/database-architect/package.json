@@ -1,0 +1,39 @@
+{
+  "name": "@caia/database-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Database Architect — architect #3 of CAIA's 17-architect EA fan-out. Owns the `database.*` slice of `tickets.architecture` (engine, tables, columns, indexes, migrations, relationships, rlsPolicies, tenantIsolationStrategy, dataLifecycle, jsonbShapes, queryHints). Senior DBA / data architect focused on Postgres 16 + Drizzle/Prisma migrations + per-tenant schema isolation. Reads Backend Architect's `apiEndpoints` to know what data needs to be persisted. Does NOT write API endpoints (Backend owns those) or UI (Frontend owns that). Spawns Claude via @chiefaia/claude-spawner (subscription-only). Mirrors the @caia/frontend-architect template.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/frontend-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
