@@ -1,6 +1,6 @@
 ---
 name: interviewer-playbook
-description: "The CAIA Interviewer Agent's startup-consultant playbook. Load this skill at the start of every interview session. It provides 16 consultant pillars, ~110 sub-categories, and ~400 open-ended question variants, with explicit horizon tags (MVP / 1yr / 5yr / nice), decision-mode tags (DECIDE / DEFER), Mom-Test-compliant phrasing, and consultant-grade methodologies (TAM/SAM/SOM, Porter's Five Forces, Jobs-to-be-Done, premortem, van Westendorp pricing, three-horizon scope fence). Use this skill whenever you are conducting a founder-discovery interview, building a business plan from a founder conversation, ranking questions, deciding what to ask next, or evaluating a plan's investor-grade quality. This skill IS your method — not a reference manual."
+description: "The CAIA Interviewer Agent's startup-consultant playbook. Load this skill at the start of every interview session. It provides 16 consultant pillars, ~110 sub-categories, and 364 open-ended question variants, with explicit horizon tags (MVP / 1yr / 5yr / nice), decision-mode tags (DECIDE / DEFER), Mom-Test-compliant phrasing, and consultant-grade methodologies (TAM/SAM/SOM, Porter's Five Forces, Jobs-to-be-Done, premortem, van Westendorp pricing, three-horizon scope fence). Use this skill whenever you are conducting a founder-discovery interview, building a business plan from a founder conversation, ranking questions, deciding what to ask next, or evaluating a plan's investor-grade quality. This skill IS your method — not a reference manual."
 version: "2.0.0"
 license: Proprietary
 ---
@@ -922,25 +922,25 @@ See `examples.md` for three end-to-end traces (fictional startup → opening tur
 
 | Pillar | Questions | Weight | Required (DECIDE) | Deferrable (DEFER) |
 |---|---:|---:|---:|---:|
-| B.1 Business Model & Monetization | 24 | 1.2 | 21 | 3 |
-| B.2 Market Opportunity & Sizing | 26 | 1.3 | 23 | 3 |
+| B.1 Business Model & Monetization | 24 | 1.2 | 20 | 4 |
+| B.2 Market Opportunity & Sizing | 26 | 1.3 | 24 | 2 |
 | B.3 Customer, ICP & Persona | 28 | 1.3 | 24 | 4 |
-| B.4 Competitive Landscape | 24 | 1.1 | 22 | 2 |
-| B.5 Problem Definition & UVP | 22 | 1.4 | 20 | 2 |
-| B.6 Solution Scope & MVP Definition | 24 | 1.5 | 22 | 2 |
-| B.7 Product Roadmap & Three-Horizon | 20 | 1.2 | 18 | 2 |
+| B.4 Competitive Landscape | 24 | 1.1 | 23 | 1 |
+| B.5 Problem Definition & Value Proposition | 22 | 1.4 | 20 | 2 |
+| B.6 Solution Scope & MVP Definition | 24 | 1.5 | 21 | 3 |
+| B.7 Product Roadmap & Three-Horizon Vision | 20 | 1.2 | 18 | 2 |
 | B.8 Technical Architecture & Stack | 24 | 1.0 | 22 | 2 |
-| B.9 Scale, Performance & Reliability | 18 | 0.9 | 16 | 2 |
-| B.10 Brand, Voice & Visual Identity | 22 | 0.9 | 19 | 3 |
-| B.11 Content, SEO & Growth | 24 | 0.9 | 17 | 7 |
-| B.12 Finance, Capital & Unit Economics | 26 | 1.2 | 18 | 8 |
-| B.13 Operations, Team & Hiring | 20 | 0.9 | 12 | 8 |
-| B.14 Legal, Compliance & IP | 26 | 1.0 | 18 | 8 |
-| B.15 Risk, Premortem & Kill Criteria | 20 | 0.9 | 14 | 6 |
-| B.16 Success Metrics & North Star | 16 | 1.1 | 14 | 2 |
-| **Total** | **364** | — | **280** | **84** |
+| B.9 Scale, Performance & Reliability | 18 | 0.9 | 15 | 3 |
+| B.10 Brand, Voice & Visual Identity | 22 | 0.9 | 18 | 4 |
+| B.11 Content, SEO & Growth | 24 | 0.9 | 16 | 8 |
+| B.12 Finance, Capital & Unit Economics | 26 | 1.2 | 20 | 6 |
+| B.13 Operations, Team & Hiring | 20 | 0.9 | 13 | 7 |
+| B.14 Legal, Compliance & IP | 26 | 1.0 | 21 | 5 |
+| B.15 Risk, Premortem & Kill Criteria | 20 | 0.9 | 15 | 5 |
+| B.16 Success Metrics & North Star | 16 | 1.1 | 16 | 0 |
+| **Total** | **364** | — | **306** | **58** |
 
-364 unique question variants. Mix: ~77% MVP-horizon, ~18% 1yr-horizon, ~4% 5yr-horizon, ~1% nice-to-have. Mix: ~77% DECIDE, ~23% DEFER.
+364 unique question variants. Horizon mix: ~66% MVP, ~27% 1yr, ~3% 5yr, ~3% nice. Decision-mode mix: ~84% DECIDE, ~16% DEFER.
 
 ---
 
