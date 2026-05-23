@@ -6,7 +6,7 @@
  * prakash-tiwari extracted ZIP.
  */
 
-import type { RenderableDesign } from '@chiefaia/atlas-mapper';
+import type { RenderableDesign } from '../../src/renderable-design.js';
 
 export function baseDesign(): RenderableDesign {
   return {

@@ -32,7 +32,7 @@
  * No LLM calls. No network beyond Postgres + the supplied BYOC adapter.
  */
 
-import type { RenderableDesign, RenderableAsset } from '@chiefaia/atlas-mapper';
+import type { RenderableDesign, RenderableAsset } from './renderable-design.js';
 import type { BYOCBlobAdapter } from './byoc-adapter.js';
 import { SnapshotterError } from './errors.js';
 import { hashValue, sha256 } from './hash.js';

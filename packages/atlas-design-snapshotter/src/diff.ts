@@ -22,7 +22,7 @@ import type {
   RenderableCopy,
   RenderableInteractivity,
   RenderableDesignTokens,
-} from '@chiefaia/atlas-mapper';
+} from './renderable-design.js';
 import { canonicalJson } from './hash.js';
 
 // ----- Output shape ------------------------------------------------------

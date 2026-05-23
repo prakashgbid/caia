@@ -26,7 +26,6 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@chiefaia/atlas-mapper": "workspace:*",
     "pg": "^8.13.0",
     "zod": "^3.23.8"
   },

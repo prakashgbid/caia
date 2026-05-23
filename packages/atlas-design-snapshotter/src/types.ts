@@ -5,7 +5,7 @@
  * have a single import surface for the contract.
  */
 
-import type { RenderableDesign } from '@chiefaia/atlas-mapper';
+import type { RenderableDesign } from './renderable-design.js';
 import type { DesignDiff, DiffSummary } from './diff.js';
 
 export type { RenderableDesign };
