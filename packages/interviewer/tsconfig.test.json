@@ -1,0 +1,9 @@
+{
+  "extends": "@chiefaia/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "resolveJsonModule": true
+  },
+  "include": ["src", "tests"]
+}

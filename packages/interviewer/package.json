@@ -1,0 +1,58 @@
+{
+  "name": "@caia/interviewer",
+  "version": "0.1.0",
+  "description": "CAIA Interviewer Agent — conversational state machine, question generator, business-plan accumulator, and Series-Seed VC critic that converges a founder's grand-idea into an investor-grade BusinessPlanV2 in 30-50 turns.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./test-support": {
+      "types": "./dist/test-support.d.ts",
+      "default": "./dist/test-support.js"
+    },
+    "./playbook": {
+      "types": "./dist/playbook-loader.d.ts",
+      "default": "./dist/playbook-loader.js"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations",
+    "skills/playbook"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run -c vitest.integration.config.ts",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@chiefaia/claude-spawner": "workspace:*",
+    "pg": "^8.13.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "@types/pg": "^8.11.6",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
