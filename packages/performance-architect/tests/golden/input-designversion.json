@@ -1,0 +1,55 @@
+{
+  "versionId": "design-pt-v3-2026-05-22",
+  "snapshotUri": "s3://atlas/designs/design-pt-v3-2026-05-22.png",
+  "anchors": [
+    {
+      "anchorId": "hero",
+      "kind": "section",
+      "bbox": { "x": 0, "y": 0, "w": 1440, "h": 720 },
+      "meta": { "variant": "hero", "breakpoints": ["sm", "md", "lg", "xl"] }
+    },
+    {
+      "anchorId": "hero-portrait",
+      "kind": "image",
+      "bbox": { "x": 80, "y": 80, "w": 480, "h": 600 },
+      "meta": { "aspect": "4/5" }
+    },
+    {
+      "anchorId": "hero-title",
+      "kind": "heading",
+      "bbox": { "x": 600, "y": 120, "w": 700, "h": 80 },
+      "meta": { "level": 1 }
+    },
+    {
+      "anchorId": "hero-tagline",
+      "kind": "text",
+      "bbox": { "x": 600, "y": 220, "w": 700, "h": 60 }
+    },
+    {
+      "anchorId": "hero-cta-primary",
+      "kind": "button",
+      "bbox": { "x": 600, "y": 320, "w": 200, "h": 56 },
+      "meta": { "variant": "primary" }
+    },
+    {
+      "anchorId": "hero-cta-secondary",
+      "kind": "button",
+      "bbox": { "x": 820, "y": 320, "w": 200, "h": 56 },
+      "meta": { "variant": "secondary" }
+    }
+  ],
+  "tokens": {
+    "color.brand.primary": "#0f3057",
+    "color.brand.accent": "#e8c547",
+    "color.text.body": "#1f1f1f",
+    "color.bg.canvas": "#f7f5ef",
+    "space.4": "16px",
+    "space.8": "32px",
+    "space.16": "64px",
+    "radius.md": "8px",
+    "radius.lg": "12px",
+    "type.display.size": "48px",
+    "type.body.size": "16px"
+  },
+  "breakpoints": ["sm", "md", "lg", "xl"]
+}
