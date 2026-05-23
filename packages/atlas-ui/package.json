@@ -1,0 +1,83 @@
+{
+  "name": "@caia/atlas-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Atlas UI — React + Next.js + Tailwind + shadcn/ui split-screen surface for the Atlas module (CAIA Step 6). Renders the bidirectional ticket-to-design mapping over @chiefaia/atlas-mapper outputs. No backend, no LLM calls.",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./bridge": {
+      "types": "./dist/src/bridge/index.d.ts",
+      "default": "./dist/src/bridge/index.js"
+    },
+    "./iframe-bootstrap": {
+      "types": "./dist/iframe-bridge/bootstrap.d.ts",
+      "default": "./dist/iframe-bridge/bootstrap.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures/index.d.ts",
+      "default": "./dist/fixtures/index.js"
+    },
+    "./styles.css": "./src/styles/atlas.css"
+  },
+  "files": [
+    "dist",
+    "src/styles",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:a11y": "playwright test tests/e2e/axe.spec.ts",
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build -o storybook-static",
+    "clean": "rm -rf dist storybook-static playwright-report test-results"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "@chiefaia/atlas-mapper": "workspace:*"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@playwright/test": "^1.48.0",
+    "@storybook/addon-a11y": "^8.3.0",
+    "@storybook/addon-essentials": "^8.3.0",
+    "@storybook/addon-interactions": "^8.3.0",
+    "@storybook/react": "^8.3.0",
+    "@storybook/react-vite": "^8.3.0",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.3.4",
+    "http-server": "^14.1.1",
+    "jsdom": "^25.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "storybook": "^8.3.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
