@@ -1,0 +1,17 @@
+{
+  "id": "ticket-pt-001",
+  "type": "Widget",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "CTA clicks emit cookieless events captured without consent gate.",
+    "No PII (email, phone, name) appears in any event payload.",
+    "Conversion funnel from page_view → cta_clicked → booking_started is defined.",
+    "DNT + GPC signals trigger auto-deny with no banner shown."
+  ],
+  "business_requirements": {
+    "title": "Artist hero bio widget",
+    "description": "Above-the-fold hero block for the artist profile page — portrait photo, name, tagline, primary CTA (\"Book session\"), secondary CTA (\"View portfolio\"). Primary goal: drive booking conversions."
+  },
+  "quality_tags": ["ui", "analytics", "privacy"]
+}

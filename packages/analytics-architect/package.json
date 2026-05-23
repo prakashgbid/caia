@@ -1,0 +1,38 @@
+{
+  "name": "@caia/analytics-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Analytics Architect — architect #8 of CAIA's 17-architect EA fan-out. Owns the `analytics.*` slice of `tickets.architecture` (provider, eventTaxonomy, userIdentificationStrategy, funnelDefinitions, consentMode, consentGatingRules, noPiiRule, privacyCompliance, conversionGoals, dashboardLinks, dataTrackAttributes, sessionStrategy, customDimensions, dataResidencyRequirements). Senior analytics engineer focused on privacy-compliant tracking, cookieless analytics, and event-taxonomy design. Produces per-ticket analytics specs. Does NOT write component code or backend logic. DOES specify which events fire from each component and what they capture. Depends on Frontend Architect's `componentTree` + `interactionStates`. Spawns Claude via @chiefaia/claude-spawner (subscription-only).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
