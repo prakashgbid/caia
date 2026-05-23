@@ -1,0 +1,66 @@
+{
+  "architectName": "backend",
+  "architectureFields": {
+    "backend.framework": { "name": "next", "version": "15.x", "runtime": "edge+node" },
+    "backend.apiEndpoints": [
+      {
+        "method": "POST",
+        "path": "/api/contacts",
+        "op": "create",
+        "requestSchema": "ContactCreate",
+        "responseSchema": "Contact",
+        "persistsTo": "contacts"
+      },
+      {
+        "method": "GET",
+        "path": "/api/contacts/:id",
+        "op": "read",
+        "responseSchema": "Contact",
+        "readsFrom": "contacts"
+      },
+      {
+        "method": "GET",
+        "path": "/api/contacts",
+        "op": "list",
+        "responseSchema": "ContactList",
+        "readsFrom": "contacts"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/contacts/:id",
+        "op": "delete",
+        "deletesFrom": "contacts"
+      }
+    ],
+    "backend.endpointEnumeration": [
+      { "route": "POST /api/contacts", "table": "contacts", "op": "insert" },
+      { "route": "GET /api/contacts/:id", "table": "contacts", "op": "select-by-pk" },
+      { "route": "GET /api/contacts", "table": "contacts", "op": "select-by-tenant" },
+      { "route": "DELETE /api/contacts/:id", "table": "contacts", "op": "delete-by-pk" }
+    ],
+    "backend.dataAccess": {
+      "orm": "drizzle",
+      "tables": ["contacts"],
+      "queries": {
+        "contacts": ["by-id", "by-tenant-paginated", "by-email"]
+      }
+    },
+    "backend.businessRules": [
+      "Contact email must be unique within tenant",
+      "Contact submission emits a contact.created domain event"
+    ]
+  },
+  "confidence": 0.85,
+  "notes": "Fake Backend upstream for Database Architect golden test.",
+  "dependencies": [],
+  "risks": [],
+  "toolCalls": [],
+  "spend": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "usdCost": 0,
+    "wallClockMs": 0,
+    "model": "sonnet"
+  },
+  "status": "ok"
+}

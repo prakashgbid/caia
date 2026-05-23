@@ -1,0 +1,16 @@
+{
+  "versionId": "design-pt-v3-2026-05-22",
+  "snapshotUri": "s3://atlas/designs/design-pt-v3-2026-05-22.png",
+  "anchors": [
+    {
+      "anchorId": "contact-form",
+      "kind": "form",
+      "bbox": { "x": 0, "y": 800, "w": 1440, "h": 480 },
+      "meta": { "fields": ["name", "email", "message"] }
+    }
+  ],
+  "tokens": {
+    "color.brand.primary": "#0f3057"
+  },
+  "breakpoints": ["sm", "md", "lg", "xl"]
+}
