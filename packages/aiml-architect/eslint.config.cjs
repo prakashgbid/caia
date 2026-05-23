@@ -1,5 +1,5 @@
 // @ts-check
-// ESLint v9 flat config — same shape as siblings.
+// ESLint v9 flat config — same shape as the other architect packages.
 // Run: pnpm lint  (== eslint src tests)
 
 const tseslint = require('typescript-eslint');

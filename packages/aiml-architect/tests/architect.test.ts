@@ -1,95 +1,106 @@
+/**
+ * `AIMLArchitect` — interface compliance tests.
+ *
+ * Verifies the class adheres to `SpecialistArchitect` per spec §1.1 and
+ * satisfies SpecialistArchitect structurally. Mirrors the canonical
+ * compliance suite from @caia/frontend-architect.
+ */
+
 import { describe, it, expect } from 'vitest';
 
-import { AIMLArchitect } from '../src/architect.js';
+import type { SpecialistArchitect } from '../src/types.js';
+
 import {
-  buildFakeAdapterRegistry,
-  buildFakeCurator,
-  buildFakeFs,
-  buildFakeMentor,
-  fixedClock
-} from './helpers/fakes.js';
+  AIMLArchitect,
+  AIML_ARCHITECT_NAME,
+  AIML_ARCHITECT_TOOLS
+} from '../src/architect.js';
+import { AIMLArchitectContract } from '../src/contract.js';
+import { buildFakeInput, fakeGoldenSpawner } from './helpers/fakes.js';
 
-describe('AIMLArchitect (integration)', () => {
-  const clock = fixedClock('2026-05-06T12:00:00Z');
-
-  it('exposes config()', () => {
-    const a = new AIMLArchitect({
-      apprenticeEvalSuiteRoot: '/fake/suites',
-      mentor: buildFakeMentor([]),
-      curator: buildFakeCurator([]),
-      adapterRegistry: buildFakeAdapterRegistry([]),
-      fs: buildFakeFs({}),
-      clock
-    });
-    expect(a.config().apprenticeEvalSuiteRoot).toBe('/fake/suites');
+describe('AIMLArchitect — SpecialistArchitect interface compliance', () => {
+  it('exports a class that can be instantiated without args', () => {
+    const a = new AIMLArchitect();
+    expect(a).toBeInstanceOf(AIMLArchitect);
   });
 
-  it('selectModel returns a choice', () => {
-    const a = new AIMLArchitect({
-      mentor: buildFakeMentor([]),
-      curator: buildFakeCurator([]),
-      adapterRegistry: buildFakeAdapterRegistry([]),
-      fs: buildFakeFs({}),
-      clock
-    });
-    const c = a.selectModel({
-      taskCategory: 'commit-message',
-      contextSizeTokens: 500,
-      qualityBar: 'standard'
-    });
-    expect(c.provider).toBeTruthy();
+  it('satisfies SpecialistArchitect structurally', () => {
+    const a = new AIMLArchitect();
+    expect(typeof a.run).toBe('function');
+    expect(typeof a.systemPrompt).toBe('function');
+    expect(a.sectionContract).toBeTruthy();
   });
 
-  it('reviewPromptPattern returns a result', () => {
-    const a = new AIMLArchitect({
-      mentor: buildFakeMentor([]),
-      curator: buildFakeCurator([]),
-      adapterRegistry: buildFakeAdapterRegistry([]),
-      fs: buildFakeFs({}),
-      clock
-    });
-    const r = a.reviewPromptPattern({
-      templateId: 'x',
-      template: 'You are a classifier.',
-      intendedTaskCategory: 'domain-classification'
-    });
-    expect(r.score).toBeGreaterThanOrEqual(0);
-    expect(r.score).toBeLessThanOrEqual(1);
+  it('exposes a stable `name` matching the V2 brief', () => {
+    const a = new AIMLArchitect();
+    expect(a.name).toBe('ai-ml');
+    expect(a.name).toBe(AIML_ARCHITECT_NAME);
   });
 
-  it('coordinateApprenticeLoop returns a verdict', () => {
-    const a = new AIMLArchitect({
-      mentor: buildFakeMentor([]),
-      curator: buildFakeCurator([]),
-      adapterRegistry: buildFakeAdapterRegistry([]),
-      fs: buildFakeFs({}),
-      clock
-    });
-    const p = a.coordinateApprenticeLoop();
-    expect(['retrain', 'hold', 'promote-canary', 'rollback']).toContain(p.decision);
+  it('exposes `sectionContract` that equals the exported contract', () => {
+    const a = new AIMLArchitect();
+    expect(a.sectionContract).toBe(AIMLArchitectContract);
   });
 
-  it('generateConventionsDoc returns markdown', () => {
-    const a = new AIMLArchitect({
-      mentor: buildFakeMentor([]),
-      curator: buildFakeCurator([]),
-      adapterRegistry: buildFakeAdapterRegistry([]),
-      fs: buildFakeFs({}),
-      clock
-    });
-    expect(a.generateConventionsDoc()).toContain('# AI/ML Architecture');
+  it('sectionContract.architectName matches `name` (registry-invariant)', () => {
+    const a = new AIMLArchitect();
+    expect(a.sectionContract.architectName).toBe(a.name);
   });
 
-  it('ownEvalSuite returns suite-not-found when path missing', () => {
-    const a = new AIMLArchitect({
-      canonicalSuitePath: '/missing.yaml',
-      mentor: buildFakeMentor([]),
-      curator: buildFakeCurator([]),
-      adapterRegistry: buildFakeAdapterRegistry([]),
-      fs: buildFakeFs({}),
-      clock
-    });
-    const s = a.ownEvalSuite();
-    expect(s.integrityIssues[0]!.kind).toBe('suite-not-found');
+  it('exposes empty `tools` array per V1 brief', () => {
+    const a = new AIMLArchitect();
+    expect(a.tools).toBe(AIML_ARCHITECT_TOOLS);
+    expect(a.tools).toEqual([]);
+    expect(a.tools.length).toBe(0);
+  });
+
+  it('`systemPrompt()` is a pure function (identical output every call)', () => {
+    const a = new AIMLArchitect();
+    const p1 = a.systemPrompt();
+    const p2 = a.systemPrompt();
+    const p3 = a.systemPrompt();
+    expect(p1).toBe(p2);
+    expect(p2).toBe(p3);
+  });
+
+  it('`systemPrompt()` returns a non-empty string', () => {
+    const a = new AIMLArchitect();
+    const p = a.systemPrompt();
+    expect(typeof p).toBe('string');
+    expect(p.length).toBeGreaterThan(100);
+  });
+
+  it('satisfies the `SpecialistArchitect` interface (structural)', () => {
+    const a = new AIMLArchitect();
+    const view: SpecialistArchitect = a;
+    expect(view.name).toBeTruthy();
+    expect(view.sectionContract).toBeTruthy();
+    expect(typeof view.systemPrompt).toBe('function');
+    expect(typeof view.run).toBe('function');
+    expect(Array.isArray(view.tools)).toBe(true);
+  });
+
+  it('`run()` returns a Promise<ArchitectOutput>', async () => {
+    const { fn: spawner } = fakeGoldenSpawner();
+    const a = new AIMLArchitect({ spawner });
+    const result = a.run(buildFakeInput());
+    expect(result).toBeInstanceOf(Promise);
+    const out = await result;
+    expect(out.architectName).toBe('ai-ml');
+  });
+
+  it('constructor accepts an injected spawner (test seam)', async () => {
+    const { fn: spawner, calls } = fakeGoldenSpawner();
+    const a = new AIMLArchitect({ spawner });
+    await a.run(buildFakeInput());
+    expect(calls.length).toBe(1);
+  });
+
+  it('constructor with no spawner falls back to the default (smoke check, no real spawn)', () => {
+    // Just instantiating should not error. We do NOT call run() here
+    // because that would invoke the real claude binary.
+    const a = new AIMLArchitect();
+    expect(a).toBeInstanceOf(AIMLArchitect);
+    expect(typeof a.systemPrompt).toBe('function');
   });
 });

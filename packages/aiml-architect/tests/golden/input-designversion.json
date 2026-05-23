@@ -1,0 +1,13 @@
+{
+  "versionId": "design-pt-v3-2026-05-22",
+  "snapshotUri": "s3://atlas/designs/design-pt-v3-2026-05-22.png",
+  "anchors": [
+    { "anchorId": "inbox-list", "kind": "list" },
+    { "anchorId": "inbox-row-label", "kind": "badge" }
+  ],
+  "tokens": {
+    "color.brand.primary": "#0f3057",
+    "color.brand.accent": "#e8c547"
+  },
+  "breakpoints": ["sm", "md", "lg", "xl"]
+}

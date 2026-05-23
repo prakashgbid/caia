@@ -169,7 +169,7 @@ export function canonicalContractSet(): readonly ArchitectSectionContract[] {
       dependsOn: ['frontend'],
       precedenceLevel: 10,
     }),
-    makeContract('aiml', ['aiml.model', 'aiml.evalSuite'], {
+    makeContract('ai-ml', ['aiml.model', 'aiml.evalSuite'], {
       dependsOn: ['backend'],
       precedenceLevel: 13,
     }),

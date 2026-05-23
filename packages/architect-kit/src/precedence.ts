@@ -41,7 +41,7 @@ export const CANONICAL_PRECEDENCE_LADDER: readonly ArchitectName[] = [
   'analytics', // compliance-sensitive (consent gating)
   'database', // schema correctness
   'backend', // functional correctness
-  'aiml', // cost/quality tradeoffs
+  'ai-ml', // cost/quality tradeoffs
   'frontend', // visual fidelity — below a11y/seo/perf
   'timeMachine', // operator-facing; not safety-critical
   'uxVersionControl', // operator-facing; not safety-critical

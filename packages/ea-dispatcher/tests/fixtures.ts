@@ -193,7 +193,7 @@ export function seventeenArchitectSet(): readonly MockArchitect[] {
     { name: 'a11y', paths: ['a11y.wcagLevel', 'a11y.keyboardSpec'], deps: ['frontend'], prec: 3 },
     { name: 'performance', paths: ['performance.lighthouseTargets'], deps: ['frontend'], prec: 5 },
     { name: 'analytics', paths: ['analytics.provider', 'analytics.eventTaxonomy'], deps: ['frontend'], prec: 10 },
-    { name: 'aiml', paths: ['aiml.model'], deps: ['backend'], prec: 13 },
+    { name: 'ai-ml', paths: ['aiml.model'], deps: ['backend'], prec: 13 },
     { name: 'observability', paths: ['observability.logShape', 'observability.metricsExport'], deps: ['backend', 'frontend'], prec: 9 },
     { name: 'security', paths: ['security.authnFlow', 'security.cspPolicy'], deps: ['backend', 'database'], prec: 1 },
     { name: 'apiGateway', paths: ['apiGateway.rateLimit', 'apiGateway.errorEnvelope'], deps: ['backend', 'security'], prec: 8 },

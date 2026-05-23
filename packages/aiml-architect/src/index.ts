@@ -1,88 +1,95 @@
 /**
- * @chiefaia/aiml-architect — public surface.
+ * @caia/aiml-architect — public surface.
+ *
+ * Architect #7 of CAIA's 17-architect EA fan-out. Senior AI/ML engineer
+ * focused on prompt patterns + model selection + eval rigor for LLM
+ * applications. Mirrors `@caia/frontend-architect` as the canonical V1
+ * template.
+ *
+ * Two-layer surface:
+ *   - The class + contract — what the EA Dispatcher consumes.
+ *   - Re-exports of run/spawner/validation/invariants for tests + the
+ *     conformance suite.
+ *
+ * Registration: import this package's default `registerWith()` helper
+ * to install the architect on a registry. The package does NOT
+ * self-register on import (registration is an explicit operator action
+ * that the Dispatcher's boot wires up).
  */
 
-export { AIMLArchitect } from './architect.js';
+import { ArchitectRegistry } from './types.js';
+
+import { AIMLArchitect } from './architect.js';
+
+// Main exports — the Dispatcher imports these.
+export {
+  AIMLArchitect,
+  AIML_ARCHITECT_NAME,
+  AIML_ARCHITECT_TOOLS
+} from './architect.js';
+export type { AIMLArchitectConfig } from './architect.js';
 
 export {
-  resolveConfig,
-  expandHome,
-  type AIMLArchitectConfig,
-  type ResolvedAIMLArchitectConfig
-} from './config.js';
+  AIMLArchitectContract,
+  AIML_OWNED_SECTIONS,
+  AIML_OWNED_FIELD_KEYS,
+  AIML_FIELD_FIX_HINTS,
+  AIML_ARCHITECT_META,
+  aimlArchitectAppliesPredicate
+} from './contract.js';
 
-export { defaultFsReader } from './fs-reader.js';
-export { createDefaultMentorReader } from './mentor-bridge.js';
-export { createDefaultCuratorReader } from './curator-bridge.js';
-export { createDefaultAdapterRegistry } from './adapter-registry.js';
+export { buildAimlSystemPrompt } from './system-prompt.js';
 
-export { selectModel } from './select-model.js';
-export { reviewPromptPattern } from './review-prompt-pattern.js';
-export { ownEvalSuite } from './own-eval-suite.js';
-export { coordinateApprenticeLoop } from './coordinate-apprentice-loop.js';
+// Spawner — exposed so the EA Dispatcher (or tests) can inject a custom one.
 export {
-  loadCanonicalSuite,
-  SuiteLoadError,
-  type CanonicalSuite,
-  type CanonicalSuiteAssertion,
-  type CanonicalSuiteTest
-} from './eval-suite-loader.js';
-export { generateConventionDoc } from './convention-doc-generator.js';
-
-export {
-  PROMPT_PATTERN_RULES,
-  scoreFromFindings,
-  type PromptPatternRule,
-  type PromptCheckInput
-} from './knowledge/prompt-patterns.js';
-export {
-  detectSignals,
-  decideDspyCompile,
-  type DspyCompileSignals,
-  type DspyCompileVerdict
-} from './knowledge/dspy-heuristics.js';
-export {
-  ASSERTION_TYPES,
-  getAssertionRouting,
-  type AssertionTypeDescriptor,
-  type AssertionRouting
-} from './knowledge/eval-methodology.js';
-export {
-  checkForgetting,
-  type ForgettingViolation,
-  type ForgettingCheckInput
-} from './knowledge/forgetting-prevention.js';
-export {
-  decideModel,
-  type DecideModelInput,
-  type LocalModel,
-  type RoutingRule
-} from './knowledge/model-routing-decision-tree.js';
-
+  createDefaultSpawner,
+  buildSpawnPrompt,
+  modelTagFor
+} from './spawner.js';
 export type {
-  AdapterRegistryEntry,
-  AdapterRegistryReader,
-  CoordinateDecision,
-  CostSignal,
-  CuratorFinding,
-  CuratorReader,
-  EvalIssue,
-  EvalIssueKind,
-  EvalSuite,
-  FailureSignal,
-  FallbackEntry,
-  FindingSeverity,
-  FsReader,
-  Hardware,
-  MentorEventRecord,
-  MentorReader,
-  ModelChoice,
-  PromptFinding,
-  PromptPatternKind,
-  Provider,
-  QualityBar,
-  ReviewPromptPatternParams,
-  ReviewResult,
-  SelectModelParams,
-  TrainingPlan
+  ArchitectSpawnerFn,
+  ArchitectSpawnInput,
+  ArchitectSpawnOutput
+} from './spawner.js';
+
+// Run + validation — exposed for the conformance test suite.
+export { runAimlArchitect, buildUserPrompt } from './run.js';
+export type { RunDeps } from './run.js';
+
+export { validateArchitectOutput, stripFences } from './validation.js';
+export type { ValidationError, ValidationResult } from './validation.js';
+
+// Invariants — exposed for the EA Reviewer's registry.
+export { AIML_INVARIANTS } from './invariants.js';
+export type { ArchitectInvariant, InvariantSeverity } from './invariants.js';
+
+// Re-export the canonical kit types so consumers have a single import surface.
+export type {
+  SpecialistArchitect,
+  ArchitectInput,
+  ArchitectOutput,
+  ArchitectUpstreamContext,
+  ArchitectBudget,
+  ArchitectSpend,
+  ArchitectToolCall,
+  ReviewerFeedback,
+  Ticket,
+  BusinessPlan,
+  RenderableDesign,
+  TenantContext,
+  ToolDefinition,
+  ArchitectSectionContract,
+  ArchitectSectionSpec,
+  ArchitectMeta,
+  FanoutPolicy
 } from './types.js';
+
+/**
+ * Register a fresh AIMLArchitect on the given registry. The Dispatcher's
+ * boot wiring calls this in its `registry.ts` per spec §7.1.
+ */
+export function registerWith(registry: ArchitectRegistry): AIMLArchitect {
+  const architect = new AIMLArchitect();
+  registry.register(architect);
+  return architect;
+}
