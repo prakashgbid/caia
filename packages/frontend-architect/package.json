@@ -1,0 +1,40 @@
+{
+  "name": "@caia/frontend-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Frontend Architect — architect #1 of CAIA's 17-architect EA fan-out. Owns the `frontend.*` slice of `tickets.architecture` (componentTree, propsContract, stateModel, designTokenReferences, a11yNotesForUI, routingNotes, interactionStates, framework, componentLibrary, stateMgmt, routeConfig, tokens, breakpoints, a11yFloor, motionPreference). Senior frontend engineer focused on Next.js 15 + React + Tailwind + shadcn/ui. Produces JSX skeletons that match the design's component boundaries. Does NOT write database code, API endpoints, or test specs. Spawns Claude via @chiefaia/claude-spawner (subscription-only). This package is the canonical template the other 16 architect packages follow.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
