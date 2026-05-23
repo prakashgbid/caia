@@ -1,0 +1,27 @@
+{
+  "name": "@caia/secrets-adapter",
+  "version": "0.1.0",
+  "description": "Adapter contract for CAIA multi-tenant secrets backends. Restored stub package.json to satisfy workspace resolution; original source was missing on disk.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "echo 'no-op (prebuilt dist)'",
+    "typecheck": "echo 'no-op'",
+    "test": "echo 'no-op'"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
