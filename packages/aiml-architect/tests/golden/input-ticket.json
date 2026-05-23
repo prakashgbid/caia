@@ -1,0 +1,17 @@
+{
+  "id": "ticket-pt-aiml-001",
+  "type": "Story",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "Each incoming inquiry email is classified as one of: prospect|press|spam|other.",
+    "Classifier latency is < 800ms p95.",
+    "No PII in logs — only the inquiry-id, label, and confidence.",
+    "Failed classifications fall back to \"other\" without blocking the inbox."
+  ],
+  "business_requirements": {
+    "title": "Auto-tag incoming inquiry emails",
+    "description": "Run a Claude classifier over each new email arriving at hello@prakash-tiwari.com. Label each email so the operator inbox view can group by category. The classifier returns {label, confidence} per email; the operator sees the label as a badge in the inbox UI."
+  },
+  "quality_tags": ["ai", "ml"]
+}
