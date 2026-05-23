@@ -1,0 +1,19 @@
+{
+  "id": "ticket-pt-bk-001",
+  "type": "Widget",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "POST /api/contacts persists a contacts row in the tenant schema.",
+    "Request body validated with Zod (name 1-200 chars, RFC-5321 email, message 1-5000 chars).",
+    "Response is the canonical Contact JSON with id, tenantId, createdAt.",
+    "Validation failures return 422 with the canonical error envelope.",
+    "Tenant-scoped routes require a Cloudflare Access JWT issued by the tenant's configured issuer.",
+    "Rate-limited at 10 req/min per IP for the public submit path."
+  ],
+  "business_requirements": {
+    "title": "Contact form submission API",
+    "description": "POST endpoint that accepts a name/email/message contact submission from the public Artist profile page, validates it with Zod, persists to the contacts table, and returns the canonical Contact response. Includes paginated list + by-id read + delete for the operator dashboard."
+  },
+  "quality_tags": ["api", "backend", "persists"]
+}
