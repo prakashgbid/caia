@@ -1,0 +1,38 @@
+{
+  "name": "@caia/backend-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend Architect — architect #2 of CAIA's 17-architect EA fan-out. Owns the `backend.*` slice of `tickets.architecture` (framework, serviceBoundaries, apiEndpoints, requestSchemas, responseSchemas, errorEnvelope, validationRules, authRequirements, rateLimits, dataAccess, businessRules). Senior backend engineer focused on Next.js Route Handlers + Server Actions + TypeScript + Zod + REST/RPC patterns + OpenAPI specs. Produces tight API endpoint specs the coding worker can implement. Does NOT write frontend components or database migrations. Spawns Claude via @chiefaia/claude-spawner (subscription-only). Mirrors the @caia/frontend-architect template.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
