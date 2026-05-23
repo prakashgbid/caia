@@ -1,0 +1,101 @@
+{
+  "architectName": "frontend",
+  "architectureFields": {
+    "frontend.framework": { "name": "next", "version": "15.x", "router": "app" },
+    "frontend.componentLibrary": {
+      "name": "shadcn/ui",
+      "tailwindVersion": "3.x",
+      "radixVersion": "1.x"
+    },
+    "frontend.stateMgmt": {
+      "default": "server",
+      "clientStore": "zustand",
+      "forms": "react-hook-form"
+    },
+    "frontend.routeConfig": {
+      "segment": "app/artists/[slug]",
+      "layoutSegment": "app/artists",
+      "loadingBoundary": true,
+      "errorBoundary": true,
+      "dynamicSegments": ["[slug]"]
+    },
+    "frontend.tokens": {
+      "color.brand.primary": "#0f3057",
+      "color.brand.accent": "#e8c547",
+      "color.text.body": "#1f1f1f",
+      "color.bg.canvas": "#f7f5ef",
+      "space.4": "16px",
+      "space.8": "32px",
+      "space.16": "64px",
+      "radius.md": "8px",
+      "radius.lg": "12px",
+      "type.display.size": "48px",
+      "type.body.size": "16px"
+    },
+    "frontend.breakpoints": ["sm", "md", "lg", "xl"],
+    "frontend.a11yFloor": {
+      "hero-cta-primary": { "element": "button", "tabOrder": 1, "focusTrap": false },
+      "hero-cta-secondary": { "element": "button", "tabOrder": 2, "focusTrap": false }
+    },
+    "frontend.motionPreference": {
+      "reducedMotionGate": true,
+      "gateThresholdMs": 200,
+      "alwaysOnAnimations": []
+    },
+    "frontend.componentTree": [
+      {
+        "id": "hero",
+        "kind": "section",
+        "propsContractRef": "hero",
+        "children": [
+          { "id": "hero-portrait", "kind": "Image", "propsContractRef": "hero-portrait" },
+          { "id": "hero-title", "kind": "h1", "propsContractRef": "hero-title" },
+          { "id": "hero-tagline", "kind": "p", "propsContractRef": "hero-tagline" },
+          {
+            "id": "hero-cta-primary",
+            "kind": "Button",
+            "propsContractRef": "hero-cta-primary"
+          },
+          {
+            "id": "hero-cta-secondary",
+            "kind": "Button",
+            "propsContractRef": "hero-cta-secondary"
+          }
+        ]
+      }
+    ],
+    "frontend.interactionStates": {
+      "hero-cta-primary": {
+        "hover": "darker brand fill",
+        "focus": "visible ring",
+        "active": "inset shadow",
+        "error": "n/a",
+        "empty": "n/a",
+        "loading": "inline spinner replacing label",
+        "disabled": "50% opacity, no pointer events"
+      },
+      "hero-cta-secondary": {
+        "hover": "darker accent fill",
+        "focus": "visible ring",
+        "active": "inset shadow",
+        "error": "n/a",
+        "empty": "n/a",
+        "loading": "inline spinner replacing label",
+        "disabled": "50% opacity, no pointer events"
+      }
+    }
+  },
+  "confidence": 0.88,
+  "notes": "Frontend golden output for prakash-tiwari hero widget.",
+  "dependencies": [],
+  "risks": [],
+  "toolCalls": [],
+  "spend": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "usdCost": 0,
+    "wallClockMs": 0,
+    "model": "sonnet"
+  },
+  "status": "ok"
+}

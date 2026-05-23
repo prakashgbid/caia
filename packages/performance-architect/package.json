@@ -1,0 +1,38 @@
+{
+  "name": "@caia/performance-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Performance Architect — architect #6 of CAIA's 17-architect EA fan-out. Owns the `performance.*` slice of `tickets.architecture` (coreWebVitalsBudgets, bundleSizeBudget, imageOptimizationPlan, fontOptimizationPlan, lazyLoadStrategy, cacheStrategy, criticalRenderPath, lighthouseBudgets). Senior frontend performance engineer focused on Core Web Vitals (LCP/FID/CLS/INP), Lighthouse budgets, bundle analysis, image/font optimization, and cache strategy. Produces per-ticket performance specs. Does NOT write component code (Frontend Architect's job) but DOES specify perf budgets the build must enforce. Depends on Frontend Architect's `componentTree` + `tokens` + `framework`. Spawns Claude via @chiefaia/claude-spawner (subscription-only).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
