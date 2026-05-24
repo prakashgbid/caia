@@ -1,0 +1,18 @@
+{
+  "id": "ticket-pt-014",
+  "type": "Page",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "Every deploy of /artists/[slug] is snapshotted before traffic flips.",
+    "Operator can revert the page to any of the last 90 days of snapshots in one CLI invocation.",
+    "Revert is forward-creating: a revert is itself a new snapshot at the chain tip.",
+    "Audit trail records who reverted, when, and from/to snapshot keys.",
+    "GDPR delete on a booking_requests row anonymizes the matching snapshot field; never hard-deletes the snapshot."
+  ],
+  "business_requirements": {
+    "title": "Artist booking page with rollback",
+    "description": "The /artists/[slug] page is the conversion surface for prakash-tiwari.com. Operators must be able to safely roll back a broken deploy without losing the historical chain. Time Machine wires snapshot + revert into the deploy pipeline."
+  },
+  "quality_tags": ["versioned", "rollback"]
+}
