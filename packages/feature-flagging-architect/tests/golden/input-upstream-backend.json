@@ -1,0 +1,30 @@
+{
+  "architectName": "backend",
+  "architectureFields": {
+    "backend.apiEndpoints": [
+      {
+        "method": "POST",
+        "path": "/api/v1/bookings",
+        "purpose": "Create a booking — drives payment authorization."
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/bookings/[id]",
+        "purpose": "Fetch a booking by id."
+      }
+    ]
+  },
+  "confidence": 0.85,
+  "notes": "Two endpoints: POST creates + auths payment, GET reads.",
+  "dependencies": [],
+  "risks": [],
+  "toolCalls": [],
+  "spend": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "usdCost": 0,
+    "wallClockMs": 0,
+    "model": "sonnet"
+  },
+  "status": "ok"
+}
