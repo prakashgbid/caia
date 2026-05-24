@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.activation-steward-hourly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/opt/node@22/bin/node</string>
+        <string>/Users/macbook32/Documents/projects/caia/packages/activation-steward/bin/activation-steward-run</string>
+        <string>--quiet</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/activation-steward.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/activation-steward.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/macbook32</string>
+        <!--
+          ACTIVATION_STEWARD_TEMPO_URL is intentionally left unset by default.
+          Until Task A7 (Tempo + Pyrra K3s deploy, per spec §12) lands, the
+          steward runs with NullBackend and emits no-telemetry.warning
+          events. Set this to e.g. http://localhost:3200 or the K3s ingress
+          to engage real attestation. The cron writes JSONL to
+          ~/.caia/activation-steward/runs.jsonl regardless.
+        -->
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macbook32/Documents/projects/caia/packages/activation-steward</string>
+
+    <!--
+      Throttle launchd's "respawn too fast" guard. A full run with a
+      Tempo backend is bounded by 5s/query × N callpaths; expect well
+      under 60s even at scale.
+    -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Nice</key>
+    <integer>10</integer>
+</dict>
+</plist>
