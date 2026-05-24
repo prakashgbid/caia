@@ -1,0 +1,41 @@
+{
+  "name": "@caia/security-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Security Architect — architect #10 of CAIA's 17-architect EA fan-out. Owns the `security.*` slice of `tickets.architecture` (authenticationStrategy, authorizationRules, secretsHandling, owaspMitigations, securityHeaders, inputValidation, rateLimitingRules, auditLogRequirements, tenantIsolationGuarantees). Senior security engineer focused on OWASP top-10 + auth (OAuth/JWT/Cloudflare Access) + secrets (forward-reference to @caia/secrets-adapter) + multi-tenant isolation (per-tenant Postgres schema isolation + scoped credentials). Depends on Backend Architect + Database Architect upstream. Per the EA Dispatcher precedence ladder Security holds rank 1 — its outputs win every semantic conflict short of operator override. Does NOT write component code or backend logic; specifies how every endpoint is authenticated, authorized, rate-limited, and audited. Spawns Claude via @chiefaia/claude-spawner (subscription-only) with Sonnet default.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/backend-architect": "workspace:*",
+    "@caia/database-architect": "workspace:*",
+    "@caia/frontend-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
