@@ -2,6 +2,12 @@
  * @caia/state-machine — typed pipeline status manager backed by Postgres.
  *
  * Public surface. Everything else stays internal.
+ *
+ * The package now hosts TWO entity FSMs:
+ *   1. `StateMachine` (the original project FSM, project-state-centric)
+ *   2. `SolutionLifecycleMachine` (the Real Definition-of-Done FSM
+ *      for the solution-lifecycle described in
+ *      `research/real_definition_of_done_enforcement_2026.md`).
  */
 
 export {
@@ -81,3 +87,18 @@ export type {
   WaitingReason,
   WhatsNextResult,
 } from './whats-next.js';
+
+// -- EA Review Entity (per research/ea_agent_operational_framework_2026.md §7) ---
+export {
+  EA_REVIEW_STATES,
+  EA_VALID_TRANSITIONS,
+  EA_TERMINAL_STATES,
+  isEaReviewState,
+  isEaTerminal,
+  canEaTransition,
+  eaAllEdges,
+  eaEventTypeFor,
+  defenderIterationStateFor
+} from './ea-review-entity.js';
+export type { EaReviewState } from './ea-review-entity.js';
+

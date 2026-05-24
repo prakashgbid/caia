@@ -1679,12 +1679,6 @@ importers:
         specifier: workspace:*
         version: link:../claude-spawner
     devDependencies:
-      '@caia/ea-plan-reviewer':
-        specifier: workspace:*
-        version: link:../ea-plan-reviewer
-      '@caia/plan-defender':
-        specifier: workspace:*
-        version: link:../plan-defender
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.39

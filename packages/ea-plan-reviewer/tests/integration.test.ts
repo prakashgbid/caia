@@ -19,7 +19,7 @@ import {
   EaPlanReviewer,
   StubRoundOneAdapter,
   type RoundOneOutput
-} from '@caia/ea-plan-reviewer';
+} from '../src/index.js';
 import {
   PlanDefenderSpawner,
   StubResponder,
@@ -27,13 +27,13 @@ import {
   type DefenderAnswer
 } from '@caia/plan-defender';
 
-import { EaCoordinator } from '../src/coordinator.js';
-import { SignoffComposer } from '../src/signoff-composer.js';
-import type {
-  CoordinatorPlanSubmission,
-  PlanReviewerAdapter,
-  SubAgentVerdict
-} from '../src/coordinator-types.js';
+import {
+  EaCoordinator,
+  SignoffComposer,
+  type CoordinatorPlanSubmission,
+  type PlanReviewerAdapter,
+  type SubAgentVerdict
+} from '@caia/ea-architect';
 
 const REAL_REPO = join(homedir(), 'Documents', 'projects', 'caia-ea');
 const REAL_MEMORY = join(homedir(), 'Documents', 'projects', 'agent-memory');
