@@ -1,0 +1,197 @@
+{
+  "outputs": {
+    "backend": {
+      "architectName": "backend",
+      "architectureFields": {
+        "backend.framework": {
+          "name": "next",
+          "version": "15.x",
+          "runtime": "edge+node",
+          "handlerStyle": "app-router-route-handlers+server-actions"
+        },
+        "backend.apiEndpoints": [
+          {
+            "method": "POST",
+            "path": "/v1/contacts",
+            "op": "createContact",
+            "requestSchemaRef": "ContactCreate",
+            "responseSchemaRef": "Contact",
+            "persistsTo": [
+              "contacts"
+            ],
+            "auth": {
+              "scheme": "public"
+            },
+            "rateLimit": {
+              "windowMs": 60000,
+              "max": 10,
+              "scope": "ip"
+            }
+          },
+          {
+            "method": "GET",
+            "path": "/v1/contacts",
+            "op": "listContacts",
+            "responseSchemaRef": "ContactList",
+            "readsFrom": [
+              "contacts"
+            ],
+            "auth": {
+              "scheme": "jwt-bearer"
+            },
+            "rateLimit": {
+              "windowMs": 60000,
+              "max": 60,
+              "scope": "tenant"
+            }
+          }
+        ],
+        "backend.authRequirements": {
+          "default": "cloudflare-access",
+          "perEndpoint": {
+            "POST /v1/contacts": {
+              "scheme": "public"
+            },
+            "GET /v1/contacts": {
+              "scheme": "jwt-bearer",
+              "issuer": "caia",
+              "scopes": [
+                "contacts:read"
+              ]
+            }
+          }
+        },
+        "backend.rateLimits": {
+          "default": {
+            "windowMs": 60000,
+            "max": 60,
+            "scope": "tenant"
+          },
+          "perEndpoint": {
+            "POST /v1/contacts": {
+              "windowMs": 60000,
+              "max": 10,
+              "scope": "ip"
+            }
+          }
+        },
+        "backend.errorEnvelope": {
+          "schema": {
+            "error": {
+              "code": "string",
+              "message": "string",
+              "details": "object?",
+              "requestId": "string"
+            }
+          },
+          "examples": [
+            {
+              "status": 400,
+              "body": {
+                "error": {
+                  "code": "INVALID_BODY",
+                  "message": "Invalid request body",
+                  "requestId": "req_…"
+                }
+              }
+            }
+          ],
+          "mapping": {
+            "ValidationError": {
+              "httpStatus": 400,
+              "code": "INVALID_BODY"
+            }
+          }
+        }
+      },
+      "confidence": 0.9,
+      "notes": "Backend fixture.",
+      "dependencies": [],
+      "risks": [],
+      "toolCalls": [],
+      "spend": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "usdCost": 0,
+        "wallClockMs": 0,
+        "model": "sonnet"
+      },
+      "status": "ok"
+    },
+    "security": {
+      "architectName": "security",
+      "architectureFields": {
+        "security.authenticationStrategy": {
+          "default": "cloudflare-access",
+          "perEndpoint": {
+            "POST /v1/contacts": {
+              "scheme": "public"
+            },
+            "GET /v1/contacts": {
+              "scheme": "jwt-bearer",
+              "issuer": "caia"
+            }
+          },
+          "sessionModel": {
+            "kind": "jwt",
+            "alg": "RS256",
+            "accessTtlSec": 900,
+            "refreshTtlSec": 2592000
+          }
+        },
+        "security.authorizationRules": {
+          "model": "rbac+abac",
+          "roles": [
+            "owner",
+            "admin",
+            "member",
+            "viewer"
+          ],
+          "denyByDefault": true
+        },
+        "security.rateLimitingRules": {
+          "perAuthTier": {
+            "public": {
+              "windowMs": 60000,
+              "max": 20
+            },
+            "authenticated": {
+              "windowMs": 60000,
+              "max": 60
+            },
+            "service": {
+              "windowMs": 60000,
+              "max": 600
+            }
+          },
+          "perEndpoint": {
+            "POST /v1/contacts": {
+              "windowMs": 60000,
+              "max": 10,
+              "scope": "ip",
+              "onLimit": {
+                "status": 429
+              }
+            }
+          }
+        }
+      },
+      "confidence": 0.9,
+      "notes": "Security fixture.",
+      "dependencies": [
+        "backend",
+        "database"
+      ],
+      "risks": [],
+      "toolCalls": [],
+      "spend": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "usdCost": 0,
+        "wallClockMs": 0,
+        "model": "sonnet"
+      },
+      "status": "ok"
+    }
+  }
+}
