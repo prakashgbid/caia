@@ -1,0 +1,41 @@
+{
+  "name": "@caia/testing-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Testing Architect — architect #16 of CAIA's 17-architect EA fan-out. Owns the `testing.*` slice of `tickets.architecture` (testingStrategy, testTypeMixPercentages, fixturesStrategy, mutationTestingThresholds, perfRegressionBudgets, e2ePatterns, coverageThresholds, flakeTolerance). Senior QA architect focused on testing STRATEGY: pyramid balance, fixture discipline, mutation testing thresholds, perf-regression budgets, Playwright conventions. Distinct from the Test Author Agent (writes test CASES per story) and the Test Reviewer Agent (audits the test set) — Testing Architect sets the strategy ONLY; it does NOT write test code. Depends on Frontend + Backend + Database architects upstream (reads what's testable). Precedence rank 17 per spec §5.2. Spawns Claude via @chiefaia/claude-spawner (subscription-only) with Sonnet default.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/backend-architect": "workspace:*",
+    "@caia/database-architect": "workspace:*",
+    "@caia/frontend-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

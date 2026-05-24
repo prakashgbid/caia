@@ -1,0 +1,21 @@
+{
+  "id": "ticket-pt-test-001",
+  "type": "Story",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "Submitting valid contact data writes a row to the contacts table.",
+    "Submitting invalid email shows the field-level error message.",
+    "Submit button is disabled while the request is in-flight.",
+    "After successful submission, the form clears and shows a success toast."
+  ],
+  "business_requirements": {
+    "title": "Contact form story",
+    "description": "End-to-end contact-form story spanning the frontend form widget, the POST /v1/contacts API, and the contacts table."
+  },
+  "quality_tags": [
+    "ui",
+    "api",
+    "persists"
+  ]
+}
