@@ -1,24 +1,61 @@
 /**
  * @caia/ea-architect — public surface.
  *
- * The EA Architect Agent is CAIA's platform-level approval gate. Every
- * future research / spec / implementation / architecture-change /
- * process-change plan goes through this agent BEFORE reaching the
- * operator. The agent reviews against the full EA Repository (ADRs,
- * principles, lessons, risk register, operator feedback memories) and
- * issues a structured ReviewOutcome.
+ * The EA Architect Agent began life (PR #556) as CAIA's platform-level
+ * approval gate — a single-pass critic that reviews any plan against the
+ * EA Repository (ADRs, principles, lessons, risk register, operator
+ * feedback memories) and issues a structured ReviewOutcome.
+ *
+ * After the operational-framework spec (research/ea_agent_operational_framework_2026.md),
+ * this same package now ALSO hosts the EA Coordinator role — the multi-
+ * sub-agent orchestrator that routes submissions to specialised sub-
+ * agents (@caia/ea-plan-reviewer, @caia/ea-ticket-auditor, etc.),
+ * aggregates verdicts per a precedence ladder, composes operator-facing
+ * sign-off documents, and emits state-machine transitions.
+ *
+ * Both APIs are exported. The single-pass `EaArchitectAgent` + `submitPlan`
+ * remain for backwards compatibility. New code should prefer
+ * `EaCoordinator` with sub-agent adapters wired via config.
  *
  * Distinct from `@caia/ea-reviewer`: that one audits per-ticket composed
  * architecture from the 17 specialist architects; this one audits
  * platform plans. See ADR-040 for the scope split.
- *
- * Subscription-only LLM use per P1 + P14 (no API key); reaches Claude
- * via `@chiefaia/claude-spawner`.
  */
 
+// -- Backwards-compat single-pass agent -------------------------------------
 export { EaArchitectAgent, submitPlan } from './agent.js';
 
-// Types — the contract callers depend on.
+// -- Coordinator (new in the operational framework) -------------------------
+export { EaCoordinator, ValidationFailure, type EaCoordinatorConfig } from './coordinator.js';
+export { ROUTING_TABLE, routeFor, involvesPlanReviewer } from './routing.js';
+export {
+  pickDominantVerdict,
+  aggregateVerdicts
+} from './aggregation.js';
+export {
+  SignoffComposer,
+  renderSignoffMarkdown,
+  computeReadTimeMinutes,
+  type SignoffComposerConfig,
+  type SignoffComposeInput
+} from './signoff-composer.js';
+export type {
+  CoordinatorPlanType,
+  CoordinatorPlanSubmission,
+  CoordinatorContextDump,
+  CoordinatorReviewOutcome,
+  CoordinatorValidationResult,
+  SubAgentId,
+  SubAgentVerdict,
+  PlanReviewerAdapter,
+  PlanReviewerAdapterInput,
+  TicketAuditorAdapter,
+  DocStewardAdapter,
+  ResearchConductorAdapter,
+  DriftSentinelAdapter
+} from './coordinator-types.js';
+
+// -- Types (existing) --------------------------------------------------------
 export type {
   PlanSubmission,
   PlanType,
@@ -51,7 +88,7 @@ export type {
   RelevantContext
 } from './types.js';
 
-// Sub-module exports for callers that want lower-level access.
+// -- Sub-module exports for callers that want lower-level access ------------
 export {
   loadRepository,
   selectRelevantContext,
@@ -99,26 +136,30 @@ export {
 export { defaultFsAdapter, InMemoryFsAdapter } from './fs-adapter.js';
 
 /**
- * Agent contract — register with @chiefaia/agent-contract-registry to
- * declare which sections the EA Architect Agent owns. Plan-submission
- * objects are not ticket sections per se (the registry's primary
- * consumer), but this declaration documents the API for the orchestrator.
- *
- * Format intentionally minimal to avoid coupling to the registry's
- * exact shape, which may evolve. Adapters can map this to the registry
- * format when integration lands.
+ * Agent contract — declares which sections this package emits / consumes.
+ * Extended for the Coordinator role.
  */
 export const EA_ARCHITECT_CONTRACT = Object.freeze({
   agentId: '@caia/ea-architect' as const,
-  role: 'platform-approval-gate' as const,
-  consumesEvents: ['ea-architect.submit-plan'] as const,
+  role: 'coordinator-and-platform-approval-gate' as const,
+  consumesEvents: [
+    'ea-architect.submit-plan',
+    'ea-coordinator.submit-plan'
+  ] as const,
   emitsEvents: [
     'ea-architect.review.pending',
     'ea-architect.review.revisions-requested',
     'ea-architect.review.approved',
     'ea-architect.review.conditional-approval',
     'ea-architect.review.rejected',
-    'ea-architect.review.escalated-to-operator'
+    'ea-architect.review.escalated-to-operator',
+    'ea-coordinator.routing',
+    'ea-coordinator.aggregating',
+    'ea-coordinator.signoff-ready',
+    'ea-coordinator.approved',
+    'ea-coordinator.conditional',
+    'ea-coordinator.rejected',
+    'ea-coordinator.escalated-to-operator'
   ] as const,
   artifacts: {
     reads: [
@@ -127,8 +168,15 @@ export const EA_ARCHITECT_CONTRACT = Object.freeze({
       'caia-ea/lessons-learned/**',
       'caia-ea/risk-register/**',
       'agent-memory/feedback_*.md',
-      'agent-memory/project_caia_*.md'
+      'agent-memory/project_caia_*.md',
+      'caia-ea/dialogues/*.jsonl'
     ],
-    writes: ['caia-ea/decisions/ADR-NNN-*.md', 'caia-ea/decisions/INDEX.md', 'agent-memory/INBOX.md']
+    writes: [
+      'caia-ea/decisions/ADR-NNN-*.md',
+      'caia-ea/decisions/INDEX.md',
+      'caia-ea/sign-offs/*.md',
+      'caia-ea/sign-offs/INDEX.md',
+      'agent-memory/INBOX.md'
+    ]
   }
 });

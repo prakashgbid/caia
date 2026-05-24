@@ -1,0 +1,38 @@
+{
+  "name": "@caia/ea-plan-reviewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EA Plan Reviewer — the primary EA review sub-agent under @caia/ea-architect (the Coordinator). Reads a submitted plan against the EA Repository (12 principles + 61+ ADRs + lessons + risks + operator feedback) and issues a structured PlanReviewVerdict (approved | approved-with-modifications | rejected | needs-clarification). When clarification is needed, drives a multi-turn dialogue against a per-submission @caia/plan-defender (the producing agent's faithful proxy) via the spawner's askQuestion API. Each round refines the verdict; hard 5-round cap per spec §3.6 forces a terminal verdict or operator escalation. Inherits @caia/ea-architect's critic prompt, repository loader, and hallucination guard — the same single-pass review is reused as the round-1 case of the iteration loop.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@caia/plan-defender": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

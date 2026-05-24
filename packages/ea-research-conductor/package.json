@@ -1,0 +1,37 @@
+{
+  "name": "@caia/ea-research-conductor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EA Research Conductor sub-agent — initiates EA-led research when a recurring problem surfaces. Frames the question, dispatches a research subagent via @chiefaia/claude-spawner, tracks the research in flight, and feeds the result back into the EA Repository as a new reference architecture / principle / lesson. Checks the EA Repository for existing research on the proposed topic before dispatching (dedup). Maintains research-log entries at caia-ea/research-log/<topic-slug>.md. Per spec §4.4: the Conductor is advisory in the precedence ladder — it never blocks an approval.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
