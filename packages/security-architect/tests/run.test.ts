@@ -11,12 +11,6 @@ import {
   goldenAssistantText, goldenExpectedOutput
 } from './helpers/fakes.js';
 
-const deps = () => ({
-  spawner: fakeGoldenSpawner().fn,
-  systemPrompt: buildSecuritySystemPrompt(),
-  architectName: SECURITY_ARCHITECT_NAME
-});
-
 describe('runSecurityArchitect — happy path', () => {
   it('produces an ArchitectOutput with the right architectName', async () => {
     const { fn: spawner } = fakeGoldenSpawner();
