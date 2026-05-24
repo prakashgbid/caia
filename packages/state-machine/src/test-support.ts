@@ -37,3 +37,10 @@ export const HAPPY_PATH: ReadonlyArray<[ProjectState, ProjectState]> = [
   ['deployed', 'verified'],
   ['verified', 'done'],
 ];
+
+// Re-export the solution-side test helpers so callers can `import { ... } from '@caia/state-machine/test-support'`.
+export {
+  buildInMemorySolutionMachine,
+  SOLUTION_HAPPY_PATH,
+  fakeAttestation,
+} from './entities/solution-test-support.js';

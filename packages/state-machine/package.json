@@ -1,7 +1,7 @@
 {
   "name": "@caia/state-machine",
-  "version": "0.1.0",
-  "description": "Typed pipeline-status finite-state machine for CAIA projects. Postgres-backed, with optimistic concurrency, atomic worker assignment, and LISTEN/NOTIFY → SSE realtime.",
+  "version": "0.2.0",
+  "description": "Typed pipeline-status FSM (project + solution-lifecycle entities) for CAIA. Postgres-backed, optimistic concurrency, atomic worker assignment, LISTEN/NOTIFY \u2192 SSE realtime. v0.2 adds the Solution lifecycle FSM for the Real Definition-of-Done (research/real_definition_of_done_enforcement_2026.md).",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
