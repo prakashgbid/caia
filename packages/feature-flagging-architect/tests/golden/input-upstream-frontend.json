@@ -1,0 +1,41 @@
+{
+  "architectName": "frontend",
+  "architectureFields": {
+    "frontend.componentTree": [
+      {
+        "id": "booking-shell",
+        "kind": "section",
+        "children": [
+          { "id": "booking-step-1", "kind": "Form" },
+          { "id": "booking-step-2", "kind": "Form" },
+          { "id": "booking-step-3", "kind": "Form" },
+          { "id": "booking-submit", "kind": "Button" }
+        ]
+      }
+    ],
+    "frontend.interactionStates": {
+      "booking-submit": {
+        "hover": "darker brand fill",
+        "focus": "visible ring",
+        "active": "inset shadow",
+        "error": "inline error message",
+        "empty": "n/a",
+        "loading": "spinner replacing label",
+        "disabled": "50% opacity"
+      }
+    }
+  },
+  "confidence": 0.9,
+  "notes": "Booking shell projected as a single section.",
+  "dependencies": [],
+  "risks": [],
+  "toolCalls": [],
+  "spend": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "usdCost": 0,
+    "wallClockMs": 0,
+    "model": "sonnet"
+  },
+  "status": "ok"
+}

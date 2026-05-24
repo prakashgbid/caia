@@ -1,0 +1,38 @@
+{
+  "name": "@caia/feature-flagging-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Feature Flagging Architect — architect #12 of CAIA's 17-architect EA fan-out. Owns the `featureFlags.*` slice of `tickets.architecture` (flagsSchema, rolloutStrategies, killSwitches, experimentationLinkage, auditRequirements). Senior platform engineer focused on feature-flagging best practices: per-environment defaults, audience targeting, percentage/canary/ring rollouts, instantly-toggleable kill switches, audit trail for every change, forward-references the A/B Testing Architect via experimentationLinkage. Specifies what gets toggleable, at what granularity, and what the rollout strategy is — does NOT write component code or backend logic. Depends on Frontend Architect's componentTree/interactionStates and Backend Architect's apiEndpoints to know what's flag-worthy. Spawns Claude via @chiefaia/claude-spawner (subscription-only). Follows the @caia/frontend-architect canonical template.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

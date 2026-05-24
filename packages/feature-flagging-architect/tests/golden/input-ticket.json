@@ -1,0 +1,17 @@
+{
+  "id": "ticket-pt-042",
+  "type": "Story",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "New booking flow ships behind a flag, default off in production.",
+    "Operator can roll out canary → 10% → 50% → 100% with auto-promote on clean error rate.",
+    "Kill switch flips in <30 seconds without a deploy.",
+    "Every flag toggle emits an audit log entry to default Cloudwatch sink."
+  ],
+  "business_requirements": {
+    "title": "New booking flow with A/B test",
+    "description": "Replace the legacy booking form with a streamlined three-step flow. Ship behind a feature flag; canary to 10% of tenants, observe completion rate vs. control, promote to 100% on win."
+  },
+  "quality_tags": ["flag", "rollout", "ab-test", "payments"]
+}

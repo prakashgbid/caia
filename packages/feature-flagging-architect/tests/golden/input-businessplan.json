@@ -1,0 +1,12 @@
+{
+  "ventureName": "Prakash Tiwari Studio",
+  "oneLiner": "Bespoke artist session booking for the Prakash Tiwari portrait studio.",
+  "audience": "High-intent prospective sitters in the artist's metropolitan area.",
+  "goals": [
+    "Drive booking completions",
+    "Reduce drop-off in the booking funnel",
+    "Validate the streamlined three-step variant via A/B test"
+  ],
+  "brandVoice": "warm + grounded",
+  "constraints": ["Must not break legacy booking links in customer emails"]
+}
