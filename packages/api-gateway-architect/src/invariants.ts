@@ -23,13 +23,19 @@ export interface ArchitectInvariant {
   detect(architecture: Readonly<Record<string, unknown>>): boolean;
 }
 
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function readField(arch: Readonly<Record<string, unknown>>, path: string): unknown {
   if (path in arch) return arch[path];
   const parts = path.split('.');
   let cursor: unknown = arch;
   for (const part of parts) {
     if (typeof cursor !== 'object' || cursor === null) return undefined;
-    cursor = (cursor as Record<string, unknown>)[part];
+    // Defence in depth: refuse to traverse into prototype-chain keys.
+    if (UNSAFE_KEYS.has(part)) return undefined;
+    cursor = Object.prototype.hasOwnProperty.call(cursor, part)
+      ? (cursor as Record<string, unknown>)[part]
+      : undefined;
   }
   return cursor;
 }
