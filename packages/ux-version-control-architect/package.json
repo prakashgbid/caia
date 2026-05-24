@@ -1,0 +1,38 @@
+{
+  "name": "@caia/ux-version-control-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UX Version Control Architect — architect #15 of CAIA's 17-architect EA fan-out. Owns the `uxVersionControl.*` slice of `tickets.architecture` (designVersionRetention, revertOperation, diffVisualizationSpec, branchingStrategy, auditTrail). Senior platform engineer focused on UX-asset version control + design-revert UX. Produces per-ticket UX-versioning specs that determine how this feature's design history is preserved. Distinct from the Time Machine Architect (#14) which owns CODE-level versioning; this architect owns DESIGN-level versioning. Does NOT write component code or backend logic. Spawns Claude via @chiefaia/claude-spawner (subscription-only). Generalizes the snapshot/revert pattern proven by @caia/atlas-design-snapshotter (PR #538) from a single uploader to ALL design uploads.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

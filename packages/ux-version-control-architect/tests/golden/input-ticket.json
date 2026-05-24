@@ -1,0 +1,19 @@
+{
+  "id": "ticket-pt-015",
+  "type": "Page",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "Every UX upload for /artists/[slug] is preserved forever in immutable R2 storage.",
+    "Operator can revert the page design to any past upload in one CLI invocation.",
+    "Design revert is forward-creating: a revert is itself a new design version at the chain tip.",
+    "Diff between any two design versions narrates as \"added X sections, modified Y widgets, removed Z anchors\".",
+    "Audit trail records who uploaded/reverted, when, versionId, parentVersionId, eventKind, and reason.",
+    "GDPR delete on a design-asset anonymizes the matching version field; never hard-deletes the version row."
+  ],
+  "business_requirements": {
+    "title": "Artist booking page with UX version control",
+    "description": "The /artists/[slug] page is the conversion surface for prakash-tiwari.com. Designers iterate on it weekly. UX Version Control preserves every uploaded design forever in immutable R2, supports forward-creating revert to any prior version, and renders semantic diffs across the five canonical layers (tree/token/copy/asset/interactivity)."
+  },
+  "quality_tags": ["versioned", "ux-version-control"]
+}
