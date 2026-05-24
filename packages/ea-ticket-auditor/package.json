@@ -1,0 +1,36 @@
+{
+  "name": "@caia/ea-ticket-auditor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EA Ticket Auditor sub-agent — the pre-architecture gate on whether a ticket is ready to enter the 17-architect composition pipeline. Distinct from both @caia/ea-reviewer (which audits the composed architecture from the 17 architects, post-fact) and @caia/ea-plan-reviewer (which reviews platform-level plans). The Auditor checks each ticket against the 15-point Definition of Done and ensures non-functional stories (perf, a11y, security, observability) exist explicitly under the parent epic. Returns pass / fail + a list of missing non-functional stories the Auditor recommends adding + an updated ticket-completeness score. Spawns its own Plan Defender only when the ticket's author session has closed (rare).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/plan-defender": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

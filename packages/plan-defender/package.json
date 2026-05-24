@@ -1,0 +1,36 @@
+{
+  "name": "@caia/plan-defender",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plan Defender — per-submission Claude Code subagent that acts as a faithful proxy for the original plan's author. Spawned by an EA sub-agent (typically @caia/ea-plan-reviewer) when the original producing agent's session has closed and a clarification question needs to be answered. Seeded with a structured PlanContextDump (the producer's reasoning trace + sources + decision points + alternatives + open questions), the Defender answers Reviewer questions with citations back to the original sources. Loops up to 5 rounds per submission; escalates to operator on (a) strategic-class questions, (b) producer-never-decided cases, or (c) three consecutive low-confidence answers. Read-only by construction (no Edit/Write/Bash) — defends reasoning, not conclusions. Persists the full back-and-forth as JSONL at caia-ea/dialogues/<submission-id>.jsonl, which becomes the audit-trail input to the EA sign-off document.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

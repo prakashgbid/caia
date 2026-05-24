@@ -2,7 +2,7 @@
   "name": "@caia/ea-architect",
   "version": "0.1.0",
   "private": true,
-  "description": "EA Architect Agent — the platform-level approval gate. Reviews every research / spec / implementation plan against CAIA's EA Repository (ADRs, principles, lessons-learned, risk register) BEFORE it reaches the operator. Distinct from @caia/ea-reviewer (which audits per-ticket composed architecture from the 17 architects); this one reviews PLATFORM-LEVEL plans (V3 plan changes, pipeline modifications, new packages, schema changes, security posture changes, process changes). Critic-style reasoning via @chiefaia/claude-spawner (subscription-only). Auto-files new ADRs on approval. Emits state-machine transitions for `ea-review-pending` → `ea-review-revisions-requested` → `ea-review-approved` | `ea-review-conditional-approval` | `ea-review-rejected` | `ea-review-escalated-to-operator`. Escalates to operator only for genuinely-strategic decisions (product pivots, billing-model changes, fundamental architecture reversals, security posture changes, anything affecting principles).",
+  "description": "EA Architect Agent \u2014 the platform-level approval gate. Reviews every research / spec / implementation plan against CAIA's EA Repository (ADRs, principles, lessons-learned, risk register) BEFORE it reaches the operator. Distinct from @caia/ea-reviewer (which audits per-ticket composed architecture from the 17 architects); this one reviews PLATFORM-LEVEL plans (V3 plan changes, pipeline modifications, new packages, schema changes, security posture changes, process changes). Critic-style reasoning via @chiefaia/claude-spawner (subscription-only). Auto-files new ADRs on approval. Emits state-machine transitions for `ea-review-pending` \u2192 `ea-review-revisions-requested` \u2192 `ea-review-approved` | `ea-review-conditional-approval` | `ea-review-rejected` | `ea-review-escalated-to-operator`. Escalates to operator only for genuinely-strategic decisions (product pivots, billing-model changes, fundamental architecture reversals, security posture changes, anything affecting principles).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -13,7 +13,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.json --watch",

@@ -1,0 +1,36 @@
+{
+  "name": "@caia/ea-drift-sentinel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EA Drift Sentinel sub-agent — subscribes to the event bus firehose, detects events whose payloads indicate a violation of an architecture principle / ADR / prior decision, and emits architecture.principle.violated events. Two-tier detection (mirrors the ea-architect critic pattern): tier 1 = deterministic regex / structural checks on event payloads (cheap, fast); tier 2 = LLM-reasoned checks invoked ONLY on tier-1 hits (bounds LLM spend at small fraction of overall framework cost). Escalates to operator via INBOX when severity warrants. Maintains an audit log at caia-ea/drift-log/<date>.jsonl.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/ea-architect": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

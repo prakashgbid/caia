@@ -1705,6 +1705,82 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
+  packages/ea-doc-steward:
+    dependencies:
+      '@caia/ea-architect':
+        specifier: workspace:*
+        version: link:../ea-architect
+      '@caia/plan-defender':
+        specifier: workspace:*
+        version: link:../plan-defender
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/ea-drift-sentinel:
+    dependencies:
+      '@caia/ea-architect':
+        specifier: workspace:*
+        version: link:../ea-architect
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/ea-plan-reviewer:
+    dependencies:
+      '@caia/ea-architect':
+        specifier: workspace:*
+        version: link:../ea-architect
+      '@caia/plan-defender':
+        specifier: workspace:*
+        version: link:../plan-defender
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/ea-research-conductor:
+    dependencies:
+      '@caia/ea-architect':
+        specifier: workspace:*
+        version: link:../ea-architect
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/ea-reviewer:
     dependencies:
       '@caia/architect-kit':
@@ -1719,6 +1795,22 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/ea-ticket-auditor:
+    dependencies:
+      '@caia/plan-defender':
+        specifier: workspace:*
+        version: link:../plan-defender
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/errors:
@@ -2461,6 +2553,22 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/plan-defender:
+    dependencies:
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/playwright-config:

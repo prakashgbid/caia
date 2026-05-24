@@ -1,0 +1,37 @@
+{
+  "name": "@caia/ea-doc-steward",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EA Documentation Steward sub-agent — auto-files ADRs from approved EA review verdicts, maintains EA Repository freshness, handles supersession (both sides + cycle detection), and keeps INDEX.md files current across decisions/, sign-offs/, and dialogues/. Inherits the existing @caia/ea-architect adr-writer machinery (writeNewAdr / applySupersessions / updateDecisionsIndex) and extends it with supersession-graph validation, scheduled freshness checks, and broader-than-ADR repository updates (lessons-learned, principles, risk-register). Runs synchronously after each Plan Reviewer approval and also on a daily schedule to detect stale ADRs and emit drift alerts.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@caia/plan-defender": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
