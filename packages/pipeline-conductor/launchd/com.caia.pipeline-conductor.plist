@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.caia.pipeline-conductor</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/macbook32/Documents/projects/caia/packages/pipeline-conductor/dist/projector-daemon.js</string>
+  </array>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>ThrottleInterval</key>
+  <integer>15</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/macbook32/Library/Logs/caia/conductor-projector.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/macbook32/Library/Logs/caia/conductor-projector.err.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PG_DSN</key>
+    <string>postgres://localhost:5432/caia</string>
+    <key>CONDUCTOR_POLICY_PATH</key>
+    <string>/Users/macbook32/Documents/projects/caia/packages/pipeline-conductor/config/escalation-policies.json</string>
+    <key>NODE_ENV</key>
+    <string>production</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/macbook32/Documents/projects/caia</string>
+</dict>
+</plist>

@@ -29,7 +29,8 @@ export type EventActor =
   | 'testing-agent'
   | 'release-agent'
   | 'story-validator'
-  | 'feature-registry-writer';
+  | 'feature-registry-writer'
+  | 'pipeline-conductor';
 
 /** Canonical envelope for every event emitted through the bus */
 export interface ConductorEvent {
@@ -547,7 +548,12 @@ export type EventType =
   | 'question.created' | 'question.answered'
   | 'requirement.created'
   // ─── Agent artifacts (DASH-204) ───────────────────────────────────────────
-  | 'artifact.draft_filed' | 'artifact.approved' | 'artifact.rejected' | 'artifact.superseded';
+  | 'artifact.draft_filed' | 'artifact.approved' | 'artifact.rejected' | 'artifact.superseded'
+  // ─── Pipeline Conductor (research/conductor_agent_spec_2026.md §4.3) ──────
+  | 'conductor.escalation.opened'
+  | 'conductor.escalation.closed'
+  | 'conductor.forecast.updated'
+  | 'conductor.pipeline-bottleneck.detected';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -671,6 +677,11 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'task.fix_applied': 'info',
   'task.tested_and_done': 'info',
   'task.fix_loop_escalated': 'error',
+  // ─── Pipeline Conductor ───────────────────────────────────────────────────
+  'conductor.escalation.opened': 'warning',
+  'conductor.escalation.closed': 'info',
+  'conductor.forecast.updated': 'info',
+  'conductor.pipeline-bottleneck.detected': 'warning',
 };
 
 /** All valid event type strings from the registry */
@@ -678,4 +689,38 @@ export const ALL_EVENT_TYPES: EventType[] = Object.keys(EVENT_SEVERITY) as Event
 
 export function isValidEventType(t: string): t is EventType {
   return t in EVENT_SEVERITY;
+}
+
+
+// ─── Pipeline Conductor ──────────────────────────────────────────────────────
+
+export interface ConductorEscalationOpenedPayload {
+  project_id: string;
+  stage: string;
+  reason: string;
+  threshold_seconds: number;
+  elapsed_seconds: number;
+  last_event_id?: string;
+}
+
+export interface ConductorEscalationClosedPayload {
+  escalation_id: string;
+  project_id: string;
+  resolution: 'resumed' | 'completed' | 'abandoned' | 'escalated-to-operator';
+}
+
+export interface ConductorForecastUpdatedPayload {
+  project_id: string;
+  stage: string;
+  p50_completion_at: string | null;
+  p90_completion_at: string | null;
+  sample_size: number;
+}
+
+export interface ConductorPipelineBottleneckDetectedPayload {
+  stage: string;
+  active_count: number;
+  stuck_count: number;
+  median_dwell_seconds: number;
+  recommended_action: 'scale-workers' | 'review-prompt' | 'escalate-to-architect' | 'none';
 }

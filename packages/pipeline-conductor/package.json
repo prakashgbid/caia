@@ -1,0 +1,64 @@
+{
+  "name": "@caia/pipeline-conductor",
+  "version": "0.1.0",
+  "description": "Pipeline Status Manager Agent — projector, watchdog, forecaster, Subagent surface for CAIA's 17-stage Build Pipeline.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./projector": {
+      "import": "./dist/projector.js",
+      "types": "./dist/projector.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    },
+    "./forecaster": {
+      "import": "./dist/forecaster.js",
+      "types": "./dist/forecaster.d.ts"
+    },
+    "./escalation-policies": {
+      "import": "./dist/escalation-policies.js",
+      "types": "./dist/escalation-policies.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations",
+    "config",
+    "launchd",
+    "scripts",
+    "src/subagent.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist",
+    "register-events": "node scripts/register-event-types.ts"
+  },
+  "dependencies": {
+    "pg": "^8.20.0",
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/event-bus-internal": "workspace:*",
+    "@chiefaia/events-taxonomy-internal": "workspace:*"
+  },
+  "devDependencies": {
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

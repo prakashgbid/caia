@@ -1,0 +1,6 @@
+{
+  "_comment_": "Operator-editable override for stage thresholds. Values in seconds. Missing stages inherit from DEFAULT_STAGE_THRESHOLDS in src/escalation-policies.ts. Per research/conductor_agent_spec_2026.md §10.1.",
+  "_example_": {
+    "coding-in-progress": { "dwell": 86400, "heartbeat": 1800 }
+  }
+}
