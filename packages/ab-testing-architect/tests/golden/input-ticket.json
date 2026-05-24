@@ -1,0 +1,22 @@
+{
+  "id": "ticket-pt-ab-001",
+  "type": "Widget",
+  "scope": "story",
+  "parent_id": null,
+  "experimental": true,
+  "quality_tags": ["ui", "analytics", "ab-test", "experiment"],
+  "acceptance_criteria": [
+    "Treatment CTA copy lifts booking_started conversion by ≥5% relative vs. control.",
+    "Variant assignment is sticky per user across sessions.",
+    "Experiment auto-terminates at 28 days regardless of significance.",
+    "SRM check is active and halts the experiment on failure.",
+    "Holdout group is preserved across the entire experiment lifecycle."
+  ],
+  "business_requirements": {
+    "title": "A/B test hero CTA copy variants",
+    "description": "Experiment: does treatment CTA copy (\"Book a session\") drive more bookings than control (\"Reserve your slot\")? Baseline conversion rate ~12%. Interview answer: 10% relative lift would be meaningful.",
+    "experimentMetric": "booking_started",
+    "mdePct": 10,
+    "baselineConversionRatePct": 12
+  }
+}

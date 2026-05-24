@@ -1,0 +1,38 @@
+{
+  "name": "@caia/ab-testing-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A/B Testing Architect — architect #13 of CAIA's 17-architect EA fan-out. Owns the `abTesting.*` slice of `tickets.architecture`. Wave-3 architect — depends on Analytics + Feature Flagging upstream. Spawns Claude via @chiefaia/claude-spawner (subscription-only).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
