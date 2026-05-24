@@ -634,3 +634,27 @@ events:
     severity: error
     actor: [worker]
     payload: [storyId, workerId, exhaustedTestCaseIds, lastFailures, escalatedAt, correlationId]
+
+  # Pipeline Conductor (research/conductor_agent_spec_2026.md §4.3)
+  - type: conductor.escalation.opened
+    severity: warning
+    actor: [pipeline-conductor]
+    payload: [project_id, stage, reason, threshold_seconds, elapsed_seconds, last_event_id]
+
+  # Pipeline Conductor (research/conductor_agent_spec_2026.md §4.3)
+  - type: conductor.escalation.closed
+    severity: info
+    actor: [pipeline-conductor]
+    payload: [escalation_id, project_id, resolution]
+
+  # Pipeline Conductor (research/conductor_agent_spec_2026.md §4.3)
+  - type: conductor.forecast.updated
+    severity: info
+    actor: [pipeline-conductor]
+    payload: [project_id, stage, p50_completion_at, p90_completion_at, sample_size]
+
+  # Pipeline Conductor (research/conductor_agent_spec_2026.md §4.3)
+  - type: conductor.pipeline-bottleneck.detected
+    severity: warning
+    actor: [pipeline-conductor]
+    payload: [stage, active_count, stuck_count, median_dwell_seconds, recommended_action]

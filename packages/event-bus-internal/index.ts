@@ -147,7 +147,7 @@ class ConductorEventBus extends EventEmitter {
       payload: JSON.parse(row.payload_json) as Record<string, unknown>,
       metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
       severity: row.severity as EventSeverity,
-    }));
+    })) as unknown as ConductorEvent[];
   }
 }
 
