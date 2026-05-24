@@ -1,0 +1,70 @@
+{
+  "name": "@caia/activation-steward",
+  "version": "0.1.0",
+  "description": "Real-DoD Layer 2 — OpenTelemetry runtime call-path verifier. Confirms every merged service's declared expectedCallPaths actually fire in production within the freshness window. Per-tenant attestation matrix. Graceful degradation when telemetry is absent. Hourly cron via launchd. JSONL audit + status snapshot + Postgres attestation history. INBOX failure routing + event-bus signals.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "activation-steward-run": "./bin/activation-steward-run"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./trace-collector": {
+      "types": "./dist/trace-collector.d.ts",
+      "default": "./dist/trace-collector.js"
+    },
+    "./manifest-cross-check": {
+      "types": "./dist/manifest-cross-check.d.ts",
+      "default": "./dist/manifest-cross-check.js"
+    },
+    "./per-tenant-isolation": {
+      "types": "./dist/per-tenant-isolation.d.ts",
+      "default": "./dist/per-tenant-isolation.js"
+    },
+    "./attestation": {
+      "types": "./dist/attestation.d.ts",
+      "default": "./dist/attestation.js"
+    },
+    "./reporter": {
+      "types": "./dist/reporter.d.ts",
+      "default": "./dist/reporter.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "launchd",
+    "migrations",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@chiefaia/tracing": "workspace:*",
+    "yaml": "^2.4.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
