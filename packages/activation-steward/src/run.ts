@@ -106,7 +106,6 @@ export async function run(opts: RunOpts = {}): Promise<RunResult> {
 
   if (!opts.quiet) {
     const counts = countByStatus(matrix);
-    // eslint-disable-next-line no-console
     console.log(
       `[activation-steward] run=${runRow.runId} site=${site} telemetry=${telemetry} ` +
         `green=${counts.green} yellow=${counts.yellow} red=${counts.red} ` +

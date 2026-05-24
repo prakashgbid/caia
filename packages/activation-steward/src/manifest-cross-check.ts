@@ -45,7 +45,7 @@ export async function crossCheck(
   for (const pkg of packages) {
     for (const cp of pkg.expectedCallPaths) {
       const since = computeSince(now, cp);
-      let matches: ReadonlyArray<TraceMatch> = [];
+      let matches: ReadonlyArray<TraceMatch>;
       try {
         matches = await backend.query({
           serviceName: cp.serviceName,

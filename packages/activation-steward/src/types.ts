@@ -5,6 +5,14 @@
  * source of truth and there are no cycles.
  */
 
+// Forward reference for TraceBackend (defined in trace-collector.ts).
+// We avoid a cyclic value import by typing it structurally here.
+export interface TraceBackendRef {
+  readonly kind: string;
+  health(): Promise<BackendHealth>;
+  query(opts: TraceQueryOptions): Promise<ReadonlyArray<TraceMatch>>;
+}
+
 // ─── Backend health ─────────────────────────────────────────────────────────
 
 /**
@@ -243,7 +251,7 @@ export interface RunOpts {
   /** Site identifier (e.g. "caia-mac", "stolution-k3s"). */
   readonly site?: string;
   /** Backend instance to query. */
-  readonly backend?: import('./trace-collector.js').TraceBackend;
+  readonly backend?: TraceBackendRef;
   /** Don't write any artifacts; just compute. */
   readonly dryRun?: boolean;
   /** Suppress stdout chatter. */
