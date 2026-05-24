@@ -1,0 +1,42 @@
+{
+  "name": "@caia/devops-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DevOps/Deployment Architect — architect #17 of 17 in CAIA's EA fan-out (LAST architect; completes the roster). Owns the `devops.*` slice of `tickets.architecture` (cicdPipeline, deployStrategy, rollbackContract, infrastructureAsCode, environmentPromotion, deploymentObservability, secretsManagementInPipeline). Senior DevOps engineer focused on CI/CD + deployment strategies + rollback safety. Produces per-ticket DEPLOY STRATEGY specs. Distinct from (a) the deploy-steward bin/launchd which EXECUTES deploys and (b) the QA Engineer agent which validates production. Depends on Backend + Database + Security architects upstream. Precedence rank 2 — operator-on-hook for a bad deploy. Spawns Claude via @chiefaia/claude-spawner (subscription-only) with Sonnet default.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/backend-architect": "workspace:*",
+    "@caia/database-architect": "workspace:*",
+    "@caia/frontend-architect": "workspace:*",
+    "@caia/security-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1590,6 +1590,37 @@ importers:
         specifier: ^4.2.0
         version: 4.2.4
 
+  packages/devops-architect:
+    dependencies:
+      '@caia/architect-kit':
+        specifier: workspace:*
+        version: link:../architect-kit
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
+    devDependencies:
+      '@caia/backend-architect':
+        specifier: workspace:*
+        version: link:../backend-architect
+      '@caia/database-architect':
+        specifier: workspace:*
+        version: link:../database-architect
+      '@caia/frontend-architect':
+        specifier: workspace:*
+        version: link:../frontend-architect
+      '@caia/security-architect':
+        specifier: workspace:*
+        version: link:../security-architect
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/dspy-bridge:
     devDependencies:
       '@chiefaia/eslint-config':
