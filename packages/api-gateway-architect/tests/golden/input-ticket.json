@@ -1,0 +1,22 @@
+{
+  "id": "ticket-pt-api-001",
+  "type": "Form",
+  "scope": "story",
+  "parent_id": null,
+  "acceptance_criteria": [
+    "POST /v1/contacts is rate-limited to 10 req/min per IP.",
+    "X-Request-Id is propagated through to the response.",
+    "No Server / X-Powered-By headers leak in any response.",
+    "Free-tier API quota overage rejects the request.",
+    "CORS allowlist is same-origin by default."
+  ],
+  "business_requirements": {
+    "title": "Contact form submission endpoint",
+    "description": "Public POST endpoint that accepts a contact-form payload and writes to the tenant's contacts table. Backs the marketing site's \"Book a session\" widget."
+  },
+  "quality_tags": [
+    "api",
+    "persists",
+    "backend"
+  ]
+}

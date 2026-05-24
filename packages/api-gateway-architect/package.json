@@ -1,0 +1,40 @@
+{
+  "name": "@caia/api-gateway-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API Gateway Architect — architect #11 of CAIA's 17-architect EA fan-out. Owns apiGateway.* (rateLimits, authGates, versioningStrategy, errorEnvelope, requestResponseTransforms, corsPolicy, webhookSecrets, apiQuotas). Sits in front of Backend's endpoints. Depends on Backend Architect + Security Architect upstream. Precedence rank 8 per spec §5.2. Spawns Claude via @chiefaia/claude-spawner (subscription-only) with Sonnet default.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/backend-architect": "workspace:*",
+    "@caia/security-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
