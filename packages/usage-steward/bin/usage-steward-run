@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+/**
+ * usage-steward-run — CLI entrypoint.
+ *
+ * Invoked hourly by `launchd/com.caia.usage-steward-hourly.plist`.
+ * Mirrors the activation-steward convention:
+ *   - exits 0 even when red attestations exist (failure surface is
+ *     INBOX + event-bus, not exit code)
+ *   - exits 1 only on internal errors (config invalid, fatal I/O)
+ */
+import { run } from '../dist/run.js';
+
+function parseFlags(argv) {
+  const out = {};
+  for (const arg of argv.slice(2)) {
+    if (arg === '--quiet') { out.quiet = true; continue; }
+    if (arg === '--dry-run') { out.dryRun = true; continue; }
+    const m = arg.match(/^--([a-z-]+)=(.+)$/i);
+    if (!m) continue;
+    const [, key, val] = m;
+    switch (key) {
+      case 'inbox': out.inboxPath = val; break;
+      case 'runs-jsonl': out.runsJsonlPath = val; break;
+      case 'status-json': out.statusJsonPath = val; break;
+      case 'attestations-jsonl': out.attestationsJsonlPath = val; break;
+      case 'packages-root': out.packagesRoot = val; break;
+      case 'deploy-manifest': out.deployManifestPath = val; break;
+      case 'site': out.site = val; break;
+      case 'only': out.only = val.split(',').map((s) => s.trim()).filter(Boolean); break;
+      case 'scanners': out.scanners = val.split(',').map((s) => s.trim()).filter(Boolean); break;
+      default: break;
+    }
+  }
+  return out;
+}
+
+async function main() {
+  const flags = parseFlags(process.argv);
+  try {
+    const result = await run(flags);
+    if (!flags.quiet) {
+      console.log(`[usage-steward] inbox-appended=${result.inboxAppended} events-emitted=${result.eventsEmitted} new-greens=${result.newGreenIds.length}`);
+    }
+    process.exit(0);
+  } catch (err) {
+    console.error(`[usage-steward] FATAL: ${err && err.message ? err.message : String(err)}`);
+    if (err && err.stack) console.error(err.stack);
+    process.exit(1);
+  }
+}
+
+main();

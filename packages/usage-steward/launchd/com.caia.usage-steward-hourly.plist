@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.usage-steward-hourly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/opt/node@22/bin/node</string>
+        <string>/Users/macbook32/Documents/projects/caia/packages/usage-steward/bin/usage-steward-run</string>
+        <string>--quiet</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/usage-steward.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/usage-steward.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/macbook32</string>
+        <!--
+          The steward shells out to knip / depcheck / ts-prune /
+          depcruise. If any binary is missing on $PATH the steward
+          marks the corresponding cell `no-tooling` and emits
+          `usage-steward.scanner.degraded` — it never goes red on
+          a missing tool. Install order suggestion:
+            pnpm add -wD knip depcheck ts-prune dependency-cruiser
+          then `pnpm install` at the workspace root so the binaries
+          resolve via the local pnpm-managed PATH.
+        -->
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macbook32/Documents/projects/caia/packages/usage-steward</string>
+
+    <!-- A full run across the caia monorepo + customer-sites is bounded
+         by O(num_packages × num_scanners) and well under 5 minutes. -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Nice</key>
+    <integer>10</integer>
+</dict>
+</plist>
