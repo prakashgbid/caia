@@ -59,7 +59,7 @@
     "@types/node": "^20",
     "@types/pg": "^8.11.6",
     "@types/react": "^18",
-    "happy-dom": "^15.7.4",
+    "jsdom": "^26.1.0",
     "react": "^18",
     "react-dom": "^18",
     "typescript": "^5.4.5",
