@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "anthropic-news",
+      "name": "Anthropic News",
+      "url": "https://www.anthropic.com/news",
+      "keywords": ["claude", "agent", "memory", "policy", "model"],
+      "category": "vendor-blog"
+    },
+    {
+      "id": "anthropic-engineering",
+      "name": "Anthropic Engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "keywords": ["agent", "claude code", "mcp", "tool use", "memory"],
+      "category": "vendor-blog"
+    },
+    {
+      "id": "openai-blog",
+      "name": "OpenAI Blog",
+      "url": "https://openai.com/blog",
+      "keywords": ["agent", "gpt", "function calling", "assistant"],
+      "category": "vendor-blog"
+    },
+    {
+      "id": "cognition-blog",
+      "name": "Cognition Blog",
+      "url": "https://www.cognition.ai/blog",
+      "keywords": ["devin", "agent", "swe-bench", "memory"],
+      "category": "vendor-blog"
+    },
+    {
+      "id": "arxiv-cs-ai",
+      "name": "arXiv cs.AI new",
+      "url": "https://arxiv.org/list/cs.AI/new",
+      "keywords": ["agent", "LLM", "memory", "policy", "multi-agent"],
+      "category": "research"
+    },
+    {
+      "id": "hn-frontpage",
+      "name": "Hacker News top stories",
+      "url": "https://news.ycombinator.com/news",
+      "keywords": ["AI", "LLM", "agent", "claude", "openai"],
+      "category": "community"
+    }
+  ]
+}

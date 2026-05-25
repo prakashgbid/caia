@@ -1,0 +1,39 @@
+{
+  "name": "@caia/ai-first-upgrade-scanner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Layer 6 of the AI-first continuous discipline framework. Daily cron that WebSearches Anthropic / OpenAI / Cognition / arxiv / Hacker News for new agent-engineering patterns, LLM-filters for CAIA relevance, drafts candidate ADRs, surfaces them to INBOX under '## AI-FIRST-UPGRADE CANDIDATES'. AI-first discipline: LLM judgment is the primary tool; deterministic part is just cadence + curated source list. Subscription-only via @chiefaia/claude-spawner. Adapter-based WebSearcher + RelevanceCritic for testability. launchd plist com.caia.ai-first-upgrade-daily runs 04:00 local.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ai-first-upgrade-scan": "./bin/ai-first-upgrade-scan"
+  },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./searcher": { "types": "./dist/searcher.d.ts", "default": "./dist/searcher.js" },
+    "./relevance-filter": { "types": "./dist/relevance-filter.d.ts", "default": "./dist/relevance-filter.js" },
+    "./candidate-adr-drafter": { "types": "./dist/candidate-adr-drafter.d.ts", "default": "./dist/candidate-adr-drafter.js" },
+    "./inbox-surfacer": { "types": "./dist/inbox-surfacer.d.ts", "default": "./dist/inbox-surfacer.js" }
+  },
+  "files": ["dist", "bin", "launchd", "sources"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT"
+}
