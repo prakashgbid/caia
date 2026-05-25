@@ -1210,6 +1210,43 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
+  packages/business-proposal-generator:
+    dependencies:
+      '@caia/state-machine':
+        specifier: workspace:*
+        version: link:../state-machine
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
+      pg:
+        specifier: ^8.13.0
+        version: 8.20.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@chiefaia/eslint-config':
+        specifier: workspace:*
+        version: link:../../configs/eslint-config
+      '@chiefaia/tsconfig':
+        specifier: workspace:*
+        version: link:../../configs/tsconfig
+      '@chiefaia/vitest-config':
+        specifier: workspace:*
+        version: link:../../configs/vitest-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      '@types/pg':
+        specifier: ^8.11.6
+        version: 8.20.0
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/capability-broker:
     dependencies:
       '@chiefaia/hmac-auth':

@@ -1,0 +1,12 @@
+{
+  "status": "rejected",
+  "reasoning": "claude spawn failed: claude binary timed out after 90000ms",
+  "cited_adrs": [],
+  "cited_principles": [],
+  "cited_lessons": [],
+  "submissionId": "business-proposal-generator-stage-5-2026-05-25",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-25T04:25:56.440Z",
+  "modelTier": "sonnet",
+  "_source": "main-checkout"
+}
