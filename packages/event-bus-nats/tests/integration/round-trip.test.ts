@@ -7,31 +7,56 @@
  *
  *   nats-server -js -p 4222 &
  *   NATS_INTEGRATION_URL=nats://localhost:4222 pnpm test:integration
+ *
+ * For an authenticated TLS broker (production / K3s), also set:
+ *   NATS_NKEY_SEED       — raw NKey user seed string (preferred), OR
+ *   NATS_USER_NK_PATH    — path to a file containing the seed on line 1
+ *   NATS_CA_PATH         — path to the CA certificate (.crt / .pem)
+ *   NATS_TLS_INSECURE=1  — skip cert hostname verification (test only)
  */
 
+import { readFileSync } from 'node:fs';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { NatsEventBus } from '../../src/index.js';
+import type { NatsEventBusConfig } from '../../src/index.js';
 
 const URL = process.env.NATS_INTEGRATION_URL;
 const skip = !URL;
+
+function resolveSeed(): string | undefined {
+  if (process.env.NATS_NKEY_SEED) return process.env.NATS_NKEY_SEED.trim();
+  if (process.env.NATS_USER_NK_PATH) {
+    const content = readFileSync(process.env.NATS_USER_NK_PATH, 'utf8');
+    return content.split(/\r?\n/)[0]!.trim();
+  }
+  return undefined;
+}
+
+function buildConfig(durable: string): NatsEventBusConfig {
+  const base: NatsEventBusConfig = {
+    servers: [URL!],
+    stream: 'integration-events',
+    subjectPrefix: 'integration',
+    durableConsumer: durable,
+  };
+  const seed = resolveSeed();
+  if (seed) base.auth = { nkeySeed: seed };
+  if (process.env.NATS_CA_PATH || process.env.NATS_TLS_INSECURE) {
+    base.tls = {
+      caFile: process.env.NATS_CA_PATH,
+      rejectUnauthorized: process.env.NATS_TLS_INSECURE === '1' ? false : true,
+    };
+  }
+  return base;
+}
 
 describe.skipIf(skip)('NATS round-trip (real broker)', () => {
   let pub: NatsEventBus;
   let sub: NatsEventBus;
 
   beforeAll(async () => {
-    pub = new NatsEventBus({
-      servers: [URL!],
-      stream: 'integration-events',
-      subjectPrefix: 'integration',
-      durableConsumer: 'integration-pub',
-    });
-    sub = new NatsEventBus({
-      servers: [URL!],
-      stream: 'integration-events',
-      subjectPrefix: 'integration',
-      durableConsumer: 'integration-sub',
-    });
+    pub = new NatsEventBus(buildConfig('integration-pub'));
+    sub = new NatsEventBus(buildConfig('integration-sub'));
     await pub.connect();
     await sub.connect();
   }, 30_000);

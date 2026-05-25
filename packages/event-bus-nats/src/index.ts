@@ -257,16 +257,16 @@ export class NatsEventBus implements EventBus {
     const js = this.js as {
       consumers: {
         get(stream: string, durable: string): Promise<{
-          consume(opts?: Record<string, unknown>): AsyncIterable<{
+          consume(opts?: Record<string, unknown>): Promise<AsyncIterable<{
             data: Uint8Array;
             ack(): void;
             nak(delayMs?: number): void;
-          }>;
+          }>>;
         }>;
       };
     };
     const consumer = await js.consumers.get(this.cfg.stream, spec.durable);
-    const iter = consumer.consume();
+    const iter = await consumer.consume();
 
     entry.stopper = async () => {
       const maybeStop = (iter as unknown as { stop?: () => void | Promise<void> }).stop;
