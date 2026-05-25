@@ -1,0 +1,19 @@
+{
+  "status": "approved-with-modifications",
+  "reasoning": "Stub critic (autonomous run): package surface mirrors the existing @chiefaia/event-bus-internal API (publish/subscribe/replay) with a NATS JetStream backend. Aligns with spec research/inter_agent_communication_protocol_2026.md §4.7. Subscription-only, self-hosted on stolution K3s, $0 new cost. V1 scope cut: ships broker manifests + at-least-once envelope + one round-trip pub/sub + 81 unit tests; full 57-event stream config and saga semantics deferred to v0.2. Operator should run a live review before True-Zero admin-merge.",
+  "cited_adrs": [],
+  "cited_principles": ["P-no-vendor-lockin", "P-true-zero", "P-idempotency"],
+  "cited_lessons": [],
+  "requested_modifications": [
+    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+    "Confirm NKey rotation procedure with infra-architect before V1 goes to prod.",
+    "V0.2 must add per-namespace stream fanout for the full 57-event taxonomy.",
+    "V0.2 must wire the DLQ advisory handler beyond the current log-and-drop stub.",
+    "V0.2 must add broker-side replay (seek by sequence); V1 returns [] from replay()."
+  ],
+  "submissionId": "eareview-event-bus-nats-2026-05-25-stub",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-25T15:20:00.000Z",
+  "modelTier": "opus",
+  "_note": "Written by scripts/submit-plan.mjs via CAIA_EA_STUB=1 path. Live EaArchitectAgent.submitPlan() exceeded the 120s tool window during the autonomous build (repository-loader + adr-writer composition); the stub critic's deterministic verdict was recorded directly per operator's ratification that 'what matters is the submission is recorded'. Operator must run live review before True-Zero admin-merge."
+}

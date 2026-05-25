@@ -1,0 +1,8 @@
+# Self-signed ClusterIssuer. Apply only if the cluster does not
+# already provide one. Safe to re-apply (idempotent).
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: chiefaia-selfsigned
+spec:
+  selfSigned: {}
