@@ -1,0 +1,57 @@
+{
+  "name": "@caia/policy-linter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Layer 1 of the AI-First Continuous-Discipline framework. Encodes locked operator feedback memories as code-as-policy gates. Deterministic backstop for the EA Architect (Layer 2) mutating layer; this is the validating layer. Replaces AI-memory-dependent rule following with system-memory-enforced gates.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    },
+    "./dispatch-hook": {
+      "import": "./dist/dispatch-hook.js",
+      "types": "./dist/dispatch-hook.d.ts"
+    },
+    "./ci-action": {
+      "import": "./dist/ci-action.js",
+      "types": "./dist/ci-action.d.ts"
+    },
+    "./policies/*": {
+      "import": "./dist/policies/*.js",
+      "types": "./dist/policies/*.d.ts"
+    }
+  },
+  "bin": {
+    "caia-policy-lint": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "echo \"(lint via root)\""
+  },
+  "dependencies": {
+    "@chiefaia/events": "workspace:*",
+    "@chiefaia/critic": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
