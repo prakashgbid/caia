@@ -1,0 +1,33 @@
+% Pandoc LaTeX template for CAIA Stage 5 proposal PDFs.
+% Minimal: cover page, TOC, accent color hook ($accent$ — set via -V accent=#hex).
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{margin=2cm}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{titlesec}
+$if(accent)$
+\definecolor{accent}{HTML}{$accent$}
+$else$
+\definecolor{accent}{HTML}{1E293B}
+$endif$
+\hypersetup{colorlinks=true, linkcolor=accent, urlcolor=accent, citecolor=accent}
+\titleformat*{\section}{\Large\bfseries\color{accent}}
+\titleformat*{\subsection}{\large\bfseries\color{accent}}
+
+\title{$title$}
+\author{$author$}
+\date{$date$}
+
+\begin{document}
+$if(title)$
+\maketitle
+$endif$
+$if(toc)$
+\tableofcontents
+\newpage
+$endif$
+$body$
+\end{document}

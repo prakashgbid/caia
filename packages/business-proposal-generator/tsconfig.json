@@ -1,0 +1,14 @@
+{
+  "extends": "@chiefaia/tsconfig/base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "resolveJsonModule": true,
+    "noImplicitAny": false,
+    "strict": false,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src"],
+  "exclude": ["dist", "node_modules", "tests"]
+}
