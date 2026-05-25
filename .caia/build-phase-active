@@ -1,0 +1,5 @@
+# Build phase active — True-Zero admin-merge exception (AGENTS.md §Gotchas) is in force.
+# Remove this file at V1 launch to flip the policy back to strict.
+#
+# Operator decision: 2026-05-25
+# Reference: PR #587 (True-Zero admin-merge carve-out), AGENTS.md lines 115 & 134
