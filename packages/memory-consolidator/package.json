@@ -1,0 +1,64 @@
+{
+  "name": "@caia/memory-consolidator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Layer 4 of the AI-first continuous discipline framework. Daily cron that scans memory files (corpusRoot), validates cross-references ([[wiki-links]] + [text](file.md)), detects stale superseded_by: chains and missing MEMORY.md index entries, then surfaces findings to INBOX.md and writes a daily consolidation report. Parameterised (corpusRoot/inboxPath/reportsRoot/researchRoot/clock/fs) per Option-E shape; fixture-corpus tests inject fake trees; production injects CAIA defaults. Subscription-only — no API keys, no LLM calls in v0 (deferred to a follow-up once Layer 3 architecture-registry wiring lands). launchd plist com.caia.memory-consolidator-daily runs 03:00 local. Exit 0 even when findings surface; failure surface is INBOX + report, not exit code.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "memory-consolidator-run": "./bin/memory-consolidator-run"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./scanner": {
+      "types": "./dist/scanner.d.ts",
+      "default": "./dist/scanner.js"
+    },
+    "./cross-referencer": {
+      "types": "./dist/cross-referencer.d.ts",
+      "default": "./dist/cross-referencer.js"
+    },
+    "./freshness-checker": {
+      "types": "./dist/freshness-checker.d.ts",
+      "default": "./dist/freshness-checker.js"
+    },
+    "./inbox-surfacer": {
+      "types": "./dist/inbox-surfacer.d.ts",
+      "default": "./dist/inbox-surfacer.js"
+    },
+    "./reporter": {
+      "types": "./dist/reporter.d.ts",
+      "default": "./dist/reporter.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "launchd"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "yaml": "^2.4.1"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT"
+}
