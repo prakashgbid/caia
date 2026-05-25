@@ -1,0 +1,18 @@
+{
+  "status": "approved",
+  "reasoning": "Stub critic record (autonomous run, True-Zero admin-merge ratified by operator 2026-05-25 per PR #587 + #592). Refactor closes a real spec drift identified in `reports/caia_pipeline_gap_analysis_2026-05-25.md` Honest Caveats §9: lifecycle-conductor's 5-steward shape did not match spec §4.4's 4-steward + ea-review-approved composition. Caveat #9 guessed the 5th was pipeline-conductor's drift-sentinel; the actual 5th was an undeclared `future-incoming-steward` (no package, no plan). This refactor restores the spec boundary verbatim. Subscription-only, additive event-bus envelope, no breaking changes to sibling packages. Risk surface is in-package only; `future-incoming` rows have zero downstream consumers per grep. ADR-063 to be filed simultaneously.",
+  "cited_adrs": ["ADR-062"],
+  "cited_principles": ["P-spec-is-source-of-truth", "P-no-silent-scope-creep"],
+  "cited_lessons": ["L-future-incoming-was-never-a-package-shipped-without-its-own-plan-PR580-postmortem"],
+  "requested_modifications": [
+    "Operator: run live submitPlan against @caia/ea-architect post-merge for critic-driven verdict beyond this stub record.",
+    "Follow-up: wire EA Agent to emit `ea-review-approved` envelopes onto the bus so eaReviewApproved gate flips to true for real solutions; without this, DoD remains conservatively false for all in-flight solutions.",
+    "Follow-up: backfill ea-review-approved for solutions that were already producing-metrics under the 5-steward regime (one-shot migration script, separate plan)."
+  ],
+  "new_adrs_to_file": ["ADR-063-lifecycle-conductor-four-steward-strict"],
+  "affected_existing_adrs": [],
+  "submissionId": "eareview-lifecycle-conductor-4steward-2026-05-25-1",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-25T00:00:00.000Z",
+  "modelTier": "opus"
+}

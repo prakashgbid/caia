@@ -1,7 +1,7 @@
 {
   "name": "@caia/lifecycle-conductor",
   "version": "0.1.0",
-  "description": "Real-DoD Layer 4 — composite solution-lifecycle aggregator. Subscribes to all 5 stewards (deploy + usage + activation + outcome + future-incoming), computes per-solution composite state via @caia/state-machine's solution-lifecycle FSM, drives transitions, projects to SSE via @caia/pipeline-conductor's existing infrastructure, surfaces stuck solutions to INBOX. DoD achieved when all 5 stewards green AND fresh for ≥24 consecutive hours. Subscription-only; no polling.",
+  "description": "Real-DoD Layer 4 \u2014 composite solution-lifecycle aggregator. Per ADR-063 (2026-05-25), subscribes to exactly 4 Real-DoD stewards (deploy + usage + activation + outcome) and the orthogonal ea-review-approved state (the spec \u00a74.4 5th gate). Computes per-solution composite state via @caia/state-machine solution-lifecycle FSM, drives transitions, projects to SSE via @caia/pipeline-conductor existing infrastructure, surfaces stuck solutions to INBOX. DoD achieved when all 4 stewards green + ea-review-approved AND fresh for >=24 consecutive hours. Subscription-only; no polling. Pipeline-conductor drift signals are NOT folded in \u2014 drift has its own ## DRIFT ALERTS surface from PR #570.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

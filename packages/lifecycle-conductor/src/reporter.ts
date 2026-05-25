@@ -7,9 +7,16 @@
  * present in the file.
  *
  * Three headings (per canonical doc §4.4):
- *   ## LIFECYCLE-CONDUCTOR REGRESSION   — drift to degraded
+ *   ## LIFECYCLE-CONDUCTOR REGRESSION   — drift to degraded (4-steward boundary)
  *   ## LIFECYCLE-CONDUCTOR STUCK        — solution past stuck threshold
  *   ## LIFECYCLE-CONDUCTOR DOD          — holdover started or completed
+ *
+ * Per ADR-063 the REGRESSION envelope surfaces ONLY the 4 Real-DoD
+ * stewards' triggers (deploy + usage + activation + outcome). Drift
+ * signals from `@caia/pipeline-conductor`'s drift-detector are
+ * surfaced separately under that package's own `## DRIFT ALERTS`
+ * heading — they are NOT folded into the lifecycle-conductor's
+ * regression channel. Different gates, different runbooks.
  *
  * Mirrors the activation-steward reporter's idempotency pattern: read
  * the file, check if reportKey appears, skip if so. Caller is the
@@ -36,6 +43,12 @@ export interface InboxReportResult {
 /**
  * Append a `REGRESSION` entry to INBOX when a solution drifts to
  * `degraded`. Idempotent on `(solutionId, at)`.
+ *
+ * The body's `trigger=` field is sourced verbatim from the FSM
+ * driver's evaluation trigger, which by construction only references
+ * the 4 Real-DoD stewards (deploy + usage + activation + outcome). The
+ * conductor's type guard drops any non-steward envelope upstream, so
+ * pipeline-conductor drift signals can never appear here.
  */
 export async function reportRegressionToInbox(
   inboxPath: string,
@@ -97,7 +110,8 @@ export async function reportDodToInbox(
   const reportKey = `dod-candidate:${event.solutionId}:${event.at}`;
   const body =
     `- [ ] ${event.at} | \`${event.solutionId}\` reached **producing-metrics** ` +
-    `— 24h holdover started. key=\`${reportKey}\``;
+    `— 24h holdover started (DoD also requires \`ea-review-approved\`). ` +
+    `key=\`${reportKey}\``;
   return appendIfNew(inboxPath, HEADING_DOD, body, reportKey);
 }
 
@@ -113,8 +127,8 @@ export async function reportDodCompletedToInbox(
   }
   const reportKey = `dod-complete:${dod.solutionId}`;
   const body =
-    `- [x] \`${dod.solutionId}\` has met the Real DoD — all five stewards green ` +
-    `for ≥24h consecutive. key=\`${reportKey}\``;
+    `- [x] \`${dod.solutionId}\` has met the Real DoD — 4 stewards green ` +
+    `+ \`ea-review-approved\` for ≥24h consecutive. key=\`${reportKey}\``;
   return appendIfNew(inboxPath, HEADING_DOD, body, reportKey);
 }
 
@@ -160,7 +174,9 @@ function isStuck(entry: ListIncompleteEntry, thresholdHours: number): boolean {
   if (entry.compositeState === 'degraded') return true;
   if (entry.compositeState === 'producing-metrics') {
     // Inside holdover: not stuck. Past holdover + still not DONE means
-    // there's drift — already a separate REGRESSION entry, skip here.
+    // there's drift OR ea-review-approved is missing — already surfaced
+    // via REGRESSION (drift) or via the DOD heading's completion entry
+    // never firing (missing approval). Skip here to avoid double surfacing.
     return false;
   }
   if (entry.ageHoursInState === null) return false;
@@ -173,6 +189,7 @@ function formatMissing(dod: DodStatus): string {
     parts.push(`${k}=${v}`);
   }
   if (dod.driftDuringHoldover) parts.push('drift-during-holdover');
+  if (!dod.eaReviewApproved) parts.push('ea-review-approved=false');
   return parts.length > 0 ? parts.join(',') : '(none)';
 }
 

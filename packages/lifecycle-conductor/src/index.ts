@@ -2,6 +2,9 @@
  * @caia/lifecycle-conductor — public surface.
  *
  * Spec: research/real_definition_of_done_enforcement_2026.md §4.4 + §6 + Task A9.
+ * Boundary: ADR-063 — exactly 4 stewards + the orthogonal
+ *           `ea-review-approved` state. PR #580's 5th steward
+ *           `future-incoming` retired 2026-05-25.
  */
 
 export * from './types.js';
@@ -21,6 +24,7 @@ export {
 export {
   LifecycleAggregator,
   coerceAttestation,
+  coerceEaReviewState,
   type AttestationEventSource,
   type LifecycleAggregatorOptions,
   type SolutionMachineLike,

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   LifecycleAggregator,
   coerceAttestation,
+  coerceEaReviewState,
 } from '../src/aggregator.js';
 import type { AttestationEventSource } from '../src/aggregator.js';
 import { DEFAULT_FRESHNESS_HOURS } from '../src/types.js';
@@ -66,6 +67,107 @@ describe('coerceAttestation', () => {
   });
 });
 
+describe('coerceAttestation — ADR-063 drop-list (out-of-DoD envelopes)', () => {
+  it('drops legacy future-incoming envelopes (5th-steward retired)', () => {
+    expect(
+      coerceAttestation({
+        steward: 'future-incoming',
+        solutionId: 'sln-A',
+        status: 'green',
+        observedAt: T0.toISOString(),
+      }),
+    ).toBeNull();
+  });
+  it('drops pipeline-conductor drift envelopes (different gate, different runbook)', () => {
+    expect(
+      coerceAttestation({
+        kind: 'policy.violation.detected',
+        policy_id: 'P9',
+        dispatch_id: 'd-1',
+        caller_agent_id: 'pipeline-conductor',
+      }),
+    ).toBeNull();
+    expect(
+      coerceAttestation({
+        kind: 'memory.consistency.broken',
+        solutionId: 'sln-A',
+        observedAt: T0.toISOString(),
+      }),
+    ).toBeNull();
+    expect(
+      coerceAttestation({
+        kind: 'architecture.principle.violated',
+        principle: 'P14',
+      }),
+    ).toBeNull();
+  });
+  it('drops drift-sentinel-shaped envelopes that try to masquerade as stewards', () => {
+    expect(
+      coerceAttestation({
+        steward: 'drift-sentinel',
+        solutionId: 'sln-A',
+        status: 'red',
+        observedAt: T0.toISOString(),
+      }),
+    ).toBeNull();
+    expect(
+      coerceAttestation({
+        steward: 'pipeline-conductor',
+        solutionId: 'sln-A',
+        status: 'red',
+        observedAt: T0.toISOString(),
+      }),
+    ).toBeNull();
+  });
+});
+
+describe('coerceEaReviewState', () => {
+  it('passes a well-formed approval envelope through', () => {
+    const result = coerceEaReviewState({
+      solutionId: 'sln-A',
+      approved: true,
+      at: T0.toISOString(),
+      reviewer: 'ea-architect-agent',
+    });
+    expect(result).toEqual({
+      solutionId: 'sln-A',
+      approved: true,
+      at: T0.toISOString(),
+      reviewer: 'ea-architect-agent',
+    });
+  });
+  it('infers approved=true when kind is ea-review-approved without explicit approved field', () => {
+    const result = coerceEaReviewState({
+      kind: 'ea-review-approved',
+      solutionId: 'sln-A',
+      at: T0.toISOString(),
+    });
+    expect(result?.approved).toBe(true);
+  });
+  it('infers approved=false from kind=ea-review-withdrawn', () => {
+    const result = coerceEaReviewState({
+      kind: 'ea-review-withdrawn',
+      solutionId: 'sln-A',
+      at: T0.toISOString(),
+    });
+    expect(result?.approved).toBe(false);
+  });
+  it('drops envelopes whose kind is unrelated', () => {
+    expect(
+      coerceEaReviewState({
+        kind: 'policy.violation.detected',
+        solutionId: 'sln-A',
+        at: T0.toISOString(),
+      }),
+    ).toBeNull();
+  });
+  it('drops malformed envelopes', () => {
+    expect(coerceEaReviewState(null)).toBeNull();
+    expect(coerceEaReviewState({ approved: true })).toBeNull(); // missing solutionId + at
+    expect(coerceEaReviewState({ solutionId: 'x', at: T0.toISOString() })).toBeNull(); // missing approved + no kind hint
+  });
+});
+
 describe('LifecycleAggregator — single solution forward walk', () => {
   let captured: CompositeStateChangedEvent[];
   let agg: LifecycleAggregator;
@@ -91,13 +193,11 @@ describe('LifecycleAggregator — single solution forward walk', () => {
     expect(agg.snapshot('sln-A')?.compositeState).toBe('deployed');
   });
 
-  it('walks deploy → usage → activation → producing-metrics with all-green attestations', async () => {
+  it('walks deploy → usage → activation → outcome with all-green attestations (4-steward)', async () => {
     await agg.ingest(att('deploy', 'green'));
     await agg.ingest(att('usage', 'green'));
     await agg.ingest(att('activation', 'green'));
-    // outcome alone is a no-op because gate=9 requires BOTH outcome AND future-incoming.
     await agg.ingest(att('outcome', 'green'));
-    await agg.ingest(att('future-incoming', 'green'));
     expect(captured.map((c) => c.toState)).toEqual([
       'deployed',
       'built-into-active-app',
@@ -106,34 +206,78 @@ describe('LifecycleAggregator — single solution forward walk', () => {
     ]);
   });
 
-  it('STRICTLY: outcome-only green does NOT advance past called-in-test', async () => {
+  it('reaches producing-metrics on outcome green alone (no fifth steward gating)', async () => {
     await agg.ingest(att('deploy', 'green'));
     await agg.ingest(att('usage', 'green'));
     await agg.ingest(att('activation', 'green'));
     captured.length = 0;
     await agg.ingest(att('outcome', 'green'));
-    expect(captured).toHaveLength(0); // No state change.
-    expect(agg.snapshot('sln-A')?.compositeState).toBe('called-in-test');
-  });
-
-  it('STRICTLY: future-incoming alone (no outcome) does NOT advance past called-in-test', async () => {
-    await agg.ingest(att('deploy', 'green'));
-    await agg.ingest(att('usage', 'green'));
-    await agg.ingest(att('activation', 'green'));
-    captured.length = 0;
-    await agg.ingest(att('future-incoming', 'green'));
-    expect(captured).toHaveLength(0);
-    expect(agg.snapshot('sln-A')?.compositeState).toBe('called-in-test');
-  });
-
-  it('reaches producing-metrics only when BOTH outcome AND future-incoming are green', async () => {
-    await agg.ingest(att('deploy', 'green'));
-    await agg.ingest(att('usage', 'green'));
-    await agg.ingest(att('activation', 'green'));
-    await agg.ingest(att('outcome', 'green'));
-    await agg.ingest(att('future-incoming', 'green'));
+    expect(captured).toHaveLength(1);
+    expect(captured[0]?.toState).toBe('producing-metrics');
     expect(agg.snapshot('sln-A')?.compositeState).toBe('producing-metrics');
     expect(agg.snapshot('sln-A')?.producingMetricsSinceMs).toBe(T0.getTime());
+  });
+});
+
+describe('LifecycleAggregator — ADR-063 ignore-list for non-DoD envelopes', () => {
+  it('ignores attestations whose steward field is `future-incoming` (envelopes dropped at type-guard)', async () => {
+    const seen: { payload: unknown }[] = [];
+    let pushed: ((e: { payload: unknown }) => void) | null = null;
+    const src: AttestationEventSource = {
+      subscribe(h): () => void {
+        pushed = h;
+        return (): void => {};
+      },
+    };
+    const agg = new LifecycleAggregator({ now: () => T0, eventSources: [src] });
+
+    // Push a future-incoming envelope through the event source.
+    const fi = {
+      steward: 'future-incoming',
+      solutionId: 'sln-Z',
+      status: 'green',
+      observedAt: T0.toISOString(),
+    };
+    pushed!({ payload: fi });
+    seen.push({ payload: fi });
+    await new Promise((r) => setImmediate(r));
+
+    // Counters: zero attestations ingested, one ignored envelope.
+    expect(agg.attestationsIngested).toBe(0);
+    expect(agg.ignoredEnvelopes).toBe(1);
+    expect(agg.listSolutionIds()).toEqual([]);
+  });
+
+  it('ignores pipeline-conductor drift envelopes pushed onto the steward channel', async () => {
+    let pushed: ((e: { payload: unknown }) => void) | null = null;
+    const src: AttestationEventSource = {
+      subscribe(h): () => void {
+        pushed = h;
+        return (): void => {};
+      },
+    };
+    const agg = new LifecycleAggregator({ now: () => T0, eventSources: [src] });
+
+    pushed!({
+      payload: {
+        kind: 'policy.violation.detected',
+        policy_id: 'P9',
+        dispatch_id: 'd-1',
+        caller_agent_id: 'pipeline-conductor',
+      },
+    });
+    pushed!({
+      payload: {
+        kind: 'architecture.principle.violated',
+        principle: 'P14',
+        actor: 'pipeline-conductor',
+      },
+    });
+    await new Promise((r) => setImmediate(r));
+
+    expect(agg.attestationsIngested).toBe(0);
+    expect(agg.ignoredEnvelopes).toBe(2);
+    expect(agg.listSolutionIds()).toEqual([]);
   });
 });
 
@@ -158,7 +302,6 @@ describe('LifecycleAggregator — drift to degraded', () => {
     await agg.ingest(att('usage', 'green'));
     await agg.ingest(att('activation', 'green'));
     await agg.ingest(att('outcome', 'green'));
-    await agg.ingest(att('future-incoming', 'green'));
     expect(agg.snapshot('sln-A')?.compositeState).toBe('producing-metrics');
     await agg.ingest(att('outcome', 'red'));
     expect(agg.snapshot('sln-A')?.compositeState).toBe('degraded');
@@ -176,12 +319,11 @@ describe('LifecycleAggregator — degraded clear with consecutive greens', () =>
     await agg.ingest(att('deploy', 'red'));
     expect(agg.snapshot('sln-A')?.compositeState).toBe('degraded');
 
-    // Sweep 1 — all five green.
+    // Sweep 1 — all four green.
     await agg.ingest(att('deploy', 'green'));
     await agg.ingest(att('usage', 'green'));
     await agg.ingest(att('activation', 'green'));
     await agg.ingest(att('outcome', 'green'));
-    await agg.ingest(att('future-incoming', 'green'));
     expect(agg.snapshot('sln-A')?.consecutiveGreensAcrossAllStewards).toBe(1);
     expect(agg.snapshot('sln-A')?.compositeState).toBe('degraded'); // 1 < 2
 
@@ -202,12 +344,11 @@ describe('LifecycleAggregator — staleness', () => {
     await agg.ingest(att('usage', 'green'));
     await agg.ingest(att('activation', 'green'));
     await agg.ingest(att('outcome', 'green', 'sln-A', oldDate));
-    await agg.ingest(att('future-incoming', 'green'));
     expect(agg.snapshot('sln-A')?.compositeState).not.toBe('producing-metrics');
   });
 });
 
-describe('LifecycleAggregator — getDodStatus', () => {
+describe('LifecycleAggregator — getDodStatus + EA-review gate', () => {
   it('returns done=false for a fresh solution with missing stewards', async () => {
     const agg = new LifecycleAggregator({ now: () => T0 });
     await agg.ingest(att('deploy', 'green'));
@@ -216,7 +357,7 @@ describe('LifecycleAggregator — getDodStatus', () => {
     expect(dod?.missing.usage).toBe('missing');
     expect(dod?.missing.activation).toBe('missing');
     expect(dod?.missing.outcome).toBe('missing');
-    expect(dod?.missing['future-incoming']).toBe('missing');
+    expect(dod?.eaReviewApproved).toBe(false);
   });
 
   it('returns null for unknown solutions', () => {
@@ -224,29 +365,62 @@ describe('LifecycleAggregator — getDodStatus', () => {
     expect(agg.getDodStatus('does-not-exist')).toBeNull();
   });
 
-  it('returns done=true only after the 24h holdover with no drift', async () => {
+  it('DoD requires ea-review-approved AND holdover AND no drift AND all 4 stewards green+fresh', async () => {
     let now = T0;
-    const agg = new LifecycleAggregator({ now: () => now });
+    // Use generous freshness windows so attestations stay fresh
+    // across the 24h holdover without needing per-2h re-attestation
+    // (which would cause regression-to-degraded mid-test).
+    const agg = new LifecycleAggregator({
+      now: () => now,
+      freshnessHoursOverride: {
+        deploy: 48,
+        usage: 48,
+        activation: 48,
+        outcome: 48,
+      },
+    });
     await agg.ingest(att('deploy', 'green'));
     await agg.ingest(att('usage', 'green'));
     await agg.ingest(att('activation', 'green'));
     await agg.ingest(att('outcome', 'green'));
-    await agg.ingest(att('future-incoming', 'green'));
     expect(agg.snapshot('sln-A')?.compositeState).toBe('producing-metrics');
-    expect(agg.getDodStatus('sln-A')?.done).toBe(false); // 0h elapsed
-    // 23h59 elapsed — still not done.
-    now = new Date(T0.getTime() + (24 * 3_600_000 - 60_000));
-    expect(agg.getDodStatus('sln-A')?.done).toBe(false);
-    // But also: at +23.99h every steward is now stale because their
-    // observedAt is still T0 and the freshness window is at most 72h.
-    // outcome window is 24, so at +23.99h outcome is fresh-by-1m. ✓
-    // 24h elapsed exactly → done IF stewards still fresh. Outcome
-    // window=24, so observed at T0 is fresh for the full 24h.
+
+    // Without EA approval, even a complete holdover keeps done=false.
     now = new Date(T0.getTime() + 24 * 3_600_000);
-    // Pre-FSM-only re-evaluation: holdoverHoursRemaining should be 0.
-    const dod = agg.getDodStatus('sln-A');
+    let dod = agg.getDodStatus('sln-A');
     expect(dod?.holdoverHoursRemaining).toBe(0);
-    // But: at +24h, the deploy steward (window=2) is stale. So done remains false.
+    expect(dod?.eaReviewApproved).toBe(false);
+    expect(dod?.done).toBe(false);
+
+    // Approve. All 4 stewards still fresh under the 48h window.
+    agg.setEaReviewApproved('sln-A', true, now.toISOString());
+    dod = agg.getDodStatus('sln-A');
+    expect(dod?.eaReviewApproved).toBe(true);
+    expect(dod?.missing).toEqual({});
+    expect(dod?.done).toBe(true);
+  });
+
+  it('withdrawn EA approval flips done back to false', async () => {
+    let now = T0;
+    const agg = new LifecycleAggregator({
+      now: () => now,
+      freshnessHoursOverride: {
+        deploy: 48,
+        usage: 48,
+        activation: 48,
+        outcome: 48,
+      },
+    });
+    await agg.ingest(att('deploy', 'green'));
+    await agg.ingest(att('usage', 'green'));
+    await agg.ingest(att('activation', 'green'));
+    await agg.ingest(att('outcome', 'green'));
+    now = new Date(T0.getTime() + 24 * 3_600_000);
+    agg.setEaReviewApproved('sln-A', true, now.toISOString());
+    expect(agg.getDodStatus('sln-A')?.done).toBe(true);
+    agg.setEaReviewApproved('sln-A', false, now.toISOString());
+    const dod = agg.getDodStatus('sln-A');
+    expect(dod?.eaReviewApproved).toBe(false);
     expect(dod?.done).toBe(false);
   });
 });
@@ -288,6 +462,30 @@ describe('LifecycleAggregator — event source attachment', () => {
 
     agg.stop();
     expect(unsubCalled).toBe(true);
+  });
+
+  it('attaches ea-review sources separately and routes envelopes to ingestEaReview', async () => {
+    let handler: ((e: { payload: unknown }) => void) | null = null;
+    const source: AttestationEventSource = {
+      subscribe(h): () => void {
+        handler = h;
+        return (): void => {};
+      },
+    };
+    const agg = new LifecycleAggregator({
+      now: () => T0,
+      eaReviewSources: [source],
+    });
+    handler!({
+      payload: {
+        kind: 'ea-review-approved',
+        solutionId: 'sln-A',
+        at: T0.toISOString(),
+      },
+    });
+    await new Promise((r) => setImmediate(r));
+    expect(agg.eaReviewsIngested).toBe(1);
+    expect(agg.snapshot('sln-A')?.eaReview?.approved).toBe(true);
   });
 });
 

@@ -1,8 +1,35 @@
 /**
  * @caia/lifecycle-conductor — aggregator.
  *
- * Subscribes to the five stewards' attestation streams and maintains an
- * in-memory accumulator per solution. On every attestation:
+ * # 4-steward-strict boundary (ADR-063, 2026-05-25)
+ *
+ * Per `research/real_definition_of_done_enforcement_2026.md` §4.4, this
+ * aggregator subscribes to **exactly four Real-DoD stewards**:
+ *
+ *   deploy + usage + activation + outcome
+ *
+ * The spec's 5th DoD gate is the EA Agent's `ea-review-approved`
+ * state, NOT a fifth steward. PR #580 originally shipped with a 5th
+ * steward `future-incoming` that was never in the spec and never had
+ * its own implementing package; per ADR-063 it has been retired and
+ * `ea-review-approved` is now integrated via the separate
+ * `ingestEaReview` / `setEaReviewApproved` path.
+ *
+ * Drift signals from `@caia/pipeline-conductor`'s Layer-5 drift
+ * detector (PR #570) are explicitly OUT OF SCOPE for this aggregator
+ * — pipeline-conductor publishes its own `## DRIFT ALERTS` INBOX
+ * envelope. Real-DoD ("is this thing producing intended results") and
+ * Continuous-Discipline drift ("has architecture drifted from ADRs")
+ * are deliberately separate gates with separate alerts and separate
+ * runbooks. The `coerceAttestation` type guard drops any envelope
+ * whose `steward` field is not one of STEWARD_NAMES, which keeps
+ * pipeline-conductor envelopes (and any future non-DoD-shaped events)
+ * out of the composite DoD calculation.
+ *
+ * # Subscription model
+ *
+ * Subscribes to the four stewards' attestation streams and maintains
+ * an in-memory accumulator per solution. On every attestation:
  *
  *   1. Update the per-solution row matrix.
  *   2. Re-run `DefaultFsmDriver.evaluate(rows, freshness, now)`.
@@ -13,7 +40,7 @@
  *      FSM forward via repeated `advanceSolution` calls until the
  *      FSM's status matches the composite target.
  *
- * Subscription-only. The aggregator NEVER polls a steward. The five
+ * Subscription-only. The aggregator NEVER polls a steward. The four
  * stewards push attestations into the conductor via:
  *
  *   - the in-process `EventBus` (default — sibling packages all share
@@ -21,6 +48,9 @@
  *   - direct calls to `aggregator.ingest(att)` (used by tests and by
  *     the daemon's stdin loop when a steward is configured to spawn
  *     the conductor with attestations on stdin).
+ *
+ * The EA Agent pushes `ea-review-approved` envelopes via the parallel
+ * `eaReviewSources` channel (or direct `ingestEaReview` calls).
  *
  * The aggregator is decoupled from the underlying FSM: provide
  * `solutionMachine` to drive the operator-vocab FSM, or leave it null
@@ -40,6 +70,7 @@ import {
   type CompositeState,
   type CompositeStateChangedEvent,
   type DodStatus,
+  type EaReviewState,
   type ForwardCompositeState,
   type LifecycleConductorOptions,
   type SolutionAccumulator,
@@ -87,7 +118,8 @@ export interface SolutionMachineLike {
  * The aggregator subscribes to ANY message whose payload contains a
  * `StewardAttestation` envelope; the source need not filter by event
  * type. The aggregator drops messages whose envelope fails the type
- * guard.
+ * guard (which excludes both `future-incoming` legacy envelopes and
+ * pipeline-conductor drift envelopes — see header docs).
  */
 export interface AttestationEventSource {
   subscribe(handler: (envelope: { payload: unknown }) => void): () => void;
@@ -100,6 +132,10 @@ export interface LifecycleAggregatorOptions extends LifecycleConductorOptions {
   /** If provided, the aggregator subscribes to it on construction.
    * Multiple sources are supported (e.g. one per steward). */
   eventSources?: AttestationEventSource[];
+  /** Separate event sources that emit `EaReviewState` envelopes (the
+   * spec's 5th gate, orthogonal to steward attestations). The
+   * aggregator drops payloads that don't match `coerceEaReviewState`. */
+  eaReviewSources?: AttestationEventSource[];
   /** Override the FSM driver in tests. */
   driver?: FsmDriver;
   /** Initial composite-state for solutions the aggregator first sees
@@ -175,6 +211,7 @@ export class LifecycleAggregator {
 
   /** Diagnostic counters — useful for the daemon's `stats` log. */
   public attestationsIngested = 0;
+  public eaReviewsIngested = 0;
   public compositeStateChanges = 0;
   public fsmAdvancesIssued = 0;
   public ignoredEnvelopes = 0;
@@ -192,9 +229,12 @@ export class LifecycleAggregator {
     for (const src of opts.eventSources ?? []) {
       this.attachSource(src);
     }
+    for (const src of opts.eaReviewSources ?? []) {
+      this.attachEaReviewSource(src);
+    }
   }
 
-  /** Wire an additional event source after construction. */
+  /** Wire an additional attestation event source after construction. */
   attachSource(source: AttestationEventSource): void {
     const unsub = source.subscribe((envelope) => {
       const att = coerceAttestation(envelope.payload);
@@ -204,6 +244,19 @@ export class LifecycleAggregator {
       }
       // Fire-and-forget — the aggregator never blocks the event source.
       void this.ingest(att);
+    });
+    this.unsubFns.push(unsub);
+  }
+
+  /** Wire an EA-review event source after construction. */
+  attachEaReviewSource(source: AttestationEventSource): void {
+    const unsub = source.subscribe((envelope) => {
+      const review = coerceEaReviewState(envelope.payload);
+      if (review === null) {
+        this.ignoredEnvelopes += 1;
+        return;
+      }
+      this.ingestEaReview(review);
     });
     this.unsubFns.push(unsub);
   }
@@ -233,10 +286,10 @@ export class LifecycleAggregator {
     // and (2) passes its gate. Counting attestation arrivals
     // (rather than synthetic cron ticks) is the right cadence because
     // the conductor is subscription-only — there is no other clock.
-    const allFiveFresh = STEWARD_NAMES.every(
+    const allFourFresh = STEWARD_NAMES.every(
       (s) => evaluation.perStewardPass[s] === true,
     );
-    if (allFiveFresh && !evaluation.anyRed && !evaluation.anyStale) {
+    if (allFourFresh && !evaluation.anyRed && !evaluation.anyStale) {
       acc.consecutiveGreensAcrossAllStewards += 1;
     } else {
       acc.consecutiveGreensAcrossAllStewards = 0;
@@ -315,6 +368,28 @@ export class LifecycleAggregator {
     }
   }
 
+  /** Record an EA-review-approved state transition for a solution.
+   * This is the spec §4.4 5th gate. Approval is sticky until a later
+   * envelope with `approved: false` withdraws it. */
+  ingestEaReview(review: EaReviewState): void {
+    this.eaReviewsIngested += 1;
+    const acc = this.accumulatorFor(review.solutionId);
+    acc.eaReview = {
+      approved: review.approved,
+      at: review.at,
+      ...(review.reviewer !== undefined ? { reviewer: review.reviewer } : {}),
+    };
+  }
+
+  /** Convenience wrapper for tests / direct callers. */
+  setEaReviewApproved(solutionId: string, approved: boolean, at?: string): void {
+    this.ingestEaReview({
+      solutionId,
+      approved,
+      at: at ?? this.nowFn().toISOString(),
+    });
+  }
+
   /** Read-only snapshot of the in-memory accumulator for a solution.
    * Used by the API surface in `api.ts`. */
   snapshot(solutionId: string): SolutionAccumulator | null {
@@ -324,7 +399,7 @@ export class LifecycleAggregator {
   }
 
   /** List every solution the aggregator has ingested at least one
-   * attestation for. */
+   * attestation (or ea-review envelope) for. */
   listSolutionIds(): string[] {
     return [...this.accumulators.keys()];
   }
@@ -348,8 +423,8 @@ export class LifecycleAggregator {
           usage: null,
           activation: null,
           outcome: null,
-          'future-incoming': null,
         },
+        eaReview: null,
         compositeState: this.initialCompositeState,
         consecutiveGreensAcrossAllStewards: 0,
         producingMetricsSinceMs: null,
@@ -527,11 +602,14 @@ function computeDod(
     );
   }
 
+  const eaReviewApproved = acc.eaReview !== null && acc.eaReview.approved === true;
+
   const done =
     acc.compositeState === 'producing-metrics' &&
     holdoverHoursRemaining !== null &&
     holdoverHoursRemaining === 0 &&
     !acc.driftDuringHoldover &&
+    eaReviewApproved &&
     Object.keys(missing).length === 0;
 
   return {
@@ -541,6 +619,7 @@ function computeDod(
     holdoverHoursRemaining,
     missing,
     driftDuringHoldover: acc.driftDuringHoldover,
+    eaReviewApproved,
   };
 }
 
@@ -553,6 +632,12 @@ function computeDod(
  * should ingest. (We intentionally do NOT coerce missing fields — a
  * malformed envelope is silently dropped to avoid corrupting the
  * accumulator with garbage.)
+ *
+ * Per ADR-063 this guard is also the choke-point that drops:
+ *   - legacy `future-incoming` envelopes (steward not in STEWARD_NAMES)
+ *   - pipeline-conductor drift envelopes (no `steward` field at all,
+ *     OR `steward` set to a non-DoD value like `pipeline-conductor`)
+ *   - any future non-DoD-shaped event accidentally routed here
  */
 export function coerceAttestation(payload: unknown): StewardAttestation | null {
   if (payload === null || typeof payload !== 'object') return null;
@@ -587,6 +672,53 @@ export function coerceAttestation(payload: unknown): StewardAttestation | null {
   return att;
 }
 
+/**
+ * Type-guard + extractor for `EaReviewState` envelopes. Accepts both
+ * the bare shape and the wrapped envelope `{ kind: 'ea-review-approved',
+ * solutionId, approved, at, reviewer? }`. Returns null for anything
+ * that doesn't look like an approval/withdrawal record.
+ */
+export function coerceEaReviewState(payload: unknown): EaReviewState | null {
+  if (payload === null || typeof payload !== 'object') return null;
+  const p = payload as Record<string, unknown>;
+  // If a `kind` field is present, require it to match the canonical
+  // envelope kind so we don't grab unrelated events.
+  if (
+    typeof p['kind'] === 'string' &&
+    p['kind'] !== 'ea-review-approved' &&
+    p['kind'] !== 'ea-review-withdrawn'
+  ) {
+    return null;
+  }
+  const solutionId = p['solutionId'] ?? p['solution_id'];
+  if (typeof solutionId !== 'string' || solutionId.length === 0) return null;
+  const approvedRaw = p['approved'];
+  // Allow `kind`-driven boolean inference as a fallback.
+  let approved: boolean;
+  if (typeof approvedRaw === 'boolean') {
+    approved = approvedRaw;
+  } else if (p['kind'] === 'ea-review-approved') {
+    approved = true;
+  } else if (p['kind'] === 'ea-review-withdrawn') {
+    approved = false;
+  } else {
+    return null;
+  }
+  const at =
+    typeof p['at'] === 'string'
+      ? p['at']
+      : typeof p['approvedAt'] === 'string'
+        ? p['approvedAt']
+        : typeof p['observedAt'] === 'string'
+          ? p['observedAt']
+          : null;
+  if (at === null) return null;
+  const review: EaReviewState = { solutionId, approved, at };
+  if (typeof p['reviewer'] === 'string') review.reviewer = p['reviewer'];
+  if (typeof p['note'] === 'string') review.note = p['note'];
+  return review;
+}
+
 function cloneRows(
   rows: Record<StewardName, StewardAttestation | null>,
 ): Record<StewardName, StewardAttestation | null> {
@@ -595,8 +727,6 @@ function cloneRows(
     usage: rows.usage === null ? null : { ...rows.usage },
     activation: rows.activation === null ? null : { ...rows.activation },
     outcome: rows.outcome === null ? null : { ...rows.outcome },
-    'future-incoming':
-      rows['future-incoming'] === null ? null : { ...rows['future-incoming'] },
   };
 }
 
@@ -604,6 +734,7 @@ function cloneAccumulator(acc: SolutionAccumulator): SolutionAccumulator {
   return {
     ...acc,
     rows: cloneRows(acc.rows),
+    eaReview: acc.eaReview === null ? null : { ...acc.eaReview },
   };
 }
 

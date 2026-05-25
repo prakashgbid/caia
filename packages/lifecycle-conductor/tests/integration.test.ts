@@ -20,7 +20,7 @@ function att(
 }
 
 
-describe('integration: solution + 5 stewards + composite walk', () => {
+describe('integration: solution + 4 stewards + ea-review composite walk (ADR-063)', () => {
   it('drives a synthetic solution through the full forward chain', async () => {
     const now = T0;
     const store = new InMemorySolutionStore();
@@ -56,10 +56,8 @@ describe('integration: solution + 5 stewards + composite walk', () => {
     expect(agg.snapshot('sln-2026-05-25-integ')?.compositeState).toBe('called-in-test');
     expect((await machine.getSolution('sln-2026-05-25-integ'))?.status).toBe('called-in-test');
 
+    // Outcome alone now reaches producing-metrics (no fifth steward).
     await agg.ingest(att('outcome', 'green', 'sln-2026-05-25-integ', now));
-    expect(agg.snapshot('sln-2026-05-25-integ')?.compositeState).toBe('called-in-test');
-
-    await agg.ingest(att('future-incoming', 'green', 'sln-2026-05-25-integ', now));
     expect(agg.snapshot('sln-2026-05-25-integ')?.compositeState).toBe('producing-metrics');
     expect((await machine.getSolution('sln-2026-05-25-integ'))?.status).toBe('producing-metrics');
 
@@ -67,6 +65,7 @@ describe('integration: solution + 5 stewards + composite walk', () => {
     expect(dod0?.done).toBe(false);
     expect(dod0?.compositeState).toBe('producing-metrics');
     expect(dod0?.holdoverHoursRemaining).toBe(24);
+    expect(dod0?.eaReviewApproved).toBe(false);
 
     // Drift: outcome goes red.
     await agg.ingest(att('outcome', 'red', 'sln-2026-05-25-integ', now));
@@ -105,7 +104,7 @@ describe('integration: orthogonal scenarios', () => {
     expect(list.map((l) => l.solutionId)).toContain('sln-ghost');
   });
 
-  it('aggregator counter bookkeeping survives a full happy walk', async () => {
+  it('aggregator counter bookkeeping survives a full happy walk (4 stewards)', async () => {
     const store = new InMemorySolutionStore();
     const machine = new SolutionLifecycleMachine(store, { now: () => T0 });
     await machine.init();
@@ -115,8 +114,7 @@ describe('integration: orthogonal scenarios', () => {
     await agg.ingest(att('usage', 'green', 'sln-counters', T0));
     await agg.ingest(att('activation', 'green', 'sln-counters', T0));
     await agg.ingest(att('outcome', 'green', 'sln-counters', T0));
-    await agg.ingest(att('future-incoming', 'green', 'sln-counters', T0));
-    expect(agg.attestationsIngested).toBe(5);
+    expect(agg.attestationsIngested).toBe(4);
     expect(agg.compositeStateChanges).toBe(4);
     expect(agg.fsmAdvancesIssued).toBeGreaterThan(4);
     expect(agg.ignoredEnvelopes).toBe(0);
@@ -124,9 +122,9 @@ describe('integration: orthogonal scenarios', () => {
 
   it('SolutionLifecycleMachine emits solution.completed when FSM reaches done', async () => {
     // The lifecycle-conductor itself does not drive to "done" (that
-    // requires the 24h holdover, which our daemon's stuck-scan
-    // monitors). We assert the FSM is still capable of doing it
-    // manually so the integration boundary is sound.
+    // requires the 24h holdover + ea-review-approved, which the daemon's
+    // stuck-scan monitors). We assert the FSM is still capable of doing
+    // it manually so the integration boundary is sound.
     const store = new InMemorySolutionStore();
     const machine = new SolutionLifecycleMachine(store, { now: () => T0 });
     await machine.init();

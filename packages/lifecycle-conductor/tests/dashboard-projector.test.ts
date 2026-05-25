@@ -55,7 +55,7 @@ describe('createSseFanout', () => {
       toState: 'deployed',
       trigger: 't',
       rowsSnapshot: {
-        deploy: null, usage: null, activation: null, outcome: null, 'future-incoming': null,
+        deploy: null, usage: null, activation: null, outcome: null,
       },
       at: T0.toISOString(),
     };
@@ -77,7 +77,7 @@ describe('createSseFanout', () => {
     });
     fanout.emit({
       solutionId: 'x', fromState: 'plan-approved', toState: 'deployed', trigger: 't',
-      rowsSnapshot: { deploy: null, usage: null, activation: null, outcome: null, 'future-incoming': null },
+      rowsSnapshot: { deploy: null, usage: null, activation: null, outcome: null },
       at: T0.toISOString(),
     });
     expect(secondCalled).toBe(true);
@@ -107,7 +107,7 @@ describe('projectToSse', () => {
       toState: 'built-into-active-app',
       trigger: 'forward',
       rowsSnapshot: {
-        deploy: null, usage: null, activation: null, outcome: null, 'future-incoming': null,
+        deploy: null, usage: null, activation: null, outcome: null,
       },
       at: T0.toISOString(),
     });
@@ -148,7 +148,7 @@ describe('projectToSse', () => {
       toState: 'deployed',
       trigger: 'forward',
       rowsSnapshot: {
-        deploy: null, usage: null, activation: null, outcome: null, 'future-incoming': null,
+        deploy: null, usage: null, activation: null, outcome: null,
       },
       at: T0.toISOString(),
     });
@@ -174,7 +174,7 @@ describe('projectToSse', () => {
       toState: 'built-into-active-app',
       trigger: 'forward',
       rowsSnapshot: {
-        deploy: null, usage: null, activation: null, outcome: null, 'future-incoming': null,
+        deploy: null, usage: null, activation: null, outcome: null,
       },
       at: T0.toISOString(),
     });

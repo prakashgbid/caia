@@ -17,6 +17,12 @@
  *   - `DefaultFsmDriver = { evaluate, decide }`
  *       The driver object the aggregator + API consume.
  *
+ * Per ADR-063 the forward-chain gates the **four Real-DoD stewards**
+ * only (deploy + usage + activation + outcome). The orthogonal
+ * `ea-review-approved` state is enforced at the DoD layer (see
+ * `aggregator.ts:computeDod`), not here — approval doesn't gate
+ * forward progress, only the final DONE verdict.
+ *
  * Why pure? The conductor's correctness is composability-critical
  * (each test asserts a single decision). Centralising the decision
  * surface in a pair of pure functions makes the FSM trivially
@@ -43,20 +49,18 @@ import {
  * highest ordinal currently satisfied by green+fresh attestations.
  *
  * Contract (asserted by tests):
- *   0 < deploy < usage < activation
- *   outcome = future-incoming = 9
+ *   0 < deploy < usage < activation < outcome
  *
- * Why outcome AND future-incoming both = 9: only the FINAL composite
- * state (`producing-metrics`) requires BOTH of them. The middle gates
- * (`deployed`, `built-into-active-app`, `called-in-test`) don't care
- * about outcome or future-incoming.
+ * Each steward gates exactly one forward state — outcome alone gates
+ * `producing-metrics`. (PR #580's 5-steward version had outcome AND
+ * future-incoming both at ordinal 9 with a special-case OR rule; per
+ * ADR-063 that special-case is removed.)
  */
 export const STEWARD_GATE_ORDINAL: Readonly<Record<StewardName, number>> = Object.freeze({
   deploy: 3,
   usage: 5,
   activation: 7,
   outcome: 9,
-  'future-incoming': 9,
 });
 
 /**
@@ -73,8 +77,8 @@ export const STEWARD_GATE_ORDINAL: Readonly<Record<StewardName, number>> = Objec
  *  called-in-
  *    test       (7): deploy + usage + activation green+fresh.
  *  producing-
- *    metrics    (9): all five (deploy + usage + activation + outcome
- *                    + future-incoming) green+fresh.
+ *    metrics    (9): all four (deploy + usage + activation + outcome)
+ *                    green+fresh.
  */
 export const FORWARD_STATE_ORDINAL: Readonly<Record<ForwardCompositeState, number>> =
   Object.freeze({
@@ -136,7 +140,6 @@ export function evaluateForwardChain(
     usage: false,
     activation: false,
     outcome: false,
-    'future-incoming': false,
   };
   const triggerParts: string[] = [];
   let anyRed = false;
@@ -197,15 +200,6 @@ export function evaluateForwardChain(
     }
   }
 
-  // Producing-metrics requires BOTH outcome AND future-incoming green+fresh.
-  // The simple ordinal walk above might say "9" if one of the two is
-  // green and the other isn't — fix that here.
-  if (satisfiedOrdinal === 9) {
-    if (!perStewardPass.outcome || !perStewardPass['future-incoming']) {
-      satisfiedOrdinal = 7;
-    }
-  }
-
   let highestForwardState = ordinalToForwardState(satisfiedOrdinal);
   // Special-case: if we satisfied ZERO gates but some attestation has
   // been observed (e.g. amber/stale), advance to pr-merged so the
@@ -215,9 +209,6 @@ export function evaluateForwardChain(
   if (satisfiedOrdinal === 0 && anyObserved) {
     highestForwardState = 'pr-merged';
   }
-  // And: if any deploy attestation is observed (even if amber/stale/null
-  // for the rest) we leave plan-approved. The forward-chain "first
-  // observation = pr-merged" already covers this via `anyObserved`.
 
   if (triggerParts.length === 0) {
     triggerParts.push(
@@ -239,7 +230,7 @@ export function evaluateForwardChain(
 export interface DecideTransitionInput {
   currentState: CompositeState;
   evaluation: ForwardChainEvaluation;
-  /** Consecutive all-five-green-and-fresh ticks. The aggregator
+  /** Consecutive all-four-green-and-fresh ticks. The aggregator
    * increments this on every all-green evaluation and resets it on
    * any anyRed / anyStale / missing attestation. */
   consecutiveGreensAcrossAllStewards: number;
