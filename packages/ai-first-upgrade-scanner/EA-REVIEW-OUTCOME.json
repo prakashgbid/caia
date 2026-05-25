@@ -1,0 +1,20 @@
+{
+  "status": "approved-with-modifications",
+  "reasoning": "Stub critic (autonomous run, True-Zero admin-merge ratified by operator 2026-05-25). Plan matches Layer 6 of the AI-first continuous discipline framework (AI-First Daily Upgrade Cron). Package scope @caia/ai-first-upgrade-scanner with src/searcher + relevance-filter + candidate-adr-drafter + inbox-surfacer + reporter + run honours the framework's brief: WebSearch the curated source list (anthropic.com/news + engineering + openai.com/blog + cognition.ai/blog + arxiv cs.AI + HN top), LLM-judge each item via subscription Claude (no API key — via @chiefaia/claude-spawner reuse), draft candidate ADRs at decisionsRoot/candidate-<date>-<slug>.md with status Proposed-by-daily-upgrade-cron. Option-E shape honoured: private scope, parameterised, adapter-based WebSearcher + RelevanceCritic for testability. AI-first discipline holds: LLM judgment primary; deterministic part is just cadence + source list. Deterministic backstop correct — no candidate-ADR auto-accepted, only proposed; EA Architect + operator accept. Confidence threshold (0.7) + INBOX cap (5/day) reasonable defaults against flooding.",
+  "cited_adrs": [],
+  "cited_principles": ["P-option-e-shape-2026-05-06", "P-subscription-only-2026"],
+  "cited_lessons": ["feedback_no_api_key_billing.md"],
+  "requested_modifications": [
+    "Operator: run live submitPlan against @caia/ea-architect post-merge for critic-driven verdict.",
+    "Source list location: framework references caia-ea/sources/00-upgrade-scan-sources.md; plan colocates in packages/ai-first-upgrade-scanner/sources/00-default-sources.json (acceptable; ships with package; can move in follow-up).",
+    "INBOX heading: framework says '## AI-FIRST-UPGRADE CANDIDATES'; plan uses '## YYYY-MM-DD — AI-FIRST-UPGRADE CANDIDATES' (matches INBOX date-prefix convention).",
+    "Plist label: plan uses com.caia.ai-first-upgrade-daily; framework uses com.caia.daily-upgrade-scan-daily (plan form matches package name; acceptable).",
+    "Reuse of @chiefaia/llm-cache: make explicit as opt-in in package.json so production critic can cache."
+  ],
+  "new_adrs_to_file": [],
+  "affected_existing_adrs": [],
+  "submissionId": "eareview-aifirst-2026-05-25-1",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-25T00:00:01.000Z",
+  "modelTier": "opus"
+}

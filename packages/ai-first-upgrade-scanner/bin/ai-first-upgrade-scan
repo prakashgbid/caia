@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+/**
+ * ai-first-upgrade-scan — CLI entrypoint.
+ *
+ * Invoked daily by launchd/com.caia.ai-first-upgrade-daily.plist.
+ * Exit 0 on success regardless of candidates found / errors per item;
+ * exit 1 only on internal errors (config invalid, fatal I/O).
+ *
+ * Failure surface is INBOX + report, NOT the exit code.
+ */
+import { runScan } from '../dist/index.js';
+
+function parseFlags(argv) {
+  const out = { quiet: false };
+  for (const a of argv) {
+    if (a === '--quiet') out.quiet = true;
+    else if (a.startsWith('--sources=')) out.sourcesPath = a.slice('--sources='.length);
+    else if (a.startsWith('--decisions=')) out.decisionsRoot = a.slice('--decisions='.length);
+    else if (a.startsWith('--inbox=')) out.inboxPath = a.slice('--inbox='.length);
+    else if (a.startsWith('--reports=')) out.reportsRoot = a.slice('--reports='.length);
+    else if (a.startsWith('--threshold=')) out.confidenceThreshold = Number(a.slice('--threshold='.length));
+    else if (a.startsWith('--cap=')) out.inboxDailyCap = Number(a.slice('--cap='.length));
+    else if (a.startsWith('--lookback-hours=')) out.lookbackHours = Number(a.slice('--lookback-hours='.length));
+  }
+  return out;
+}
+
+async function main() {
+  const flags = parseFlags(process.argv.slice(2));
+  try {
+    const report = await runScan(flags);
+    if (!flags.quiet) {
+      console.log(JSON.stringify({
+        runAt: report.runAt,
+        sourcesScanned: report.sourcesScanned,
+        itemsFound: report.itemsFound,
+        itemsRelevant: report.itemsRelevant,
+        candidateAdrs: report.candidateAdrs.length,
+        inboxEntries: report.inboxEntries,
+        errors: report.errors.length,
+        reportPath: report.reportPath,
+      }, null, 2));
+    }
+    process.exit(0);
+  } catch (err) {
+    console.error('ai-first-upgrade-scan: fatal error');
+    console.error(err && err.stack ? err.stack : String(err));
+    process.exit(1);
+  }
+}
+
+main();
