@@ -1,0 +1,56 @@
+{
+  "name": "@caia/devops-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DevOps Runtime — Stage 15 in CAIA's canonical pipeline. EXECUTES deploys per the strategy spec emitted by @caia/devops-architect (architect #17, PR #562). Distinct from the architect (which SETS the strategy in ticket.architecture.devops) — this RUNS it: dispatches to blue-green / canary / rolling impls, drives the solution-lifecycle FSM transition `merged -> deployed | deployed-failed | deployed-rolled-back`, hands off to @chiefaia/deploy-steward for post-deploy verification, and runs the rollback contract on failure. Subscription-only. Reuses @caia/state-machine (solution lifecycle), @chiefaia/capability-broker (BYOC deploy.production capability), @chiefaia/deploy-steward (ledger).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./runner": {
+      "import": "./dist/runner.js",
+      "types": "./dist/runner.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    },
+    "./state": {
+      "import": "./dist/state.js",
+      "types": "./dist/state.d.ts"
+    },
+    "./steward": {
+      "import": "./dist/steward.js",
+      "types": "./dist/steward.d.ts"
+    }
+  },
+  "files": ["dist", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/capability-broker": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/devops-architect": "workspace:*",
+    "@caia/ea-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1652,6 +1652,31 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
+  packages/devops-runtime:
+    dependencies:
+      '@caia/state-machine':
+        specifier: workspace:*
+        version: link:../state-machine
+      '@chiefaia/capability-broker':
+        specifier: workspace:*
+        version: link:../capability-broker
+    devDependencies:
+      '@caia/devops-architect':
+        specifier: workspace:*
+        version: link:../devops-architect
+      '@caia/ea-architect':
+        specifier: workspace:*
+        version: link:../ea-architect
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/dspy-bridge:
     devDependencies:
       '@chiefaia/eslint-config':
