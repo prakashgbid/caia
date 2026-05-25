@@ -1,0 +1,53 @@
+{
+  "name": "@caia/per-story-tester",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Per-Story Tester — Stage 14 in CAIA's canonical pipeline. Runs the test cases (vitest + Playwright + axe + Lighthouse) defined by the Test Author Agent against the code emitted by the Full-Stack Engineer for each story. Drives the state-machine transition code-complete -> per-story-tested (pass) | per-story-test-failed (fail; PR review comment payload returned). Subscription-only. Reuses @chiefaia/playwright-config, @chiefaia/test-kit, @caia/state-machine.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./runner": {
+      "import": "./dist/runner.js",
+      "types": "./dist/runner.d.ts"
+    },
+    "./result-parser": {
+      "import": "./dist/result-parser.js",
+      "types": "./dist/result-parser.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    }
+  },
+  "files": ["dist", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/playwright-config": "workspace:*",
+    "@chiefaia/test-kit": "workspace:*",
+    "@chiefaia/ticket-template": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

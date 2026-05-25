@@ -30,7 +30,11 @@ export type EventActor =
   | 'release-agent'
   | 'story-validator'
   | 'feature-registry-writer'
-  | 'pipeline-conductor';
+  | 'pipeline-conductor'
+  // ─── AI-First Continuous Discipline — Layer 5 actors ──────────────────
+  | 'policy-linter'
+  | 'memory-consolidator'
+  | 'ea-drift-sentinel';
 
 /** Canonical envelope for every event emitted through the bus */
 export interface ConductorEvent {
@@ -553,7 +557,11 @@ export type EventType =
   | 'conductor.escalation.opened'
   | 'conductor.escalation.closed'
   | 'conductor.forecast.updated'
-  | 'conductor.pipeline-bottleneck.detected';
+  | 'conductor.pipeline-bottleneck.detected'
+  // ─── AI-First Continuous Discipline — Layer 5 drift events ───────────
+  | 'policy.violation.detected'
+  | 'memory.consistency.broken'
+  | 'architecture.principle.violated';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -682,6 +690,12 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'conductor.escalation.closed': 'info',
   'conductor.forecast.updated': 'info',
   'conductor.pipeline-bottleneck.detected': 'warning',
+  // ─── AI-First Continuous Discipline — Layer 5 drift events ───────────
+  // policy.violation.detected severity is dynamic: callers MAY override
+  // to 'error' on hard-fail mode. Default is 'warning' (advisory/soft-fail).
+  'policy.violation.detected': 'warning',
+  'memory.consistency.broken': 'warning',
+  'architecture.principle.violated': 'error',
 };
 
 /** All valid event type strings from the registry */
@@ -724,3 +738,57 @@ export interface ConductorPipelineBottleneckDetectedPayload {
   median_dwell_seconds: number;
   recommended_action: 'scale-workers' | 'review-prompt' | 'escalate-to-architect' | 'none';
 }
+
+// ─── AI-First Continuous Discipline — Layer 5 drift events ──────────────────
+
+/**
+ * Emitted by @caia/pipeline-conductor's drift-detector when a policy
+ * linter reports a violation. Sourced from research/ai_first_continuous_discipline_2026.md §7.
+ */
+export interface PolicyViolationDetectedPayload {
+  /** Linter rule id, e.g. "p005-auto-merge-prs". */
+  policy_id: string;
+  /** Originating dispatch id (correlation). */
+  dispatch_id: string;
+  /** Agent that triggered the dispatch. */
+  caller_agent_id: string;
+  /** Sentinel three-mode classification. */
+  mode: 'hard-fail' | 'soft-fail' | 'advisory';
+  /** Human-readable reason from the linter. */
+  reason: string;
+  /** Optional suggested remediation. */
+  suggested_fix?: string;
+}
+
+/**
+ * Emitted by @caia/pipeline-conductor's drift-detector when the
+ * memory-consolidation saga finds a memory claim that no longer matches
+ * filesystem reality.
+ */
+export interface MemoryConsistencyBrokenPayload {
+  /** Absolute path to the memory file. */
+  memory_file: string;
+  /** The claim that was broken. */
+  claim: string;
+  /** What the filesystem actually says. */
+  actual: string;
+  /** Who discovered it — 'memory-consolidation-cron' | 'manual' | etc. */
+  discovered_by: string;
+}
+
+/**
+ * Emitted by @caia/pipeline-conductor's drift-detector when the EA Drift
+ * Sentinel confirms a tier-1 hit via tier-2 reasoning. A confirmed
+ * architecture principle violation is a P0-class signal.
+ */
+export interface ArchitecturePrincipleViolatedPayload {
+  /** Principle id, e.g. "P11". */
+  principle_id: string;
+  /** Optional ADR the violation traces to. */
+  adr_id?: string;
+  /** Where the violation lives — file:line or url. */
+  location: string;
+  /** ISO 8601 timestamp of detection. */
+  detected_at: string;
+}
+
