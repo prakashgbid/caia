@@ -1,0 +1,30 @@
+# Issues a TLS cert for nats.chiefaia.svc.cluster.local via cert-manager.
+# Requires a ClusterIssuer named `chiefaia-selfsigned`; if absent,
+# operator can install one (apply 36-selfsigned-issuer.yaml).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nats-tls
+  labels:
+    app.kubernetes.io/name: nats
+    app.kubernetes.io/component: tls
+spec:
+  secretName: nats-tls
+  duration: 8760h     # 365d
+  renewBefore: 720h   # 30d
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  commonName: nats.chiefaia.svc.cluster.local
+  dnsNames:
+    - nats
+    - nats.chiefaia
+    - nats.chiefaia.svc
+    - nats.chiefaia.svc.cluster.local
+    - nats-0.nats-headless.chiefaia.svc.cluster.local
+    - nats-1.nats-headless.chiefaia.svc.cluster.local
+    - nats-2.nats-headless.chiefaia.svc.cluster.local
+  issuerRef:
+    name: chiefaia-selfsigned
+    kind: ClusterIssuer

@@ -1,0 +1,54 @@
+{
+  "name": "@chiefaia/event-bus-nats",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NATS JetStream backend for the ConductorEventBus. Implements the same publish/subscribe/replay surface as @chiefaia/event-bus-internal but persists events to a JetStream broker for cross-process, multi-host inter-agent communication. Per research/inter_agent_communication_protocol_2026.md §4.7. Subscription-only; self-hosted on stolution K3s; $0 marginal cost. V1 ships the broker manifests, the at-least-once envelope, one round-trip pub/sub path, and 40+ unit tests; the full 57-event stream config is deferred to a follow-up.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./envelope": {
+      "import": "./dist/envelope.js",
+      "types": "./dist/envelope.d.ts"
+    },
+    "./streams": {
+      "import": "./dist/streams.js",
+      "types": "./dist/streams.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "files": ["dist", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@chiefaia/events-taxonomy-internal": "workspace:*",
+    "nats": "^2.28.0",
+    "picomatch": "^4.0.2"
+  },
+  "devDependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "@types/picomatch": "^3.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
