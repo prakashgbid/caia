@@ -1,0 +1,52 @@
+{
+  "name": "@caia/qa-engineer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "QA Engineer — production verifier in CAIA's canonical pipeline. Drives Playwright e2e specs (authored by @caia/test-author and reviewed by @caia/test-reviewer) against the live production URL post-deploy, then hands off to @caia/outcome-steward for SLI confirmation. Drives the canonical state-machine transition deployed -> verified (pass) | deploy-failed/verify-failed (fail; rollback recommendation returned). Subscription-only. Reuses @chiefaia/playwright-config, @caia/state-machine, @caia/outcome-steward.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./agent": {
+      "import": "./dist/agent.js",
+      "types": "./dist/agent.d.ts"
+    },
+    "./test-strategy": {
+      "import": "./dist/test-strategy.js",
+      "types": "./dist/test-strategy.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    }
+  },
+  "files": ["dist", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/state-machine": "workspace:*",
+    "@caia/outcome-steward": "workspace:*",
+    "@chiefaia/playwright-config": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
