@@ -1,0 +1,45 @@
+{
+  "name": "@caia/design-ingest-adapter-cd-zip",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Claude Design ZIP adapter for @caia/design-ingest. Walks a Claude Design export (project/pages/*.jsx, project/styles.css, project/CLICKS.md, project/RESPONSIVE.md) and produces a RenderableDesign. Reuses @chiefaia/atlas-mapper parseJsxToRenderableDesign rather than reimplementing the JSX walk. SCAFFOLD-ONLY in v0.1.0 - full 7-stage pipeline ships in a follow-up.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:golden": "vitest run -c vitest.golden.config.ts",
+    "lint": "eslint src",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/design-ingest": "workspace:*",
+    "@chiefaia/atlas-mapper": "workspace:*",
+    "yauzl": "^3.1.3",
+    "postcss": "^8.4.47"
+  },
+  "devDependencies": {
+    "@chiefaia/eslint-config": "workspace:*",
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "@types/yauzl": "^2.10.3",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT"
+}
