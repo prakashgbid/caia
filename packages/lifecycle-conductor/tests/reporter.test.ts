@@ -34,7 +34,7 @@ function regressionEvent(): CompositeStateChangedEvent {
     toState: 'degraded',
     trigger: 'drift-to-degraded:outcome.red',
     rowsSnapshot: {
-      deploy: null, usage: null, activation: null, outcome: null, 'future-incoming': null,
+      deploy: null, usage: null, activation: null, outcome: null,
     },
     at: T0.toISOString(),
   };
@@ -47,7 +47,7 @@ function dodCandidateEvent(): CompositeStateChangedEvent {
     toState: 'producing-metrics',
     trigger: 'forward-advance',
     rowsSnapshot: {
-      deploy: null, usage: null, activation: null, outcome: null, 'future-incoming': null,
+      deploy: null, usage: null, activation: null, outcome: null,
     },
     at: T0.toISOString(),
   };
@@ -100,6 +100,14 @@ describe('reportRegressionToInbox', () => {
     expect(content.match(new RegExp(HEADING_REGRESSION, 'g'))?.length).toBe(1);
     expect(content).toContain('sln-B');
   });
+
+  it('REGRESSION envelope body never mentions drift-sentinel or future-incoming (ADR-063)', async () => {
+    await reportRegressionToInbox(inboxPath, regressionEvent());
+    const content = await fs.readFile(inboxPath, 'utf8');
+    expect(content).not.toContain('drift-sentinel');
+    expect(content).not.toContain('future-incoming');
+    expect(content).not.toContain('## DRIFT ALERTS'); // pipeline-conductor's separate surface
+  });
 });
 
 describe('reportDodToInbox', () => {
@@ -115,6 +123,7 @@ describe('reportDodToInbox', () => {
     const content = await fs.readFile(inboxPath, 'utf8');
     expect(content).toContain(HEADING_DOD);
     expect(content).toContain('24h holdover');
+    expect(content).toContain('ea-review-approved');
   });
 
   it('skips when toState is not producing-metrics', async () => {
@@ -141,11 +150,14 @@ describe('reportDodCompletedToInbox', () => {
       holdoverHoursRemaining: 0,
       missing: {},
       driftDuringHoldover: false,
+      eaReviewApproved: true,
     });
     expect(result.appended).toBe(true);
     const content = await fs.readFile(inboxPath, 'utf8');
     expect(content).toContain('sln-X');
     expect(content).toContain('met the Real DoD');
+    expect(content).toContain('4 stewards');
+    expect(content).toContain('ea-review-approved');
   });
 
   it('does not append when done=false', async () => {
@@ -156,6 +168,7 @@ describe('reportDodCompletedToInbox', () => {
       holdoverHoursRemaining: null,
       missing: {},
       driftDuringHoldover: false,
+      eaReviewApproved: false,
     });
     expect(result.appended).toBe(false);
   });
@@ -191,5 +204,14 @@ describe('reportStuckToInbox', () => {
       now: T0,
     });
     expect(results.every((r) => !r.appended)).toBe(true);
+  });
+
+  it('STUCK body surfaces ea-review-approved=false when that is the missing gate', async () => {
+    const agg = new LifecycleAggregator({ now: () => T0 });
+    await agg.ingest(att('deploy', 'red'));
+    const api = new LifecycleConductorApi(agg);
+    await reportStuckToInbox(inboxPath, api, { thresholdHours: 1, now: T0 });
+    const content = await fs.readFile(inboxPath, 'utf8');
+    expect(content).toContain('ea-review-approved=false');
   });
 });

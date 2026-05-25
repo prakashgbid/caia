@@ -18,7 +18,6 @@ const FRESH: Record<StewardName, number> = {
   usage: DEFAULT_FRESHNESS_HOURS.usage,
   activation: DEFAULT_FRESHNESS_HOURS.activation,
   outcome: DEFAULT_FRESHNESS_HOURS.outcome,
-  'future-incoming': DEFAULT_FRESHNESS_HOURS.futureIncoming,
 };
 
 function att(
@@ -35,17 +34,24 @@ function blank(): Record<StewardName, StewardAttestation | null> {
     usage: null,
     activation: null,
     outcome: null,
-    'future-incoming': null,
   };
 }
 
-describe('STEWARD_GATE_ORDINAL', () => {
-  it('maps stewards to their forward-chain gate index', () => {
+describe('STEWARD_GATE_ORDINAL — ADR-063 4-steward strict', () => {
+  it('maps stewards to their forward-chain gate index, outcome at 9', () => {
     expect(STEWARD_GATE_ORDINAL.deploy).toBeGreaterThan(0);
     expect(STEWARD_GATE_ORDINAL.outcome).toBe(9);
-    expect(STEWARD_GATE_ORDINAL['future-incoming']).toBe(9);
     expect(STEWARD_GATE_ORDINAL.usage).toBeGreaterThan(STEWARD_GATE_ORDINAL.deploy);
     expect(STEWARD_GATE_ORDINAL.activation).toBeGreaterThan(STEWARD_GATE_ORDINAL.usage);
+    expect(STEWARD_GATE_ORDINAL.outcome).toBeGreaterThan(STEWARD_GATE_ORDINAL.activation);
+  });
+  it('contains exactly 4 keys (no future-incoming)', () => {
+    expect(Object.keys(STEWARD_GATE_ORDINAL).sort()).toEqual([
+      'activation',
+      'deploy',
+      'outcome',
+      'usage',
+    ]);
   });
 });
 
@@ -89,13 +95,12 @@ describe('evaluateForwardChain', () => {
     expect(ev.highestForwardState).toBe('called-in-test');
   });
 
-  it('reaches producing-metrics only with all 5 green AND fresh', () => {
+  it('reaches producing-metrics with all 4 stewards green AND fresh (ADR-063)', () => {
     const rows: Record<StewardName, StewardAttestation | null> = {
       deploy: att('deploy', 'green'),
       usage: att('usage', 'green'),
       activation: att('activation', 'green'),
       outcome: att('outcome', 'green'),
-      'future-incoming': att('future-incoming', 'green'),
     };
     const ev = evaluateForwardChain(rows, FRESH, NOW);
     expect(ev.highestForwardState).toBe('producing-metrics');
@@ -130,7 +135,6 @@ describe('evaluateForwardChain', () => {
       usage: att('usage', 'green'),
       activation: att('activation', 'green'),
       outcome: att('outcome', 'green', new Date(NOW.getTime() - 10 * 24 * 3_600_000)),
-      'future-incoming': att('future-incoming', 'green'),
     };
     const ev = evaluateForwardChain(rows, FRESH, NOW);
     expect(ev.highestForwardState).not.toBe('producing-metrics');
@@ -183,7 +187,6 @@ describe('decideTransition', () => {
       usage: att('usage', 'green'),
       activation: att('activation', 'green'),
       outcome: att('outcome', 'green'),
-      'future-incoming': att('future-incoming', 'green'),
     };
     const ev = evaluateForwardChain(rows, FRESH, NOW);
     const d = decideTransition({

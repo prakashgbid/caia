@@ -10,6 +10,13 @@
  *     lives in `fsm.ts` via `SOLUTION_STATE_CANONICAL_SYNONYM`).
  *   - §12 Task A9 (the build task this package implements).
  *
+ * Per ADR-063 (2026-05-25), this conductor aggregates **exactly four
+ * stewards** — `deploy`, `usage`, `activation`, `outcome` — and the
+ * orthogonal `ea-review-approved` state. PR #580 originally shipped
+ * with a 5th steward `future-incoming` that was never in the spec; it
+ * has been retired and `ea-review-approved` (the spec's real 5th gate)
+ * is now integrated via the separate `EaReviewState` channel.
+ *
  * Kept in a single module so every other module imports from one
  * source-of-truth and there are no cycles. The shape mirrors the
  * sibling `@caia/activation-steward` package's `types.ts` so the two
@@ -19,17 +26,22 @@
 // ─── Steward names ──────────────────────────────────────────────────────────
 
 /**
- * The five stewards the conductor aggregates. `future-incoming` is the
- * Layer-3.5 steward that gates "are there outstanding research / spec
- * commitments that should keep this solution out of DONE even when the
- * other four greens light?" — same ordinal as `outcome`.
+ * The four Real-DoD stewards the conductor aggregates. Per spec §4.4
+ * and ADR-063, this list is strict: adding a fifth steward here without
+ * an ADR is a spec-drift bug. The orthogonal `ea-review-approved` state
+ * is NOT a steward — it has its own envelope shape and ingest path
+ * (`EaReviewState` / `LifecycleAggregator.ingestEaReview`).
+ *
+ * `@caia/pipeline-conductor`'s drift-detector (PR #570) publishes its
+ * own `## DRIFT ALERTS` envelope independently and is NOT a steward
+ * either; the conductor explicitly drops drift-shaped envelopes via
+ * `coerceAttestation`'s `isStewardName` check.
  */
 export const STEWARD_NAMES = [
   'deploy',
   'usage',
   'activation',
   'outcome',
-  'future-incoming',
 ] as const;
 
 export type StewardName = (typeof STEWARD_NAMES)[number];
@@ -71,6 +83,36 @@ export interface StewardAttestation {
   evidence?: Record<string, unknown>;
 }
 
+// ─── EA-review-approved (the spec's 5th gate, orthogonal to stewards) ───────
+
+/**
+ * Envelope the EA Agent (or any approval authority) pushes onto the
+ * event bus to record an `ea-review-approved` state transition for
+ * a solution. Per ADR-063, this is NOT a steward attestation — it has
+ * no freshness window, no traffic-light, and is binary. Withdrawal
+ * (`approved: false`) is supported so the EA Agent can revoke approval
+ * if a later review surfaces a blocker.
+ *
+ * The conductor's DoD gate requires `approved === true` AND all four
+ * stewards green+fresh AND the 24h producing-metrics holdover.
+ */
+export interface EaReviewState {
+  /** Solution this approval/withdrawal applies to. */
+  solutionId: string;
+  /** True iff the EA Agent has approved this solution as DoD-eligible. */
+  approved: boolean;
+  /** ISO timestamp the approval was recorded. */
+  at: string;
+  /** Optional reviewer id (defaults to the EA Agent). */
+  reviewer?: string;
+  /** Optional note (e.g. "withdrawn pending ADR-063 ratification"). */
+  note?: string;
+}
+
+/** Canonical event-bus envelope kind for EA review state. */
+export const EA_REVIEW_EVENT_KIND = 'ea-review-approved' as const;
+export type EaReviewEventKind = typeof EA_REVIEW_EVENT_KIND;
+
 // ─── Composite state vocabulary ─────────────────────────────────────────────
 
 /**
@@ -101,7 +143,7 @@ export type ForwardCompositeState = (typeof FORWARD_COMPOSITE_STATES)[number];
  *
  * - `degraded`: entered on any red attestation; clears only after the
  *   configured `degradedClearThreshold` (default 3) consecutive
- *   all-five-green ticks. Defined as "middleware" in the spec — it
+ *   all-four-green ticks. Defined as "middleware" in the spec — it
  *   sits between the forward states and acts as a regression sink.
  * - `sunset`: terminal, operator-driven.
  */
@@ -123,8 +165,8 @@ export function isCompositeState(value: unknown): value is CompositeState {
 
 /** Terminal composite states. `producing-metrics` is the DoD-candidate
  * terminal-success state but only counts as DONE after the 24h holdover
- * (enforced at the API layer); `sunset` is the operator-abandoned
- * terminal. */
+ * AND the EA-review-approved gate (enforced at the DoD layer); `sunset`
+ * is the operator-abandoned terminal. */
 export const TERMINAL_COMPOSITE_STATES: readonly CompositeState[] = ['sunset'];
 
 export function isTerminalComposite(state: CompositeState): boolean {
@@ -140,25 +182,24 @@ export function isTerminalComposite(state: CompositeState): boolean {
  * by the gate evaluator regardless of their traffic-light status.
  *
  * The numbers come from the canonical doc §5 (the per-solution
- * manifest's `verifier_freshness_thresholds`). The `futureIncoming`
- * window is set generously because incoming-research stewardship
- * does not have a per-hour rhythm — it's a daily review.
+ * manifest's `verifier_freshness_thresholds`). `ea-review-approved`
+ * is not a steward and has no freshness window — approval is sticky
+ * until explicitly withdrawn by a follow-up envelope with
+ * `approved: false`.
  */
 export const DEFAULT_FRESHNESS_HOURS = Object.freeze({
   deploy: 2,
   usage: 4,
   activation: 6,
   outcome: 24,
-  futureIncoming: 72,
 } as const);
 
 /**
  * Resolve per-steward freshness windows from a partial override. Keys
- * are the camelCase variants in {@link DEFAULT_FRESHNESS_HOURS} (the
- * `future-incoming` steward's key is `futureIncoming` for consistency
- * with the rest of the camelCase config surface). Returns a fully
- * populated map keyed by the kebab-case steward names — that's the
- * shape `evaluateForwardChain` and `decideTransition` consume.
+ * are the camelCase variants in {@link DEFAULT_FRESHNESS_HOURS}.
+ * Returns a fully populated map keyed by the kebab-case steward names —
+ * that's the shape `evaluateForwardChain` and `decideTransition`
+ * consume.
  */
 export function resolveFreshnessHours(
   override: Partial<Record<keyof typeof DEFAULT_FRESHNESS_HOURS, number>> = {},
@@ -169,7 +210,6 @@ export function resolveFreshnessHours(
     usage: merged.usage,
     activation: merged.activation,
     outcome: merged.outcome,
-    'future-incoming': merged.futureIncoming,
   };
 }
 
@@ -178,17 +218,21 @@ export function resolveFreshnessHours(
 /**
  * Per-solution accumulator the aggregator maintains in memory. Pure
  * data — no methods. Mutated by the aggregator on every incoming
- * attestation.
+ * attestation or ea-review envelope.
  */
 export interface SolutionAccumulator {
   solutionId: string;
   /** Most-recent attestation per steward, null if never observed. */
   rows: Record<StewardName, StewardAttestation | null>;
+  /** Most-recent EA-review-approved record, null if never observed.
+   * `approved === true` is required (in addition to all four stewards
+   * green+fresh + 24h holdover + no drift) for `DodStatus.done`. */
+  eaReview: { approved: boolean; at: string; reviewer?: string } | null;
   /** Current conductor composite-state. Stored separately from the
    * underlying FSM operator-state so the conductor can avoid driving
    * the FSM on no-op ticks. */
   compositeState: CompositeState;
-  /** Number of consecutive all-five-green-and-fresh ticks. Used both
+  /** Number of consecutive all-four-green-and-fresh ticks. Used both
    * to clear `degraded` and to track the 24h `producing-metrics`
    * holdover. */
   consecutiveGreensAcrossAllStewards: number;
@@ -216,18 +260,23 @@ export const PRODUCING_METRICS_HOLDOVER_HOURS = 24;
 export interface DodStatus {
   solutionId: string;
   /** True iff composite == 'producing-metrics' AND holdover >= 24h
-   * AND no degraded event during the holdover. */
+   * AND no degraded event during the holdover AND eaReviewApproved
+   * AND every steward green+fresh. */
   done: boolean;
   compositeState: CompositeState;
   /** Hours remaining in the producing-metrics holdover. Zero if the
-   * holdover is complete (and `done = true`). null if the solution
-   * has never reached producing-metrics. */
+   * holdover is complete (and `done` depends on the other gates). null
+   * if the solution has never reached producing-metrics. */
   holdoverHoursRemaining: number | null;
   /** Per-steward miss reason; populated for every steward whose row
    * is currently red, stale, or null. */
   missing: Partial<Record<StewardName, 'red' | 'stale' | 'missing' | 'amber'>>;
   /** True iff any degraded event fired during the current holdover. */
   driftDuringHoldover: boolean;
+  /** True iff the EA Agent has recorded an `approved: true` state for
+   * this solution and not subsequently withdrawn it. Per spec §4.4
+   * this is the 5th gate, orthogonal to the four steward attestations. */
+  eaReviewApproved: boolean;
 }
 
 // ─── Conductor configuration ────────────────────────────────────────────────

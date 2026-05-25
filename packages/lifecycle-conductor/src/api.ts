@@ -11,6 +11,10 @@
  * underlying `SolutionLifecycleMachine` (optional — when absent, the
  * lifecycle history is sourced purely from the aggregator's
  * accumulator).
+ *
+ * Per ADR-063 the accumulator exposes 4 steward rows and an orthogonal
+ * `eaReviewApproved` boolean. The view surfaces both so the dashboard
+ * can render the 5-gate composite (4 stewards + EA review) explicitly.
  */
 
 import type { LifecycleAggregator } from './aggregator.js';
@@ -61,9 +65,13 @@ export interface SolutionLifecycleView {
   /** Underlying FSM state — the operator-vocab. `null` if the FSM is
    * not wired into the conductor in this deployment. */
   fsmState: string | null;
-  /** Per-steward most-recent attestation (or null if unobserved). */
+  /** Per-steward most-recent attestation (or null if unobserved). 4
+   * keys per ADR-063 (deploy + usage + activation + outcome). */
   rows: Record<StewardName, StewardAttestation | null>;
-  /** Number of consecutive all-five-green-and-fresh ticks. Used by the
+  /** EA-review-approved snapshot (the spec's 5th gate). `null` if no
+   * approval has been recorded for this solution. */
+  eaReview: { approved: boolean; at: string; reviewer?: string } | null;
+  /** Number of consecutive all-four-green-and-fresh ticks. Used by the
    * dashboard to render the holdover progress bar. */
   consecutiveGreensAcrossAllStewards: number;
   /** ISO timestamp when the solution last entered producing-metrics
@@ -176,6 +184,7 @@ export class LifecycleConductorApi {
       compositeState: snap.compositeState,
       fsmState,
       rows: snap.rows,
+      eaReview: snap.eaReview,
       consecutiveGreensAcrossAllStewards: snap.consecutiveGreensAcrossAllStewards,
       producingMetricsSince:
         snap.producingMetricsSinceMs !== null
@@ -196,7 +205,8 @@ export class LifecycleConductorApi {
    *
    * Includes: every solution in a forward state strictly below
    * `producing-metrics`, every solution in `degraded`, AND every
-   * solution in `producing-metrics` whose 24h holdover is incomplete.
+   * solution in `producing-metrics` whose 24h holdover is incomplete
+   * OR whose `ea-review-approved` gate is still false.
    *
    * Excludes: solutions in `sunset` (terminal). Excludes solutions
    * whose DoD is achieved (`dod.done === true`).
@@ -270,9 +280,9 @@ function zeroDod(solutionId: string): DodStatus {
       usage: 'missing',
       activation: 'missing',
       outcome: 'missing',
-      'future-incoming': 'missing',
     },
     driftDuringHoldover: false,
+    eaReviewApproved: false,
   };
 }
 
@@ -288,8 +298,8 @@ function projectFromFsmOnly(
       usage: null,
       activation: null,
       outcome: null,
-      'future-incoming': null,
     },
+    eaReview: null,
     consecutiveGreensAcrossAllStewards: 0,
     producingMetricsSince: null,
     driftDuringHoldover: false,

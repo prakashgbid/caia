@@ -10,6 +10,11 @@
  *   - `LifecycleConductorApi` over the aggregator.
  *   - `createSseFanout()` wired to the aggregator's
  *     `onCompositeStateChanged` hook.
+ *
+ * Per ADR-063 the aggregator subscribes to the 4 Real-DoD stewards
+ * plus an orthogonal `eaReviewSources` channel for the EA Agent's
+ * approval envelopes. Pipeline-conductor drift signals are NOT routed
+ * here — they live on their own `## DRIFT ALERTS` INBOX surface.
  */
 
 import { homedir } from 'node:os';
@@ -45,7 +50,10 @@ export interface DaemonConfig {
   statsIntervalMs?: number;
   stuckScanIntervalMs?: number;
   stuckThresholdHours?: number;
+  /** Steward attestation event sources (deploy/usage/activation/outcome). */
   extraSources?: AttestationEventSource[];
+  /** EA-review-approved envelope sources (spec §4.4 5th gate). */
+  extraEaReviewSources?: AttestationEventSource[];
   log?: (...args: unknown[]) => void;
 }
 
@@ -83,6 +91,9 @@ export async function startDaemon(config: DaemonConfig = {}): Promise<RunningDae
   for (const src of config.extraSources ?? []) {
     aggregator.attachSource(src);
   }
+  for (const src of config.extraEaReviewSources ?? []) {
+    aggregator.attachEaReviewSource(src);
+  }
 
   const api = new LifecycleConductorApi(aggregator, machine);
 
@@ -91,6 +102,7 @@ export async function startDaemon(config: DaemonConfig = {}): Promise<RunningDae
   const statsTimer = setInterval(() => {
     log(
       `stats attestations=${aggregator.attestationsIngested} ` +
+        `ea-reviews=${aggregator.eaReviewsIngested} ` +
         `composite-changes=${aggregator.compositeStateChanges} ` +
         `fsm-advances=${aggregator.fsmAdvancesIssued} ` +
         `ignored=${aggregator.ignoredEnvelopes}`,
