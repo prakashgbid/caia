@@ -7,11 +7,37 @@
 
 rules:
   # ─── No --admin merges (bypasses required status checks) ───────────────
+  #
+  # TRUE-ZERO BUILD-PHASE CARVE-OUT (standing rule 2026-05-13):
+  # During the CAIA build phase, admin-squash-merge is permitted when the
+  # standard `pnpm flow ship` path is blocked by PAT-scope limits or
+  # unrelated pre-existing dev-broken checks. The mechanical gate has two
+  # parts:
+  #   1. The orchestrator-maintained marker file `.caia/build-phase-active`
+  #      MUST exist at repo root. Absence ⇒ exception does not apply.
+  #   2. The offending line (or an adjacent line in the same statement)
+  #      MUST carry the comment marker `TRUE-ZERO-MERGE` (e.g.
+  #      `gh pr merge 123 --squash --admin --delete-branch  # TRUE-ZERO-MERGE`).
+  # The `pattern-not-regex` below implements the line-level marker check;
+  # the marker-file check is enforced by humans/agents per AGENTS.md and
+  # by the audit trail (squash-commit must carry `[True-Zero admin-merge]`).
   - id: caia-no-admin-merge
     message: |
       `gh pr merge --admin` bypasses required status checks. The CAIA git-flow
-      forbids this — every PR must satisfy the deterministic-evidence gate.
-      Remove the `--admin` flag and let CI run.
+      forbids this by default — every PR must satisfy the deterministic-evidence
+      gate.
+
+      TRUE-ZERO carve-out: during the build phase (marker file
+      `.caia/build-phase-active` present at repo root), admin-squash-merge is
+      permitted when `pnpm flow ship` is blocked by PAT scope or unrelated
+      pre-existing dev-broken checks. To exercise the carve-out, add the
+      inline marker `# TRUE-ZERO-MERGE` (or `// TRUE-ZERO-MERGE` in JS/TS)
+      on the same line as the `gh pr merge --admin` call, and tag the
+      squash-commit with `[True-Zero admin-merge]`. See AGENTS.md "Gotchas"
+      section and standing rule:
+      `~/Documents/projects/agent-memory/standing_rule_true_zero_before_new_pr_2026-05-13.md`.
+
+      Outside the build phase: remove the `--admin` flag and let CI run.
     severity: ERROR
     languages: [generic]
     paths:
@@ -36,10 +62,20 @@ rules:
         - "docs/mcp-security.md"
         - "docs/prompt-injection-defense.md"
         - "docs/spend-guard.md"
-    pattern-either:
-      - pattern: gh pr merge $...ARGS --admin
-      - pattern: gh pr merge --admin $...ARGS
-      - pattern: gh pr merge $A --admin $...B
+    patterns:
+      # Single consolidated pattern: matches `gh pr merge` with `--admin`
+      # appearing anywhere in the argv. `$...A` / `$...B` are zero-or-more
+      # token metavariables, so the match span covers the entire command
+      # including any trailing-comment marker — which is what the
+      # `pattern-not-regex` below relies on.
+      - pattern: gh pr merge $...A --admin $...B
+      # TRUE-ZERO carve-out: a `TRUE-ZERO-MERGE` marker (in a // or # comment
+      # on the same line/statement) downgrades the match to a non-finding.
+      # Operators MUST also ensure `.caia/build-phase-active` exists at repo
+      # root before using this carve-out (humans/agents enforce; semgrep can
+      # only see the file contents, not adjacent sibling files).
+      - pattern-not-regex: 'TRUE-ZERO-MERGE'
+
 
   # ─── No git push --force outside backup/* branches ────────────────────
   - id: caia-no-force-push-non-backup

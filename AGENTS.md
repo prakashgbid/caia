@@ -109,7 +109,29 @@ Worktree cap = 8 concurrent. Going above triggers a Steward alarm. See `feedback
 
 - **Drizzle multi-statement migrations need explicit `--> statement-breakpoint` markers.** A migration that bundles `ALTER TABLE` + `CREATE INDEX` in one SQL string will execute as a single statement and fail mid-way without rollback. Always split with breakpoints. Bit us in PR #287/#285.
 - **NEVER use `gh pr update-branch`.** It creates merge commits that violate `gitflow-conformance`. To bring a feature branch up to date, rebase locally on `develop` (or use `git merge --ff-only develop` from local, then push). The CAIA flow assumes linear feature-branch history.
-- **NEVER use `gh pr merge --admin`.** It bypasses required status checks. Semgrep rule `caia-no-admin-merge` blocks this.
+- **NEVER use `gh pr merge --admin`** — with one carve-out below. By default, `--admin` bypasses required status checks; semgrep rule `caia-no-admin-merge` blocks it.
+
+  **TRUE-ZERO EXCEPTION (build phase only).** During the CAIA build phase, the operator's True-Zero standing rule (`~/Documents/projects/agent-memory/standing_rule_true_zero_before_new_pr_2026-05-13.md`) permits admin-squash-merge when, and only when, ALL of:
+  1. The build-phase marker file `.caia/build-phase-active` exists at the repo root (orchestrator-maintained; absence ⇒ exception does not apply).
+  2. The standard `pnpm flow ship` path is unavailable because either (a) the PAT in scope cannot bypass required status checks at org-admin level, or (b) pre-existing dev-broken checks unrelated to the PR's diff are wedging the merge.
+  3. Evidence Gate locally passed on the PR's own contents (`pnpm typecheck && pnpm test && pnpm lint && semgrep ci --config=auto --config=.semgrep/caia-rules.yml`) — `--admin` is a CI-bypass, not a correctness-bypass.
+
+  **Procedure** (same pattern as PRs #574 / #575 / #580):
+  ```bash
+  # 1. Temporarily flip enforce_admins=false on develop's branch protection
+  gh api -X PUT "/repos/prakashgbid/caia/branches/develop/protection/enforce_admins" -f enabled=false
+
+  # 2. Admin-squash-merge the PR
+  gh pr merge <PR> --squash --admin --delete-branch  # TRUE-ZERO-MERGE
+
+  # 3. Immediately restore enforce_admins=true (DO NOT skip — leaving it off is a security regression)
+  gh api -X PUT "/repos/prakashgbid/caia/branches/develop/protection/enforce_admins" -f enabled=true
+  ```
+
+  **Commit-message tag.** The squash-merge commit MUST include `[True-Zero admin-merge]` in the title or trailer so the audit trail is greppable. Example title:
+  `chore(governance): document True-Zero admin-merge exception [True-Zero admin-merge] (#NNN)`
+
+  Outside the build phase (when `.caia/build-phase-active` is absent), this exception does not apply and `--admin` is forbidden. The marker file is removed by the orchestrator at build-phase exit.
 - **NEVER `git push --force` outside `backup/*`.** Semgrep rule `caia-no-force-push-non-backup` blocks this.
 - **Custom semgrep rules live in `.semgrep/caia-rules.yml`.** Run them locally with `semgrep ci --config=auto --config=.semgrep/caia-rules.yml`. The Evidence Gate runs the same set.
 - **`required_linear_history` is OFF on `develop`** (since 2026-05-03) to allow classic back-merges from release branches. `gitflow-conformance` still rejects unwanted merge commits inside feature PRs.
