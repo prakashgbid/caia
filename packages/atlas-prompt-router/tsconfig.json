@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": false,
+    "types": ["node"],
+    "lib": ["ES2022"],
+    "baseUrl": ".",
+    "paths": {
+      "@caia/atlas-ui/fixtures/prakash-tiwari-home.js": ["../atlas-ui/fixtures/prakash-tiwari-home.ts"],
+      "@caia/atlas-ui/fixtures": ["../atlas-ui/fixtures/index.ts"],
+      "@caia/atlas-ui": ["../atlas-ui/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}

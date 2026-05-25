@@ -1,0 +1,40 @@
+{
+  "name": "@caia/atlas-prompt-router",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Atlas per-scope prompt router (CAIA Step 6). Receives the operator's natural-language change request from @caia/atlas-ui, validates, classifies its scope of change, persists a ticket-version snapshot, emits a state-machine 'change-requested' transition, and fans the EA dispatch out over the ticket subtree via @chiefaia/atlas-mapper.descendantTickets. No LLM in the orchestrator itself — all I/O bound at composition time via ports.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" },
+    "./router": { "import": "./dist/router.js", "types": "./dist/router.d.ts" },
+    "./api": { "import": "./dist/api.js", "types": "./dist/api.d.ts" },
+    "./validation": { "import": "./dist/validation.js", "types": "./dist/validation.d.ts" },
+    "./scope-resolver": { "import": "./dist/scope-resolver.js", "types": "./dist/scope-resolver.d.ts" }
+  },
+  "files": ["dist", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/atlas-ui": "workspace:*",
+    "@caia/ea-dispatcher": "workspace:*",
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/atlas-mapper": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "engines": { "node": ">=20" }
+}
