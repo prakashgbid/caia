@@ -65,7 +65,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   apps/completeness-sentinel:
     dependencies:
@@ -157,7 +157,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@25.0.1)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@25.0.1)
 
   apps/db-backup: {}
 
@@ -190,7 +190,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   apps/local-preview-orchestrator:
     dependencies:
@@ -227,7 +227,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   apps/mesh-supervisor:
     dependencies:
@@ -385,7 +385,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   apps/orchestrator-middleware:
     dependencies:
@@ -442,7 +442,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   apps/stolution-mcp:
     dependencies:
@@ -584,7 +584,7 @@ importers:
     dependencies:
       vitest:
         specifier: '>=1'
-        version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@22.19.17)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/a2a-adapter:
     dependencies:
@@ -619,7 +619,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/accessibility-architect:
     dependencies:
@@ -638,7 +638,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/activation-steward:
     dependencies:
@@ -669,7 +669,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/adoption-enforcement:
     dependencies:
@@ -700,7 +700,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/agent-contract-registry:
     dependencies:
@@ -716,7 +716,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -759,7 +759,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/analytics:
     dependencies:
@@ -802,7 +802,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@24.1.3)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@24.1.3)
 
   packages/analytics-architect:
     dependencies:
@@ -821,7 +821,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/api-gateway-architect:
     dependencies:
@@ -846,7 +846,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/apprentice-corpus:
     dependencies:
@@ -865,7 +865,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/apprentice-eval:
     dependencies:
@@ -887,13 +887,13 @@ importers:
         version: 20.19.39
       '@vitest/coverage-v8':
         specifier: ^1.6.1
-        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/apprentice-retrainer:
     dependencies:
@@ -918,7 +918,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/apprentice-serving:
     devDependencies:
@@ -930,7 +930,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/apprentice-training:
     dependencies:
@@ -946,7 +946,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/architect-kit:
     devDependencies:
@@ -958,7 +958,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/architecture-registry:
     dependencies:
@@ -995,7 +995,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/atlas-design-snapshotter:
     dependencies:
@@ -1029,7 +1029,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/atlas-mapper:
     dependencies:
@@ -1048,7 +1048,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/atlas-prompt-router:
     dependencies:
@@ -1149,7 +1149,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@25.0.1)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@25.0.1)
 
   packages/backend-architect:
     dependencies:
@@ -1168,7 +1168,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/backend-core:
     dependencies:
@@ -1193,7 +1193,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.2.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/behavior-suite:
     devDependencies:
@@ -1236,7 +1236,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/cast-bridge:
     dependencies:
@@ -1276,7 +1276,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@24.1.3)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@24.1.3)
 
   packages/chain-runner:
     dependencies:
@@ -1307,7 +1307,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/chain-scaffolder:
     dependencies:
@@ -1341,7 +1341,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/classifier:
     devDependencies:
@@ -1353,7 +1353,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/claude-spawner:
     devDependencies:
@@ -1374,7 +1374,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/claude-subagents:
     devDependencies:
@@ -1386,7 +1386,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/cli:
     dependencies:
@@ -1411,7 +1411,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/code-reviewer:
     dependencies:
@@ -1427,13 +1427,13 @@ importers:
         version: 20.19.39
       '@vitest/coverage-v8':
         specifier: 1.6.1
-        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/config:
     dependencies:
@@ -1461,7 +1461,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/content-engine:
     dependencies:
@@ -1486,7 +1486,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/critic:
     dependencies:
@@ -1502,13 +1502,13 @@ importers:
         version: 20.19.39
       '@vitest/coverage-v8':
         specifier: 1.6.1
-        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/curator:
     devDependencies:
@@ -1523,7 +1523,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/database-architect:
     dependencies:
@@ -1545,7 +1545,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/dead-shell-detector:
     dependencies:
@@ -1580,7 +1580,7 @@ importers:
     devDependencies:
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@22.19.17)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/decomposer-recursive:
     dependencies:
@@ -1617,7 +1617,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/dedup-engine: {}
 
@@ -1665,7 +1665,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@24.1.3)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@24.1.3)
       web-vitals:
         specifier: ^4.2.0
         version: 4.2.4
@@ -1699,7 +1699,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/devops-runtime:
     dependencies:
@@ -1745,7 +1745,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ea-architect:
     dependencies:
@@ -1761,7 +1761,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ea-dispatcher:
     dependencies:
@@ -1777,7 +1777,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ea-doc-steward:
     dependencies:
@@ -1796,7 +1796,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ea-drift-sentinel:
     dependencies:
@@ -1812,7 +1812,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ea-plan-reviewer:
     dependencies:
@@ -1834,7 +1834,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ea-research-conductor:
     dependencies:
@@ -1853,7 +1853,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ea-reviewer:
     dependencies:
@@ -1869,7 +1869,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ea-ticket-auditor:
     dependencies:
@@ -1885,7 +1885,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/errors:
     devDependencies:
@@ -1903,7 +1903,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@22.19.17)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/event-bus-internal:
     dependencies:
@@ -1934,7 +1934,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@22.19.17)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/events-taxonomy-internal: {}
 
@@ -1955,7 +1955,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/feature-registry:
     dependencies:
@@ -1986,7 +1986,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/frontend-architect:
     dependencies:
@@ -2005,7 +2005,56 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
+
+  packages/grand-idea:
+    dependencies:
+      '@caia/state-machine':
+        specifier: workspace:*
+        version: link:../state-machine
+      pg:
+        specifier: ^8.13.0
+        version: 8.20.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@chiefaia/eslint-config':
+        specifier: workspace:*
+        version: link:../../configs/eslint-config
+      '@chiefaia/tsconfig':
+        specifier: workspace:*
+        version: link:../../configs/tsconfig
+      '@chiefaia/vitest-config':
+        specifier: workspace:*
+        version: link:../../configs/vitest-config
+      '@testing-library/react':
+        specifier: ^16.0.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      '@types/pg':
+        specifier: ^8.11.6
+        version: 8.20.0
+      '@types/react':
+        specifier: ^18
+        version: 18.3.28
+      happy-dom:
+        specifier: ^15.7.4
+        version: 15.11.7
+      react:
+        specifier: ^18
+        version: 18.3.1
+      react-dom:
+        specifier: ^18
+        version: 18.3.1(react@18.3.1)
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/full-stack-engineer:
     dependencies:
@@ -2061,7 +2110,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/hmac-auth:
     devDependencies:
@@ -2082,7 +2131,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/image-provider:
     dependencies:
@@ -2134,7 +2183,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/integrity-check:
     dependencies:
@@ -2168,7 +2217,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/interviewer:
     dependencies:
@@ -2202,7 +2251,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/knowledge-graph-dispatch-hook:
     dependencies:
@@ -2255,7 +2304,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/lifecycle-conductor:
     dependencies:
@@ -2308,7 +2357,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/local-llm-router:
     dependencies:
@@ -2369,7 +2418,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/local-llm-router-mcp:
     dependencies:
@@ -2421,7 +2470,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/logger:
     dependencies:
@@ -2452,7 +2501,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/mcp-allowlist-proxy:
     dependencies:
@@ -2477,7 +2526,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/memory-consolidator:
     dependencies:
@@ -2542,7 +2591,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/mentor-fastpath:
     dependencies:
@@ -2567,7 +2616,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/mentor-retrieval:
     dependencies:
@@ -2589,7 +2638,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/metrics:
     dependencies:
@@ -2611,7 +2660,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@22.19.17)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/observability-architect:
     dependencies:
@@ -2630,7 +2679,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/onboarding:
     dependencies:
@@ -2655,7 +2704,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/orchestrator-elevate:
     dependencies:
@@ -2680,7 +2729,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/per-story-tester:
     dependencies:
@@ -2727,7 +2776,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/pipeline-conductor:
     dependencies:
@@ -2761,7 +2810,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/plan-defender:
     dependencies:
@@ -2777,7 +2826,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/playwright-config:
     dependencies:
@@ -2805,7 +2854,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/policy-linter:
     dependencies:
@@ -2868,7 +2917,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/prompt-optimizer:
     dependencies:
@@ -2893,7 +2942,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/researcher:
     dependencies:
@@ -2906,13 +2955,13 @@ importers:
         version: 20.19.39
       '@vitest/coverage-v8':
         specifier: 1.6.1
-        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/reviewer:
     dependencies:
@@ -2928,13 +2977,13 @@ importers:
         version: 20.19.39
       '@vitest/coverage-v8':
         specifier: 1.6.1
-        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/secrets:
     devDependencies:
@@ -2955,7 +3004,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/secrets-adapter:
     dependencies:
@@ -2980,7 +3029,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/secrets-broker:
     dependencies:
@@ -3042,7 +3091,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/secrets-postgres:
     dependencies:
@@ -3076,7 +3125,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/security-architect:
     dependencies:
@@ -3104,7 +3153,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/seo-architect:
     dependencies:
@@ -3123,7 +3172,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/seo-program:
     dependencies:
@@ -3164,7 +3213,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/spend-guard:
     dependencies:
@@ -3189,7 +3238,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/sql-helper:
     dependencies:
@@ -3230,7 +3279,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/steward-analyzers:
     devDependencies:
@@ -3251,7 +3300,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/steward-core:
     dependencies:
@@ -3279,7 +3328,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/stolution-dispatch:
     dependencies:
@@ -3304,7 +3353,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/story-decomposer:
     dependencies:
@@ -3338,13 +3387,13 @@ importers:
         version: 20.19.39
       '@vitest/coverage-v8':
         specifier: 1.6.1
-        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/system-prompt-block:
     devDependencies:
@@ -3356,7 +3405,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/test-author:
     dependencies:
@@ -3424,7 +3473,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/test-kit:
     dependencies:
@@ -3455,7 +3504,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/test-reviewer:
     dependencies:
@@ -3505,7 +3554,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ticket-template:
     dependencies:
@@ -3521,7 +3570,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/time-machine-architect:
     dependencies:
@@ -3540,7 +3589,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/tool-output-sanitizer:
     devDependencies:
@@ -3561,7 +3610,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/tracing:
     dependencies:
@@ -3586,7 +3635,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@22.19.17)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/ux-version-control-architect:
     dependencies:
@@ -3605,7 +3654,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/vastu:
     dependencies:
@@ -3627,7 +3676,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   packages/verifier:
     dependencies:
@@ -3640,13 +3689,13 @@ importers:
         version: 20.19.39
       '@vitest/coverage-v8':
         specifier: 1.6.1
-        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))
+        version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^1.6.1
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
 
   services/claude-spawner-agent: {}
 
@@ -3698,7 +3747,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.19.17)(jsdom@26.1.0)
+        version: 2.1.9(@types/node@22.19.17)(happy-dom@15.11.7)(jsdom@26.1.0)
 
 packages:
 
@@ -9171,6 +9220,10 @@ packages:
     engines: {node: '>=0.4.7'}
     hasBin: true
 
+  happy-dom@15.11.7:
+    resolution: {integrity: sha512-KyrFvnl+J9US63TEzwoiJOQzZBJY7KgBushJA8X61DMbNsH+2ONkDuLDnCnwUiPTF42tLoEmrPyoqbenVA5zrg==}
+    engines: {node: '>=18.0.0'}
+
   has-flag@3.0.0:
     resolution: {integrity: sha512-sKJf1+ceQBr4SMkvQnBDNDtf4TXpVhVGateu0t918bl30FnbE2m4vNLX+VWe/dpjlb+HugGYzW7uQXH98HPEYw==}
     engines: {node: '>=4'}
@@ -12354,6 +12407,10 @@ packages:
 
   whatwg-fetch@3.6.20:
     resolution: {integrity: sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg==}
+
+  whatwg-mimetype@3.0.0:
+    resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
+    engines: {node: '>=12'}
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -16637,6 +16694,16 @@ snapshots:
       '@types/react': 18.3.28
       '@types/react-dom': 18.3.7(@types/react@18.3.28)
 
+  '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@babel/runtime': 7.29.2
+      '@testing-library/dom': 10.4.1
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+    optionalDependencies:
+      '@types/react': 18.3.28
+      '@types/react-dom': 19.2.3(@types/react@18.3.28)
+
   '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
       '@babel/runtime': 7.29.2
@@ -16825,6 +16892,11 @@ snapshots:
   '@types/react-dom@18.3.7(@types/react@18.3.28)':
     dependencies:
       '@types/react': 18.3.28
+
+  '@types/react-dom@19.2.3(@types/react@18.3.28)':
+    dependencies:
+      '@types/react': 18.3.28
+    optional: true
 
   '@types/react-dom@19.2.3(@types/react@19.2.14)':
     dependencies:
@@ -17078,7 +17150,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))':
+  '@vitest/coverage-v8@1.6.1(vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 0.2.3
@@ -17093,7 +17165,7 @@ snapshots:
       std-env: 3.10.0
       strip-literal: 2.1.1
       test-exclude: 6.0.0
-      vitest: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+      vitest: 1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -19271,6 +19343,12 @@ snapshots:
       wordwrap: 1.0.0
     optionalDependencies:
       uglify-js: 3.19.3
+
+  happy-dom@15.11.7:
+    dependencies:
+      entities: 4.5.0
+      webidl-conversions: 7.0.0
+      whatwg-mimetype: 3.0.0
 
   has-flag@3.0.0: {}
 
@@ -22954,7 +23032,7 @@ snapshots:
       '@types/node': 22.19.17
       fsevents: 2.3.3
 
-  vitest@1.6.1(@types/node@20.19.39)(jsdom@24.1.3):
+  vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@24.1.3):
     dependencies:
       '@vitest/expect': 1.6.1
       '@vitest/runner': 1.6.1
@@ -22978,6 +23056,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.39
+      happy-dom: 15.11.7
       jsdom: 24.1.3
     transitivePeerDependencies:
       - less
@@ -22989,7 +23068,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@1.6.1(@types/node@20.19.39)(jsdom@25.0.1):
+  vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@25.0.1):
     dependencies:
       '@vitest/expect': 1.6.1
       '@vitest/runner': 1.6.1
@@ -23013,6 +23092,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.39
+      happy-dom: 15.11.7
       jsdom: 25.0.1
     transitivePeerDependencies:
       - less
@@ -23024,7 +23104,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0):
+  vitest@1.6.1(@types/node@20.19.39)(happy-dom@15.11.7)(jsdom@26.1.0):
     dependencies:
       '@vitest/expect': 1.6.1
       '@vitest/runner': 1.6.1
@@ -23048,6 +23128,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.39
+      happy-dom: 15.11.7
       jsdom: 26.1.0
     transitivePeerDependencies:
       - less
@@ -23059,7 +23140,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@1.6.1(@types/node@22.19.17)(jsdom@26.1.0):
+  vitest@1.6.1(@types/node@22.19.17)(happy-dom@15.11.7)(jsdom@26.1.0):
     dependencies:
       '@vitest/expect': 1.6.1
       '@vitest/runner': 1.6.1
@@ -23083,6 +23164,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.17
+      happy-dom: 15.11.7
       jsdom: 26.1.0
     transitivePeerDependencies:
       - less
@@ -23094,7 +23176,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@2.1.9(@types/node@22.19.17)(jsdom@26.1.0):
+  vitest@2.1.9(@types/node@22.19.17)(happy-dom@15.11.7)(jsdom@26.1.0):
     dependencies:
       '@vitest/expect': 2.1.9
       '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.17))
@@ -23118,6 +23200,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.17
+      happy-dom: 15.11.7
       jsdom: 26.1.0
     transitivePeerDependencies:
       - less
@@ -23163,6 +23246,8 @@ snapshots:
       iconv-lite: 0.6.3
 
   whatwg-fetch@3.6.20: {}
+
+  whatwg-mimetype@3.0.0: {}
 
   whatwg-mimetype@4.0.0: {}
 
