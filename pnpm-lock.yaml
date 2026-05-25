@@ -2032,6 +2032,34 @@ importers:
         specifier: ^2.3.4
         version: 2.3.4
 
+  packages/event-bus-nats:
+    dependencies:
+      '@chiefaia/events-taxonomy-internal':
+        specifier: workspace:*
+        version: link:../events-taxonomy-internal
+      nats:
+        specifier: ^2.28.0
+        version: 2.29.3
+      picomatch:
+        specifier: ^4.0.2
+        version: 4.0.4
+    devDependencies:
+      '@caia/ea-architect':
+        specifier: workspace:*
+        version: link:../ea-architect
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      '@types/picomatch':
+        specifier: ^3.0.1
+        version: 3.0.2
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/events:
     devDependencies:
       '@chiefaia/eslint-config':
@@ -2121,6 +2149,37 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
+  packages/full-stack-engineer:
+    dependencies:
+      '@caia/architect-kit':
+        specifier: workspace:*
+        version: link:../architect-kit
+      '@caia/state-machine':
+        specifier: workspace:*
+        version: link:../state-machine
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../claude-spawner
+      '@chiefaia/claude-subagents':
+        specifier: workspace:*
+        version: link:../claude-subagents
+      '@chiefaia/ticket-template':
+        specifier: workspace:*
+        version: link:../ticket-template
+    devDependencies:
+      '@caia/ea-architect':
+        specifier: workspace:*
+        version: link:../ea-architect
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/grand-idea:
     dependencies:
       '@caia/state-machine':
@@ -2168,37 +2227,6 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
-
-  packages/full-stack-engineer:
-    dependencies:
-      '@caia/architect-kit':
-        specifier: workspace:*
-        version: link:../architect-kit
-      '@caia/state-machine':
-        specifier: workspace:*
-        version: link:../state-machine
-      '@chiefaia/claude-spawner':
-        specifier: workspace:*
-        version: link:../claude-spawner
-      '@chiefaia/claude-subagents':
-        specifier: workspace:*
-        version: link:../claude-subagents
-      '@chiefaia/ticket-template':
-        specifier: workspace:*
-        version: link:../ticket-template
-    devDependencies:
-      '@caia/ea-architect':
-        specifier: workspace:*
-        version: link:../ea-architect
-      '@types/node':
-        specifier: ^20.0.0
-        version: 20.19.39
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/guardrails-validator:
@@ -7199,6 +7227,9 @@ packages:
   '@types/picomatch@2.3.4':
     resolution: {integrity: sha512-0so8lU8O5zatZS/2Fi4zrwks+vZv7e0dygrgEZXljODXBig97l4cPQD+9LabXfGJOWwoRkTVz6Q4edZvD12UOA==}
 
+  '@types/picomatch@3.0.2':
+    resolution: {integrity: sha512-n0i8TD3UDB7paoMMxA3Y65vUncFJXjcUf7lQY7YyKGl6031FNjfsLs6pdLFCy2GNFxItPJG8GvvpbZc2skH7WA==}
+
   '@types/pino@7.0.5':
     resolution: {integrity: sha512-wKoab31pknvILkxAF8ss+v9iNyhw5Iu/0jLtRkUD74cNfOOLJNnqfFKAv0r7wVaTQxRZtWrMpGfShwwBjOcgcg==}
     deprecated: This is a stub types definition. pino provides its own type definitions, so you do not need this installed.
@@ -10543,6 +10574,11 @@ packages:
   napi-build-utils@2.0.0:
     resolution: {integrity: sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==}
 
+  nats@2.29.3:
+    resolution: {integrity: sha512-tOQCRCwC74DgBTk4pWZ9V45sk4d7peoE2njVprMRCBXrhJ5q5cYM7i6W+Uvw2qUrcfOSnuisrX7bEx3b3Wx4QA==}
+    engines: {node: '>= 14.0.0'}
+    deprecated: Package moved. Use @nats-io/transport-node from https://github.com/nats-io/nats.js
+
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
@@ -10589,6 +10625,10 @@ packages:
         optional: true
       sass:
         optional: true
+
+  nkeys.js@1.1.0:
+    resolution: {integrity: sha512-tB/a0shZL5UZWSwsoeyqfTszONTt4k2YS0tuQioMOD180+MbombYVgzDUYHlx+gejYK6rgf08n/2Df99WY0Sxg==}
+    engines: {node: '>=10.0.0'}
 
   node-abi@3.89.0:
     resolution: {integrity: sha512-6u9UwL0HlAl21+agMN3YAMXcKByMqwGx+pq+P76vii5f7hTPtKDp08/H9py6DY+cfDw7kQNTGEj/rly3IgbNQA==}
@@ -12251,6 +12291,9 @@ packages:
   turbo@2.9.6:
     resolution: {integrity: sha512-+v2QJey7ZUeUiuigkU+uFfklvNUyPI2VO2vBpMYJA+a1hKFLFiKtUYlRHdb3P9CrAvMzi0upbjI4WT+zKtqkBg==}
     hasBin: true
+
+  tweetnacl@1.0.3:
+    resolution: {integrity: sha512-6rt+RN7aOi1nGMyC4Xa5DdYiukl2UWCbcJft7YhxReBGQD7OAM8Pbxw6YMo4r2diNEA8FEmu32YOn9rhaiE5yw==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -17049,6 +17092,8 @@ snapshots:
 
   '@types/picomatch@2.3.4': {}
 
+  '@types/picomatch@3.0.2': {}
+
   '@types/pino@7.0.5':
     dependencies:
       pino: 10.3.1
@@ -20864,6 +20909,10 @@ snapshots:
 
   napi-build-utils@2.0.0: {}
 
+  nats@2.29.3:
+    dependencies:
+      nkeys.js: 1.1.0
+
   natural-compare@1.4.0: {}
 
   natural@8.1.1(@opentelemetry/api@1.9.1)(socks@2.8.8):
@@ -20953,6 +21002,10 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+
+  nkeys.js@1.1.0:
+    dependencies:
+      tweetnacl: 1.0.3
 
   node-abi@3.89.0:
     dependencies:
@@ -22970,6 +23023,8 @@ snapshots:
       '@turbo/linux-arm64': 2.9.6
       '@turbo/windows-64': 2.9.6
       '@turbo/windows-arm64': 2.9.6
+
+  tweetnacl@1.0.3: {}
 
   type-check@0.4.0:
     dependencies:
