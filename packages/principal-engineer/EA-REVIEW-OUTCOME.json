@@ -1,0 +1,16 @@
+{
+  "status": "approved-with-modifications",
+  "reasoning": "Stub critic: principal-engineer (Stage 12) package surface mirrors the brief (dependency-graph + bucketer + worker-pool + dispatcher + api). State-machine transitions stay strictly inside the canonical FSM enumerated in transitions.ts (tests-reviewed -> scheduled | scheduling-failed; scheduled -> coding-in-progress driven by dispatched FSE). Reuses @caia/state-machine worker primitives (tryAssignWork / recordWorkerHeartbeat / completeWork / expireInactiveWorkers), @chiefaia/claude-spawner (subscription-only, scrubs ANTHROPIC_API_KEY), and the existing caia-coding.md FSE subagent template. Iterative Tarjan keeps SCC detection stack-safe for ~10k-node graphs. Per-tenant tier caps (free=2, pro=5, enterprise=10) align with the spend-guard taxonomy. The 40+ vitest target satisfies the EA test-floor convention.",
+  "cited_adrs": [],
+  "cited_principles": [],
+  "cited_lessons": [],
+  "requested_modifications": [
+    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+    "Confirm per-tenant tier caps (free=2, pro=5, enterprise=10) match current tenant-config canon.",
+    "Bucketer: when SPS bucket-policy YAML is absent (CI / smoke tests), fall back to defaults rather than throwing."
+  ],
+  "submissionId": "eareview-mpkp21cy-1-kl7w0s",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-25T04:16:17.506Z",
+  "modelTier": "opus"
+}
