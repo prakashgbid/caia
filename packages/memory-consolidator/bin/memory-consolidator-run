@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+/**
+ * memory-consolidator-run — CLI entrypoint.
+ *
+ * Invoked daily by launchd/com.caia.memory-consolidator-daily.plist.
+ * Exit code 0 on success regardless of findings; 1 only on internal
+ * errors. Failure surface is INBOX + report, not the exit code.
+ */
+import { runConsolidation } from '../dist/index.js';
+
+function parseFlags(argv) {
+  const out = { quiet: false, dryRun: false };
+  for (const a of argv) {
+    if (a === '--quiet') out.quiet = true;
+    else if (a === '--dry-run') out.dryRun = true;
+    else if (a.startsWith('--corpus=')) out.corpusRoot = a.slice('--corpus='.length);
+    else if (a.startsWith('--inbox=')) out.inboxPath = a.slice('--inbox='.length);
+    else if (a.startsWith('--reports=')) out.reportsRoot = a.slice('--reports='.length);
+    else if (a.startsWith('--dedupe-days=')) out.dedupeWindowDays = Number(a.slice('--dedupe-days='.length));
+  }
+  return out;
+}
+
+async function main() {
+  const flags = parseFlags(process.argv.slice(2));
+  try {
+    const report = await runConsolidation({
+      corpusRoot: flags.corpusRoot,
+      inboxPath: flags.inboxPath,
+      reportsRoot: flags.reportsRoot,
+      dedupeWindowDays: flags.dedupeWindowDays,
+      dryRun: flags.dryRun,
+    });
+    if (!flags.quiet) {
+      console.log(JSON.stringify({
+        runAt: report.runAt,
+        filesScanned: report.filesScanned,
+        findings: report.findings.length,
+        newInboxEntries: report.newInboxEntries,
+        reportPath: report.reportPath,
+        dryRun: report.dryRun,
+      }, null, 2));
+    }
+    process.exit(0);
+  } catch (err) {
+    console.error('memory-consolidator-run: fatal error');
+    console.error(err && err.stack ? err.stack : String(err));
+    process.exit(1);
+  }
+}
+
+main();
