@@ -1029,6 +1029,34 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
+  packages/atlas-prompt-router:
+    dependencies:
+      '@caia/atlas-ui':
+        specifier: workspace:*
+        version: link:../atlas-ui
+      '@caia/ea-dispatcher':
+        specifier: workspace:*
+        version: link:../ea-dispatcher
+      '@caia/state-machine':
+        specifier: workspace:*
+        version: link:../state-machine
+      '@chiefaia/atlas-mapper':
+        specifier: workspace:*
+        version: link:../atlas-mapper
+    devDependencies:
+      '@caia/ea-architect':
+        specifier: workspace:*
+        version: link:../ea-architect
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/atlas-ui:
     dependencies:
       '@chiefaia/atlas-mapper':

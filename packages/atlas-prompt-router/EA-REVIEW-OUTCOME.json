@@ -1,0 +1,14 @@
+{
+  "status": "approved-with-modifications",
+  "reasoning": "Stub critic: package surface is the per-scope prompt router for Atlas (CAIA Step 6); deps are bound through ports; reuses @caia/atlas-ui (wire shapes), @chiefaia/atlas-mapper (descendantTickets), @caia/state-machine, @caia/ea-dispatcher. State-machine transition stays inside the canonical FSM (* -> change-requested, ticket-level). Suggest operator run a live review before True-Zero admin-merge.",
+  "cited_adrs": [],
+  "cited_principles": [],
+  "cited_lessons": [],
+  "requested_modifications": [
+    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge."
+  ],
+  "submissionId": "eareview-mpkp1xv5-1-tgbn10",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-25T04:16:12.977Z",
+  "modelTier": "opus"
+}
