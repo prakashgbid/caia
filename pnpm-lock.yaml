@@ -3168,6 +3168,28 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
+  packages/test-reviewer:
+    dependencies:
+      '@caia/architect-kit':
+        specifier: workspace:*
+        version: link:../architect-kit
+      '@caia/state-machine':
+        specifier: workspace:*
+        version: link:../state-machine
+      '@chiefaia/ticket-template':
+        specifier: workspace:*
+        version: link:../ticket-template
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/testing-architect:
     dependencies:
       '@caia/architect-kit':
