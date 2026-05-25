@@ -1,6 +1,7 @@
 /**
  * @caia/pipeline-conductor — Pipeline Status Manager Agent.
- * Public surface. Per research/conductor_agent_spec_2026.md §6.
+ * Public surface. Per research/conductor_agent_spec_2026.md §6
+ * + research/ai_first_continuous_discipline_2026.md §7 (Layer 5).
  */
 
 export { ConductorClient } from './api.js';
@@ -47,3 +48,32 @@ export type {
   EscalationResolution,
   EscalationResult,
 } from './types.js';
+
+// ─── AI-First Continuous Discipline — Layer 5 ──────────────────────────────
+export {
+  DriftDetector,
+  DEFAULT_SOURCE_GLOBS,
+  DRIFT_DETECTOR_ACTOR,
+} from './drift-detector.js';
+export type {
+  DriftDetectorOptions,
+  PolicyViolationInput,
+  MemoryInconsistencyInput,
+  PrincipleViolationInput,
+} from './drift-detector.js';
+
+export {
+  Alerter,
+  DRIFT_EVENT_TYPES,
+  INBOX_SECTION_HEADER,
+  InMemoryAlerterFs,
+  isDriftEventType,
+  renderAlertEntry,
+} from './alerter.js';
+export type {
+  AlerterOptions,
+  AlerterFsAdapter,
+  DriftEventType,
+  OperatorNotifier,
+  OperatorNotification,
+} from './alerter.js';
