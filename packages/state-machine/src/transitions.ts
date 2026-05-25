@@ -2,7 +2,12 @@
  * Valid transitions for the CAIA project FSM.
  *
  * Sourced verbatim from `state_machine_handoff_spec_2026.md` §1.1 + §1.3 +
- * §1.4 + §1.5. Every transition is enumerated; anything else throws.
+ * §1.4 + §1.5. Information-Architecture edges (interview-complete →
+ * information-architecture-in-progress → information-architecture-complete
+ * → proposal-generated) added per `info_architect_agent_spec_2026.md` §6
+ * (ratified 2026-05-25 in ADR-024).
+ *
+ * Every transition is enumerated; anything else throws.
  */
 
 import { ALL_STATES, isTerminal, type ProjectState } from './states.js';
@@ -22,8 +27,37 @@ const VALID_TRANSITIONS_RAW: Record<ProjectState, readonly ProjectState[]> = {
     'paused',
     'archived',
   ],
+  // ADR-024 (2026-05-25): the canonical successor to `interview-complete` is
+  // `information-architecture-in-progress`, not `proposal-generated`. The
+  // direct edge to `proposal-generated` is REMOVED because Step 4 now
+  // consumes IA artifacts instead of inventing them inline. The IA failure
+  // state is also reachable so the IA worker can fast-fail before any
+  // artifact is written (e.g. advisory-lock contention, BusinessPlanV2
+  // schema violation).
   'interview-complete': [
+    'information-architecture-in-progress',
+    'information-architecture-failed',
+    'paused',
+    'archived',
+  ],
+  // -- Step 3.5: Information Architect (ADR-024) ----------------------------
+  // The IA worker either completes (all three artifacts written, critic
+  // score ≥85 per IA spec §6.2, schema validation passes) or fails. Failure
+  // is recoverable: the operator can re-trigger the IA run without losing
+  // the BusinessPlanV2 it was working from.
+  'information-architecture-in-progress': [
+    'information-architecture-complete',
+    'information-architecture-failed',
+    'paused',
+    'archived',
+  ],
+  // The canonical edge into Step 4. Step 4's prompt context reads
+  // `iaRevisionId` from project state and joins the three IA artifacts.
+  // Per IA spec §6.3, a regenerate flow reverts back to
+  // `information-architecture-in-progress`.
+  'information-architecture-complete': [
     'proposal-generated',
+    'information-architecture-in-progress',
     'proposal-failed',
     'paused',
     'archived',
@@ -59,6 +93,9 @@ const VALID_TRANSITIONS_RAW: Record<ProjectState, readonly ProjectState[]> = {
     'tests-authored',
     'coding-in-progress',
     'idea-captured',
+    // IA artifacts can also be the resume target when a change-request
+    // affects sitemap, design system, or component identity (IA spec §6.3).
+    'information-architecture-in-progress',
     'paused',
     'archived',
   ],
@@ -70,6 +107,7 @@ const VALID_TRANSITIONS_RAW: Record<ProjectState, readonly ProjectState[]> = {
     'tests-authored',
     'coding-in-progress',
     'idea-captured',
+    'information-architecture-in-progress',
     'paused',
     'archived',
   ],
@@ -118,7 +156,22 @@ const VALID_TRANSITIONS_RAW: Record<ProjectState, readonly ProjectState[]> = {
   // -- Failed-side variants -> recover or abandon (spec §1.3) ---------------
   'onboarding-failed': ['onboarding', 'archived'],
   'interviewing-failed': ['interviewing', 'idea-captured', 'archived'],
-  'proposal-failed': ['interview-complete', 'archived'],
+  // IA failure recovers to interview-complete (re-trigger from scratch) or
+  // back into IA-in-progress (resume from the last critic checkpoint).
+  'information-architecture-failed': [
+    'interview-complete',
+    'information-architecture-in-progress',
+    'archived',
+  ],
+  // Proposal can fail from either IA-complete (Step 4 prompt build error)
+  // or from an earlier state via routing. Recovery returns to IA-complete
+  // (re-render with the same IA revision) or all the way back to
+  // interview-complete (re-author IA).
+  'proposal-failed': [
+    'information-architecture-complete',
+    'interview-complete',
+    'archived',
+  ],
   'design-ingest-failed': ['awaiting-external-design', 'archived'],
   'atlas-decompose-failed': ['design-uploaded', 'archived'],
   'ea-dispatching-failed': ['ticket-tree-generated', 'ea-dispatching', 'archived'],

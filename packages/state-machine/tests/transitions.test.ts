@@ -123,3 +123,151 @@ describe('transitions', () => {
     expect(exits.length).toBe(ALL_STATES.length - 1);
   });
 });
+
+// -- ADR-024 (2026-05-25): Information Architect FSM edges -----------------
+describe('transitions — Information Architect (ADR-024)', () => {
+  it('interview-complete → information-architecture-in-progress is canonical', () => {
+    expect(
+      canTransition('interview-complete', 'information-architecture-in-progress'),
+    ).toBe(true);
+  });
+
+  it('interview-complete no longer reaches proposal-generated directly', () => {
+    expect(canTransition('interview-complete', 'proposal-generated')).toBe(false);
+  });
+
+  it('interview-complete can fast-fail to information-architecture-failed', () => {
+    expect(
+      canTransition('interview-complete', 'information-architecture-failed'),
+    ).toBe(true);
+  });
+
+  it('IA-in-progress → IA-complete is the success edge', () => {
+    expect(
+      canTransition(
+        'information-architecture-in-progress',
+        'information-architecture-complete',
+      ),
+    ).toBe(true);
+  });
+
+  it('IA-in-progress → IA-failed is the failure edge', () => {
+    expect(
+      canTransition(
+        'information-architecture-in-progress',
+        'information-architecture-failed',
+      ),
+    ).toBe(true);
+  });
+
+  it('IA-in-progress can be paused and archived', () => {
+    expect(
+      canTransition('information-architecture-in-progress', 'paused'),
+    ).toBe(true);
+    expect(
+      canTransition('information-architecture-in-progress', 'archived'),
+    ).toBe(true);
+  });
+
+  it('IA-complete → proposal-generated replaces the legacy direct edge', () => {
+    expect(
+      canTransition('information-architecture-complete', 'proposal-generated'),
+    ).toBe(true);
+  });
+
+  it('IA-complete can regenerate back into IA-in-progress (IA spec §6.3)', () => {
+    expect(
+      canTransition(
+        'information-architecture-complete',
+        'information-architecture-in-progress',
+      ),
+    ).toBe(true);
+  });
+
+  it('IA-complete → proposal-failed is a recognised failure path', () => {
+    expect(
+      canTransition('information-architecture-complete', 'proposal-failed'),
+    ).toBe(true);
+  });
+
+  it('IA-failed recovers to interview-complete', () => {
+    expect(
+      canTransition(
+        'information-architecture-failed',
+        'interview-complete',
+      ),
+    ).toBe(true);
+  });
+
+  it('IA-failed recovers to IA-in-progress (resume from critic checkpoint)', () => {
+    expect(
+      canTransition(
+        'information-architecture-failed',
+        'information-architecture-in-progress',
+      ),
+    ).toBe(true);
+  });
+
+  it('IA-failed can only escape to interview-complete, IA-in-progress, or archived', () => {
+    const exits = VALID_TRANSITIONS['information-architecture-failed'];
+    expect([...exits].sort()).toEqual(
+      [
+        'archived',
+        'information-architecture-in-progress',
+        'interview-complete',
+      ].sort(),
+    );
+  });
+
+  it('proposal-failed can recover to IA-complete (re-render Step 4) or interview-complete (re-IA)', () => {
+    expect(
+      canTransition('proposal-failed', 'information-architecture-complete'),
+    ).toBe(true);
+    expect(canTransition('proposal-failed', 'interview-complete')).toBe(true);
+  });
+
+  it('change-requested can route back into IA-in-progress', () => {
+    expect(
+      canTransition('change-requested', 'information-architecture-in-progress'),
+    ).toBe(true);
+  });
+
+  it('revision-pending can resume into IA-in-progress', () => {
+    expect(
+      canTransition('revision-pending', 'information-architecture-in-progress'),
+    ).toBe(true);
+  });
+
+  it('done is still reachable from IA-in-progress', () => {
+    expect(reachableTerminals('information-architecture-in-progress')).toContain(
+      'done',
+    );
+  });
+
+  it('done is still reachable from IA-complete', () => {
+    expect(reachableTerminals('information-architecture-complete')).toContain(
+      'done',
+    );
+  });
+
+  it('done is still reachable from IA-failed (via recovery)', () => {
+    expect(reachableTerminals('information-architecture-failed')).toContain(
+      'done',
+    );
+  });
+
+  it('IA-complete cannot skip Step 4 and jump straight to design-uploaded', () => {
+    expect(
+      canTransition('information-architecture-complete', 'design-uploaded'),
+    ).toBe(false);
+  });
+
+  it('IA-in-progress cannot jump straight to proposal-generated', () => {
+    expect(
+      canTransition(
+        'information-architecture-in-progress',
+        'proposal-generated',
+      ),
+    ).toBe(false);
+  });
+});

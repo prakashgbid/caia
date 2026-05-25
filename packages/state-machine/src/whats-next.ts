@@ -67,7 +67,23 @@ const HANDOFF_TABLE: Record<ProjectState, HandoffEntry> = {
     onSuccessTransitionTo: 'interview-complete',
     onFailureTransitionTo: 'interviewing-failed',
   },
+  // ADR-024 (2026-05-25): post-interview, the orchestrator now fans out to
+  // the Information Architect (Step 3.5). The IA agent emits pages-catalogue,
+  // design-system, and components-library. Only after IA completion does
+  // Step 4 (proposal-generator) run.
   'interview-complete': {
+    type: '@caia/info-architect',
+    producesArtifact: 'IaArtifactSet',
+    onSuccessTransitionTo: 'information-architecture-in-progress',
+    onFailureTransitionTo: 'information-architecture-failed',
+  },
+  'information-architecture-in-progress': {
+    type: '@caia/info-architect',
+    producesArtifact: 'IaArtifactSet',
+    onSuccessTransitionTo: 'information-architecture-complete',
+    onFailureTransitionTo: 'information-architecture-failed',
+  },
+  'information-architecture-complete': {
     type: '@caia/proposal-generator',
     producesArtifact: 'ProposalBundle',
     onSuccessTransitionTo: 'proposal-generated',
@@ -176,6 +192,7 @@ const HANDOFF_TABLE: Record<ProjectState, HandoffEntry> = {
   // -- Failed-side: wait for operator / auto-retry --
   'onboarding-failed': { waitingOn: 'waiting-for-failure-recovery' },
   'interviewing-failed': { waitingOn: 'waiting-for-failure-recovery' },
+  'information-architecture-failed': { waitingOn: 'waiting-for-failure-recovery' },
   'proposal-failed': { waitingOn: 'waiting-for-failure-recovery' },
   'design-ingest-failed': { waitingOn: 'waiting-for-failure-recovery' },
   'atlas-decompose-failed': { waitingOn: 'waiting-for-failure-recovery' },

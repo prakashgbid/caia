@@ -1,0 +1,22 @@
+{
+  "status": "approved-with-modifications",
+  "reasoning": "Stub critic (autonomous run, 2026-05-25, ADR-024 ratification): @caia/info-architect package surface matches the brief — agent + persistence + system-prompt + api + types + migrations. FSM extension stays within the canonical pipeline FSM (interview-complete -> information-architecture-in-progress -> information-architecture-complete -> proposal-generated). Three new states (information-architecture-in-progress, information-architecture-complete, information-architecture-failed) and the IA-failure recovery edges (-> interview-complete, -> information-architecture-in-progress) are enumerated in transitions.ts. The pre-2026-05-25 direct edge interview-complete -> proposal-generated is removed; this is a behaviour change and the proposal-generator now runs from IA-complete via @caia/state-machine/whats-next. Reuses @caia/state-machine, @chiefaia/claude-spawner (subscription-only), and the per-tenant {{SCHEMA}} substitution pattern from @caia/grand-idea. Wave-1 deferrals (deep critic loop, S3 snapshots, ArchitectInput extension, Step 4 refactor, @caia/info-architect-playbook, @caia/info-architect-types) are documented in PLAN.md §2.2. Operator should run a live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+  "cited_adrs": [
+    "ADR-024",
+    "ADR-061"
+  ],
+  "cited_principles": [],
+  "cited_lessons": [],
+  "requested_modifications": [
+    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+    "Wave 2: extract @caia/info-architect-types as a standalone Zod-schema package.",
+    "Wave 2: wire the §9.13 critic-loop rubric and replace the skeleton fallback.",
+    "Wave 2: extend ArchitectInput with the informationArchitecture field across all 17 architects.",
+    "Wave 2: refactor @caia/business-proposal-generator to read IA artifacts.",
+    "Wave 2: add S3 snapshot mirror per IA spec §8."
+  ],
+  "submissionId": "eareview-mplqpygr-1-z9xibm",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-25T21:50:39.291Z",
+  "modelTier": "opus"
+}

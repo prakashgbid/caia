@@ -18,7 +18,16 @@ export const HAPPY_PATH: ReadonlyArray<[ProjectState, ProjectState]> = [
   ['onboarding', 'idea-captured'],
   ['idea-captured', 'interviewing'],
   ['interviewing', 'interview-complete'],
-  ['interview-complete', 'proposal-generated'],
+  // ADR-024 (2026-05-25): canonical path is now interview-complete →
+  // information-architecture-in-progress → information-architecture-complete
+  // → proposal-generated. Step 4 consumes IA artifacts instead of inventing
+  // them inline.
+  ['interview-complete', 'information-architecture-in-progress'],
+  [
+    'information-architecture-in-progress',
+    'information-architecture-complete',
+  ],
+  ['information-architecture-complete', 'proposal-generated'],
   ['proposal-generated', 'awaiting-external-design'],
   ['awaiting-external-design', 'design-uploaded'],
   ['design-uploaded', 'ticket-tree-generated'],
