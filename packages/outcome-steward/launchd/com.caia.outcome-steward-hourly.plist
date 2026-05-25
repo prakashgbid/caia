@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.outcome-steward-hourly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/opt/node@22/bin/node</string>
+        <string>/Users/macbook32/Documents/projects/caia/packages/outcome-steward/bin/outcome-steward-run</string>
+        <string>--quiet</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/outcome-steward.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/outcome-steward.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/macbook32</string>
+        <!--
+          OUTCOME_STEWARD_PROMETHEUS_URL is intentionally left unset by default.
+          Until the Prometheus instance is reachable (status.chiefaia.com or the
+          K3s ingress), the steward runs with NullBackend and emits
+          no-metric-store.warning events. Set to e.g. http://localhost:9090 or
+          the K3s ingress to engage real attestation. JSONL is written to
+          ~/.caia/outcome-steward/runs.jsonl regardless.
+        -->
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macbook32/Documents/projects/caia/packages/outcome-steward</string>
+
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Nice</key>
+    <integer>10</integer>
+</dict>
+</plist>

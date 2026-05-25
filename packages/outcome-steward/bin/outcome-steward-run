@@ -1,0 +1,111 @@
+#!/usr/bin/env node
+/**
+ * outcome-steward-run — CLI entrypoint.
+ *
+ * Invoked hourly by `launchd/com.caia.outcome-steward-hourly.plist`.
+ * Mirrors the activation-steward CLI convention:
+ *   - exits 0 even when red attestations exist (failure surface is
+ *     INBOX + event-bus, not exit code; this lets launchd cycle
+ *     cleanly and avoids re-spawn loops)
+ *   - exits 1 only on internal errors (config invalid, fatal I/O)
+ *
+ * Flags:
+ *   --quiet                       suppress stdout summary
+ *   --dry-run                     don't write JSONL / INBOX / status snapshot
+ *   --window-hours=N              freshness window (default 24)
+ *   --prometheus-url=URL          Prometheus backend URL (else NullBackend)
+ *   --grafana-url=URL             Grafana backend URL (overrides --prometheus-url)
+ *   --grafana-ds=UID              Grafana datasource UID (required with --grafana-url)
+ *   --grafana-api-key=KEY         Grafana API key (optional)
+ *   --inbox=PATH                  override INBOX path
+ *   --runs-jsonl=PATH             override JSONL audit path
+ *   --status-json=PATH            override status snapshot path
+ *   --attestations-jsonl=PATH     override green-attestation JSONL path
+ *   --packages-root=PATH          override packages root
+ *   --deploy-manifest=PATH        override deploy manifest path
+ *   --site=NAME                   site identifier (default caia-mac)
+ */
+
+import { run } from '../dist/run.js';
+import {
+  GrafanaBackend,
+  NullBackend,
+  PrometheusBackend,
+} from '../dist/metric-collector.js';
+
+function parseFlags(argv) {
+  const out = {};
+  for (const arg of argv.slice(2)) {
+    if (arg === '--quiet') { out.quiet = true; continue; }
+    if (arg === '--dry-run') { out.dryRun = true; continue; }
+    const m = arg.match(/^--([a-z-]+)=(.+)$/i);
+    if (!m) continue;
+    const [, key, val] = m;
+    switch (key) {
+      case 'window-hours':          out.windowHours = Number(val); break;
+      case 'prometheus-url':        out.prometheusUrl = val; break;
+      case 'grafana-url':           out.grafanaUrl = val; break;
+      case 'grafana-ds':            out.grafanaDs = val; break;
+      case 'grafana-api-key':       out.grafanaApiKey = val; break;
+      case 'inbox':                 out.inboxPath = val; break;
+      case 'runs-jsonl':            out.runsJsonlPath = val; break;
+      case 'status-json':           out.statusJsonPath = val; break;
+      case 'attestations-jsonl':    out.attestationsJsonlPath = val; break;
+      case 'packages-root':         out.packagesRoot = val; break;
+      case 'deploy-manifest':       out.deployManifestPath = val; break;
+      case 'site':                  out.site = val; break;
+      default:                      break;
+    }
+  }
+  return out;
+}
+
+function pickBackend(flags) {
+  if (flags.grafanaUrl) {
+    if (!flags.grafanaDs) {
+      throw new Error('--grafana-url requires --grafana-ds=<datasource-uid>');
+    }
+    const opts = { baseUrl: flags.grafanaUrl, datasourceUid: flags.grafanaDs };
+    if (flags.grafanaApiKey) opts.apiKey = flags.grafanaApiKey;
+    return new GrafanaBackend(opts);
+  }
+  if (flags.prometheusUrl) return new PrometheusBackend({ baseUrl: flags.prometheusUrl });
+  if (process.env.OUTCOME_STEWARD_PROMETHEUS_URL) {
+    return new PrometheusBackend({ baseUrl: process.env.OUTCOME_STEWARD_PROMETHEUS_URL });
+  }
+  return new NullBackend();
+}
+
+async function main() {
+  const flags = parseFlags(process.argv);
+  let backend;
+  try {
+    backend = pickBackend(flags);
+  } catch (err) {
+    console.error(`[outcome-steward] FATAL: ${err && err.message ? err.message : String(err)}`);
+    process.exit(1);
+    return;
+  }
+  const opts = { ...flags, backend };
+  delete opts.prometheusUrl;
+  delete opts.grafanaUrl;
+  delete opts.grafanaDs;
+  delete opts.grafanaApiKey;
+
+  try {
+    const result = await run(opts);
+    if (!flags.quiet) {
+      console.log(
+        `[outcome-steward] inbox-appended=${result.inboxAppended} ` +
+          `events-emitted=${result.eventsEmitted} green-attestations=${result.greenCount}`,
+      );
+    }
+    process.exit(0);
+  } catch (err) {
+    console.error(`[outcome-steward] FATAL: ${err && err.message ? err.message : String(err)}`);
+    if (err && err.stack) console.error(err.stack);
+    process.exit(1);
+  }
+}
+
+main();
