@@ -1,0 +1,57 @@
+{
+  "name": "@caia/test-author",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Test Author Agent — Stage 10 of CAIA's canonical pipeline. Reads each EA-approved ticket (composed `tickets.architecture` JSONB filled by the 17 specialist architects) and emits the per-story `ticket.testCases` JSONB: Gherkin-flavoured Given/When/Then cases with the right category + layer + selector hints + mocks so the Test Runner (Stage 14 / @caia/per-story-tester) can deterministically translate to vitest + Playwright + axe + Lighthouse source. Drives the transition `ea-complete → tests-authored` on success and `ea-complete → tests-authored → tests-authoring-failed` on failure (canonical chain per @caia/state-machine). Distinct from @caia/testing-architect (PR #565 — sets strategy) and @caia/test-reviewer (PR #573 — audits the test set). Subscription-only LLM via @chiefaia/claude-spawner.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./agent": {
+      "import": "./dist/agent.js",
+      "types": "./dist/agent.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    },
+    "./contract": {
+      "import": "./dist/contract.js",
+      "types": "./dist/contract.d.ts"
+    }
+  },
+  "files": ["dist", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "lint": "eslint src tests",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*",
+    "@chiefaia/playwright-config": "workspace:*",
+    "@chiefaia/test-kit": "workspace:*",
+    "@chiefaia/ticket-template": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@caia/testing-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
