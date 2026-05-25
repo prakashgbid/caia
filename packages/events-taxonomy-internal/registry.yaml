@@ -658,3 +658,33 @@ events:
     severity: warning
     actor: [pipeline-conductor]
     payload: [stage, active_count, stuck_count, median_dwell_seconds, recommended_action]
+
+  # ─── AI-First Continuous Discipline — Layer 5 drift events ───────────────
+  # research/ai_first_continuous_discipline_2026.md §7. Three drift event
+  # types normalised by @caia/pipeline-conductor's drift-detector from
+  # upstream signals (@caia/policy-linter, @caia/memory-consolidator,
+  # @caia/ea-drift-sentinel). Pipeline Conductor's alerter subscribes to
+  # all three and surfaces to INBOX + dashboard.
+
+  # Emitted by the drift-detector when a policy linter reports a violation.
+  # The `mode` carries the Sentinel three-mode discipline: advisory|soft-fail|hard-fail.
+  # Severity is dynamic — `warning` for advisory/soft-fail, `error` for hard-fail.
+  - type: policy.violation.detected
+    severity: warning
+    actor: [pipeline-conductor, policy-linter]
+    payload: [policy_id, dispatch_id, caller_agent_id, mode, reason, suggested_fix]
+
+  # Emitted by the drift-detector when the memory-consolidation saga finds
+  # a memory file whose claim no longer matches the filesystem reality.
+  - type: memory.consistency.broken
+    severity: warning
+    actor: [pipeline-conductor, memory-consolidator]
+    payload: [memory_file, claim, actual, discovered_by]
+
+  # Emitted by the drift-detector when the EA Drift Sentinel confirms a
+  # tier-1 hit via its tier-2 LLM reasoner. Severity is `error` because a
+  # confirmed principle violation is a P0-class signal.
+  - type: architecture.principle.violated
+    severity: error
+    actor: [pipeline-conductor, ea-drift-sentinel]
+    payload: [principle_id, adr_id, location, detected_at]
