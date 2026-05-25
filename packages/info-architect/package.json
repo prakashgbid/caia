@@ -1,0 +1,61 @@
+{
+  "name": "@caia/info-architect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Information Architect (IA) Agent — Step 3.5 in CAIA's canonical pipeline (ratified 2026-05-25 in ADR-024). Consumes BusinessPlanV2 + tenant context and emits three canonical structural artifacts: pages-catalogue (sitemap + template + section stacks), design-system (color/typography/spacing tokens + light/dark mapping), and components-library (Atomic-Design catalogue with stable globally-unique IDs). The first pipeline step that produces structural truth; every downstream step reads its outputs as the canonical contract for 'what is this site, made of what, structured how.' Subscription-only via @chiefaia/claude-spawner. Drives the canonical FSM chain interview-complete → information-architecture-in-progress → information-architecture-complete via @caia/state-machine.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./agent": {
+      "import": "./dist/agent.js",
+      "types": "./dist/agent.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    },
+    "./persistence": {
+      "import": "./dist/persistence.js",
+      "types": "./dist/persistence.d.ts"
+    },
+    "./system-prompt": {
+      "import": "./dist/system-prompt.js",
+      "types": "./dist/system-prompt.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "files": ["dist", "migrations", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/atlas-mapper": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*",
+    "@chiefaia/ticket-template": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

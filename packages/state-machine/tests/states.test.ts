@@ -14,16 +14,40 @@ import {
 } from '../src/states.js';
 
 describe('states', () => {
-  it('enumerates 23 happy states', () => {
-    expect(HAPPY_STATES.length).toBe(23);
+  it('enumerates 25 happy states (post ADR-024: +IA-in-progress, +IA-complete)', () => {
+    expect(HAPPY_STATES.length).toBe(25);
   });
 
-  it('enumerates 15 failed states', () => {
-    expect(FAILED_STATES.length).toBe(15);
+  it('enumerates 16 failed states (post ADR-024: +IA-failed)', () => {
+    expect(FAILED_STATES.length).toBe(16);
   });
 
   it('enumerates 3 control states', () => {
     expect(CONTROL_STATES.length).toBe(3);
+  });
+
+  it('exposes the two new IA happy states', () => {
+    expect(HAPPY_STATES).toContain('information-architecture-in-progress');
+    expect(HAPPY_STATES).toContain('information-architecture-complete');
+  });
+
+  it('exposes the IA failed state', () => {
+    expect(FAILED_STATES).toContain('information-architecture-failed');
+  });
+
+  it('IA-in-progress sits between interview-complete and IA-complete in the happy sequence', () => {
+    const ip = HAPPY_STATES.indexOf('interview-complete');
+    const iaInProgress = HAPPY_STATES.indexOf(
+      'information-architecture-in-progress',
+    );
+    const iaComplete = HAPPY_STATES.indexOf(
+      'information-architecture-complete',
+    );
+    const proposal = HAPPY_STATES.indexOf('proposal-generated');
+    expect(ip).toBeGreaterThan(-1);
+    expect(iaInProgress).toBe(ip + 1);
+    expect(iaComplete).toBe(iaInProgress + 1);
+    expect(proposal).toBe(iaComplete + 1);
   });
 
   it('ALL_STATES is the concatenation of happy + failed + control', () => {
@@ -41,6 +65,9 @@ describe('states', () => {
     expect(isProjectState('onboarding')).toBe(true);
     expect(isProjectState('archived')).toBe(true);
     expect(isProjectState('done')).toBe(true);
+    expect(isProjectState('information-architecture-in-progress')).toBe(true);
+    expect(isProjectState('information-architecture-complete')).toBe(true);
+    expect(isProjectState('information-architecture-failed')).toBe(true);
   });
 
   it('isProjectState rejects garbage', () => {
@@ -52,8 +79,11 @@ describe('states', () => {
 
   it('classifies states correctly', () => {
     expect(isHappyState('done')).toBe(true);
+    expect(isHappyState('information-architecture-in-progress')).toBe(true);
+    expect(isHappyState('information-architecture-complete')).toBe(true);
     expect(isHappyState('onboarding-failed' as never)).toBe(false);
     expect(isFailedState('onboarding-failed')).toBe(true);
+    expect(isFailedState('information-architecture-failed')).toBe(true);
     expect(isFailedState('done' as never)).toBe(false);
     expect(isControlState('paused')).toBe(true);
     expect(isControlState('done' as never)).toBe(false);
@@ -65,5 +95,6 @@ describe('states', () => {
     expect(isTerminal('archived')).toBe(true);
     expect(isTerminal('onboarding')).toBe(false);
     expect(isTerminal('paused')).toBe(false);
+    expect(isTerminal('information-architecture-complete')).toBe(false);
   });
 });

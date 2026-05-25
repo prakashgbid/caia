@@ -2,6 +2,8 @@
  * Canonical CAIA pipeline states.
  *
  * Sourced from `research/state_machine_handoff_spec_2026.md` §1.2 + §1.3.
+ * Information-Architecture states added per `info_architect_agent_spec_2026.md`
+ * §6.1 (Step 3.5 in the canonical pipeline, ratified 2026-05-25 in ADR-024).
  *
  * Every "doing" state has an explicit `*-failed` variant. Plus `paused` and
  * `revision-pending` as orthogonal flags-as-states. `archived` is terminal.
@@ -13,6 +15,14 @@ export const HAPPY_STATES = [
   'idea-captured',
   'interviewing',
   'interview-complete',
+  // -- Step 3.5: Information Architect (ADR-024) ----------------------------
+  // The IA agent emits pages-catalogue, design-system, and components-library
+  // as the canonical structural contract for the rest of the pipeline. Fires
+  // automatically when BusinessPlanV2 completeness ≥ 80; Step 4 (proposal-
+  // generator) reads its outputs instead of inventing IA inline. Replaces the
+  // pre-2026-05-25 direct `interview-complete → proposal-generated` edge.
+  'information-architecture-in-progress',
+  'information-architecture-complete',
   'proposal-generated',
   'awaiting-external-design',
   'design-uploaded',
@@ -38,6 +48,10 @@ export const HAPPY_STATES = [
 export const FAILED_STATES = [
   'onboarding-failed',
   'interviewing-failed',
+  // Critic-loop failure of the IA Agent (artifacts don't reach §9.13 score
+  // floor, schema validation fails, advisory-lock timeout, etc.). Recovers
+  // back to interview-complete or IA-in-progress.
+  'information-architecture-failed',
   'proposal-failed',
   'design-ingest-failed',
   'atlas-decompose-failed',

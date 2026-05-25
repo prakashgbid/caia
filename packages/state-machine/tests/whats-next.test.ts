@@ -53,6 +53,8 @@ describe('whatsNext', () => {
       'idea-captured',
       'interviewing',
       'interview-complete',
+      'information-architecture-in-progress',
+      'information-architecture-complete',
       'proposal-generated',
       'awaiting-external-design',
     ] as const) {
@@ -73,6 +75,8 @@ describe('whatsNext', () => {
       'idea-captured',
       'interviewing',
       'interview-complete',
+      'information-architecture-in-progress',
+      'information-architecture-complete',
       'proposal-generated',
       'awaiting-external-design',
       'design-uploaded',
@@ -113,6 +117,94 @@ describe('whatsNext', () => {
     expect(a.agent?.type).toBe(b.agent?.type);
     expect(a.currentState).toBe(b.currentState);
   });
+
+  // -- ADR-024 Information Architect handoff coverage -----------------------
+  it('fans out to @caia/info-architect at interview-complete', async () => {
+    const p = await newProject();
+    for (const target of [
+      'idea-captured',
+      'interviewing',
+      'interview-complete',
+    ] as const) {
+      await sm.transition(p.id, target, {
+        reason: 'walk',
+        triggeredBy: { kind: 'system', id: 'test' },
+        payload: { target },
+      });
+    }
+    const r = await whatsNext(sm, p.id);
+    expect(r.hasWork).toBe(true);
+    expect(r.agent?.type).toBe('@caia/info-architect');
+    expect(r.agent?.producesArtifact).toBe('IaArtifactSet');
+    expect(r.agent?.onSuccessTransitionTo).toBe(
+      'information-architecture-in-progress',
+    );
+    expect(r.agent?.onFailureTransitionTo).toBe(
+      'information-architecture-failed',
+    );
+  });
+
+  it('continues running @caia/info-architect at IA-in-progress', async () => {
+    const p = await newProject();
+    for (const target of [
+      'idea-captured',
+      'interviewing',
+      'interview-complete',
+      'information-architecture-in-progress',
+    ] as const) {
+      await sm.transition(p.id, target, {
+        reason: 'walk',
+        triggeredBy: { kind: 'system', id: 'test' },
+        payload: { target },
+      });
+    }
+    const r = await whatsNext(sm, p.id);
+    expect(r.hasWork).toBe(true);
+    expect(r.agent?.type).toBe('@caia/info-architect');
+    expect(r.agent?.onSuccessTransitionTo).toBe(
+      'information-architecture-complete',
+    );
+  });
+
+  it('fans out to @caia/proposal-generator at IA-complete', async () => {
+    const p = await newProject();
+    for (const target of [
+      'idea-captured',
+      'interviewing',
+      'interview-complete',
+      'information-architecture-in-progress',
+      'information-architecture-complete',
+    ] as const) {
+      await sm.transition(p.id, target, {
+        reason: 'walk',
+        triggeredBy: { kind: 'system', id: 'test' },
+        payload: { target },
+      });
+    }
+    const r = await whatsNext(sm, p.id);
+    expect(r.hasWork).toBe(true);
+    expect(r.agent?.type).toBe('@caia/proposal-generator');
+    expect(r.agent?.onSuccessTransitionTo).toBe('proposal-generated');
+  });
+
+  it('reports waiting-for-failure-recovery at information-architecture-failed', async () => {
+    const p = await newProject();
+    for (const target of [
+      'idea-captured',
+      'interviewing',
+      'interview-complete',
+      'information-architecture-failed',
+    ] as const) {
+      await sm.transition(p.id, target, {
+        reason: 'walk',
+        triggeredBy: { kind: 'system', id: 'test' },
+        payload: { target },
+      });
+    }
+    const r = await whatsNext(sm, p.id);
+    expect(r.hasWork).toBe(false);
+    expect(r.waitingOn).toBe('waiting-for-failure-recovery');
+  });
 });
 
 describe('resumePoint', () => {
@@ -137,6 +229,24 @@ describe('resumePoint', () => {
       reason: 'fail',
       triggeredBy: { kind: 'system', id: 'test' },
     });
+    const r = await resumePoint(sm, p.id);
+    expect(r.reason).toBe('parked-at-failure');
+  });
+
+  it('reports parked-at-failure for information-architecture-failed', async () => {
+    const p = await newProject();
+    for (const target of [
+      'idea-captured',
+      'interviewing',
+      'interview-complete',
+      'information-architecture-failed',
+    ] as const) {
+      await sm.transition(p.id, target, {
+        reason: 'walk',
+        triggeredBy: { kind: 'system', id: 'test' },
+        payload: { target },
+      });
+    }
     const r = await resumePoint(sm, p.id);
     expect(r.reason).toBe('parked-at-failure');
   });
