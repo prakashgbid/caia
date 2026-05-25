@@ -1,0 +1,60 @@
+{
+  "name": "@caia/principal-engineer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Principal Engineer — Stage 12 in CAIA's canonical pipeline. Takes EA-approved + Test-Author-prepared tickets and distributes them across N parallel coding workers, deciding parallel-vs-sequential bucketing from a typed dependency graph. Drives the state-machine transition tests-reviewed -> scheduled per ticket and dispatches Full-Stack-Engineer subagents up to the per-tenant concurrency cap. Subscription-only. Reuses @caia/state-machine, @chiefaia/claude-spawner, @chiefaia/ticket-template, and the caia-coding subagent template.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./dependency-graph": {
+      "import": "./dist/dependency-graph.js",
+      "types": "./dist/dependency-graph.d.ts"
+    },
+    "./bucketer": {
+      "import": "./dist/bucketer.js",
+      "types": "./dist/bucketer.d.ts"
+    },
+    "./worker-pool": {
+      "import": "./dist/worker-pool.js",
+      "types": "./dist/worker-pool.d.ts"
+    },
+    "./dispatcher": {
+      "import": "./dist/dispatcher.js",
+      "types": "./dist/dispatcher.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    }
+  },
+  "files": ["dist", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*",
+    "@chiefaia/ticket-template": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
