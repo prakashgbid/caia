@@ -1,0 +1,57 @@
+{
+  "name": "@caia/knowledge-graph-dispatch-hook",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Layer 3 of the AI-First Continuous-Discipline framework. Pre-dispatch context injection: activates the Architecture Knowledge Graph (@chiefaia/architecture-registry, nomic-embed-text + sqlite-vec) so every fresh subagent dispatch receives relevant ADRs / principles / lessons / feedback memories auto-prepended to its brief based on semantic similarity to the task topic. Mirrors @caia/policy-linter's dispatch-hook pattern (HOF wrapper around any dispatch fn).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./hook": {
+      "import": "./dist/hook.js",
+      "types": "./dist/hook.d.ts"
+    },
+    "./embedder": {
+      "import": "./dist/embedder.js",
+      "types": "./dist/embedder.d.ts"
+    },
+    "./context-builder": {
+      "import": "./dist/context-builder.js",
+      "types": "./dist/context-builder.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "echo \"(lint via root)\""
+  },
+  "dependencies": {
+    "@chiefaia/architecture-registry": "workspace:*",
+    "@chiefaia/events": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "better-sqlite3": "^12.6.2",
+    "sqlite-vec": "^0.1.9",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
