@@ -1,0 +1,66 @@
+{
+  "name": "@caia/full-stack-engineer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Full-Stack Engineer — Stage 13 in CAIA's canonical pipeline. Per-ticket coding worker subagent. Reads EA-approved + Test-authored ticket; implements code (frontend + backend + database + tests) per the architects' specs; opens PR; awaits per-story-tester pass. N of these run in parallel under Principal Engineer's scheduling. Drives the state-machine transitions scheduled -> coding-in-progress -> code-complete (or coding-failed). Subscription-only. Reuses @chiefaia/claude-spawner, @chiefaia/claude-subagents, @caia/state-machine, @caia/architect-kit.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./agent": {
+      "import": "./dist/agent.js",
+      "types": "./dist/agent.d.ts"
+    },
+    "./work-claimer": {
+      "import": "./dist/work-claimer.js",
+      "types": "./dist/work-claimer.d.ts"
+    },
+    "./spec-reader": {
+      "import": "./dist/spec-reader.js",
+      "types": "./dist/spec-reader.d.ts"
+    },
+    "./code-emitter": {
+      "import": "./dist/code-emitter.js",
+      "types": "./dist/code-emitter.d.ts"
+    },
+    "./pr-opener": {
+      "import": "./dist/pr-opener.js",
+      "types": "./dist/pr-opener.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    }
+  },
+  "files": ["dist", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/architect-kit": "workspace:*",
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*",
+    "@chiefaia/claude-subagents": "workspace:*",
+    "@chiefaia/ticket-template": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
