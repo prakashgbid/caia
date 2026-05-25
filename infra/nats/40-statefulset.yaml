@@ -20,6 +20,14 @@ spec:
         app.kubernetes.io/component: broker
     spec:
       terminationGracePeriodSeconds: 60
+      # PodSecurity "restricted" compliance.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -33,6 +41,14 @@ spec:
         - name: nats
           image: nats:2.10-alpine
           imagePullPolicy: IfNotPresent
+          # Container-level securityContext for restricted PSA + semgrep.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
           args:
             - "--config"
             - "/etc/nats/config/nats-server.conf"
@@ -60,6 +76,10 @@ spec:
               readOnly: true
             - name: data
               mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+            - name: var-run
+              mountPath: /var/run/nats
           readinessProbe:
             httpGet:
               path: /healthz
@@ -93,7 +113,11 @@ spec:
         - name: tls
           secret:
             secretName: nats-tls
-            optional: true   # allow boot before cert-manager issues; nats will fail-closed if TLS required
+            optional: true   # allow boot before cert-manager issues
+        - name: tmp
+          emptyDir: {}
+        - name: var-run
+          emptyDir: {}
   volumeClaimTemplates:
     - metadata:
         name: data
