@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.caia.lifecycle-conductor</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/opt/node@22/bin/node</string>
+        <string>/Users/macbook32/Documents/projects/caia/packages/lifecycle-conductor/bin/lifecycle-conductor-daemon</string>
+    </array>
+
+    <!-- Continuous listener. KeepAlive true so launchd respawns on
+         crash. NOT a cron — the conductor is subscription-only. -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/lifecycle-conductor.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/macbook32/Library/Logs/caia/lifecycle-conductor.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/macbook32</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macbook32/Documents/projects/caia/packages/lifecycle-conductor</string>
+
+    <!-- Throttle restarts to avoid spin-loops if the daemon crashes
+         repeatedly during construction. -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Nice</key>
+    <integer>5</integer>
+</dict>
+</plist>

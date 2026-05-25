@@ -1,0 +1,64 @@
+{
+  "name": "@caia/lifecycle-conductor",
+  "version": "0.1.0",
+  "description": "Real-DoD Layer 4 — composite solution-lifecycle aggregator. Subscribes to all 5 stewards (deploy + usage + activation + outcome + future-incoming), computes per-solution composite state via @caia/state-machine's solution-lifecycle FSM, drives transitions, projects to SSE via @caia/pipeline-conductor's existing infrastructure, surfaces stuck solutions to INBOX. DoD achieved when all 5 stewards green AND fresh for ≥24 consecutive hours. Subscription-only; no polling.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "lifecycle-conductor-daemon": "./bin/lifecycle-conductor-daemon"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./fsm": {
+      "types": "./dist/fsm.d.ts",
+      "default": "./dist/fsm.js"
+    },
+    "./aggregator": {
+      "types": "./dist/aggregator.d.ts",
+      "default": "./dist/aggregator.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "default": "./dist/api.js"
+    },
+    "./dashboard-projector": {
+      "types": "./dist/dashboard-projector.d.ts",
+      "default": "./dist/dashboard-projector.js"
+    },
+    "./reporter": {
+      "types": "./dist/reporter.d.ts",
+      "default": "./dist/reporter.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "launchd"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@caia/state-machine": "workspace:*"
+  },
+  "devDependencies": {
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

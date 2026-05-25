@@ -1,0 +1,64 @@
+#!/usr/bin/env node
+/**
+ * lifecycle-conductor-daemon — launchd entrypoint.
+ *
+ * Continuous listener. Subscribes to the underlying
+ * `SolutionLifecycleMachine`'s solution.advanced stream AND (optionally,
+ * via env) extra event sources, computes per-solution composite state,
+ * surfaces stuck solutions / regressions / DoD-candidates to INBOX,
+ * fans out composite-state-change events over the SSE projector.
+ *
+ * Env:
+ *   LIFECYCLE_CONDUCTOR_INBOX      override INBOX path
+ *   LIFECYCLE_CONDUCTOR_STATS_MS   stats log interval (default 60000)
+ *   LIFECYCLE_CONDUCTOR_STUCK_MS   stuck-scan interval (default 300000)
+ *   LIFECYCLE_CONDUCTOR_STUCK_H    stuck threshold hours (default 12)
+ */
+
+import { startDaemon } from '../dist/daemon.js';
+
+function parseIntEnv(name, def) {
+  const v = process.env[name];
+  if (v === undefined || v === '') return def;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : def;
+}
+
+async function main() {
+  const config = {};
+  if (process.env.LIFECYCLE_CONDUCTOR_INBOX) {
+    config.inboxPath = process.env.LIFECYCLE_CONDUCTOR_INBOX;
+  }
+  config.statsIntervalMs = parseIntEnv('LIFECYCLE_CONDUCTOR_STATS_MS', 60_000);
+  config.stuckScanIntervalMs = parseIntEnv('LIFECYCLE_CONDUCTOR_STUCK_MS', 300_000);
+  config.stuckThresholdHours = parseIntEnv('LIFECYCLE_CONDUCTOR_STUCK_H', 12);
+
+  let running;
+  try {
+    running = await startDaemon(config);
+  } catch (err) {
+    console.error(`[lifecycle-conductor] FATAL: ${err && err.message ? err.message : String(err)}`);
+    if (err && err.stack) console.error(err.stack);
+    process.exit(1);
+  }
+
+  const shutdown = async (signal) => {
+    console.log(`[lifecycle-conductor] received ${signal}; stopping`);
+    try {
+      await running.stop();
+    } catch (err) {
+      console.error('[lifecycle-conductor] stop failed', err);
+    }
+    process.exit(0);
+  };
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+
+  // Keep the process alive forever — the daemon's intervals + event
+  // subscriptions hold the event loop open. No explicit await needed.
+}
+
+main().catch((err) => {
+  console.error('[lifecycle-conductor] fatal', err);
+  process.exit(1);
+});
