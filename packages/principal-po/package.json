@@ -1,0 +1,39 @@
+{
+  "name": "@caia/principal-po",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Principal PO — Step 6 of CAIA's canonical pipeline (per project_caia_canonical_pipeline_2026-05-22). Memory names a single 'Principal PO' role; on disk the role is split across @caia/principal-engineer (scheduling), @chiefaia/decomposer-recursive (story-hierarchy decomposition), and @caia/architect-kit (registry + waves + types). This package is a thin facade that re-exports the public API of the three under the canonical names memory uses (decomposeStoryHierarchy, scheduleStoryGraph, plus common architect-kit utilities) so callers can write `import { decomposeStoryHierarchy, scheduleStoryGraph } from '@caia/principal-po'` and stay aligned with the canonical-pipeline doc. NOT a re-implementation — no new logic; every export delegates to the subordinate package.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "files": ["src", "README.md", "PLAN.md", "scripts"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "ea:submit-plan": "node scripts/submit-plan.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/principal-engineer": "workspace:*",
+    "@chiefaia/decomposer-recursive": "workspace:*",
+    "@caia/architect-kit": "workspace:*"
+  },
+  "devDependencies": {
+    "@caia/ea-architect": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
