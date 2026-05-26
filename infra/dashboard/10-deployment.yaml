@@ -1,0 +1,230 @@
+# chiefaia-dashboard Deployment.
+#
+# Next.js 15 (App Router) admin UI behind Cloudflare Access. Image is
+# published by `.github/workflows/dashboard-publish.yml` on every push
+# to develop touching apps/dashboard/** or the dashboard's workspace
+# deps. V1 ships 1 replica + manual rollout (HPA is Phase C).
+#
+# Reuse-first pattern compliance:
+#   - Pod & container securityContext mirror chiefaia-web exactly
+#     (runAsNonRoot, drop ALL caps, seccomp RuntimeDefault)
+#   - Service account follows the NATS pattern of a dedicated SA per
+#     workload, namespace-scoped — `automountServiceAccountToken: false`
+#     because nothing in the dashboard needs to talk to the K8s API.
+#   - Resources sized to the bands in the mission spec; identical
+#     liveness/readiness probe shape to Tempo (`httpGet` named port).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chiefaia-dashboard
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-dashboard
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: chiefaia
+    net.chiefaia.io/exposed-via: istio
+spec:
+  # V1: single replica. Promotion to HPA happens in Phase C of the
+  # wizard live-end-to-end plan (separate PR).
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: chiefaia-dashboard
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # 1-replica rollouts need 0 unavailable + 1 surge to stay green.
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: chiefaia-dashboard
+        app.kubernetes.io/component: web
+        app.kubernetes.io/part-of: chiefaia
+        net.chiefaia.io/exposed-via: istio
+      annotations:
+        # Bumping these forces a pod restart on ConfigMap / Secret
+        # changes when the YAMLs are re-applied. Update the date when
+        # you intentionally roll the config.
+        checksum/config: "v1-2026-05-25"
+        checksum/secret: "v1-2026-05-25"
+    spec:
+      serviceAccountName: chiefaia-dashboard
+      # The dashboard never calls the K8s API — keep the token off.
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001        # matches the Dockerfile's `nextjs` uid
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: dashboard
+          # Tag is updated by the rollout step (manual in V1, see
+          # README). `:develop` is the floating tag the publish
+          # workflow writes; pin to `develop-<sha>` for prod rollouts.
+          image: ghcr.io/prakashgbid/chiefaia-dashboard:develop
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: chiefaia-dashboard-config
+            - secretRef:
+                name: chiefaia-dashboard-secrets
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          livenessProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          startupProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/apps/dashboard/.next/cache
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: next-cache
+          emptyDir:
+            sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chiefaia-dashboard
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-dashboard
+    app.kubernetes.io/part-of: chiefaia
+automountServiceAccountToken: false
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chiefaia-dashboard-egress
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-dashboard
+    app.kubernetes.io/component: networkpolicy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: chiefaia-dashboard
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow any pod in the chiefaia namespace to reach the dashboard on
+    # port 3000 — Istio sidecar lives in this namespace.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: chiefaia
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow istio-system ingress gateway to reach us directly.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+      ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # NATS (client + monitor)
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: nats
+      ports:
+        - protocol: TCP
+          port: 4222
+        - protocol: TCP
+          port: 8222
+    # Tempo OTLP-HTTP
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: tempo
+      ports:
+        - protocol: TCP
+          port: 4318
+    # Infisical (in-cluster service) and other intra-namespace HTTP(S)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: chiefaia
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+    # Postgres (cluster-out)
+    - ports:
+        - protocol: TCP
+          port: 5432
+    # HTTPS egress (Cloudflare Access JWKS, Infisical public hostname)
+    - ports:
+        - protocol: TCP
+          port: 443
