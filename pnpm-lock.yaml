@@ -200,6 +200,9 @@ importers:
       '@caia/grand-idea':
         specifier: workspace:*
         version: link:../../packages/grand-idea
+      '@caia/interviewer':
+        specifier: workspace:*
+        version: link:../../packages/interviewer
       '@caia/onboarding':
         specifier: workspace:*
         version: link:../../packages/onboarding
@@ -209,6 +212,9 @@ importers:
       '@caia/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../../packages/claude-spawner
       '@chiefaia/event-bus-internal':
         specifier: workspace:*
         version: link:../../packages/event-bus-internal

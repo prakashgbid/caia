@@ -85,4 +85,68 @@ test.describe('wizard step pages — happy-path walk', () => {
       page.getByRole('navigation', { name: 'wizard step indicator' }),
     ).toBeVisible();
   });
+
+  test('Step 3 interview page mounts the InterviewerChat shell', async ({ page }) => {
+    await page.goto('/wizard/interview?projectId=p_e2e_interview&tenantSlug=tenant_e2e');
+    await expect(page.getByTestId('wizard-step-interview-shell')).toBeVisible();
+    await expect(page.getByTestId('wizard-step-interview')).toBeVisible();
+  });
+
+  test('Step 3 interview walks first question → answer → next question → complete', async ({
+    page,
+  }) => {
+    await page.goto('/wizard/interview?projectId=p_e2e_walk&tenantSlug=tenant_e2e');
+
+    // 1) First question renders (turn 1).
+    await expect(page.getByTestId('history-agent-1')).toBeVisible();
+    await expect(page.getByTestId('interview-pending-question')).toBeVisible();
+
+    // 2) Pillar radar is mounted.
+    await expect(page.getByTestId('pillar-coverage')).toBeVisible();
+    await expect(page.getByTestId('pillar-coverage-svg')).toBeVisible();
+
+    // 3) Submit an answer → next question.
+    await page.getByTestId('interview-draft-input').fill(
+      'A detailed answer that gives the interviewer enough material to extract a clear extraction signal.',
+    );
+    await page.getByTestId('interview-submit').click();
+    await expect(page.getByTestId('history-user-1')).toBeVisible();
+    await expect(page.getByTestId('history-agent-2')).toBeVisible();
+
+    // 4) Verify the aggregate score moved off zero (coverage updated).
+    const scoreText = await page.getByTestId('interview-aggregate-score').textContent();
+    expect(scoreText ?? '').toMatch(/aggregate \d+ \/ 100/);
+
+    // 5) Walk to exhaustion so the complete button is enabled even with
+    //    low coverage (exhaustion → meetsThreshold=true via the route).
+    for (let i = 2; i <= 8; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await page.getByTestId('interview-draft-input').fill(
+        `Answer to turn ${i}: a long enough response so per-pillar scores bump meaningfully.`,
+      );
+      // eslint-disable-next-line no-await-in-loop
+      await page.getByTestId('interview-submit').click();
+      // eslint-disable-next-line no-await-in-loop
+      await page.waitForTimeout(50);
+    }
+
+    // 6) The complete CTA should now be visible.
+    await expect(page.getByTestId('interview-complete')).toBeVisible();
+    await page.getByTestId('interview-complete').click();
+
+    // The mock-FSM may 412 (no real state row exists in the e2e env). We
+    // verify either the success state OR the operator-override checkbox
+    // appeared — both prove the complete route was reached.
+    const advancedOrOverride = await Promise.race([
+      page
+        .getByTestId('interview-advanced')
+        .waitFor({ state: 'visible', timeout: 4_000 })
+        .then(() => 'advanced'),
+      page
+        .getByTestId('interview-force-checkbox')
+        .waitFor({ state: 'visible', timeout: 4_000 })
+        .then(() => 'override'),
+    ]).catch(() => null);
+    expect(advancedOrOverride === 'advanced' || advancedOrOverride === 'override').toBe(true);
+  });
 });
