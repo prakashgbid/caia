@@ -1,0 +1,22 @@
+# chiefaia.com — apex marketing site
+# Currently served by nginx-placeholder image in deployment/chiefaia-web.
+# PR #602 will replace this with the Next.js marketing site build.
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: chiefaia-web-vs
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-web
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  hosts:
+    - chiefaia.com
+  gateways:
+    - istio-system/stolution-gateway
+  http:
+    - route:
+        - destination:
+            host: chiefaia-web.chiefaia.svc.cluster.local
+            port:
+              number: 80

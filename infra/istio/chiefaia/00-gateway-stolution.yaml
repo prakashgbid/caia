@@ -1,0 +1,36 @@
+# Patch of the canonical istio-system/stolution-gateway to also expose
+# chiefaia.com hostnames on port 80. HTTPS termination happens at the
+# Cloudflare edge — the Cloudflare Tunnel forwards plain HTTP to the
+# istio-ingressgateway service, so only an HTTP server entry is required.
+#
+# This file is the FULL desired state of the gateway — apply replaces the
+# existing object verbatim. Re-applying with the stolution hosts list
+# unchanged ensures we do not regress any of the 20+ stolution.com routes
+# that depend on it.
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: stolution-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - hosts:
+        - "*.stolution.com"
+        - stolution.com
+        - "*.chiefaia.com"
+        - chiefaia.com
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+    - hosts:
+        - "*.stolution.com"
+        - stolution.com
+      port:
+        name: https
+        number: 443
+        protocol: HTTPS
+      tls:
+        mode: PASSTHROUGH

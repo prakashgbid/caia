@@ -1,0 +1,177 @@
+# Desired-state mirror of the in-cluster ConfigMap `default/cloudflared-config`.
+#
+# Status (2026-05-25): NOT mounted into the running Deployment.
+#   The `stolution-infra/cloudflared` Deployment currently uses `--token`
+#   (Cloudflare remote-managed ingress). This file documents what the
+#   ConfigMap holds today and what the cloudflared Deployment should
+#   consume once it is reverted to `--config` mode. See README.md for
+#   the migration path.
+#
+# Chiefaia routes use the in-cluster DNS form, which becomes the active
+# routing path the moment the Deployment mounts this ConfigMap and drops
+# hostNetwork.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: default
+  labels:
+    app: cloudflared
+data:
+  config.yml: |
+    tunnel: 3cf7eece-1e16-4dbe-8460-a127b8e9d238
+    metrics: 0.0.0.0:2000
+    no-autoupdate: true
+
+    ingress:
+      # =====================================================
+      # K8s services routed through Istio IngressGateway
+      # =====================================================
+
+      # Production sites
+      - hostname: stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: www.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: api.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+
+      # ArgoCD
+      - hostname: argocd.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+
+      # Monitoring & Observability (K8s)
+      - hostname: grafana.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: prometheus.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: alerts.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: loki.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+
+      # Databases & Storage (K8s)
+      - hostname: clickhouse.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: neo4j.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: opensearch.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: opensearch-dashboards.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: qdrant.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+
+      # AI & Machine Learning (K8s)
+      - hostname: ollama.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: llm.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: embedding.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: query-parser.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: ai-query.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+
+      # Security (K8s)
+      - hostname: auth.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: vault.stolution.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+
+      # chiefaia.com (K8s, via Istio) — added 2026-05-25
+      - hostname: chiefaia.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: dashboard.chiefaia.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: api.chiefaia.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: infisical.chiefaia.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+      - hostname: atlas.chiefaia.com
+        service: http://istio-ingressgateway.istio-system.svc.cluster.local:80
+
+      # =====================================================
+      # Docker services still running on host (162.251.161.17)
+      # =====================================================
+
+      # Staging (Docker)
+      - hostname: staging.stolution.com
+        service: http://162.251.161.17:3002
+      - hostname: staging-api.stolution.com
+        service: http://162.251.161.17:3003
+
+      # Central Hub (Docker)
+      - hostname: hub.stolution.com
+        service: http://162.251.161.17:8080
+      - hostname: wiki.stolution.com
+        service: http://162.251.161.17:3000
+
+      # Content Management (Docker)
+      - hostname: cms.stolution.com
+        service: http://162.251.161.17:1337
+
+      # Business Intelligence (Docker)
+      - hostname: bi.stolution.com
+        service: http://162.251.161.17:3000
+
+      # Data Pipelines (Docker)
+      - hostname: airflow.stolution.com
+        service: http://162.251.161.17:8080
+      - hostname: airbyte.stolution.com
+        service: http://162.251.161.17:8080
+      - hostname: dbt.stolution.com
+        service: http://162.251.161.17:8008
+      - hostname: kafka.stolution.com
+        service: http://162.251.161.17:8080
+      - hostname: kafka-connect.stolution.com
+        service: http://162.251.161.17:8083
+      - hostname: temporal.stolution.com
+        service: http://162.251.161.17:8080
+
+      # Infrastructure (Docker)
+      - hostname: portainer.stolution.com
+        service: http://162.251.161.17:9000
+      - hostname: unleash.stolution.com
+        service: http://162.251.161.17:4242
+      - hostname: anomaly.stolution.com
+        service: http://162.251.161.17:8091
+
+      # Databases (Docker)
+      - hostname: db.stolution.com
+        service: http://162.251.161.17:8080
+      - hostname: nocodb.stolution.com
+        service: http://162.251.161.17:8080
+      - hostname: storage.stolution.com
+        service: http://162.251.161.17:9001
+
+      # Monitoring (Docker - secondary)
+      - hostname: cadvisor.stolution.com
+        service: http://162.251.161.17:8080
+      - hostname: loki-ai.stolution.com
+        service: http://162.251.161.17:3100
+      - hostname: loki-data.stolution.com
+        service: http://162.251.161.17:3100
+      - hostname: loki-dev.stolution.com
+        service: http://162.251.161.17:3100
+
+      # Development (Docker)
+      # Storybook Dev Server (live reload)
+      - hostname: storybook-dev.stolution.com
+        service: http://162.251.161.17:6006
+      - hostname: storybook.stolution.com
+        service: http://162.251.161.17:80
+      - hostname: dev-homepage.stolution.com
+        service: http://162.251.161.17:3000
+      - hostname: dev-search.stolution.com
+        service: http://162.251.161.17:3000
+      - hostname: dev-pdp.stolution.com
+        service: http://162.251.161.17:3000
+      - hostname: dev-sdp.stolution.com
+        service: http://162.251.161.17:3000
+      - hostname: dev-affiliate.stolution.com
+        service: http://162.251.161.17:3000
+
+      # Catch-all (404 for unknown hostnames)
+      - service: http_status:404

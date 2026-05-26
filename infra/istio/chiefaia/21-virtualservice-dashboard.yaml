@@ -1,0 +1,25 @@
+# dashboard.chiefaia.com — admin dashboard (Cloudflare Access gated)
+# Cloudflare Access app cb6d1de5-2ab6-4860-af9e-7395ca0a8381 already
+# protects this hostname, allowlisting prakash.stolution@gmail.com.
+# Returns 503 "no healthy upstream" until chiefaia-dashboard Deployment
+# lands (placeholder Service in 10-placeholder-services.yaml has no
+# matching pods).
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: chiefaia-dashboard-vs
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-dashboard
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  hosts:
+    - dashboard.chiefaia.com
+  gateways:
+    - istio-system/stolution-gateway
+  http:
+    - route:
+        - destination:
+            host: chiefaia-dashboard.chiefaia.svc.cluster.local
+            port:
+              number: 80

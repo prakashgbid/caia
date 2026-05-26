@@ -1,0 +1,22 @@
+# api.chiefaia.com — backend API
+# Service chiefaia-api exposes port 80 → targetPort 8080 (nginx-placeholder
+# for now). Real backend image swap is tracked separately.
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: chiefaia-api-vs
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-api
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  hosts:
+    - api.chiefaia.com
+  gateways:
+    - istio-system/stolution-gateway
+  http:
+    - route:
+        - destination:
+            host: chiefaia-api.chiefaia.svc.cluster.local
+            port:
+              number: 80

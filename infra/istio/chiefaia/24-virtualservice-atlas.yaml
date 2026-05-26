@@ -1,0 +1,24 @@
+# atlas.chiefaia.com — atlas service (not yet scoped)
+# Placeholder route: Service chiefaia-atlas exists with no endpoints, so
+# Envoy returns HTTP 503 "no healthy upstream" until the real deployment
+# is added. Pre-wiring the route + DNS now means cutover later is a pure
+# Deployment-add, no networking churn.
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: chiefaia-atlas-vs
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-atlas
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  hosts:
+    - atlas.chiefaia.com
+  gateways:
+    - istio-system/stolution-gateway
+  http:
+    - route:
+        - destination:
+            host: chiefaia-atlas.chiefaia.svc.cluster.local
+            port:
+              number: 80

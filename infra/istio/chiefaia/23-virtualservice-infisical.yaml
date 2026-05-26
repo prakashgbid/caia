@@ -1,0 +1,21 @@
+# infisical.chiefaia.com — secrets manager UI
+# Backed by chiefaia-infisical Service (port 80, currently nginx-placeholder).
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: chiefaia-infisical-vs
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-infisical
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  hosts:
+    - infisical.chiefaia.com
+  gateways:
+    - istio-system/stolution-gateway
+  http:
+    - route:
+        - destination:
+            host: chiefaia-infisical.chiefaia.svc.cluster.local
+            port:
+              number: 80
