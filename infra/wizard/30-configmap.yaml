@@ -1,8 +1,8 @@
 # chiefaia-wizard ConfigMap — NON-SECRET runtime env.
 #
-# Secret values (DB URL, Infisical admin token, NATS NKey seed) live
-# in the chiefaia-wizard-secrets Secret managed out-of-band by the
-# operator or Infisical operator.
+# Secret values (DB URL, Infisical admin token, NATS NKey seed,
+# EDGE_SHARED_SECRET) live in the chiefaia-wizard-secrets Secret
+# managed out-of-band by the operator or Infisical operator.
 #
 # Changes to this ConfigMap require a pod restart — handled by bumping
 # the `checksum/config` annotation in 10-deployment.yaml when you apply.
@@ -49,3 +49,23 @@ data:
   # CF_ACCESS_AUD lives in the Secret alongside the real bearer tokens
   # to avoid noise from secret-scanning heuristics.
   CF_ACCESS_TEAM_DOMAIN: "chiefaia.cloudflareaccess.com"
+
+  # ─── Wizard auth mode (see apps/wizard/lib/auth/edge-bypass.ts) ─
+  # Three modes:
+  #
+  #   cloudflare    (default) — strict JWT, redirect /sign-in on miss.
+  #   cf-edge-only             — defence-in-depth bypass: requires Cf-Ray
+  #                              header (CF-injected) + Cf-Connecting-Ip
+  #                              ∈ BYPASS_ALLOWED_IPS + a constant-time
+  #                              match on X-Caia-Edge-Token vs the
+  #                              EDGE_SHARED_SECRET in the K8s Secret.
+  #                              Any failure → falls through to strict JWT.
+  #   disabled                 — no-op (NEVER set in production).
+  #
+  # Operator note: cf-edge-only is the live mode now so the operator's
+  # allowlisted Mac IP can reach dashboard.chiefaia.com without the
+  # browser carrying a CF_Authorization cookie. Cloudflare Access still
+  # gates everyone ELSE at the edge.
+  WIZARD_AUTH_MODE: "cf-edge-only"
+  BYPASS_ALLOWED_IPS: "69.118.44.175"
+  BYPASS_TENANT_EMAIL: "prakash.stolution@gmail.com"

@@ -1,0 +1,57 @@
+{
+  "status": "self-approved-true-zero",
+  "branch": "feature/wizard-middleware-cf-bypass-mode-2026-05-26",
+  "adr_refs": ["ADR-065"],
+  "reasoning": "Adds env-var-driven three-mode branch (cloudflare default / cf-edge-only / disabled) to the existing Cloudflare-Access JWT middleware so the operator's allowlisted Mac IP can reach dashboard.chiefaia.com and ops.chiefaia.com without a sign-in prompt. Defence-in-depth bypass requires three signals: Cf-Ray header (CF-injected, absent on direct-to-origin), Cf-Connecting-Ip in BYPASS_ALLOWED_IPS allow-list, and X-Caia-Edge-Token constant-time-matched against EDGE_SHARED_SECRET (which a Cloudflare WAF Transform Rule sets/overwrites at the edge). Any failure falls through to the strict JWT path. Apps duplicate the middleware + lib/auth/* + lib/tenants/* with explicit REUSE-FIRST EXCEPTION markers; the operator-instructed B-task to extract @chiefaia/wizard-auth is documented in PLAN.md §7. Default-cloudflare behaviour is unchanged byte-for-byte. 50 vitest cases pass across both apps (full mode × JWT × bypass-header matrix).",
+  "reuseSearchResults": [
+    {
+      "candidate": "@chiefaia/wizard-auth",
+      "considered_for": "shared middleware + auth helpers",
+      "decision": "rejected",
+      "reason": "Does not exist yet on develop. Operator instructed inline duplication with REUSE-FIRST EXCEPTION marker + B-task tracker."
+    },
+    {
+      "candidate": "@chiefaia/http-client",
+      "considered_for": "Cloudflare JWKS fetch",
+      "decision": "rejected",
+      "reason": "Referenced in AGENTS.md but not shipped. Native fetch is allowlisted."
+    },
+    {
+      "candidate": "@chiefaia/secrets-infisical",
+      "considered_for": "tenant Infisical provisioning",
+      "decision": "rejected",
+      "reason": "Wraps secrets-data CRUD, not workspace creation. lib/tenants/infisical.ts keeps the hand-rolled admin client."
+    },
+    {
+      "candidate": "@caia/ui",
+      "considered_for": "sign-in page primitives",
+      "decision": "selected",
+      "reason": "Used for Card / Button on both apps' /sign-in pages."
+    },
+    {
+      "candidate": "jose",
+      "considered_for": "JWT verification",
+      "decision": "selected (already in use)",
+      "reason": "lib/auth/jwks-cache.ts uses createRemoteJWKSet + jwtVerify. Unchanged here."
+    },
+    {
+      "candidate": "node:crypto.timingSafeEqual",
+      "considered_for": "EDGE_SHARED_SECRET comparison",
+      "decision": "selected",
+      "reason": "Constant-time compare in lib/auth/edge-bypass.ts; length mismatch handled before the call to avoid leaking expected length."
+    },
+    {
+      "candidate": "pg",
+      "considered_for": "tenant store",
+      "decision": "selected (already in use)",
+      "reason": "lib/tenants/store.ts uses the pg driver directly. @chiefaia/persistence-postgres does not exist."
+    },
+    {
+      "candidate": "@chiefaia/event-bus-nats",
+      "considered_for": "tenant.provisioned publish",
+      "decision": "selected (already in use)",
+      "reason": "lib/tenants/wire.ts already routes tenant.provisioned via HybridEventBus. Unchanged here."
+    }
+  ],
+  "cited_adrs": ["ADR-065"]
+}
