@@ -1,0 +1,82 @@
+# Auto-sync `main` to `develop` on every push to `develop`.
+#
+# Doctrine: per ADR-016 (develop-canonical-main-mirror, 2026-05-25), `develop` is the
+# canonical integration branch and `main` is a fast-forwarded mirror. All PRs target
+# `develop`; this workflow propagates the new tip to `main` so external consumers that
+# track `main` (Cloudflare Pages production deploy, GitHub UI default landing page,
+# downstream forks) stay current with no manual release-PR cycle.
+#
+# PAT-permission consideration: this workflow uses GITHUB_TOKEN to push to `main`.
+# `main` is a protected branch — the operator must configure branch protection on
+# `main` to allow workflow-driven pushes from this workflow. Specifically:
+#
+#   GitHub → Settings → Branches → main → branch protection rule
+#     - "Restrict who can push to matching branches" → add `github-actions[bot]` (or
+#       allow GitHub Actions via "Allow specified actors to bypass required pull
+#       requests" if PRs are required)
+#     - OR a finer-grained alternative: use a PAT with `contents: write` on `main`
+#       stored as a secret `SYNC_MAIN_TOKEN`, and substitute `${{ secrets.SYNC_MAIN_TOKEN }}`
+#       for `${{ secrets.GITHUB_TOKEN }}` in the checkout step below.
+#
+# If `develop` rewrites history (it shouldn't — develop is protected), this workflow
+# will fail because `main` cannot fast-forward. That's the correct outcome — surfacing
+# the violation rather than silently rewriting `main` too.
+#
+# References:
+#   - docs/adr/ADR-016-develop-canonical-main-mirror.md
+#   - reports/main_develop_reconcile_audit_2026-05-25.md
+#   - ~/Documents/projects/agent-memory/standing_rule_develop_canonical_2026-05-25.md
+name: sync-main
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch: {}
+
+concurrency:
+  group: sync-main
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: develop
+          # Use GITHUB_TOKEN by default; swap in SYNC_MAIN_TOKEN if branch protection
+          # on `main` blocks the github-actions[bot] account.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Show source and target tips
+        run: |
+          echo "develop tip: $(git rev-parse HEAD)"
+          git fetch origin main || true
+          echo "main tip (before): $(git rev-parse origin/main || echo none)"
+
+      - name: Fast-forward main to develop
+        run: |
+          # Push develop's tip onto main. This is a fast-forward push (no --force) so
+          # if main has diverged for any reason, the push fails loudly rather than
+          # silently rewriting main.
+          git push origin HEAD:main
+
+      - name: Confirm main now equals develop
+        run: |
+          git fetch origin main
+          DEV=$(git rev-parse HEAD)
+          MAIN=$(git rev-parse origin/main)
+          echo "develop: $DEV"
+          echo "main:    $MAIN"
+          if [ "$DEV" != "$MAIN" ]; then
+            echo "::error::main did not advance to develop's tip"
+            exit 1
+          fi

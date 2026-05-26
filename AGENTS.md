@@ -60,19 +60,29 @@ Test runners: vitest is the default for new packages; a few legacy ones still us
 - Comments explain WHY (constraint, invariant, workaround). Don't comment WHAT — names should carry it.
 - File layout: `src/` for code, `tests/` for tests, `dist/` for build output (gitignored).
 
+## Canonical branch (STANDING RULE 2026-05-25 — see `docs/adr/ADR-016-develop-canonical-main-mirror.md`)
+
+**`develop` is the canonical integration branch. `main` is a fast-forwarded mirror of `develop`.**
+
+- ALL new feature branches MUST be cut from `origin/develop` (never from `origin/main`).
+- ALL new PRs MUST target `develop`. `gh pr create` requires `--base develop` until the operator flips the GitHub UI default-branch setting (operator TODO #2).
+- `main` is updated only by the auto-sync workflow `.github/workflows/sync-main.yml`, which fast-forwards `main` to `develop`'s tip on every push to `develop`. Never push directly to `main`.
+- The old "release/<date> PR to main → merge → tag" cycle is **retired**. No more periodic develop→main back-merges; the auto-sync workflow makes them redundant.
+- Background and full rationale: standing rule `~/Documents/projects/agent-memory/standing_rule_develop_canonical_2026-05-25.md`; one-time reconcile audit `reports/main_develop_reconcile_audit_2026-05-25.md`.
+
 ## Git Flow (enforced — see `feedback_git_flow_enforced.md`)
 
 ```
 feature/<id>-<slug>  →  PR to develop  →  squash-merge  →  branch deleted
-develop              →  release/<date> PR to main       →  merge → tag
-main                 ←  only develop or release/* may merge in
+develop              →  auto-sync workflow fast-forwards main  →  no manual release PRs
+main                 ←  auto-sync only; never manually pushed
 backup/<reason>      ←  preservation only, never merged
 ```
 
 - NEVER push directly to `main` or `develop`. Husky hooks + branch protection + the required `gitflow-conformance` CI check block this.
 - One PR per logical unit. Open the PR as soon as you have a first commit; don't accumulate work on a branch without a PR.
-- "Done" = merged into BOTH develop AND main, branch + worktree gone.
-- Quickstart wrapper: `pnpm flow start <id>-<slug>` / `pnpm flow ready` / `pnpm flow ship` / `pnpm flow release --auto`. Full runbook: `docs/git-flow.md`.
+- "Done" = merged into `develop` (the auto-sync workflow handles main mirroring), branch + worktree gone.
+- Quickstart wrapper: `pnpm flow start <id>-<slug>` / `pnpm flow ready` / `pnpm flow ship`. The `pnpm flow release` step is no longer required (auto-sync replaces it). Full runbook: `docs/git-flow.md`.
 
 ## Evidence Gate (every PR — see `docs/evidence-gate.md`)
 
