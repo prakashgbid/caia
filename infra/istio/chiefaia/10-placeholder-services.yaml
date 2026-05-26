@@ -1,0 +1,46 @@
+# Placeholder Services for hostnames that do not yet have a real backing
+# Deployment. They expose no endpoints (selector intentionally matches no
+# pods), so Istio routes will return HTTP 503 "no healthy upstream" until
+# the corresponding Deployment lands. This keeps the VirtualServices
+# admissible and the routing surface complete.
+#
+#   chiefaia-dashboard — Next.js admin UI, lands with PR #602 follow-up
+#   chiefaia-atlas     — atlas service, not yet scoped
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chiefaia-dashboard
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-dashboard
+    app.kubernetes.io/part-of: chiefaia
+    placeholder: "true"
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: chiefaia-dashboard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chiefaia-atlas
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-atlas
+    app.kubernetes.io/part-of: chiefaia
+    placeholder: "true"
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: chiefaia-atlas
