@@ -1,39 +1,62 @@
-# chiefaia-site
+# @caia-app/chiefaia-site
 
-Single-file placeholder for **www.chiefaia.com**, served from Cloudflare Pages.
+ChiefAIA marketing site — Next.js 15 + App Router.
 
-## What this is
+## What's here
 
-A static `index.html` (~5 KB, no framework, no build step, no dependencies) shown while the full site is in development. Theme follows light/dark via `prefers-color-scheme`.
+| Surface | Path | Status |
+|---------|------|--------|
+| Home | `/` | Live (operator-confirmed copy) |
+| Pricing | `/pricing` | Live (tier copy confirmed; $$ TBD) |
+| Docs index | `/docs` | Live (cards) |
+| Docs category | `/docs/<slug>` | "Coming soon" stub |
+| Blog index | `/blog` | Live |
+| Blog post | `/blog/<slug>` | Live (1 launch post) |
+| Changelog | `/changelog` | Auto-generated from `git log origin/develop` |
+| Contact | `/contact` | Live (form → `/api/contact` stub) |
+| Sign-in | `/sign-in` | Server-redirects to dashboard.chiefaia.com (Cloudflare Access) |
+| Sitemap | `/sitemap.xml` | Auto |
+| Robots | `/robots.txt` | Auto |
+| Manifest | `/manifest.webmanifest` | Auto |
 
-Public branding is "Chief AI Agent" — internal codename "CAIA" deliberately does not appear in any public content.
+## Reuse-first
 
-## Why minimal
+All UI primitives come from `@caia/ui` (operator-locked 2026-05-25, ADR-065).
+Inline shadcn / Radix / Tailwind component-copying is refused by the
+`reuse-advisory-blocking` CI gate. Frame-level layout classes (header, footer,
+grid) are intentional and live exactly once in `components/site-shell.tsx`.
 
-A previous iteration scaffolded a Next.js app (PR #496, closed). That was reverted in favor of this placeholder because:
+## No fabricated content
 
-1. The 5 high-fidelity mockups it was designed to host are being deleted (separate cleanup task).
-2. The real public site will be designed by the design-agent track later; no point baking decisions now.
-3. A single static file deploys in seconds to Cloudflare Pages and costs literally zero — perfect for a "coming soon" page.
+Per `agent-memory/feedback_action_research_outputs.md` and the operator
+standing rule: no fabricated metrics, no fabricated testimonials, no
+fabricated authorship. The blog has no per-post author byline by design
+(the publisher entity is the byline via `schema.org/Organization`).
 
-## Deploy
-
-Target: **Cloudflare Pages** (free tier).
-Project name (proposed): `chiefaia`
-Production branch: `main`
-Build command: *(none — static)*
-Output directory: `apps/chiefaia-site`
-
-Once a Cloudflare account exists and a Pages project is connected to this repo via GitHub, every push to `main` that touches this directory auto-deploys. PRs get preview URLs at `https://<sha>.<project>.pages.dev`.
-
-## Local preview
+## Run locally
 
 ```bash
-cd apps/chiefaia-site
-python3 -m http.server 7780
-# open http://localhost:7780
+pnpm --filter @caia-app/chiefaia-site dev    # http://localhost:7878
+pnpm --filter @caia-app/chiefaia-site build
+pnpm --filter @caia-app/chiefaia-site start
+pnpm --filter @caia-app/chiefaia-site test
+pnpm --filter @caia-app/chiefaia-site lighthouse
 ```
 
-## Future evolution
+The `prebuild` and `predev` hooks regenerate `lib/changelog.data.json` from
+`git log origin/develop` (last 30 PR-shaped commits).
 
-When the design-agent track produces a real design and content, this file gets replaced (or a Next.js / static-site-generator setup gets layered on top). Until then, keep it boring.
+## SEO surface
+
+- `app/layout.tsx` — OpenGraph + Twitter Card metadata
+- `app/sitemap.ts` — `MetadataRoute.Sitemap` generator
+- `app/robots.ts` — `MetadataRoute.Robots` generator
+- `app/manifest.ts` — `MetadataRoute.Manifest` (PWA shell)
+- `lib/jsonld.ts` — schema.org `Organization` + `WebSite` graph rendered in
+  the root layout `<head>`
+
+## Lighthouse
+
+`lighthouserc.cjs` boots `next start -p 7878` and asserts performance ≥ 0.90,
+accessibility ≥ 0.90, best-practices ≥ 0.90, SEO ≥ 0.90 across the canonical
+routes.

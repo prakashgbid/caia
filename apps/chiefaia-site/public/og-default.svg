@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="ChiefAIA — The Chief AI Agent that builds, ships, and operates software">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b0e14"/>
+      <stop offset="100%" stop-color="#1a1f2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <g transform="translate(80,200)">
+    <text x="0" y="0" font-family="ui-sans-serif, system-ui, sans-serif" font-size="44" font-weight="500" fill="#94a3b8">ChiefAIA</text>
+    <text x="0" y="80" font-family="ui-sans-serif, system-ui, sans-serif" font-size="68" font-weight="700" fill="#f1f5f9">The Chief AI Agent</text>
+    <text x="0" y="160" font-family="ui-sans-serif, system-ui, sans-serif" font-size="68" font-weight="700" fill="#f1f5f9">that builds, ships, and</text>
+    <text x="0" y="240" font-family="ui-sans-serif, system-ui, sans-serif" font-size="68" font-weight="700" fill="#f1f5f9">operates software</text>
+  </g>
+  <text x="80" y="570" font-family="ui-sans-serif, system-ui, sans-serif" font-size="28" fill="#94a3b8">chiefaia.com</text>
+</svg>
