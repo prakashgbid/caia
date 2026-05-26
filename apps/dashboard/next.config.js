@@ -35,23 +35,6 @@ const nextConfig = {
     '@grpc/grpc-js',
   ],
   transpilePackages: ['@chiefaia/atlas-mapper'],
-  // `@chiefaia/tracing` and `@chiefaia/claude-spawner` (and the latter's
-  // transitive `@caia/interviewer`) bring in `@opentelemetry/sdk-node`
-  // → `@grpc/grpc-js`, which requires Node's built-in `net`/`tls`/`http2`
-  // modules. Letting Next.js webpack-bundle them for the server fails
-  // because the bundler tries to follow those Node intrinsics. Marking
-  // them as "server external" leaves the imports as plain Node `require`s
-  // at runtime — which is what the standalone image's `node` server can
-  // resolve anyway.
-  serverExternalPackages: [
-    '@chiefaia/tracing',
-    '@chiefaia/claude-spawner',
-    '@caia/interviewer',
-    '@opentelemetry/sdk-node',
-    '@opentelemetry/exporter-trace-otlp-http',
-    '@opentelemetry/exporter-logs-otlp-grpc',
-    '@grpc/grpc-js',
-  ],
   webpack(config) {
     config.resolve = config.resolve ?? {};
     config.resolve.extensionAlias = {
