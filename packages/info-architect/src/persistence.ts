@@ -111,8 +111,21 @@ export class IaPostgresPersistence implements IaPersistence {
     this.readIaInputFn = opts.readIaInputFn;
   }
 
-  public async ensureSchema(): Promise<void> {
-    if (this.schemaEnsured) return;
+  /**
+   * Apply the info-architect migration.
+   *
+   * @param overrideSchemaName optional canonical schema name (e.g. from
+   * `apps/dashboard/lib/tenants/store.ts::schemaNameForEmail`). When
+   * supplied, the migration applies to this schema instead of the
+   * constructor-derived `tenantSchema`. Used by
+   * `@caia/wizard-tenant-bootstrap` to align all per-tenant packages on
+   * the provisioning-canonical `tenant_<safe>_<hash>` name. Backward
+   * compatible — existing callers pass nothing and get unchanged behavior.
+   */
+  public async ensureSchema(overrideSchemaName?: string): Promise<void> {
+    const targetSchema = overrideSchemaName ?? this.tenantSchema;
+    const targetQuoted = overrideSchemaName ? quoteIdent(overrideSchemaName) : this.quotedSchema;
+    if (this.schemaEnsured && targetSchema === this.tenantSchema) return;
     let template: string;
     try {
       template = await readFile(this.migrationPath, 'utf8');
@@ -123,14 +136,14 @@ export class IaPostgresPersistence implements IaPersistence {
         err,
       );
     }
-    const sql = template.replace(/\{\{SCHEMA\}\}/g, this.quotedSchema);
+    const sql = template.replace(/\{\{SCHEMA\}\}/g, targetQuoted);
     try {
       await this.pool.query(sql);
-      this.schemaEnsured = true;
+      if (targetSchema === this.tenantSchema) this.schemaEnsured = true;
     } catch (err) {
       throw new InfoArchitectError(
         'persistence_failed',
-        `failed to apply info-architect migration to ${this.tenantSchema}`,
+        `failed to apply info-architect migration to ${targetSchema}`,
         err,
       );
     }
