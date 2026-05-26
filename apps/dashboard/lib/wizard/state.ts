@@ -24,7 +24,7 @@
 
 import useSWR from 'swr';
 import type { ProjectState } from '@caia/state-machine';
-import { stepIndexForState } from './steps.js';
+import { stepIndexForState } from './steps';
 
 export interface WizardStateSnapshot {
   projectId: string;

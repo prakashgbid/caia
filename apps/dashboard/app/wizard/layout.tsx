@@ -1,3 +1,4 @@
+'use client';
 /**
  * Shared wizard layout — Card frame + 7-step Progress indicator +
  * Back/Next buttons. UI primitives are SOURCED EXCLUSIVELY FROM `@caia/ui`
@@ -16,7 +17,7 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle, Progress } from '@caia/ui';
-import { findStepBySlug, WIZARD_STEPS } from '../../lib/wizard/steps.js';
+import { WIZARD_STEPS } from '../../lib/wizard/steps';
 import { WizardNav } from '../../components/wizard/WizardNav';
 
 export default function WizardLayout({
@@ -66,4 +67,3 @@ function ProgressShell({ stepCount }: { stepCount: number }): React.JSX.Element 
   );
 }
 
-export { findStepBySlug };

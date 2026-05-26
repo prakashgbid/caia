@@ -1,3 +1,4 @@
+'use client';
 /**
  * `/sign-in` — Cloudflare Access redirect-target stub.
  *
@@ -28,7 +29,7 @@ import {
 } from '@caia/ui';
 
 interface PageProps {
-  searchParams?: Promise<{ from?: string; r?: string }> | { from?: string; r?: string };
+  searchParams?: Promise<{ from?: string; r?: string }>;
 }
 
 export default async function SignInPage({ searchParams }: PageProps) {

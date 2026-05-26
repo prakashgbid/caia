@@ -8,7 +8,7 @@ import {
   isWizardSlug,
   findStepBySlug,
   stepIndexForState,
-} from '../../lib/wizard/steps.js';
+} from '../../lib/wizard/steps';
 
 describe('WIZARD_STEPS', () => {
   it('has exactly 7 steps', () => {

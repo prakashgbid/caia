@@ -11,8 +11,8 @@
  */
 
 import type { ProjectState, StateStore } from '@caia/state-machine';
-import { stepIndexForState } from './steps.js';
-import type { WizardStateSnapshot } from './state.js';
+import { stepIndexForState } from './steps';
+import type { WizardStateSnapshot } from './state';
 
 export interface GetWizardStateDeps {
   store: StateStore;

@@ -15,7 +15,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { Button, Progress } from '@caia/ui';
-import type { WizardStep } from '../../lib/wizard/steps.js';
+import type { WizardStep } from '../../lib/wizard/steps';
 
 interface WizardNavProps {
   steps: ReadonlyArray<WizardStep>;

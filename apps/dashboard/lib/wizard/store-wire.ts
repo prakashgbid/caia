@@ -10,7 +10,7 @@
  */
 
 import { Pool } from 'pg';
-import { getPool } from '../tenants/wire.js';
+import { getPool } from '../tenants/wire';
 import type { StateStore } from '@caia/state-machine';
 
 const cache = new Map<string, StateStore>();
@@ -24,7 +24,7 @@ export async function getStateStoreForTenant(tenantId: string): Promise<StateSto
   // and tell PgStateStore which schema to target. We re-derive the schema
   // name from the tenantId via a one-shot lookup (cached upstream by the
   // TenantStore — see `lib/tenants/store.ts`).
-  const { TenantStore } = await import('../tenants/store.js');
+  const { TenantStore } = await import('../tenants/store');
   const pool: Pool = getPool();
   const ts = new TenantStore({ pool });
   // tenantId-keyed lookup. We do a parallel `findById` via a small query.

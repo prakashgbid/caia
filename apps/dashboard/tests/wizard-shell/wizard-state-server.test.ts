@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   getWizardState,
   ProjectNotFoundError,
-} from '../../lib/wizard/state.server.js';
+} from '../../lib/wizard/state.server';
 
 function fakeStore(row: { status: string; updatedAt: Date | string } | null) {
   return {

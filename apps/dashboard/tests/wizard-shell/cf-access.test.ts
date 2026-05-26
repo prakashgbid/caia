@@ -8,7 +8,7 @@ import {
   getDefaultVerifier,
   __resetDefaultVerifier,
   CF_AUTHORIZATION_COOKIE,
-} from '../../lib/auth/cf-access.js';
+} from '../../lib/auth/cf-access';
 
 describe('readCfAccessEnv', () => {
   it('reads CF_ACCESS_TEAM_DOMAIN + CF_ACCESS_AUD from process.env by default', () => {

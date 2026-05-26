@@ -21,14 +21,14 @@ import {
 import {
   getWizardState,
   ProjectNotFoundError,
-} from '../../../../../lib/wizard/state.server.js';
-import { getStateStoreForTenant } from '../../../../../lib/wizard/store-wire.js';
+} from '../../../../../lib/wizard/state.server';
+import { getStateStoreForTenant } from '../../../../../lib/wizard/store-wire';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 interface RouteContext {
-  params: Promise<{ projectId: string }> | { projectId: string };
+  params: Promise<{ projectId: string }>;
 }
 
 async function readTenantId(): Promise<string | null> {

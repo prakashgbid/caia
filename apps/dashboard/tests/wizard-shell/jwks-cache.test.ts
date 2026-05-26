@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { CloudflareAccessJwksCache } from '../../lib/auth/jwks-cache.js';
+import { CloudflareAccessJwksCache } from '../../lib/auth/jwks-cache';
 
 const OPTS = {
   jwksUrl: 'https://example.cloudflareaccess.com/cdn-cgi/access/certs',

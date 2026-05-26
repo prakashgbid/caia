@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { TenantStore, schemaNameForEmail } from '../../lib/tenants/store.js';
+import { TenantStore, schemaNameForEmail } from '../../lib/tenants/store';
 import type { Pool } from 'pg';
 
 interface FakeQuery {

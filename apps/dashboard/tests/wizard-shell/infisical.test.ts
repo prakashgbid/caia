@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   createInfisicalProject,
   InfisicalProvisionError,
-} from '../../lib/tenants/infisical.js';
+} from '../../lib/tenants/infisical';
 
 const OPTS = {
   baseUrl: 'https://infisical.test',

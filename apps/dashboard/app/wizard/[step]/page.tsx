@@ -1,3 +1,4 @@
+'use client';
 /**
  * Generic step router. Maps `/wizard/<slug>` to a "Coming soon" Card stub
  * for now; per-step components arrive in follow-up PRs.
@@ -14,10 +15,10 @@
 
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
-import { findStepBySlug, isWizardSlug } from '../../../lib/wizard/steps.js';
+import { findStepBySlug, isWizardSlug } from '../../../lib/wizard/steps';
 
 interface PageProps {
-  params: Promise<{ step: string }> | { step: string };
+  params: Promise<{ step: string }>;
 }
 
 export default async function StepPage({ params }: PageProps) {

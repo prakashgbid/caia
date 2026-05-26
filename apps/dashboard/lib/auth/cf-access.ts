@@ -15,7 +15,7 @@
  * behaviour for any misconfiguration.
  */
 
-import { CloudflareAccessJwksCache } from './jwks-cache.js';
+import { CloudflareAccessJwksCache } from './jwks-cache';
 
 export interface CfAccessEnv {
   teamDomain?: string;

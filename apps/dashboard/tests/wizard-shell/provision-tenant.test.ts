@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { provisionTenant, ensureTenantSchema } from '../../lib/tenants/provision.js';
+import { provisionTenant, ensureTenantSchema } from '../../lib/tenants/provision';
 import type { Pool } from 'pg';
 
 const TENANT_ROW = {

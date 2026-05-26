@@ -36,11 +36,11 @@ import {
   TenantStore,
   schemaNameForEmail,
   type TenantRow,
-} from './store.js';
+} from './store';
 import {
   createInfisicalProject,
   type InfisicalProvisionOptions,
-} from './infisical.js';
+} from './infisical';
 
 /**
  * Subset of @chiefaia/event-bus-nats's EventBus we actually use. Typed

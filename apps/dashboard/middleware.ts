@@ -30,9 +30,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   CF_AUTHORIZATION_COOKIE,
   getDefaultVerifier,
-} from './lib/auth/cf-access.js';
-import { getProvisionDeps } from './lib/tenants/wire.js';
-import { provisionTenant } from './lib/tenants/provision.js';
+} from './lib/auth/cf-access';
+import { getProvisionDeps } from './lib/tenants/wire';
+import { provisionTenant } from './lib/tenants/provision';
 
 export const config = {
   // Nodejs runtime is required for `pg` + `nats` access from the

@@ -11,7 +11,7 @@
 
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { getProvisionDeps } from '../../../../lib/tenants/wire.js';
+import { getProvisionDeps } from '../../../../lib/tenants/wire';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

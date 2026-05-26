@@ -8,9 +8,9 @@
  */
 
 import { Pool } from 'pg';
-import { TenantStore } from './store.js';
-import type { EventPublisher, ProvisionDeps } from './provision.js';
-import type { InfisicalProvisionOptions } from './infisical.js';
+import { TenantStore } from './store';
+import type { EventPublisher, ProvisionDeps } from './provision';
+import type { InfisicalProvisionOptions } from './infisical';
 
 let cachedPool: Pool | null = null;
 let cachedDeps: ProvisionDeps | null = null;
