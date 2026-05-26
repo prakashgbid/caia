@@ -55,8 +55,8 @@ spec:
         # Bumping these forces a pod restart on ConfigMap / Secret
         # changes when the YAMLs are re-applied. Update the date when
         # you intentionally roll the config.
-        checksum/config: "v1-2026-05-26"
-        checksum/secret: "v1-2026-05-26"
+        checksum/config: "v2-cf-edge-only-2026-05-26"
+        checksum/secret: "v2-cf-edge-only-2026-05-26"
     spec:
       serviceAccountName: chiefaia-wizard
       # The wizard never calls the K8s API — keep the token off.

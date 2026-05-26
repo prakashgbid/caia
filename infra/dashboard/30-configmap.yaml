@@ -1,8 +1,8 @@
 # chiefaia-dashboard ConfigMap — NON-SECRET runtime env.
 #
-# Secret values (DB URL, Infisical admin token, NATS NKey seed) live
-# in the chiefaia-dashboard-secrets Secret managed out-of-band by the
-# operator or Infisical operator.
+# Secret values (DB URL, Infisical admin token, NATS NKey seed,
+# EDGE_SHARED_SECRET) live in the chiefaia-dashboard-secrets Secret
+# managed out-of-band by the operator or Infisical operator.
 #
 # Changes to this ConfigMap require a pod restart — handled by bumping
 # the `checksum/config` annotation in 10-deployment.yaml when you apply.
@@ -52,3 +52,13 @@ data:
   # via the chiefaia-dashboard-secrets Secret alongside the real
   # bearer tokens).
   CF_ACCESS_TEAM_DOMAIN: "chiefaia.cloudflareaccess.com"
+
+  # ─── Wizard auth mode (see apps/dashboard/lib/auth/edge-bypass.ts) ─
+  # Same env-var shape as apps/wizard. The dashboard is the OPERATOR
+  # system (ops.chiefaia.com) so cf-edge-only mode is even more
+  # appropriate here — there is exactly one operator (the fallback
+  # tenant email below), and the same defence-in-depth checks apply:
+  # Cf-Ray + Cf-Connecting-Ip allow-list + X-Caia-Edge-Token match.
+  WIZARD_AUTH_MODE: "cf-edge-only"
+  BYPASS_ALLOWED_IPS: "69.118.44.175"
+  BYPASS_TENANT_EMAIL: "prakash.stolution@gmail.com"

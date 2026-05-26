@@ -1,3 +1,5 @@
+// REUSE-FIRST EXCEPTION: short-lived duplicate of apps/wizard/middleware.ts, refactor to shared package tracked at follow-up B-task
+// TODO(ADR): once @chiefaia/wizard-auth lands, this file becomes a 3-line re-export with the env-var branch coming from the shared module.
 /**
  * Next.js middleware — Cloudflare Access JWT gate + tenant header,
  * with optional `cf-edge-only` bypass for the operator's allowlisted
