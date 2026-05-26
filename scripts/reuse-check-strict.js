@@ -14,7 +14,7 @@
  *   | `from "@/components/ui/*"` (raw shadcn)          | packages/ui/**          |
  *   | `import axios from "axios"`                      | packages/http-client/** |
  *   | `import ... from "node-fetch"`                   | packages/http-client/** |
- *   | `import ... from "better-sqlite3"`               | packages/persistence-*/** |
+ *   | `import ... from "better-sqlite3"`               | packages/persistence-* /** |
  *
  * Baseline-aware: pre-existing violations recorded in
  * `.reuse-advisory-baseline.json` at repo root are NOT failed. New violations
@@ -60,7 +60,7 @@ const RULES = [
   },
   {
     id: "raw-better-sqlite3-import",
-    description: "Raw better-sqlite3 import outside packages/persistence-*/**",
+    description: "Raw better-sqlite3 import outside packages/persistence-* /**",
     regex: /(?:import[^"']+["']better-sqlite3["']|require\(\s*["']better-sqlite3["']\s*\))/,
     allow: (p) => /^packages\/persistence-[a-z0-9-]+\//.test(p),
   },
