@@ -2,7 +2,7 @@
   "name": "@caia-app/dashboard",
   "private": true,
   "scripts": {
-    "build": "pnpm --filter @caia/ui --filter @chiefaia/event-bus-nats build && next build",
+    "build": "pnpm --filter @caia/billing --filter @caia/ui --filter @chiefaia/event-bus-nats build && next build",
     "dev": "next dev -p 7777",
     "lighthouse": "lhci autorun --config=./lighthouserc.cjs",
     "size-limit": "size-limit",
@@ -17,9 +17,11 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^1.2.12",
+    "@caia/billing": "workspace:*",
     "@caia/state-machine": "workspace:*",
     "@caia/ui": "workspace:*",
     "@chiefaia/event-bus-nats": "workspace:*",
+    "@chiefaia/events": "workspace:*",
     "@chiefaia/events-taxonomy-internal": "workspace:*",
     "ai": "^4.3.16",
     "jose": "^5.9.6",

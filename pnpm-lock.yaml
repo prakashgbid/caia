@@ -179,6 +179,9 @@ importers:
       '@ai-sdk/react':
         specifier: ^1.2.12
         version: 1.2.12(react@19.2.5)(zod@3.25.76)
+      '@caia/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@caia/state-machine':
         specifier: workspace:*
         version: link:../../packages/state-machine
@@ -188,6 +191,9 @@ importers:
       '@chiefaia/event-bus-nats':
         specifier: workspace:*
         version: link:../../packages/event-bus-nats
+      '@chiefaia/events':
+        specifier: workspace:*
+        version: link:../../packages/events
       '@chiefaia/events-taxonomy-internal':
         specifier: workspace:*
         version: link:../../packages/events-taxonomy-internal
