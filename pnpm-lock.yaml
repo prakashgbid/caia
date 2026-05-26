@@ -188,6 +188,9 @@ importers:
       '@caia/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@chiefaia/event-bus-internal':
+        specifier: workspace:*
+        version: link:../../packages/event-bus-internal
       '@chiefaia/event-bus-nats':
         specifier: workspace:*
         version: link:../../packages/event-bus-nats
@@ -383,6 +386,9 @@ importers:
       '@chiefaia/event-bus-internal':
         specifier: workspace:*
         version: link:../../packages/event-bus-internal
+      '@chiefaia/event-bus-nats':
+        specifier: workspace:*
+        version: link:../../packages/event-bus-nats
       '@chiefaia/events-taxonomy-internal':
         specifier: workspace:*
         version: link:../../packages/events-taxonomy-internal

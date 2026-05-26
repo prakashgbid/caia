@@ -13,6 +13,21 @@
  * V1 scope cut: one catch-all stream, single durable consumer per
  * subscription. Full 57-event fanout, saga, request/reply, and
  * broker-side replay land in v0.2.
+ *
+ * Wave 1a (2026-05-25, this PR): three additions on top of the V1
+ * baseline:
+ *   1. Per-event-type consumer overrides via `consumerOverrides` —
+ *      lets `worker.heartbeat` opt into `ackPolicy: 'none'`.
+ *   2. Active DLQ republishing — when a message exceeds
+ *      `maxRetriesBeforeDlq` deliveries, the bus wraps it with a
+ *      `dlq` provenance block and republishes to `dlqSubject`,
+ *      then ack's the original so JetStream stops redelivering.
+ *   3. Exponential-backoff nak — nakBackoffMs() derives a per-attempt
+ *      delay so transient failures don't hot-loop.
+ *
+ * The HybridEventBus (./router.js) wraps NatsEventBus + a legacy
+ * in-process bus and routes per event-type via the
+ * BUS_BACKEND_NATS_FOR_EVENT_TYPES env var.
  */
 
 import picomatch from 'picomatch';
@@ -31,6 +46,7 @@ import {
   isValidEventType,
 } from '@chiefaia/events-taxonomy-internal';
 import type {
+  ConsumerOverride,
   EventBus,
   EventEnvelope,
   EventHandler,
@@ -48,7 +64,12 @@ import {
   wrap,
 } from './envelope.js';
 import { DEFAULT_STREAM, defaultConsumer } from './streams.js';
-import { defaultDlqHandler, type DlqHandler } from './dlq.js';
+import {
+  defaultDlqHandler,
+  nakBackoffMs,
+  publishToDlq,
+  type DlqHandler,
+} from './dlq.js';
 
 // We import nats lazily inside connect() so the package can be
 // loaded in environments where the native bits aren't installed
@@ -62,6 +83,7 @@ interface InternalSub {
   matcher: (s: string) => boolean;
   handler: EventHandler;
   durable: string;
+  override?: ConsumerOverride;
   stopper?: () => Promise<void>;
 }
 
@@ -76,7 +98,13 @@ interface ResolvedConfig {
   auth: NatsEventBusConfig['auth'];
   tls: NatsEventBusConfig['tls'];
   reconnect: NatsEventBusConfig['reconnect'];
+  consumerOverrides: Record<string, ConsumerOverride>;
+  dlqSubject: string;
+  maxRetriesBeforeDlq: number;
 }
+
+/** Default DLQ subject; can be overridden per-bus via NatsEventBusConfig.dlqSubject. */
+export const DEFAULT_DLQ_SUBJECT = 'chiefaia.events.dlq';
 
 export class NatsEventBus implements EventBus {
   private readonly cfg: ResolvedConfig;
@@ -105,6 +133,9 @@ export class NatsEventBus implements EventBus {
       auth: cfg.auth,
       tls: cfg.tls,
       reconnect: cfg.reconnect,
+      consumerOverrides: cfg.consumerOverrides ?? {},
+      dlqSubject: cfg.dlqSubject ?? DEFAULT_DLQ_SUBJECT,
+      maxRetriesBeforeDlq: cfg.maxRetriesBeforeDlq ?? 3,
     };
     this._sender = this.cfg.durableConsumer;
   }
@@ -177,6 +208,22 @@ export class NatsEventBus implements EventBus {
     return (EVENT_SEVERITY as Record<string, EventSeverity | undefined>)[type];
   }
 
+  /** Resolve the per-subscription consumer override merged with bus defaults. */
+  private resolveConsumerSpec(entry: InternalSub): {
+    ackPolicy: 'explicit' | 'none' | 'all';
+    ackWaitMs: number;
+    maxDeliver: number;
+    maxAckPending: number;
+  } {
+    const ov = entry.override ?? {};
+    return {
+      ackPolicy: ov.ackPolicy ?? 'explicit',
+      ackWaitMs: ov.ackWaitMs ?? this.cfg.ackWaitMs,
+      maxDeliver: ov.maxDeliver ?? this.cfg.maxDeliver,
+      maxAckPending: ov.maxAckPending ?? 1024,
+    };
+  }
+
   async publish(input: PublishInput): Promise<ConductorEvent> {
     if (this._closed) throw new Error('NatsEventBus: bus is closed');
     if (!this.js) throw new Error('NatsEventBus: not connected (call connect() first)');
@@ -229,11 +276,13 @@ export class NatsEventBus implements EventBus {
   }
 
   subscribe(typeGlob: string, handler: EventHandler): Unsubscribe {
+    const override = this.cfg.consumerOverrides[typeGlob];
     const entry: InternalSub = {
       glob: typeGlob,
       matcher: picomatch(typeGlob),
       handler,
       durable: `${this.cfg.durableConsumer}-${sanitizeDurable(typeGlob)}`,
+      ...(override ? { override } : {}),
     };
     this._subs.push(entry);
 
@@ -252,10 +301,13 @@ export class NatsEventBus implements EventBus {
 
   private async startConsumer(entry: InternalSub): Promise<void> {
     if (!this.js || !this.jsm) return;
+    const resolved = this.resolveConsumerSpec(entry);
     const filter = subjectGlob(entry.glob, this.cfg.subjectPrefix);
     const spec = defaultConsumer(entry.durable, filter, {
-      ackWaitMs: this.cfg.ackWaitMs,
-      maxDeliver: this.cfg.maxDeliver,
+      ackWaitMs: resolved.ackWaitMs,
+      maxDeliver: resolved.maxDeliver,
+      maxAckPending: resolved.maxAckPending,
+      ackPolicy: resolved.ackPolicy,
     });
 
     const jsm = this.jsm as {
@@ -267,10 +319,10 @@ export class NatsEventBus implements EventBus {
       await jsm.consumers.add(this.cfg.stream, {
         durable_name: spec.durable,
         filter_subject: spec.filterSubject,
-        ack_policy: 'explicit',
-        ack_wait: this.cfg.ackWaitMs * 1_000_000,
-        max_deliver: this.cfg.maxDeliver,
-        max_ack_pending: spec.maxAckPending,
+        ack_policy: resolved.ackPolicy,
+        ack_wait: resolved.ackWaitMs * 1_000_000,
+        max_deliver: resolved.maxDeliver,
+        max_ack_pending: resolved.maxAckPending,
       });
     } catch (err) {
       if (!String(err).includes('already in use')) {
@@ -280,12 +332,14 @@ export class NatsEventBus implements EventBus {
     }
 
     const js = this.js as {
+      publish(subject: string, data: Uint8Array, opts?: Record<string, unknown>): Promise<unknown>;
       consumers: {
         get(stream: string, durable: string): Promise<{
           consume(opts?: Record<string, unknown>): Promise<AsyncIterable<{
             data: Uint8Array;
             ack(): void;
             nak(delayMs?: number): void;
+            info?: { redeliveryCount?: number; deliveryCount?: number };
           }>>;
         }>;
       };
@@ -298,15 +352,44 @@ export class NatsEventBus implements EventBus {
       if (maybeStop) await maybeStop.call(iter);
     };
 
+    const ackPolicy = resolved.ackPolicy;
+    const maxRetriesBeforeDlq = this.cfg.maxRetriesBeforeDlq;
+    const dlqSubject = this.cfg.dlqSubject;
+
     (async () => {
       for await (const msg of iter) {
+        if (ackPolicy === 'none') {
+          try {
+            const env = decodeEnvelope(msg.data);
+            if (entry.matcher(env.event.type)) {
+              const carrier: TraceCarrier = env.trace ?? {};
+              await withNatsConsumeSpan(
+                {
+                  subject: subjectFor(env.event.type, this.cfg.subjectPrefix),
+                  carrier,
+                  attributes: {
+                    'caia.event.type': env.event.type,
+                    'caia.event.id': env.event.id,
+                    'caia.event.sender': env.sender,
+                    'caia.subscription.glob': entry.glob,
+                    'caia.consumer.ack_policy': 'none',
+                  },
+                },
+                async () => entry.handler(env.event),
+              );
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('[event-bus-nats] handler threw (ackPolicy=none, dropping)', err);
+          }
+          continue;
+        }
+
+        let env: EventEnvelope | null = null;
+        const deliveryCount = (msg.info?.redeliveryCount ?? 0) + 1;
         try {
-          const env = decodeEnvelope(msg.data);
+          env = decodeEnvelope(msg.data);
           if (entry.matcher(env.event.type)) {
-            // OTel: rebuild parent span from envelope.trace (set by
-            // the publish side via withNatsPublishSpan). Pre-G47
-            // envelopes have no `trace` field — withNatsConsumeSpan
-            // handles that by starting a new root span.
             const carrier: TraceCarrier = env.trace ?? {};
             await withNatsConsumeSpan(
               {
@@ -317,16 +400,46 @@ export class NatsEventBus implements EventBus {
                   'caia.event.id': env.event.id,
                   'caia.event.sender': env.sender,
                   'caia.subscription.glob': entry.glob,
+                  'caia.delivery.count': deliveryCount,
                 },
               },
-              async () => entry.handler(env.event),
+              async () => entry.handler!(env!.event),
             );
           }
           msg.ack();
         } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error('[event-bus-nats] handler threw, nak-ing', err);
-          msg.nak(1000);
+          const errMsg = err instanceof Error ? err.message : String(err);
+          if (env && deliveryCount > maxRetriesBeforeDlq) {
+            try {
+              await publishToDlq(
+                js,
+                dlqSubject,
+                env,
+                {
+                  originalSubject: subjectFor(env.event.type, this.cfg.subjectPrefix),
+                  deliveryCount,
+                  lastError: errMsg,
+                },
+              );
+              // eslint-disable-next-line no-console
+              console.error(
+                `[event-bus-nats] DLQ'd after ${deliveryCount} deliveries: ${env.event.type} id=${env.event.id} subject=${dlqSubject}`,
+                err,
+              );
+              msg.ack();
+            } catch (dlqErr) {
+              // eslint-disable-next-line no-console
+              console.error('[event-bus-nats] DLQ publish failed, nak-ing', dlqErr);
+              msg.nak(nakBackoffMs(deliveryCount));
+            }
+          } else {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[event-bus-nats] handler threw on delivery ${deliveryCount}/${maxRetriesBeforeDlq}, nak-ing`,
+              errMsg,
+            );
+            msg.nak(nakBackoffMs(deliveryCount));
+          }
         }
       }
     })().catch((err) => {
@@ -373,6 +486,7 @@ function sanitizeDurable(glob: string): string {
 }
 
 export type {
+  ConsumerOverride,
   EventBus,
   EventEnvelope,
   EventHandler,
@@ -392,4 +506,19 @@ export {
   makeEventId,
 } from './envelope.js';
 export { DEFAULT_STREAM, defaultConsumer, NAMESPACE_HINTS } from './streams.js';
-export type { DlqAdvisory, DlqHandler } from './dlq.js';
+export type { DlqAdvisory, DlqHandler, DlqPublisher } from './dlq.js';
+export { defaultDlqHandler, nakBackoffMs, publishToDlq } from './dlq.js';
+export {
+  HybridEventBus,
+  parseFlagCsv,
+  BUS_BACKEND_NATS_ENV_VAR,
+  type HybridEventBusOptions,
+  type LegacyEventBus,
+} from './router.js';
+export {
+  WAVE_1A_EVENT_TYPES,
+  WAVE_1A_CONSUMER_OVERRIDES,
+  WAVE_1A_DLQ_SUBJECT,
+  isWave1aEvent,
+  type Wave1aEventType,
+} from './wave1a.js';

@@ -49,6 +49,7 @@
     "@chiefaia/decomposer": "workspace:*",
     "@chiefaia/dedup-engine": "workspace:*",
     "@chiefaia/event-bus-internal": "workspace:*",
+    "@chiefaia/event-bus-nats": "workspace:*",
     "@chiefaia/events-taxonomy-internal": "workspace:*",
     "@chiefaia/feature-registry": "workspace:*",
     "@chiefaia/local-llm-router": "workspace:*",

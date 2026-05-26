@@ -44,7 +44,10 @@ export function registerEventsRoutes(app: Hono, _db: Db): void {
       return c.json({ error: 'invalid event type' }, 400);
     }
 
-    const event = eventBus.publish({
+    // HybridEventBus.publish returns Promise<ConductorEvent> | ConductorEvent
+    // depending on whether body.type routes to NATS or legacy. `await` handles
+    // both: awaiting a non-Promise is a no-op in JS.
+    const event = await eventBus.publish({
       type: body.type,
       actor: (body.actor ?? 'api') as import('@chiefaia/events-taxonomy-internal').EventActor,
       payload: body.payload ?? {},
