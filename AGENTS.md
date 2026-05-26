@@ -8,6 +8,27 @@ CAIA is a private monorepo housing the multi-agent AI software-development platf
 
 Sites (pokerzeno, roulette-community, stolution, etc.) live in their own repos and historically consumed `@chiefaia/*` from npm; new agent packages stay private workspace packages per the 2026-05-06 standing rule.
 
+## Reuse-first (mandatory — see `agent-memory/feedback_reuse_first_no_custom_code.md`)
+
+**Rule.** Before writing any code — UI primitive, backend helper, type, or new dependency — you MUST search the workspace for an existing reusable package and either use it or extend it. Writing one-off inline code when a reusable package exists (or should exist) is institutional debt.
+
+**4-step check (run before the first line of code):**
+
+1. **UI primitives** — does `@caia/ui` export the component you need? If yes, import. If no but it's a UI primitive: add it to `@caia/ui` first (its own PR), then consume. Raw `@radix-ui/*`, `@/components/ui/*`, or inline-Tailwind component code outside `packages/ui/**` is a Semgrep ERROR (`caia-no-raw-shadcn-import-outside-ui-package`, `caia-no-raw-radix-outside-ui-package`).
+2. **Backend helpers** — grep `packages/` and the installed `@chiefaia/*` set. The canonical wrappers are: `@chiefaia/http-client` (no raw axios/fetch — Semgrep ERROR), `@chiefaia/persistence-sqlite` and `@chiefaia/persistence-postgres` (no raw `better-sqlite3` / `pg.Pool` — Semgrep ERROR), `@caia/architect-kit`, `@caia/state-machine`, `@chiefaia/claude-spawner`, `@chiefaia/events`, `@chiefaia/critic`, `@chiefaia/ticket-template`, `@chiefaia/logger`, `@chiefaia/errors`, `@chiefaia/config`, `@chiefaia/metrics`, `@chiefaia/tracing`.
+3. **Dependencies** — before `pnpm add <thing>`, check whether a workspace package already wraps it. If yes, add the workspace package instead.
+4. **New code** — treat every helper, component, and type as a future-package candidate. Land it in a package, not inline in an app.
+
+**Mechanical enforcement (defence-in-depth — see `caia-ea/decisions/ADR-065`):**
+
+- **L1 — this section.** Doctrine.
+- **L2 — EA gate.** Plans submitted through `@caia/reuse-check-gate` must include a `reuseSearchResults` field naming the `@caia/*` / `@chiefaia/*` packages considered + why each was selected or rejected. Plans of type `implementation` with empty `reuseSearchResults` are refused at the gate.
+- **L3 — dispatch-time reuse search.** Orchestrators call `searchReuseCandidates(brief)` from `@caia/reuse-searcher` (also available as the `caia-reuse-search-mcp` tool) before spawning any code task. The ranked candidate list is injected into the spawned agent's system prompt.
+- **L4 — CI gate.** `reuse-advisory-blocking` is a required status check on `develop` + `main`. It refuses PRs that add raw shadcn/Radix/Tailwind imports outside `packages/ui/**`, raw `axios`/`node-fetch` outside `packages/http-client/**`, raw `better-sqlite3` outside `packages/persistence-*/**`. The legacy non-blocking `reuse-advisory` job stays as a comment-only second opinion.
+- **L5 — Semgrep.** The rules in `.semgrep/caia-rules.yml` named `caia-no-raw-shadcn-import-outside-ui-package`, `caia-no-raw-radix-outside-ui-package`, `caia-no-inline-tailwind-in-customer-facing-app`, `caia-no-raw-axios-outside-http-client`, `caia-no-raw-better-sqlite3-outside-persistence` block the same patterns at PR-diff time.
+
+**Consequence when violated.** PR fails the `reuse-advisory-blocking` and `semgrep` required checks. The escape hatch is the `reuse-advisory-escape` label, which the EA-reviewer applies after recording the one-off rationale on the PR. Operator does NOT need to repeat the rule in agent context — the gates above carry it.
+
 ## Build, test, lint, typecheck
 
 ```bash

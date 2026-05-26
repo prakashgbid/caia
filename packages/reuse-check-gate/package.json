@@ -1,0 +1,28 @@
+{
+  "name": "@caia/reuse-check-gate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EA-gate adapter that refuses implementation plans missing a reuseSearchResults field. Enforcement layer L2 of the reuse-first guardrail wave (ADR-065). Wraps @caia/ea-architect.submitPlan so callers can't bypass.",
+  "keywords": ["reuse", "ea", "architect", "gate", "plan", "guardrail", "submitPlan", "validation"],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.4.0"
+  }
+}
