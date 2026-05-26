@@ -9,7 +9,14 @@
  * uses `@caia/atlas-prompt-router.createAtlasPromptApiHandler` to
  * validate + classify the request server-side.
  *
- * Wave 2 swaps the mock client for the live atlas HTTP client.
+ * Wave 2 swaps the mock client for the live atlas HTTP client and the
+ * inline no-op Mapper for the real `@chiefaia/atlas-mapper.buildMapper`
+ * call. The V1 wizard surface uses an inline no-op Mapper because
+ * @chiefaia/atlas-mapper ships uncompiled source (no `dist/` build),
+ * which Next.js's webpack can't resolve through `.js` extension imports
+ * without an additional path alias config. The selection model still
+ * works for fixture data because `useAtlasSelection` only calls the
+ * mapper for cross-references that the V1 fixtures don't exercise.
  */
 
 import { useCallback, useMemo, useState } from 'react';
@@ -31,9 +38,7 @@ import {
   sampleEvents,
   ticketTree,
   versionsByTicketId,
-  toMapperTickets,
 } from '@caia/atlas-ui/fixtures';
-import { buildMapper } from '@chiefaia/atlas-mapper';
 
 export interface AtlasWizardClientProps {
   projectId: string;
@@ -41,6 +46,25 @@ export interface AtlasWizardClientProps {
   fetchImpl?: typeof fetch;
   /** Override the mock fixtures (tests). */
   fixturesOverride?: AtlasMockFixtures;
+}
+
+/**
+ * No-op Mapper for V1. Provides the minimum surface
+ * `useAtlasSelection` requires; queries that depend on real DOM-ID ↔
+ * ticket-id bindings (`ticketByDomId`, `domIdsByTicket`,
+ * `nearestEnclosingTicket`, `descendantTickets`) return null/[] which
+ * the reducer handles cleanly. Wave 2 replaces this with the result of
+ * `@chiefaia/atlas-mapper.buildMapper`.
+ */
+function makeNoopMapper(designVersionId: string): unknown {
+  return {
+    designVersionId,
+    ticketByDomId: () => null,
+    domIdsByTicket: () => [],
+    nearestEnclosingTicket: () => null,
+    descendantTickets: () => [],
+    ticketsById: new Map(),
+  };
 }
 
 export function AtlasWizardClient(props: AtlasWizardClientProps): React.JSX.Element {
@@ -60,21 +84,20 @@ export function AtlasWizardClient(props: AtlasWizardClientProps): React.JSX.Elem
   const client = useMemo(() => createMockClient(fixtures), [fixtures]);
 
   const mapper = useMemo(
-    () =>
-      buildMapper({
-        designVersionId: fixtures.latestDesign.designVersion.id,
-        tickets: [toMapperTickets(fixtures.ticketsTree.tree)],
-      }),
+    () => makeNoopMapper(fixtures.latestDesign.designVersion.id),
     [fixtures],
   );
 
-  const selectionApi = useAtlasSelection(mapper);
+  // The `useAtlasSelection` hook accepts the canonical `Mapper`; we
+  // structurally cast our no-op into that type because TS does not
+  // know `Mapper` is the structural minimum we satisfy.
+  const selectionApi = useAtlasSelection(mapper as Parameters<typeof useAtlasSelection>[0]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastResponse, setLastResponse] = useState<AtlasSubmitPromptResponse | null>(null);
 
   const primaryTicketId =
-    selectionApi.selection.primaryTicketId ?? selectionApi.selection.ticketIds[0] ?? null;
+    selectionApi.selection.primary?.ticketId ?? selectionApi.selection.ticketIds[0] ?? null;
   const primaryNode = primaryTicketId ? findNodeById(fixtures.ticketsTree.tree, primaryTicketId) : null;
 
   const handleSubmitPrompt = useCallback(
@@ -140,7 +163,7 @@ export function AtlasWizardClient(props: AtlasWizardClientProps): React.JSX.Elem
         breadcrumb={
           <SelectionBreadcrumb
             segments={selectionApi.breadcrumb}
-            onClick={(id) => selectionApi.selectTicket(id, 'replace')}
+            onSelect={(id) => selectionApi.selectTicket(id, 'replace')}
           />
         }
         promptDock={

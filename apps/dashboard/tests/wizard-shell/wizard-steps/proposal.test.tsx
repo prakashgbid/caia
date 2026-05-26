@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import ProposalPage from '../../../app/wizard/proposal/page';
+import { ProposalPanel as ProposalPage } from '../../../components/wizard/ProposalPanel';
 
 afterEach(() => cleanup());
 

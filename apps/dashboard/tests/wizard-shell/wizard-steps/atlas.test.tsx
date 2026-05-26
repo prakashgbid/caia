@@ -5,24 +5,6 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-
-// Mock @chiefaia/atlas-mapper since its package.json points at src/*.ts
-// (no build step), which Vite + vitest can't resolve from inside
-// node_modules without ts-loader.
-vi.mock('@chiefaia/atlas-mapper', () => ({
-  buildMapper: vi.fn(() => ({
-    designVersionId: 'dv-test',
-    descendantTickets: () => [],
-    ticketByDomId: () => null,
-    domIdByTicket: () => null,
-    walk: () => [],
-    extra: () => ({}),
-    children: () => [],
-    parent: () => null,
-    isRoot: () => true,
-  })),
-}));
-
 import { AtlasWizardClient } from '../../../components/wizard/AtlasWizardClient';
 
 afterEach(() => cleanup());
