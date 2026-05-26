@@ -14,7 +14,7 @@
  *   | `from "@/components/ui/*"` (raw shadcn)          | packages/ui/**          |
  *   | `import axios from "axios"`                      | packages/http-client/** |
  *   | `import ... from "node-fetch"`                   | packages/http-client/** |
- *   | `import ... from "better-sqlite3"`               | packages/persistence-*/** |
+ *   | `import ... from "better-sqlite3"`               | packages/persistence-PKG/** |
  *
  * Baseline-aware: pre-existing violations recorded in
  * `.reuse-advisory-baseline.json` at repo root are NOT failed. New violations
