@@ -13,33 +13,66 @@
  *   - `@caia/design-ingest/migrations/0001_ux_uploads.sql`  — global, row-level `tenant_id` scoping (deliberate; see AUDIT.md Blocker 2)
  *   - `apps/dashboard/migrations/0011_tenants_global.sql`   — global `tenants` lookup table
  *
- * The list is computed lazily (via `getDefaultManifest()`) so the package
- * paths are resolved at runtime, not at module-load time. This avoids
- * forcing the workspace to be `pnpm install`-ed for `import`-only sites
- * (like the bootstrap-skipped legacy admin path in dashboard tests).
+ * Resolution strategy: walk up from this file's `import.meta.url` to find
+ * the monorepo root (the directory containing `pnpm-workspace.yaml`), then
+ * join the package-relative path. We deliberately avoid
+ * `require.resolve('${pkg}/package.json')` because several workspace
+ * packages (state-machine, onboarding, etc.) don't expose `./package.json`
+ * in their `exports` field and Node-20 ESM-strict throws
+ * `ERR_PACKAGE_PATH_NOT_EXPORTED`.
  */
 
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
+import { existsSync, statSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type { MigrationEntry } from './types.js';
 
-const require = createRequire(import.meta.url);
-
 /**
- * Resolve the on-disk path to a workspace package's `package.json` and
- * return its directory. We don't import the package's JS — we just need
- * to find its `migrations/` folder.
+ * Walk up from `startDir` to find the directory that contains
+ * `pnpm-workspace.yaml`. Throws if not found (which means the package
+ * is being used outside the monorepo — unsupported for now).
  */
+function findMonorepoRoot(startDir: string): string {
+  let dir = resolve(startDir);
+  for (let i = 0; i < 12; i++) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error(
+    `@caia/wizard-tenant-bootstrap: pnpm-workspace.yaml not found walking up from ${startDir}. ` +
+      `This package only works inside the caia monorepo.`,
+  );
+}
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const MONOREPO_ROOT = findMonorepoRoot(HERE);
+
+/** Package-name → on-disk directory inside the monorepo. */
 function packageDir(packageName: string): string {
-  const pkgJsonPath = require.resolve(`${packageName}/package.json`);
-  return dirname(pkgJsonPath);
+  // `@caia/<name>` → `packages/<name>`
+  // `@caia-app/<name>` → `apps/<name>`
+  // Anything else → walk packages/, apps/ trying the bare name.
+  if (packageName.startsWith('@caia/')) {
+    return join(MONOREPO_ROOT, 'packages', packageName.slice('@caia/'.length));
+  }
+  if (packageName.startsWith('@caia-app/')) {
+    return join(MONOREPO_ROOT, 'apps', packageName.slice('@caia-app/'.length));
+  }
+  // Defence-in-depth — try both.
+  for (const sub of ['packages', 'apps', 'services', 'configs']) {
+    const candidate = join(MONOREPO_ROOT, sub, packageName);
+    if (existsSync(candidate) && statSync(candidate).isDirectory()) return candidate;
+  }
+  throw new Error(
+    `@caia/wizard-tenant-bootstrap: cannot locate workspace package "${packageName}" under ${MONOREPO_ROOT}`,
+  );
 }
 
 /**
- * Returns the canonical per-tenant migration manifest. Throws if any
- * workspace dep isn't installed (which would indicate the bootstrap
- * package was used outside the monorepo, which is unsupported).
+ * Returns the canonical per-tenant migration manifest.
  *
  * Order matters: each package's migration is idempotent in isolation,
  * but applying them in a deterministic order makes test diffs stable
@@ -74,10 +107,6 @@ export function getDefaultManifest(): ReadonlyArray<MigrationEntry> {
     {
       packageName: '@caia-app/dashboard',
       filename: '0010_wizard_state.sql',
-      // The dashboard isn't a published package, but it IS a workspace
-      // member, so `require.resolve` succeeds when the dashboard ships
-      // its `package.json` in the workspace (it does). We resolve relative
-      // to its `package.json` for stability.
       sqlPath: join(packageDir('@caia-app/dashboard'), 'migrations', '0010_wizard_state.sql'),
     },
   ];
@@ -91,3 +120,8 @@ export function getDefaultManifest(): ReadonlyArray<MigrationEntry> {
  * via `BootstrapOptions.manifest` instead of re-exporting.
  */
 export const DEFAULT_MANIFEST: ReadonlyArray<MigrationEntry> = getDefaultManifest();
+
+/** Internal helper exposed for the audit-shape tests. */
+export function _packageDir(packageName: string): string {
+  return packageDir(packageName);
+}

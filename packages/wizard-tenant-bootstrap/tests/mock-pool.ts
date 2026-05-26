@@ -63,7 +63,10 @@ export function makeMockPool(): MockPool {
     ): Promise<{ rows: R[]; rowCount: number | null }> {
       const p = params ?? [];
       calls.push({ text, params: p });
-      for (const h of handlers) {
+      // Iterate in reverse so test overrides (registered later) win over
+      // baseline handlers (registered earlier inside wireSuccessfulPool).
+      for (let i = handlers.length - 1; i >= 0; i--) {
+        const h = handlers[i]!;
         if (h.match(text)) {
           const r = await h.fn(text, p);
           return { rows: r.rows as R[], rowCount: r.rowCount };

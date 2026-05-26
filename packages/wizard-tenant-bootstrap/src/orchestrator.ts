@@ -72,7 +72,22 @@ export async function bootstrapTenant(opts: BootstrapOptions): Promise<TenantBoo
 
   log(`[wizard-tenant-bootstrap] start schema=${schemaName} entries=${manifest.length}`);
 
-  const outcomes = await applyManifest(pool, schemaName, manifest);
+  let outcomes: ReadonlyArray<MigrationOutcome>;
+  try {
+    outcomes = await applyManifest(pool, schemaName, manifest);
+  } catch (err) {
+    // ensureTrackerTable (or another pre-loop failure) threw — surface
+    // as a synthetic kind:'failed' outcome so the caller's result envelope
+    // shape is consistent even when the tracker itself can't be created.
+    outcomes = [
+      {
+        kind: 'failed',
+        packageName: '__bootstrap__',
+        filename: '_migrations_applied',
+        error: `tracker bootstrap: ${(err as Error).message}`,
+      },
+    ];
+  }
   const failures = outcomes.filter(
     (o): o is Extract<MigrationOutcome, { kind: 'failed' }> => o.kind === 'failed',
   );

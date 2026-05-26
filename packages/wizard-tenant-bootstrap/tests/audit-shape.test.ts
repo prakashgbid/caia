@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { createRequire } from 'node:module';
+import { join } from 'node:path';
 
-const require = createRequire(import.meta.url);
+import { _packageDir } from '../src/manifest.js';
 
 /**
  * Belt-and-braces tests asserting AUDIT.md §2's shape invariants on
@@ -27,8 +26,7 @@ const GLOBAL_PACKAGES = [
 ] as const;
 
 function migrationPath(packageName: string, filename: string): string {
-  const pkgJson = require.resolve(`${packageName}/package.json`);
-  return join(dirname(pkgJson), 'migrations', filename);
+  return join(_packageDir(packageName), 'migrations', filename);
 }
 
 describe('per-tenant migrations conform to AUDIT.md §2', () => {
