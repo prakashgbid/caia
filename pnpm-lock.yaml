@@ -3275,12 +3275,15 @@ importers:
         specifier: workspace:*
         version: link:../reuse-searcher
     devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
       typescript:
         specifier: ^5.4.5
         version: 5.9.3
       vitest:
         specifier: ^1.4.0
-        version: 1.6.1(@types/node@22.19.17)(jsdom@26.1.0)
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
   packages/reuse-searcher:
     devDependencies:
