@@ -135,15 +135,19 @@ describe('<OnboardingStepForm>', () => {
   });
 
   it('PATCHes the wizard state route on FSM advance', async () => {
-    const fetchSpy = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ state: 'idea-captured' }), { status: 200 }),
-    );
+    const calls: { url: string; body?: unknown }[] = [];
+    const fetchSpy = (async (url: unknown, init?: RequestInit) => {
+      calls.push({
+        url: String(url),
+        body: init?.body ? JSON.parse(init.body as string) : undefined,
+      });
+      return new Response(JSON.stringify({ state: 'idea-captured' }), { status: 200 });
+    }) as unknown as typeof fetch;
     render(
       <OnboardingStepForm
         projectId="p-42"
         categories={[CAT_IDENTITY]}
-        fetchImpl={fetchSpy as unknown as typeof fetch}
+        fetchImpl={fetchSpy}
       />,
     );
     fireEvent.click(screen.getByTestId('provider-manual'));
@@ -153,10 +157,9 @@ describe('<OnboardingStepForm>', () => {
     fireEvent.click(screen.getByTestId('submit-step'));
     fireEvent.click(screen.getByTestId('advance-fsm'));
     await new Promise((r) => setTimeout(r, 10));
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe('/api/wizard/p-42/state');
-    const body = JSON.parse((fetchSpy.mock.calls[0]?.[1] as RequestInit).body as string);
-    expect(body.targetState).toBe('idea-captured');
+    expect(calls.length).toBe(1);
+    expect(calls[0]?.url).toBe('/api/wizard/p-42/state');
+    expect((calls[0]?.body as { targetState: string }).targetState).toBe('idea-captured');
   });
 
   it('surfaces an error when the FSM PATCH fails', async () => {
