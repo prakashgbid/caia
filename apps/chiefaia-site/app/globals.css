@@ -1,0 +1,19 @@
+/*
+ * chiefaia-site root stylesheet.
+ *
+ * Imports the canonical @caia/ui base styles (Tailwind layers + shadcn design
+ * tokens), then adds a few app-local rules. Per ADR-065, the design tokens
+ * live in @caia/ui — overrides here are scoped to marketing-site needs only.
+ *
+ * NOTE: we don't wrap app-local rules in `@layer base { ... }` here — the
+ * @tailwind directives are inside the imported stylesheet so PostCSS treats
+ * them as siblings (not predecessors) and rejects @layer references. Plain
+ * top-level rules are functionally identical for this minimal addition.
+ */
+
+@import "@caia/ui/styles.css";
+
+/* Smooth-scroll for in-page anchor links (Docs / Pricing FAQ etc). */
+html {
+  scroll-behavior: smooth;
+}

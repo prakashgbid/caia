@@ -1,0 +1,15 @@
+# Build artifacts
+.next/
+node_modules/
+out/
+.turbo/
+
+# Local env
+.env*.local
+
+# Generated at prebuild — kept out of version control so the file is always
+# fresh against the current git state
+lib/changelog.data.json
+
+# Lighthouse output
+.lighthouseci/

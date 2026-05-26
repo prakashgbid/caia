@@ -1,0 +1,39 @@
+{
+  "name": "@caia-app/chiefaia-site",
+  "private": true,
+  "description": "ChiefAIA marketing site — Next.js 15 + App Router. Operator-confirmed copy only, no fabricated metrics / testimonials / authorship. See ADR-067 (A1 gap-analysis) and apps/chiefaia-site/README.md.",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev -p 7878",
+    "lighthouse": "lhci autorun --config=./lighthouserc.cjs",
+    "prebuild": "node scripts/generate-changelog.mjs",
+    "predev": "node scripts/generate-changelog.mjs",
+    "start": "next start -p 7878",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint --max-warnings 0"
+  },
+  "dependencies": {
+    "@caia/ui": "workspace:*",
+    "next": "15.5.15",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@lhci/cli": "^0.14.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.1",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "15.5.15",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5",
+    "vitest": "^1.6.1"
+  }
+}
