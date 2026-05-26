@@ -1,0 +1,6 @@
+{
+  "$comment": "Per-violation baseline for reuse-advisory-blocking. The CI gate refuses NEW violations relative to this list. Populated by the first develop-branch run after PR B merges. Shrinks over time as packages are refactored. Format: { rule, path, line, snippet }. The CI key is `${rule}::${path}::${line}`.",
+  "schemaVersion": 1,
+  "lastUpdated": "2026-05-25",
+  "violations": []
+}
