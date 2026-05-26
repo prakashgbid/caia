@@ -688,3 +688,17 @@ events:
     severity: error
     actor: [pipeline-conductor, ea-drift-sentinel]
     payload: [principle_id, adr_id, location, detected_at]
+
+  # ─── Tenant lifecycle ───────────────────────────────────────────────────
+  # Emitted by apps/dashboard middleware (provisionTenant) the FIRST time a
+  # new email signs in successfully via Cloudflare Access. Fan-out includes:
+  #   - dashboard's onboarding step (renders welcome banner)
+  #   - @caia/usage-steward (starts subscription-period accounting)
+  #   - @chiefaia/secrets-broker (no-op: per-tenant Infisical workspace
+  #     already exists by the time this event fires)
+  # Re-emits are prevented by `INSERT … ON CONFLICT DO NOTHING` in
+  # apps/dashboard/lib/tenants/store.ts — only the first writer publishes.
+  - type: tenant.provisioned
+    severity: info
+    actor: [api, user, system]
+    payload: [tenant_id, email, schema_name, infisical_project_id]
