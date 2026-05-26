@@ -48,7 +48,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@caia/state-machine": "workspace:*"
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/tracing": "workspace:*"
   },
   "devDependencies": {
     "@chiefaia/tsconfig": "workspace:*",

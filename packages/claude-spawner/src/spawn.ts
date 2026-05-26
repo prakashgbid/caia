@@ -66,6 +66,17 @@
  */
 
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { createTracer } from '@chiefaia/tracing';
+
+/**
+ * OTel tracer for this package. Spans emitted via this tracer are
+ * attached to the active root trace (set by `chain-runner` /
+ * `lifecycle-conductor` / `ea-architect` callers) when the SDK has
+ * been bootstrapped by `@chiefaia/tracing`'s `initTracing()`. When
+ * the SDK is not initialised, the tracer degrades to no-op spans —
+ * unit tests that don't bootstrap the SDK are unaffected.
+ */
+const tracer = createTracer('@chiefaia/claude-spawner');
 
 /** Default path to the `claude` binary. Overridable via env or option. */
 const DEFAULT_CLAUDE_BINARY = process.env['CLAUDE_BINARY_PATH'] ?? 'claude';
@@ -258,7 +269,13 @@ export interface SpawnClaudeInput {
  * error taxonomy (e.g. rate-limit detection) should layer their own
  * parsing on top.
  */
-export async function spawnClaude(input: SpawnClaudeInput): Promise<SpawnClaudeResult> {
+/**
+ * Internal implementation. Public surface is the `spawnClaude` wrapper
+ * below, which adds OTel span instrumentation. We keep the impl as a
+ * separate function so the (large) body remains exactly as written in
+ * the v0.1.0 ship — span wiring is purely additive.
+ */
+async function _spawnClaudeImpl(input: SpawnClaudeInput): Promise<SpawnClaudeResult> {
   const options = input.options ?? {};
   const constraints = input.constraints ?? {};
   const accountId: string | null = options.accountId ?? null;
@@ -436,6 +453,41 @@ export async function spawnClaude(input: SpawnClaudeInput): Promise<SpawnClaudeR
     diagnostic: null,
     accountId,
   };
+}
+
+/**
+ * Public {@link spawnClaude} — thin OTel-instrumented wrapper around
+ * {@link _spawnClaudeImpl}. Emits a `claude.spawn` span carrying the
+ * binary path, optional model, configured timeout, account id, and on
+ * completion the spawn outcome (ok, exit code, duration, timed_out).
+ *
+ * When `@chiefaia/tracing`'s SDK has not been initialised, the
+ * underlying tracer is a no-op and this wrapper adds only the cost of
+ * a single allocation per spawn — well below the 6-10s session-init
+ * the binary itself incurs.
+ */
+export async function spawnClaude(input: SpawnClaudeInput): Promise<SpawnClaudeResult> {
+  return tracer.withSpan('claude.spawn', async (span) => {
+    const opts = input.options ?? {};
+    span.setAttribute('claude.binary', opts.binaryPath ?? DEFAULT_CLAUDE_BINARY);
+    span.setAttribute('claude.timeout_ms', opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    if (opts.model !== undefined) span.setAttribute('claude.model', opts.model);
+    if (opts.permissionMode !== undefined) {
+      span.setAttribute('claude.permission_mode', opts.permissionMode);
+    }
+    if (opts.accountId !== undefined && opts.accountId !== null) {
+      span.setAttribute('caia.account.id', opts.accountId);
+    }
+    const result = await _spawnClaudeImpl(input);
+    span.setAttribute('claude.ok', result.ok);
+    span.setAttribute('claude.duration_ms', result.durationMs);
+    if (result.rc !== null) span.setAttribute('claude.exit_code', result.rc);
+    if (result.timedOut) span.setAttribute('claude.timed_out', true);
+    if (!result.ok && result.diagnostic !== null) {
+      span.setStatus('error', result.diagnostic);
+    }
+    return result;
+  });
 }
 
 /**

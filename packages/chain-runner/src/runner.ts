@@ -2,7 +2,17 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { closeSync, mkdtempSync, openSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createTracer } from '@chiefaia/tracing';
 import { acquireLock, clearLock, stampWorkerPid } from './lock.js';
+
+/**
+ * OTel tracer for chain-runner. Each `dispatchPhase()` is the root
+ * span for an end-to-end task trace — every downstream span (FSM
+ * transition, NATS publish/subscribe, claude spawn, EA submitPlan,
+ * lifecycle ingest) hangs off this one when the SDK has been
+ * initialised via `@chiefaia/tracing`'s `initTracing()`.
+ */
+const tracer = createTracer('chain-runner');
 import { appendAudit } from './audit.js';
 import { classifyEarlyExit } from './classify.js';
 import { findPhase } from './spec.js';
@@ -183,6 +193,34 @@ Your task starts below:
  * run), and the lock is cleared so the next wake can re-dispatch.
  */
 export async function dispatchPhase(
+  ctx: StateContext,
+  phaseId: number,
+  dispatch?: DispatchOptions,
+): Promise<DispatchResult> {
+  return tracer.withSpan('chain-runner.dispatch-phase', async (span) => {
+    span.setAttribute('caia.chain.phase_id', phaseId);
+    if (dispatch?.command) span.setAttribute('caia.chain.command', dispatch.command);
+    span.setAttribute('caia.chain.base_dir', ctx.paths.baseDir);
+    span.setAttribute('caia.chain.phase_count', ctx.spec.phases.length);
+    const result = await _dispatchPhaseImpl(ctx, phaseId, dispatch);
+    span.setAttribute('caia.chain.session_id', result.sessionId);
+    if (result.pid !== null) span.setAttribute('caia.chain.pid', result.pid);
+    if (result.early_exit_code !== undefined && result.early_exit_code !== null) {
+      span.setAttribute('caia.chain.early_exit_code', result.early_exit_code);
+      span.setStatus('error', `early_exit=${result.early_exit_code}`);
+    }
+    if (result.dispatcher_fingerprint_error) {
+      span.setAttribute(
+        'caia.chain.fingerprint_error',
+        result.dispatcher_fingerprint_error.reason,
+      );
+      span.setStatus('error', result.dispatcher_fingerprint_error.reason);
+    }
+    return result;
+  });
+}
+
+async function _dispatchPhaseImpl(
   ctx: StateContext,
   phaseId: number,
   dispatch?: DispatchOptions,

@@ -17,6 +17,8 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import { createTracer } from '@chiefaia/tracing';
+
 import { writeNewAdr, applySupersessions, updateDecisionsIndex } from './adr-writer.js';
 import { createDefaultCritic, applyHallucinationGuard } from './critic.js';
 import {
@@ -49,6 +51,14 @@ import type {
 
 const HOME = homedir();
 const DEFAULT_REPO_PATH = join(HOME, 'Documents', 'projects', 'caia-ea');
+
+/**
+ * OTel tracer for EA submissions. Each `submitPlan()` call emits a
+ * `caia.ea.submit-plan` span carrying the plan type, iteration, and
+ * (on completion) the review outcome status. Spans link back to the
+ * caller's root trace when `@chiefaia/tracing`'s SDK is initialised.
+ */
+const tracer = createTracer('@caia/ea-architect');
 const DEFAULT_INBOX_PATH = join(HOME, 'Documents', 'projects', 'agent-memory', 'INBOX.md');
 const DEFAULT_AGENT_MEMORY_PATH = join(HOME, 'Documents', 'projects', 'agent-memory');
 
@@ -111,6 +121,27 @@ export class EaArchitectAgent {
    * (iteration N+1) — the prior state must be `ea-review-revisions-requested`.
    */
   async submitPlan(input: PlanSubmission): Promise<ReviewOutcome> {
+    return tracer.withSpan('caia.ea.submit-plan', async (span) => {
+      span.setAttribute('caia.ea.plan_type', input.planType);
+      if (input.submissionId !== undefined) {
+        span.setAttribute('caia.ea.submission_id', input.submissionId);
+      }
+      span.setAttribute(
+        'caia.ea.affected_count',
+        input.affectedComponents?.length ?? 0,
+      );
+      const outcome = await this._submitPlanImpl(input);
+      span.setAttribute('caia.ea.outcome_status', outcome.status);
+      span.setAttribute('caia.ea.iteration', outcome.iteration);
+      span.setAttribute('caia.ea.submission_id', outcome.submissionId);
+      if (outcome.status === 'rejected') {
+        span.setStatus('error', `outcome=${outcome.status}`);
+      }
+      return outcome;
+    });
+  }
+
+  private async _submitPlanImpl(input: PlanSubmission): Promise<ReviewOutcome> {
     const now = this.clock();
     const submissionId = input.submissionId ?? this.generateSubmissionId();
     const existing = this.submissions.get(submissionId);

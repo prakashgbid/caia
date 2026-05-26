@@ -59,6 +59,17 @@ export interface EventEnvelope {
   sender: string;
   /** Optional explicit recipient list; empty = broadcast on subject. */
   recipients: string[];
+  /**
+   * W3C TraceContext carrier (added 2026-05-25, gap analysis G47 + W5).
+   *
+   * Populated by `withNatsPublishSpan` on publish and consumed by
+   * `withNatsConsumeSpan` on subscribe so a single trace_id propagates
+   * across the bus end-to-end. Optional for backward-compatibility —
+   * envelopes published by older producers (no `trace` field) are
+   * still accepted; the consume side just starts a new root span when
+   * no parent context is present.
+   */
+  trace?: { traceparent?: string; tracestate?: string };
 }
 
 /** Authentication options for the NATS connection. */

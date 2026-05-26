@@ -1,0 +1,16 @@
+{
+  "_comment": "PLACEHOLDER — Grafana deferred per operator decision 2026-05-25 (feature/otel-tracing-tempo-2026-05-25). V1 trace verification is via Tempo's HTTP query API; see infra/tempo/README.md. When Grafana lands (separate PR), replace this file with a full dashboard JSON: p95 latency per service.name, top-10 slowest spans, error rate per service.name, sourced from the Tempo data source at http://tempo.chiefaia.svc.cluster.local:3200.",
+  "_status": "deferred",
+  "_grafana_install_when_ready": "helm install grafana grafana/grafana -n chiefaia --set persistence.enabled=true --set datasources.\"datasources\\.yaml\".datasources[0].name=Tempo --set datasources.\"datasources\\.yaml\".datasources[0].type=tempo --set datasources.\"datasources\\.yaml\".datasources[0].url=http://tempo.chiefaia.svc.cluster.local:3200",
+  "_intended_panels": [
+    "p95 latency per service.name (1h window)",
+    "top-10 slowest spans (1h window)",
+    "error rate per service.name (5m window)",
+    "trace count per service.name (1h window)",
+    "p99 spawn duration for @chiefaia/claude-spawner (24h window)"
+  ],
+  "title": "CAIA Traces — PLACEHOLDER",
+  "schemaVersion": 0,
+  "version": 0,
+  "panels": []
+}

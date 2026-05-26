@@ -1,95 +1,47 @@
-import {
-  trace,
-  SpanStatusCode,
-  SpanKind,
-  type Span as OtelSpan,
-  type Tracer as OtelTracer,
-} from '@opentelemetry/api';
+/**
+ * @chiefaia/tracing — OpenTelemetry tracing for the CAIA spine.
+ *
+ * Surface (v0.3.0):
+ *
+ *   - createTracer / startSpan / withSpan   — the v0.2.0 manual tracer (unchanged)
+ *   - initTracing / shutdownTracing         — NodeSDK bootstrap + OTLP wiring
+ *   - injectContext / extractContext        — W3C TraceContext propagation
+ *   - withNatsPublishSpan / withNatsConsumeSpan — manual NATS instrumentation
+ *
+ * Reuse-first: this package is the canonical OTel surface for CAIA.
+ * Do not ship a parallel `@chiefaia/otel`. See PLAN.md in the
+ * feature/otel-tracing-tempo-2026-05-25 PR for the reuse decision.
+ */
 
-export interface SpanContext {
-  readonly traceId: string;
-  readonly spanId: string;
-  readonly parentSpanId?: string;
-}
+export type {
+  Span,
+  SpanAttributes,
+  SpanContext,
+  TraceCarrier,
+  Tracer,
+} from './types.js';
 
-export interface SpanAttributes {
-  readonly [key: string]: string | number | boolean;
-}
+export { createTracer } from './tracer.js';
 
-export interface Span {
-  readonly context: SpanContext;
-  setAttribute(key: string, value: string | number | boolean): void;
-  addEvent(name: string, attrs?: SpanAttributes): void;
-  setStatus(code: 'ok' | 'error', message?: string): void;
-  end(): void;
-}
+export {
+  initTracing,
+  shutdownTracing,
+  isTracingInitialised,
+  currentServiceName,
+  DEFAULT_OTLP_ENDPOINT,
+  type InitTracingOptions,
+} from './init.js';
 
-export interface Tracer {
-  startSpan(name: string, options?: { parent?: SpanContext }): Span;
-  withSpan<T>(name: string, fn: (span: Span) => T | Promise<T>, options?: { parent?: SpanContext }): Promise<T>;
-}
+export {
+  injectContext,
+  extractContext,
+  parseTraceparent,
+  spanCtxToOtelContext,
+} from './propagation.js';
 
-function wrapOtelSpan(otelSpan: OtelSpan, spanCtx: SpanContext): Span {
-  return {
-    context: spanCtx,
-    setAttribute(key, value) { otelSpan.setAttribute(key, value); },
-    addEvent(name, attrs) { otelSpan.addEvent(name, attrs); },
-    setStatus(code, message) {
-      if (message !== undefined) {
-        otelSpan.setStatus({
-          code: code === 'ok' ? SpanStatusCode.OK : SpanStatusCode.ERROR,
-          message,
-        });
-      } else {
-        otelSpan.setStatus({
-          code: code === 'ok' ? SpanStatusCode.OK : SpanStatusCode.ERROR,
-        });
-      }
-    },
-    end() { otelSpan.end(); },
-  };
-}
-
-function randomHex(bytes: number): string {
-  return Array.from(
-    { length: bytes },
-    () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0'),
-  ).join('');
-}
-
-function buildSpanContext(otelSpan: OtelSpan, parent: SpanContext | undefined): SpanContext {
-  const sc = otelSpan.spanContext();
-  const traceId = sc.traceId.replace(/^0+$/, '') || parent?.traceId || randomHex(16);
-  const spanId = sc.spanId.replace(/^0+$/, '') || randomHex(8);
-
-  if (parent?.spanId !== undefined) {
-    return { traceId, spanId, parentSpanId: parent.spanId };
-  }
-  return { traceId, spanId };
-}
-
-export function createTracer(name: string): Tracer {
-  const otelTracer: OtelTracer = trace.getTracer(name);
-
-  return {
-    startSpan(spanName, options): Span {
-      const otelSpan = otelTracer.startSpan(spanName, { kind: SpanKind.INTERNAL });
-      const spanCtx = buildSpanContext(otelSpan, options?.parent);
-      return wrapOtelSpan(otelSpan, spanCtx);
-    },
-
-    async withSpan<T>(spanName: string, fn: (span: Span) => T | Promise<T>, options?: { parent?: SpanContext }): Promise<T> {
-      const span = this.startSpan(spanName, options);
-      try {
-        const result = await fn(span);
-        span.setStatus('ok');
-        return result;
-      } catch (err) {
-        span.setStatus('error', err instanceof Error ? err.message : String(err));
-        throw err;
-      } finally {
-        span.end();
-      }
-    },
-  };
-}
+export {
+  withNatsPublishSpan,
+  withNatsConsumeSpan,
+  type NatsPublishSpanOpts,
+  type NatsConsumeSpanOpts,
+} from './nats-instrumentation.js';

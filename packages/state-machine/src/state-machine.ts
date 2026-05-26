@@ -1,3 +1,4 @@
+import { createTracer } from '@chiefaia/tracing';
 import {
   InvalidTransitionError,
   ProjectNotFoundError,
@@ -6,6 +7,16 @@ import {
 } from './errors.js';
 import { hashPayload } from './hash.js';
 import { isProjectState, type ProjectState } from './states.js';
+
+/**
+ * OTel tracer for the state machine. Each `transition()` call emits a
+ * `caia.state-machine.transition` span carrying the project id,
+ * from-state, to-state, and the number of optimistic-lock retries the
+ * call needed. Spans link back to the caller's root trace when
+ * tracing has been bootstrapped via `@chiefaia/tracing`'s
+ * `initTracing()`; otherwise they degrade to no-ops.
+ */
+const tracer = createTracer('@caia/state-machine');
 import type {
   StateStore,
 } from './store.js';
@@ -122,6 +133,29 @@ export class StateMachine {
     triggeredBy: TriggeredBy | string,
   ): Promise<TransitionResult>;
   async transition(
+    projectId: string,
+    toState: ProjectState,
+    optsOrReason: TransitionOpts | string,
+    maybeTriggeredBy?: TriggeredBy | string,
+  ): Promise<TransitionResult> {
+    return tracer.withSpan('caia.state-machine.transition', async (span) => {
+      span.setAttribute('caia.project.id', projectId);
+      span.setAttribute('caia.state.to', toState);
+      const result = await this._transitionImpl(
+        projectId,
+        toState,
+        optsOrReason,
+        maybeTriggeredBy,
+      );
+      span.setAttribute('caia.state.from', result.fromState);
+      span.setAttribute('caia.transition.applied', result.applied);
+      span.setAttribute('caia.transition.retries', result.retries);
+      span.setAttribute('caia.transition.new_version', result.newVersion);
+      return result;
+    });
+  }
+
+  private async _transitionImpl(
     projectId: string,
     toState: ProjectState,
     optsOrReason: TransitionOpts | string,
