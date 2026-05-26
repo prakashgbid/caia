@@ -2,27 +2,16 @@
 #
 # chiefaia-site — Next.js 15 (App Router) standalone marketing image.
 #
-# Stages mirror apps/dashboard/Dockerfile (PR #612 / A1+A2) — same
-# conventions per ADR-065 reuse-first:
-#   deps    — install full workspace (cached on pnpm-lock.yaml)
-#   builder — `next build` produces .next/standalone + .next/static,
-#             then vendors @chiefaia/tracing + @opentelemetry into it
-#   runner  — minimal runtime: standalone bundle + public/ + static
+# OTel vendoring: instrumentation.ts uses `await import('@chiefaia/
+# tracing')` because it's loaded for BOTH edge and node runtimes and
+# OTel NodeSDK is Node-only. Next.js 15's standalone tracer does NOT
+# follow this dynamic import even with a literal-string arg —
+# empirically confirmed by the first failed build.
 #
-# Final image:
-#   - base: node:20-alpine, non-root uid 1001 (nextjs:nodejs)
-#   - listens on $PORT (default 3000)
-#   - HEALTHCHECK hits /api/healthz over HTTP
-#
-# OTel vendoring (the hard part): instrumentation.ts uses
-# `await import('@chiefaia/tracing')` because the file is loaded for
-# BOTH edge and node runtimes and OTel NodeSDK is Node-only. The
-# dynamic import gates on NEXT_RUNTIME === 'nodejs'. Empirically:
-# Next.js 15's standalone tracer does NOT follow this dynamic import
-# (literal string arg notwithstanding) — first build of this
-# Dockerfile failed the verification check with @chiefaia/* missing
-# from the standalone node_modules. Fix below dereferences pnpm's
-# symlink graph.
+# Fix: copy /repo/packages/tracing (workspace package with built dist)
+# and /repo/packages/tracing/node_modules/@opentelemetry (where pnpm
+# parks the OTel transitive closure as symlinks to .pnpm/) into the
+# standalone tree. `cp -rL` dereferences pnpm's symlinks. Adds ~25 MB.
 
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
@@ -49,34 +38,28 @@ RUN pnpm --filter @caia/ui --filter @chiefaia/tracing build
 RUN pnpm --filter @caia-app/chiefaia-site build
 
 # Vendor @chiefaia/tracing + its OTel transitive closure into the
-# standalone tree. Next.js's tracer leaves them out because the
-# import is dynamic (see header). We dereference pnpm's symlink graph
-# with `cp -rL` so the standalone node_modules contains real files,
-# not dangling symlinks. The `.pnpm/@chiefaia+tracing@*` directory
-# has both @chiefaia/tracing AND every @opentelemetry/* peer in one
-# node_modules — the cleanest single source.
+# standalone tree. Source: /repo/packages/tracing (the workspace
+# package source + built dist) and /repo/packages/tracing/
+# node_modules/@opentelemetry (where pnpm parks the OTel symlinks
+# pointing into .pnpm/). cp -rL dereferences them.
 RUN set -eux; \
     STANDALONE=/repo/apps/chiefaia-site/.next/standalone; \
-    TRACING_PNPM=$(ls -d /repo/apps/chiefaia-site/node_modules/.pnpm/@chiefaia+tracing@* 2>/dev/null | head -1); \
-    if [ -z "$TRACING_PNPM" ]; then \
-        TRACING_PNPM=$(ls -d /repo/node_modules/.pnpm/@chiefaia+tracing@* 2>/dev/null | head -1); \
-    fi; \
-    test -n "$TRACING_PNPM" || { echo "ERROR: cannot find @chiefaia/tracing in any .pnpm dir" >&2; exit 1; }; \
-    echo "Vendor source: $TRACING_PNPM"; \
-    mkdir -p "$STANDALONE/node_modules/@chiefaia"; \
-    cp -rL "$TRACING_PNPM/node_modules/@chiefaia/tracing" "$STANDALONE/node_modules/@chiefaia/tracing"; \
-    if [ -d "$TRACING_PNPM/node_modules/@opentelemetry" ]; then \
-        mkdir -p "$STANDALONE/node_modules/@opentelemetry"; \
-        for pkg in "$TRACING_PNPM"/node_modules/@opentelemetry/*; do \
-            name=$(basename "$pkg"); \
-            if [ ! -e "$STANDALONE/node_modules/@opentelemetry/$name" ]; then \
-                cp -rL "$pkg" "$STANDALONE/node_modules/@opentelemetry/"; \
-            fi; \
-        done; \
-    fi
+    TRACING_SRC=/repo/packages/tracing; \
+    test -d "$TRACING_SRC/dist" || { echo "ERROR: packages/tracing/dist missing — was pnpm --filter @chiefaia/tracing build run?" >&2; exit 1; }; \
+    test -d "$TRACING_SRC/node_modules/@opentelemetry" || { echo "ERROR: packages/tracing/node_modules/@opentelemetry missing — pnpm install layout changed?" >&2; ls -la "$TRACING_SRC/node_modules/" 2>&1 || true; exit 1; }; \
+    mkdir -p "$STANDALONE/node_modules/@chiefaia/tracing"; \
+    cp -rL "$TRACING_SRC/dist" "$STANDALONE/node_modules/@chiefaia/tracing/dist"; \
+    cp "$TRACING_SRC/package.json" "$STANDALONE/node_modules/@chiefaia/tracing/package.json"; \
+    mkdir -p "$STANDALONE/node_modules/@opentelemetry"; \
+    for pkg in "$TRACING_SRC"/node_modules/@opentelemetry/*; do \
+        name=$(basename "$pkg"); \
+        if [ ! -e "$STANDALONE/node_modules/@opentelemetry/$name" ]; then \
+            cp -rL "$pkg" "$STANDALONE/node_modules/@opentelemetry/$name"; \
+        fi; \
+    done
 
-RUN test -d /repo/apps/chiefaia-site/.next/standalone/node_modules/@chiefaia/tracing \
-    || (echo "ERROR: vendoring step did not place @chiefaia/tracing into the standalone bundle." && exit 1)
+RUN test -d /repo/apps/chiefaia-site/.next/standalone/node_modules/@chiefaia/tracing/dist \
+    || (echo "ERROR: vendoring step did not place @chiefaia/tracing/dist into the standalone bundle." && exit 1)
 RUN test -d /repo/apps/chiefaia-site/.next/standalone/node_modules/@opentelemetry/sdk-node \
     || (echo "ERROR: vendoring step did not place @opentelemetry/sdk-node into the standalone bundle." && exit 1)
 
