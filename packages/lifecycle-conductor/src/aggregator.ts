@@ -58,7 +58,18 @@
  * pre-Postgres bootstrapping and for unit tests).
  */
 
+import { createTracer } from '@chiefaia/tracing';
 import { DefaultFsmDriver, FORWARD_STATE_ORDINAL } from './fsm.js';
+
+/**
+ * OTel tracer for composite-state computation. Each steward
+ * attestation that lands here emits a `caia.lifecycle.ingest` span
+ * carrying the solution id, the steward that pushed the attestation,
+ * the prior composite state, the new composite state, and (when
+ * applicable) the operator-vocab FSM target the conductor drove the
+ * solution forward to.
+ */
+const tracer = createTracer('@caia/lifecycle-conductor');
 import type { FsmDriver } from './fsm.js';
 import {
   ALL_COMPOSITE_STATES,
@@ -275,6 +286,27 @@ export class LifecycleAggregator {
 
   /** Direct ingest path used by tests and by the daemon's stdin loop. */
   async ingest(att: StewardAttestation): Promise<void> {
+    return tracer.withSpan('caia.lifecycle.ingest', async (span) => {
+      span.setAttribute('caia.solution.id', att.solutionId);
+      span.setAttribute('caia.steward', att.steward);
+      const accForSpan = this.accumulators.get(att.solutionId);
+      span.setAttribute(
+        'caia.composite.from',
+        accForSpan?.compositeState ?? this.initialCompositeState,
+      );
+      await this._ingestImpl(att);
+      const accAfter = this.accumulators.get(att.solutionId);
+      if (accAfter) {
+        span.setAttribute('caia.composite.to', accAfter.compositeState);
+        span.setAttribute(
+          'caia.consecutive_greens',
+          accAfter.consecutiveGreensAcrossAllStewards,
+        );
+      }
+    });
+  }
+
+  private async _ingestImpl(att: StewardAttestation): Promise<void> {
     this.attestationsIngested += 1;
     const acc = this.accumulatorFor(att.solutionId);
     acc.rows[att.steward] = att;

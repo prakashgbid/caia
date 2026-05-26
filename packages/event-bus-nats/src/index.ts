@@ -16,6 +16,11 @@
  */
 
 import picomatch from 'picomatch';
+import {
+  withNatsConsumeSpan,
+  withNatsPublishSpan,
+  type TraceCarrier,
+} from '@chiefaia/tracing';
 import type {
   ConductorEvent,
   EventType,
@@ -188,7 +193,12 @@ export class NatsEventBus implements EventBus {
     const event = inflateEvent(input as PublishInput, (t) => this.resolveSeverity(t));
     const envelope = wrap(event, this._sender);
     const subject = subjectFor(event.type, this.cfg.subjectPrefix);
-    const bytes = encodeEnvelope(envelope);
+
+    // OTel: stamp the active trace context into the envelope so the
+    // consumer can rebuild the parent span. Carrier is mutated in
+    // place by `withNatsPublishSpan` → `injectContext`.
+    const traceCarrier: TraceCarrier = {};
+    envelope.trace = traceCarrier;
 
     const js = this.js as {
       publish(subject: string, data: Uint8Array, opts?: Record<string, unknown>): Promise<unknown>;
@@ -196,7 +206,22 @@ export class NatsEventBus implements EventBus {
 
     this._inflight += 1;
     try {
-      await js.publish(subject, bytes, { msgID: envelope.idempotency_key });
+      await withNatsPublishSpan(
+        {
+          subject,
+          carrier: traceCarrier,
+          attributes: {
+            'caia.event.type': event.type,
+            'caia.event.id': event.id,
+            'caia.event.sender': this._sender,
+          },
+        },
+        async () => {
+          // Re-encode AFTER injection so traceparent is on the wire.
+          const bytes = encodeEnvelope(envelope);
+          await js.publish(subject, bytes, { msgID: envelope.idempotency_key });
+        },
+      );
     } finally {
       this._inflight -= 1;
     }
@@ -277,7 +302,26 @@ export class NatsEventBus implements EventBus {
       for await (const msg of iter) {
         try {
           const env = decodeEnvelope(msg.data);
-          if (entry.matcher(env.event.type)) await entry.handler(env.event);
+          if (entry.matcher(env.event.type)) {
+            // OTel: rebuild parent span from envelope.trace (set by
+            // the publish side via withNatsPublishSpan). Pre-G47
+            // envelopes have no `trace` field — withNatsConsumeSpan
+            // handles that by starting a new root span.
+            const carrier: TraceCarrier = env.trace ?? {};
+            await withNatsConsumeSpan(
+              {
+                subject: subjectFor(env.event.type, this.cfg.subjectPrefix),
+                carrier,
+                attributes: {
+                  'caia.event.type': env.event.type,
+                  'caia.event.id': env.event.id,
+                  'caia.event.sender': env.sender,
+                  'caia.subscription.glob': entry.glob,
+                },
+              },
+              async () => entry.handler(env.event),
+            );
+          }
           msg.ack();
         } catch (err) {
           // eslint-disable-next-line no-console

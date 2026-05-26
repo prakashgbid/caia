@@ -1,0 +1,105 @@
+# Tempo Deployment — single replica, monolithic mode.
+#
+# Why a Deployment (not StatefulSet): V1 storage is emptyDir; ephemeral
+# by design. Restart-tolerant because spine traces are short-lived
+# and ingester WAL turnover is fast (10s idle, 5m max block).
+# Promote to StatefulSet + PVC when retention SLAs land.
+#
+# Resource sizing chosen to fit comfortably alongside chiefaia-api
+# (which currently runs at ~500Mi/0.3 CPU under normal spine load).
+# Tempo's resident set is dominated by ingester block buffers — the
+# 1Gi limit gives ~6× current spine volume of headroom.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: tempo
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate          # single-replica + emptyDir → no rolling
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tempo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tempo
+        app.kubernetes.io/part-of: caia-observability
+      annotations:
+        # Force pod restart when ConfigMap changes (kubectl rollout
+        # restart deploy/tempo also works).
+        checksum/config: "v1-2026-05-25"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.6.0
+          args:
+            - -config.file=/etc/tempo/tempo.yaml
+            - -mem-ballast-size-mbs=64
+          ports:
+            - name: http
+              containerPort: 3200
+              protocol: TCP
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+            - name: grpc
+              containerPort: 9095
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo
+              readOnly: true
+            - name: data
+              mountPath: /var/tempo
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: config
+          configMap:
+            name: tempo
+            items:
+              - key: tempo.yaml
+                path: tempo.yaml
+        - name: data
+          emptyDir:
+            sizeLimit: 5Gi

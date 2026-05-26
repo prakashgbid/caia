@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/tracing",
-  "version": "0.2.0",
-  "description": "OpenTelemetry distributed tracing",
+  "version": "0.3.0",
+  "description": "OpenTelemetry distributed tracing for the CAIA spine. Provides init / withSpan / W3C TraceContext inject+extract / NATS span helpers + pg/http/undici auto-instrumentations. Canonical reuse target (no parallel @chiefaia/otel).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -22,6 +22,25 @@
     "lint": "eslint src",
     "clean": "rm -rf dist"
   },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/core": "^2.7.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.215.0",
+    "@opentelemetry/resources": "^2.7.0",
+    "@opentelemetry/sdk-node": "^0.215.0",
+    "@opentelemetry/sdk-trace-base": "^2.7.0",
+    "@opentelemetry/semantic-conventions": "^1.32.0"
+  },
+  "peerDependencies": {
+    "@opentelemetry/instrumentation-http": "*",
+    "@opentelemetry/instrumentation-pg": "*",
+    "@opentelemetry/instrumentation-undici": "*"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/instrumentation-http": { "optional": true },
+    "@opentelemetry/instrumentation-pg": { "optional": true },
+    "@opentelemetry/instrumentation-undici": { "optional": true }
+  },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
     "@chiefaia/tsconfig": "workspace:*",
@@ -32,9 +51,5 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
-  },
-  "dependencies": {
-    "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/sdk-node": "^0.215.0"
   }
 }

@@ -1,0 +1,38 @@
+# Tempo service — ClusterIP only. No Ingress (V1 verification is
+# in-cluster via `kubectl run -it --rm tracer ...`).
+#
+# Port map:
+#   3200  → HTTP — query API (`/api/traces/<id>`, `/api/echo`, ...)
+#   4317  → OTLP gRPC receiver
+#   4318  → OTLP HTTP receiver  ← this is what @chiefaia/tracing
+#                                  defaults `initTracing` to
+#   9095  → gRPC server (internal)
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: tempo
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: tempo
+  ports:
+    - name: http
+      port: 3200
+      targetPort: http
+      protocol: TCP
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+      protocol: TCP
+    - name: grpc
+      port: 9095
+      targetPort: grpc
+      protocol: TCP

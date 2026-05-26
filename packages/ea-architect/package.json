@@ -26,7 +26,8 @@
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "@chiefaia/claude-spawner": "workspace:*"
+    "@chiefaia/claude-spawner": "workspace:*",
+    "@chiefaia/tracing": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

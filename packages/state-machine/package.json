@@ -35,6 +35,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@chiefaia/tracing": "workspace:*",
     "pg": "^8.20.0"
   },
   "devDependencies": {
