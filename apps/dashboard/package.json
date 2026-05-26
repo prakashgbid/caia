@@ -6,13 +6,20 @@
     "build": "next build",
     "start": "next start -p 7777",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lighthouse": "lhci autorun --config=./lighthouserc.cjs",
     "test:a11y": "playwright test tests/a11y.spec.ts",
     "test:visual": "playwright test tests/visual.spec.ts",
+    "test:e2e": "playwright test tests/wizard/e2e.spec.ts",
     "visual:update": "playwright test tests/visual.spec.ts --update-snapshots",
     "size-limit": "size-limit"
   },
   "dependencies": {
+    "@caia/info-architect": "workspace:*",
+    "@caia/interviewer": "workspace:*",
+    "@caia/state-machine": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*",
     "next": "^15.5.18",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
@@ -23,9 +30,16 @@
     "@lhci/cli": "^0.14.0",
     "@playwright/test": "^1.48.0",
     "@size-limit/preset-app": "^11.1.0",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20",
     "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^25.0.1",
     "size-limit": "^11.1.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^1.6.1"
   }
 }
