@@ -1,0 +1,50 @@
+# .dockerignore for chiefaia-site.
+#
+# Build context is the MONOREPO ROOT (CI invokes
+# `docker buildx build -f apps/chiefaia-site/Dockerfile .`), so this
+# file is not the operative one — the root `.dockerignore` wins. We
+# ship this here too because `docker buildx build ./apps/chiefaia-site`
+# is a valid local smoke command, and we want the same exclusions to
+# apply.
+
+# Never ship build artefacts — the multi-stage builder regenerates these.
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/build
+**/coverage
+
+# Tests + fixtures — not needed at runtime.
+**/tests
+**/__tests__
+**/__fixtures__
+**/__visual_baselines__
+**/playwright-report
+**/test-results
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Editor / VCS / local-only metadata.
+.git
+.gitignore
+.github
+.vscode
+.idea
+**/.DS_Store
+**/Thumbs.db
+
+# Lockfiles other than pnpm-lock.yaml — the monorepo is pnpm-only.
+**/package-lock.json
+**/yarn.lock
+
+# Docs + planning artefacts — image doesn't need them.
+**/*.md
+**/CHANGELOG.md
+docs/
+caia-ea/
+reports/
+PLAN.md
+EA-REVIEW-OUTCOME.json

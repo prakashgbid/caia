@@ -1,0 +1,153 @@
+# chiefaia-site — Next.js 15 marketing site (PR #602, B16).
+#
+# Deployment is named `chiefaia-web` to MATCH the existing Service +
+# Istio VirtualService (chiefaia-web-vs at infra/istio/chiefaia/
+# 20-virtualservice-web.yaml). The Service selector keys on
+# `app.kubernetes.io/name: chiefaia-web`, so this Deployment's pod
+# template MUST carry that label. Applying this Deployment will roll
+# the existing nginx-placeholder pod (replicaset chiefaia-web-7b74d79b5)
+# over to the new Next.js image without changing the Service or VS.
+#
+# Image: ghcr.io/prakashgbid/chiefaia-site:<tag>. The CI workflow
+# tags `latest` + `develop-<sha>` on every push to develop. For first
+# rollouts the operator can pin a specific develop-<sha> here.
+#
+# Probes hit /api/healthz (liveness) and /api/readyz (readiness) on
+# container port 3000 (Next.js standalone default; PORT=3000 set in
+# the Dockerfile).
+#
+# Security: non-root (uid 1001), read-only rootfs except /tmp,
+# allowPrivilegeEscalation=false, all caps dropped, seccomp=RuntimeDefault.
+#
+# Reuse-first: mirrors apps/dashboard/Dockerfile + dashboard manifest
+# conventions per ADR-065. Pod labels mirror the existing chiefaia-web
+# pod (verified live: kubectl get pod -n chiefaia -l app.kubernetes.io/
+# name=chiefaia-web).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chiefaia-web
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: chiefaia
+    app.kubernetes.io/instance: chiefaia-site
+    app.kubernetes.io/version: "0.1.0"
+    net.chiefaia.io/exposed-via: tunnel
+  annotations:
+    app.chiefaia.io/source: "apps/chiefaia-site (PR #602)"
+    app.chiefaia.io/replaces: "nginx-unprivileged:1.27-alpine placeholder"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # 1 replica + maxSurge=1 + maxUnavailable=0 gives zero-downtime
+      # cutover: a new pod comes up fully before the old one is killed.
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: chiefaia-web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: chiefaia-web
+        app.kubernetes.io/component: web
+        app.kubernetes.io/part-of: chiefaia
+        app.kubernetes.io/instance: chiefaia-site
+        app.kubernetes.io/version: "0.1.0"
+        net.chiefaia.io/exposed-via: tunnel
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: ghcr.io/prakashgbid/chiefaia-site:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            # NODE_ENV is baked into the image but re-declared so it's
+            # visible in `kubectl describe pod`.
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+          envFrom:
+            - configMapRef:
+                name: chiefaia-site-config
+            # Secret is optional today (no creds required for the
+            # marketing site stub). Mounted via optional=true so the
+            # pod still boots if the operator hasn't created it.
+            - secretRef:
+                name: chiefaia-site-secrets
+                optional: true
+          livenessProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/readyz
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            # Next.js standalone cold-start + OTel SDK init takes ~3-8 s.
+            # startupProbe gives 60 s before liveness kicks in.
+            httpGet:
+              path: /api/healthz
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "192Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            # Next.js writes a small cache dir at runtime; mount tmpfs
+            # so readOnlyRootFilesystem=true still permits it.
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/apps/chiefaia-site/.next/cache
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: next-cache
+          emptyDir:
+            sizeLimit: 128Mi
+      terminationGracePeriodSeconds: 30
