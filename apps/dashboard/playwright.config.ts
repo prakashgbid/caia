@@ -1,15 +1,28 @@
 // apps/dashboard/playwright.config.ts
 //
-// Playwright config for the dashboard's a11y + visual-regression checks.
-// Boots `next start -p 7777` and runs against localhost.
+// Playwright config for the dashboard's a11y + visual-regression checks
+// and the local-mode wizard-shell / wizard-steps E2E specs (PR #601 + #610).
 //
-// Used by the evidence-gate workflow's `axe` and `visual` jobs.
-// Scripts: `pnpm test:a11y`, `pnpm test:visual`, `pnpm visual:update`.
+// Boots `next start -p 7777` and runs against localhost. Used by the
+// evidence-gate workflow's `axe`, `visual`, and `test:e2e` jobs.
+//
+// Live-cluster smoke (`tests/e2e/live-wizard-smoke.spec.ts`, PR
+// "feature/live-wizard-smoke-2026-05-25") uses a SEPARATE config —
+// `playwright.live-smoke.config.ts` — so:
+//   - the visual/a11y jobs here never accidentally hit a live cluster, and
+//   - the live job runs without the `webServer` block (we point at a
+//     deployed dashboard, not a local boot).
+// We achieve the partition by ignoring `tests/e2e/**` here. See that
+// config for the live-smoke project setup.
+//
+// Scripts: `pnpm test:a11y`, `pnpm test:visual`, `pnpm visual:update`,
+// `pnpm test:e2e`, and `pnpm test:live-smoke` (live).
 
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: ['tests/e2e/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

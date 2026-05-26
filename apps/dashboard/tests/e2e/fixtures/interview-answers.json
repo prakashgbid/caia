@@ -1,0 +1,17 @@
+{
+  "_comment": "3 canned Q&A pairs the smoke types into the Interview chat. The real Interviewer Agent (packages/interviewer, PR #541) drives the question order via its 16-pillar / 364-question playbook; the smoke does not predict which questions fire — it answers the first 3 prompts that appear with these strings, then asserts the FSM reaches `interview-complete` via a forced-complete API call (PR #541 exposes POST /api/interview/:projectId/complete for operator-driven completion in smoke / demo flows).",
+  "answers": [
+    {
+      "topicHint": "target-audience",
+      "answer": "Primary persona: independent studio potters with 5-50 active listings selling $80-$2,000 pieces, mostly West Coast US and UK. Secondary: interior designers buying for client homes, and collectors aged 35-65 with $5K+ annual ceramics budgets."
+    },
+    {
+      "topicHint": "moat",
+      "answer": "Three pillars: (1) native commissioning workflow with milestone escrow — no general marketplace does this; (2) curator review tier where designers can browse vetted-only sellers; (3) AI matchmaker pairing buyers with potters whose aesthetic matches uploaded room photos."
+    },
+    {
+      "topicHint": "go-to-market",
+      "answer": "Phase 1: white-glove onboard 50 hand-picked potters from the SF Bay Area + LA ceramics scene + 20 from London. Phase 2: invite-only beta for 200 designers via partnerships with the AIA (American Institute of Architects) and the Society of British Interior Design. Phase 3: open self-serve signup once GMV crosses $250K/month."
+    }
+  ]
+}
