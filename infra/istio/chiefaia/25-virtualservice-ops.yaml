@@ -1,0 +1,28 @@
+# ops.chiefaia.com — operator system dashboard (Cloudflare Access gated,
+# restricted to prakash.stolution@gmail.com).
+#
+# Apps split (standing_rule_wizard_ops_app_split_2026-05-26):
+#   - ops.chiefaia.com       → apps/dashboard    → chiefaia-dashboard
+#   - dashboard.chiefaia.com → apps/wizard       → chiefaia-wizard
+#
+# The chiefaia-dashboard Service + Deployment continue to be defined in
+# infra/dashboard/ — only the hostname routing moved.
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: chiefaia-ops-vs
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-dashboard
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  hosts:
+    - ops.chiefaia.com
+  gateways:
+    - istio-system/stolution-gateway
+  http:
+    - route:
+        - destination:
+            host: chiefaia-dashboard.chiefaia.svc.cluster.local
+            port:
+              number: 80

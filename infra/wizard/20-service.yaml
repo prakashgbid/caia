@@ -1,0 +1,30 @@
+# chiefaia-wizard Service.
+#
+# The Istio VirtualService at infra/istio/chiefaia/21-virtualservice-wizard.yaml
+# targets `chiefaia-wizard.chiefaia.svc.cluster.local:80` to serve
+# dashboard.chiefaia.com (the customer-facing wizard URL after the
+# app split documented in standing_rule_wizard_ops_app_split_2026-05-26).
+#
+# Apply order:
+#   1. Apply 10-deployment.yaml — pods come up Ready behind their own selector
+#   2. Apply 20-service.yaml    — Service selects the real pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: chiefaia-wizard
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-wizard
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: chiefaia-wizard
+  ports:
+    - name: http
+      port: 80
+      # Standalone Next.js listens on 3000 inside the container (see
+      # Dockerfile ENV PORT=3000).
+      targetPort: 3000
+      protocol: TCP

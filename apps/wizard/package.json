@@ -1,20 +1,14 @@
 {
-  "name": "@caia-app/dashboard",
+  "name": "@caia-app/wizard",
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "build": "pnpm --filter '@caia-app/dashboard^...' build && next build",
-    "dev": "next dev -p 7777",
-    "lighthouse": "lhci autorun --config=./lighthouserc.cjs",
-    "size-limit": "size-limit",
-    "start": "next start -p 7777",
+    "build": "pnpm --filter '@caia-app/wizard^...' build && next build",
+    "dev": "next dev -p 7788",
+    "start": "next start -p 7788",
     "test": "vitest run",
-    "test:a11y": "playwright test tests/a11y.spec.ts",
-    "test:visual": "playwright test tests/visual.spec.ts",
     "test:e2e": "playwright test tests/wizard-shell/e2e.spec.ts tests/wizard-shell/wizard-steps-e2e.spec.ts",
-    "typecheck": "tsc --noEmit",
-    "visual:update": "playwright test tests/visual.spec.ts --update-snapshots",
-    "ea:submit-plan": "node scripts/submit-plan.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/react": "^1.2.12",
@@ -24,10 +18,10 @@
     "@caia/business-proposal-generator": "workspace:*",
     "@caia/design-ingest": "workspace:*",
     "@caia/grand-idea": "workspace:*",
+    "@caia/interviewer": "workspace:*",
     "@caia/onboarding": "workspace:*",
     "@caia/state-machine": "workspace:*",
     "@caia/ui": "workspace:*",
-    "@chiefaia/claude-spawner": "workspace:*",
     "@chiefaia/event-bus-internal": "workspace:*",
     "@chiefaia/event-bus-nats": "workspace:*",
     "@chiefaia/events": "workspace:*",
@@ -44,9 +38,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
-    "@lhci/cli": "^0.14.0",
     "@playwright/test": "^1.48.0",
-    "@size-limit/preset-app": "^11.1.0",
     "@testing-library/react": "^16.0.1",
     "@types/node": "^20",
     "@types/pg": "^8.11.10",
@@ -54,7 +46,6 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^25.0.1",
-    "size-limit": "^11.1.0",
     "typescript": "^5",
     "vitest": "^1.6.1"
   }
