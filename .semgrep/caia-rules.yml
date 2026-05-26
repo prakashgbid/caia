@@ -317,3 +317,130 @@ rules:
     pattern-either:
       - pattern-regex: '["''`]~?/Documents/projects/caia/[^"''`]+["''`]'
       - pattern-regex: '["''`]/Users/[^/"''`]+/Documents/projects/caia/[^"''`]+["''`]'
+
+  # ─── Reuse-first guardrail rules (ADR-065, AGENTS.md > Reuse-first) ───
+  #
+  # The next five rules enforce the canonical-wrapper convention: every
+  # foundational dep (shadcn, Radix, axios, fetch, better-sqlite3) is
+  # allowed only inside its wrapper package. Everywhere else, code must
+  # consume the wrapper.
+  #
+  # Defence-in-depth with the `reuse-advisory-blocking` CI gate
+  # (`scripts/reuse-check-strict.js`) — the CI gate catches what
+  # Semgrep's regex can't (e.g. dynamic imports), and Semgrep catches
+  # what the CI gate skips (small diffs, fast feedback).
+
+  - id: caia-no-raw-shadcn-import-outside-ui-package
+    message: |
+      Raw shadcn primitive imports are only allowed inside `packages/ui/**`.
+      Use `@caia/ui` instead. See AGENTS.md > Reuse-first.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      include:
+        - "apps/**/*.ts"
+        - "apps/**/*.tsx"
+        - "packages/**/*.ts"
+        - "packages/**/*.tsx"
+      exclude:
+        - "packages/ui/**"
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+        - "**/*.spec.ts"
+        - "**/*.spec.tsx"
+        - "**/node_modules/**"
+        - "**/dist/**"
+        - "**/__fixtures__/**"
+    pattern-either:
+      - pattern-regex: 'from\s+["'\'']@/components/ui/[a-z-]+["'\'']'
+      - pattern-regex: 'from\s+["'\'']\.\./components/ui/[a-z-]+["'\'']'
+      - pattern-regex: 'from\s+["'\'']\./components/ui/[a-z-]+["'\'']'
+
+  - id: caia-no-raw-radix-outside-ui-package
+    message: |
+      Raw `@radix-ui/*` imports are only allowed inside `packages/ui/**`.
+      Wrap the primitive in `@caia/ui` and consume from there.
+      See AGENTS.md > Reuse-first.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      include:
+        - "apps/**/*.ts"
+        - "apps/**/*.tsx"
+        - "packages/**/*.ts"
+        - "packages/**/*.tsx"
+      exclude:
+        - "packages/ui/**"
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+        - "**/node_modules/**"
+        - "**/dist/**"
+    pattern-regex: 'from\s+["'\'']@radix-ui/'
+
+  - id: caia-no-inline-tailwind-in-customer-facing-app
+    message: |
+      Inline Tailwind utility-class strings in customer-facing apps cause
+      brand drift. Use a `@caia/ui` component (which encapsulates the
+      Tailwind classes) instead. Demote to a WARNING-only rule via the
+      `reuse-advisory-escape` label if the use is genuinely one-off.
+    severity: WARNING
+    languages: [generic]
+    paths:
+      include:
+        - "apps/chiefaia-site/**/*.tsx"
+        - "apps/dashboard/**/*.tsx"
+      exclude:
+        - "packages/ui/**"
+        - "**/*.test.tsx"
+        - "**/*.spec.tsx"
+        - "**/node_modules/**"
+        - "**/__visual_baselines__/**"
+    pattern-regex: 'className\s*=\s*["'\''][^"'\'']*\b(flex|grid|p-[0-9]|m-[0-9]|text-(sm|lg|xl)|bg-[a-z]+-[0-9]+)\b'
+
+  - id: caia-no-raw-axios-outside-http-client
+    message: |
+      `axios` is only allowed inside `packages/http-client/**` (the
+      canonical HTTP wrapper). Use `@chiefaia/http-client` from any
+      other package or app. See AGENTS.md > Reuse-first.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      include:
+        - "apps/**/*.ts"
+        - "apps/**/*.tsx"
+        - "packages/**/*.ts"
+        - "packages/**/*.tsx"
+      exclude:
+        - "packages/http-client/**"
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+        - "**/node_modules/**"
+        - "**/dist/**"
+    pattern-either:
+      - pattern-regex: 'import\s+axios\s+from\s+["'\'']axios["'\'']'
+      - pattern-regex: 'import\s+\*\s+as\s+axios\s+from\s+["'\'']axios["'\'']'
+      - pattern-regex: 'import\s+\{[^}]+\}\s+from\s+["'\'']axios["'\'']'
+      - pattern-regex: 'require\(\s*["'\'']axios["'\'']\s*\)'
+
+  - id: caia-no-raw-better-sqlite3-outside-persistence
+    message: |
+      `better-sqlite3` is only allowed inside `packages/persistence-*/**`.
+      Use `@chiefaia/persistence-sqlite` everywhere else. See AGENTS.md
+      > Reuse-first.
+    severity: ERROR
+    languages: [generic]
+    paths:
+      include:
+        - "apps/**/*.ts"
+        - "apps/**/*.tsx"
+        - "packages/**/*.ts"
+        - "packages/**/*.tsx"
+      exclude:
+        - "packages/persistence-*/**"
+        - "**/*.test.ts"
+        - "**/node_modules/**"
+        - "**/dist/**"
+    pattern-either:
+      - pattern-regex: 'import\s+\w+\s+from\s+["'\'']better-sqlite3["'\'']'
+      - pattern-regex: 'import\s+\*\s+as\s+\w+\s+from\s+["'\'']better-sqlite3["'\'']'
+      - pattern-regex: 'require\(\s*["'\'']better-sqlite3["'\'']\s*\)'
