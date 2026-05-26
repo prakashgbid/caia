@@ -1,9 +1,10 @@
 {
   "name": "@caia-app/chiefaia-site",
   "private": true,
+  "version": "0.1.0",
   "description": "ChiefAIA marketing site — Next.js 15 + App Router. Operator-confirmed copy only, no fabricated metrics / testimonials / authorship. See ADR-067 (A1 gap-analysis) and apps/chiefaia-site/README.md.",
   "scripts": {
-    "build": "next build",
+    "build": "pnpm --filter @caia/ui --filter @chiefaia/tracing build && next build",
     "dev": "next dev -p 7878",
     "lighthouse": "lhci autorun --config=./lighthouserc.cjs",
     "prebuild": "node scripts/generate-changelog.mjs",
@@ -15,6 +16,7 @@
   },
   "dependencies": {
     "@caia/ui": "workspace:*",
+    "@chiefaia/tracing": "workspace:*",
     "@mdx-js/loader": "^3.0.1",
     "@mdx-js/react": "^3.0.1",
     "@next/mdx": "^15.5.15",

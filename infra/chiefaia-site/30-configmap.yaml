@@ -1,0 +1,31 @@
+# chiefaia-site runtime config (non-secret).
+#
+# These values are baked into pod env via the Deployment's `envFrom`.
+# Anything secret (Resend / SendGrid keys for /api/contact, Slack
+# webhooks, etc.) belongs in `40-secret-template.yaml` — a real Secret
+# of the same name is created out-of-band (Infisical sync or `kubectl
+# create secret`) and pod env merges them on top.
+#
+# OTEL_EXPORTER_OTLP_ENDPOINT points at the in-cluster Tempo OTLP-HTTP
+# receiver. apps/chiefaia-site/instrumentation.ts initialises
+# @chiefaia/tracing with serviceName='chiefaia-site' and reads this
+# env var to set the exporter endpoint.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chiefaia-site-config
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-web
+    app.kubernetes.io/instance: chiefaia-site
+    app.kubernetes.io/part-of: chiefaia
+data:
+  NEXT_PUBLIC_SITE_URL: "https://chiefaia.com"
+  NEXT_PUBLIC_DASHBOARD_URL: "https://dashboard.chiefaia.com"
+  # Tempo OTLP-HTTP receiver (Service tempo.chiefaia.svc.cluster.local
+  # port 4318). Verified live: `kubectl get svc tempo -n chiefaia`.
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo.chiefaia.svc.cluster.local:4318"
+  # OTel resource attributes — Tempo + Grafana use these for grouping.
+  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=chiefaia,deployment.environment=production"
+  # Next.js telemetry phone-home — disabled to avoid egress from pods.
+  NEXT_TELEMETRY_DISABLED: "1"

@@ -1,0 +1,35 @@
+# chiefaia-web Service — UPDATED from the nginx placeholder version.
+#
+# Same name (`chiefaia-web`), same NodePort (30030), same selector
+# (`app.kubernetes.io/name: chiefaia-web`) — so the existing Istio
+# VirtualService at infra/istio/chiefaia/20-virtualservice-web.yaml
+# keeps routing chiefaia.com → chiefaia-web.chiefaia.svc.cluster.local:80
+# without modification. The only change is targetPort: 8080 → 3000
+# because the new Next.js container listens on 3000 (not nginx 8080).
+#
+# nodePort 30030 is preserved to avoid a port reshuffle on the K3s node.
+# If the operator ever removes the NodePort fronting (e.g. switches to
+# pure-Istio gateway), the chiefaia-web-vs VS routes directly via
+# clusterIP and the NodePort can be dropped.
+apiVersion: v1
+kind: Service
+metadata:
+  name: chiefaia-web
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: chiefaia
+    app.kubernetes.io/instance: chiefaia-site
+  annotations:
+    app.chiefaia.io/source: "infra/chiefaia-site/20-service.yaml (B16)"
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: chiefaia-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      nodePort: 30030
+      protocol: TCP
