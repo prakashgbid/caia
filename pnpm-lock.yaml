@@ -179,9 +179,27 @@ importers:
       '@ai-sdk/react':
         specifier: ^1.2.12
         version: 1.2.12(react@19.2.5)(zod@3.25.76)
+      '@caia/atlas-prompt-router':
+        specifier: workspace:*
+        version: link:../../packages/atlas-prompt-router
+      '@caia/atlas-ui':
+        specifier: workspace:*
+        version: link:../../packages/atlas-ui
       '@caia/billing':
         specifier: workspace:*
         version: link:../../packages/billing
+      '@caia/business-proposal-generator':
+        specifier: workspace:*
+        version: link:../../packages/business-proposal-generator
+      '@caia/design-ingest':
+        specifier: workspace:*
+        version: link:../../packages/design-ingest
+      '@caia/grand-idea':
+        specifier: workspace:*
+        version: link:../../packages/grand-idea
+      '@caia/onboarding':
+        specifier: workspace:*
+        version: link:../../packages/onboarding
       '@caia/state-machine':
         specifier: workspace:*
         version: link:../../packages/state-machine
