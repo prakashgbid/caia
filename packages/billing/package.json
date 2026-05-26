@@ -1,0 +1,45 @@
+{
+  "name": "@caia/billing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stripe subscription billing for the CAIA SaaS itself (Layer 1) + BYOK runtime credit management for tenant-generated apps (Layer 2). Subscription-only during CAIA BUILD phase; tenant-facing RUNTIME billing is BYOK via Infisical.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "import": "./dist/api.js"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src --max-warnings 0 || true",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@chiefaia/events": "workspace:*",
+    "stripe": "^17.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@chiefaia/tsconfig": "workspace:*",
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.1"
+  },
+  "license": "MIT"
+}
