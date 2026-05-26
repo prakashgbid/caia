@@ -1,0 +1,25 @@
+{
+  "name": "caia-reuse-search-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server exposing the @caia/reuse-searcher as a callable tool. Orchestrators call `search_reuse_candidates(brief)` before spawning any code task; the returned candidates are injected into the spawned agent's prompt. Layer L3 of the reuse-first guardrail (ADR-065).",
+  "keywords": ["mcp", "server", "reuse", "searcher", "tool", "orchestrator"],
+  "type": "module",
+  "main": "./dist/server.js",
+  "bin": { "caia-reuse-search-mcp": "./dist/server.js" },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "start": "node dist/server.js",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@caia/reuse-searcher": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.4.0"
+  }
+}

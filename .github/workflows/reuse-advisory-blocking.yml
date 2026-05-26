@@ -1,0 +1,76 @@
+# Reuse-advisory (BLOCKING) — Layer L4 of the reuse-first guardrail (ADR-065).
+#
+# Required status check `reuse-advisory-blocking` on develop + main. Fails the
+# PR on NEW violations relative to the per-branch baseline file
+# `.reuse-advisory-baseline.json`. Pre-existing violations are tolerated;
+# the baseline shrinks over time as packages are refactored.
+#
+# Companion to:
+#   - .github/workflows/reuse-advisory.yml — legacy non-blocking advisor (kept)
+#   - scripts/reuse-check-strict.js        — the actual rules
+#
+# Escape hatches:
+#   - Inline: `// reuse-advisory:allow <reason>` on or above the offending line
+#   - PR-level: label `reuse-advisory-escape` — applied by EA-reviewer
+
+name: reuse-advisory-blocking
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+    branches: [develop, main]
+
+concurrency:
+  group: reuse-advisory-blocking-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  block:
+    name: reuse-advisory-blocking
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Drafts are skipped; PR-level escape label skips the gate.
+    if: |
+      github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'reuse-advisory-escape')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base ref
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -e
+          git fetch --no-tags --depth=200 origin "$BASE_REF":"refs/remotes/origin/$BASE_REF"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run reuse-check-strict (NEW-only)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          node scripts/reuse-check-strict.js
+
+      - name: Hint on failure
+        if: failure()
+        run: |
+          {
+            echo "### ❌ reuse-advisory-blocking refused this PR"
+            echo ""
+            echo "One or more files added a NEW raw shadcn / Radix / axios / better-sqlite3 import outside the canonical wrapper package."
+            echo ""
+            echo "**Fixes (in order of preference):**"
+            echo "1. Refactor to consume the canonical wrapper (\`@caia/ui\`, \`@chiefaia/http-client\`, \`@chiefaia/persistence-*\`)."
+            echo "2. If genuinely one-off: add \`// reuse-advisory:allow <reason>\` on the line above the violation."
+            echo "3. PR-level escape: have an EA-reviewer apply the \`reuse-advisory-escape\` label."
+            echo ""
+            echo "Doctrine: \`AGENTS.md\` > Reuse-first · \`caia-ea/decisions/ADR-065\`."
+          } >> "$GITHUB_STEP_SUMMARY"

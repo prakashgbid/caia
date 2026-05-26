@@ -1,0 +1,25 @@
+{
+  "name": "@caia/reuse-searcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Index + rank @caia/* / @chiefaia/* / @stolution/* / @pokerzeno/* workspace packages by relevance to a task brief. Layer L3 of the reuse-first guardrail (ADR-065). Called by orchestrators before spawning any code task so the spawned agent starts with reuse candidates in context.",
+  "keywords": ["reuse", "searcher", "ranker", "packages", "workspace", "discovery", "candidates"],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.4.0"
+  }
+}

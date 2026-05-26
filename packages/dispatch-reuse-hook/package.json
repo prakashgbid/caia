@@ -1,0 +1,26 @@
+{
+  "name": "@caia/dispatch-reuse-hook",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Helpers for orchestrators to inject @caia/reuse-searcher results into a spawned agent's prompt before dispatch. Companion to @caia/reuse-searcher. Layer L3 of the reuse-first guardrail (ADR-065).",
+  "keywords": ["reuse", "dispatch", "hook", "orchestrator", "prompt", "injection"],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@caia/reuse-searcher": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.4.0"
+  }
+}
