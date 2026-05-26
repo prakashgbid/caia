@@ -1,0 +1,47 @@
+# .dockerignore for chiefaia-wizard.
+#
+# Build context is the MONOREPO ROOT (CI invokes
+# `docker buildx build -f apps/wizard/Dockerfile .`), so this file
+# is not the operative one — the root `.dockerignore` wins. We ship
+# this here too so `docker buildx build ./apps/wizard` works locally.
+
+# Never ship build artefacts — the multi-stage builder regenerates these.
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/build
+**/coverage
+
+# Tests + fixtures — not needed at runtime.
+**/tests
+**/__tests__
+**/__fixtures__
+**/__visual_baselines__
+**/playwright-report
+**/test-results
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Editor / VCS / local-only metadata.
+.git
+.gitignore
+.github
+.vscode
+.idea
+**/.DS_Store
+**/Thumbs.db
+
+# Lockfiles other than pnpm-lock.yaml — the monorepo is pnpm-only.
+**/package-lock.json
+**/yarn.lock
+
+# Docs + planning artefacts — image doesn't need them.
+**/*.md
+**/CHANGELOG.md
+docs/
+caia-ea/
+reports/
+PLAN.md

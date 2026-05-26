@@ -1,0 +1,111 @@
+{
+  "config": {
+    "configFile": "/Users/macbook32/Documents/projects/caia/apps/dashboard/playwright.live-smoke.config.ts",
+    "rootDir": "/Users/macbook32/Documents/projects/caia/apps/dashboard/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/macbook32/Documents/projects/caia/apps/dashboard/test-results-live-smoke",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "live-smoke",
+        "name": "live-smoke",
+        "testDir": "/Users/macbook32/Documents/projects/caia/apps/dashboard/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "live-wizard-smoke.spec.ts"
+        ],
+        "timeout": 1800000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report-live-smoke",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report-live-smoke/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.59.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "live-wizard-smoke.spec.ts",
+      "file": "live-wizard-smoke.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Live wizard smoke — all 7 steps against dashboard.chiefaia.com",
+          "file": "live-wizard-smoke.spec.ts",
+          "line": 280,
+          "column": 6,
+          "specs": [
+            {
+              "title": "walks Onboarding → Atlas and asserts FSM + Postgres + Tempo per step",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 1800000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "live-smoke",
+                  "projectName": "live-smoke",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0cdd1ebd7e97cfb2ede7-24dbd6bb3ce3b89521f5",
+              "file": "live-wizard-smoke.spec.ts",
+              "line": 305,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-05-26T05:38:55.719Z",
+    "duration": 82.90200000000004,
+    "expected": 0,
+    "skipped": 1,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -1,0 +1,28 @@
+# dashboard.chiefaia.com — customer-facing wizard (Cloudflare Access gated)
+#
+# Apps split (standing_rule_wizard_ops_app_split_2026-05-26):
+#   - dashboard.chiefaia.com → apps/wizard       → chiefaia-wizard
+#   - ops.chiefaia.com       → apps/dashboard    → chiefaia-dashboard
+#
+# Cloudflare Access app cb6d1de5-2ab6-4860-af9e-7395ca0a8381 protects
+# this hostname for customers; the operator-only restriction lives on
+# the ops.chiefaia.com Access app (see 22-virtualservice-ops.yaml).
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: chiefaia-wizard-vs
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-wizard
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  hosts:
+    - dashboard.chiefaia.com
+  gateways:
+    - istio-system/stolution-gateway
+  http:
+    - route:
+        - destination:
+            host: chiefaia-wizard.chiefaia.svc.cluster.local
+            port:
+              number: 80
