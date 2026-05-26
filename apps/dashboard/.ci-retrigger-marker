@@ -1,0 +1,9 @@
+# CI re-trigger marker — 2026-05-25.
+
+The `auto-pr` workflow was firing on push but the `pull_request`-triggered
+workflows (CI, Evidence Gate, Secrets Scan) were not registering the new
+HEAD on PR #601. This empty marker file forces a non-trivial diff so the
+push synchronize event fires the full required-status-checks suite.
+
+Safe to delete in the merge commit's squash. The build doesn't reference
+this path.
