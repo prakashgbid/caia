@@ -218,6 +218,9 @@ importers:
       '@chiefaia/events-taxonomy-internal':
         specifier: workspace:*
         version: link:../../packages/events-taxonomy-internal
+      '@chiefaia/tracing':
+        specifier: workspace:*
+        version: link:../../packages/tracing
       ai:
         specifier: ^4.3.16
         version: 4.3.19(react@19.2.5)(zod@3.25.76)

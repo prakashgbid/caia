@@ -11,7 +11,10 @@
  *      so downstream route handlers can read it from headers().
  *
  * Public paths (never gated): `/sign-in`, `/_next/*`, `/favicon.ico`,
- * `/api/health` (if it exists).
+ * `/api/health`, `/api/healthz`, `/api/readyz`. The K8s kubelet probes
+ * never carry a `CF_Authorization` cookie, so the probe endpoints MUST
+ * be excluded from the matcher — otherwise readiness checks 302 to
+ * /sign-in, the pod never goes Ready, and the rollout fails.
  *
  * Edge-runtime caveat: Next.js middleware runs on the edge, where
  * `pg`, `nats`, and `node:crypto` are unavailable. We mitigate by
@@ -39,10 +42,11 @@ export const config = {
   // provisioning path. See file-header comment.
   runtime: 'nodejs',
   // We DON'T match _next/static, _next/image, favicon, public files,
-  // or the sign-in page itself. Public API endpoints opt-in by being
-  // outside the listed prefixes below — match only what we want gated.
+  // the sign-in page itself, or the K8s probe endpoints (/api/healthz,
+  // /api/readyz). Public API endpoints opt-in by being outside the
+  // listed prefixes below.
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|sign-in|api/health).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|sign-in|api/health|api/healthz|api/readyz).*)',
   ],
 };
 

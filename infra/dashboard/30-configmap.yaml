@@ -1,0 +1,54 @@
+# chiefaia-dashboard ConfigMap — NON-SECRET runtime env.
+#
+# Secret values (DB URL, Infisical admin token, NATS NKey seed) live
+# in the chiefaia-dashboard-secrets Secret managed out-of-band by the
+# operator or Infisical operator.
+#
+# Changes to this ConfigMap require a pod restart — handled by bumping
+# the `checksum/config` annotation in 10-deployment.yaml when you apply.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chiefaia-dashboard-config
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-dashboard
+    app.kubernetes.io/part-of: chiefaia
+data:
+  # ─── Runtime ────────────────────────────────────────────────────
+  NODE_ENV: "production"
+  NEXT_TELEMETRY_DISABLED: "1"
+  PORT: "3000"
+  HOSTNAME: "0.0.0.0"
+
+  # ─── Tracing (@chiefaia/tracing) ────────────────────────────────
+  # OTLP-HTTP receiver on the in-cluster Tempo. Read by
+  # `initTracing` in apps/dashboard/instrumentation.ts.
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo.chiefaia.svc.cluster.local:4318"
+
+  # ─── Event bus (@chiefaia/event-bus-nats) ───────────────────────
+  # Empty string = no event types routed to NATS yet (V1 default).
+  # Wave 1a flips this to a real list when ops are ready.
+  BUS_BACKEND_NATS_FOR_EVENT_TYPES: ""
+
+  # NATS connection settings. Auth NKey lives in the Secret; the rest
+  # are non-sensitive cluster coordinates.
+  NATS_SERVERS: "nats://nats.chiefaia.svc.cluster.local:4222"
+  NATS_STREAM: "chiefaia-events"
+  NATS_SUBJECT_PREFIX: "chiefaia"
+  NATS_DURABLE: "chiefaia-dashboard"
+  NATS_MONITOR_URL: "http://nats.chiefaia.svc.cluster.local:8222/healthz"
+
+  # ─── Infisical (self-hosted) ────────────────────────────────────
+  # Base URL is public; admin token lives in the Secret.
+  INFISICAL_BASE_URL: "https://infisical.chiefaia.com"
+  INFISICAL_ORG_ID: ""    # populated by operator when the org is provisioned
+
+  # ─── Cloudflare Access ──────────────────────────────────────────
+  # The middleware verifies CF Access JWTs via the public JWKS.
+  # CF_ACCESS_AUD is the Cloudflare Access Application UUID (not a
+  # secret per Cloudflare docs, but kept out of this ConfigMap to
+  # avoid noise from secret-scanning heuristics — operator sets it
+  # via the chiefaia-dashboard-secrets Secret alongside the real
+  # bearer tokens).
+  CF_ACCESS_TEAM_DOMAIN: "chiefaia.cloudflareaccess.com"

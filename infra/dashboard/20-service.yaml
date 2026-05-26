@@ -1,0 +1,36 @@
+# chiefaia-dashboard Service — replaces the placeholder Service in
+# infra/istio/chiefaia/10-placeholder-services.yaml.
+#
+# The Istio VirtualService at infra/istio/chiefaia/21-virtualservice-dashboard.yaml
+# already targets `chiefaia-dashboard.chiefaia.svc.cluster.local:80`,
+# so changing targetPort + selector here is enough to flip the route
+# from "503 no healthy upstream" to live. Apply order:
+#
+#   1. Apply 10-deployment.yaml — pods come up Ready behind their own selector
+#   2. Apply 20-service.yaml    — Service drops the placeholder label and
+#                                  starts selecting the real pods
+#
+# Until both are applied, the VirtualService routes to the placeholder
+# (no endpoints) and returns 503 — exactly the V1 behavior PR #609
+# committed to.
+apiVersion: v1
+kind: Service
+metadata:
+  name: chiefaia-dashboard
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-dashboard
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  type: ClusterIP
+  selector:
+    # Drops the placeholder marker; selects pods from 10-deployment.yaml.
+    app.kubernetes.io/name: chiefaia-dashboard
+  ports:
+    - name: http
+      port: 80
+      # Standalone Next.js listens on 3000 inside the container (see
+      # Dockerfile ENV PORT=3000).
+      targetPort: 3000
+      protocol: TCP
