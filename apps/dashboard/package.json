@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "build": "pnpm --filter @caia/billing --filter @caia/ui --filter @chiefaia/event-bus-nats --filter @chiefaia/tracing build && next build",
+    "build": "pnpm --filter @chiefaia/events --filter @chiefaia/tracing --filter @caia/billing --filter @caia/ui --filter @chiefaia/event-bus-nats build && next build",
     "dev": "next dev -p 7777",
     "lighthouse": "lhci autorun --config=./lighthouserc.cjs",
     "size-limit": "size-limit",
