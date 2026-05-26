@@ -1,0 +1,48 @@
+{
+  "status": "approved-with-modifications",
+  "reasoning": "Stub critic (autonomous run, 2026-05-25): apps/dashboard wizard-shell + Cloudflare Access auth + tenant provisioning. The package surface matches the brief — middleware + provisioning fan-out + wizard layout + step router + sign-in + tenant/me + wizard state hook + state API route + migrations + event registry update. UI primitives are sourced exclusively from @caia/ui (PR #597); FSM lookups use @caia/state-machine (with the IA states from PR #594); the tenant.provisioned bus event uses @chiefaia/event-bus-nats (PR #590). Reuse-first compliance is documented in PLAN.md §3 + §4 with the full reuseSearchResults table — every @caia/* / @chiefaia/* package considered, with explicit selected/rejected rationale. Native `fetch` is used for the Infisical V2 workspace-create call (allowed by reuse-check-strict + Semgrep — they only block raw axios/node-fetch/better-sqlite3); raw `pg` driver is used for Postgres (no rule against `pg`). The middleware uses the `nodejs` runtime in V1 because `pg` + `nats` are needed in the same trip; Wave 2 will split the provisioning path into a Node-runtime route handler so the edge can stay lean (documented in PLAN.md §2.2). Per-step UI for onboarding/grand-idea/interview/architecture/proposal/design/atlas is intentionally deferred — they land on sibling PRs. Operator should run a live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+  "cited_adrs": [
+    "ADR-024",
+    "ADR-061",
+    "ADR-065"
+  ],
+  "cited_principles": [
+    "P-no-vendor-lockin",
+    "P-true-zero",
+    "P-idempotency",
+    "P-subscription-only-llm",
+    "P-reuse-first"
+  ],
+  "cited_lessons": [],
+  "requested_modifications": [
+    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+    "Wave 2: split provisioning into a Node-runtime route handler so the middleware can move to the edge runtime.",
+    "Wave 2: add cross-tenant audit log on /api/wizard/[projectId]/state (project-belongs-to-tenant check).",
+    "Wave 2: extend @caia/secrets-infisical to wrap the workspace-creation admin API.",
+    "Wave 2: adopt @chiefaia/http-client for the Infisical call once that package ships on develop.",
+    "Wave 2: adopt @chiefaia/persistence-postgres for the pg.Pool once that package ships on develop.",
+    "Wave 2: extract a @caia/ui Stack / Page layout primitive to absorb the inline-style wrappers in WizardLayout / SignInPage."
+  ],
+  "reuseSearchResults": [
+    { "packageName": "@caia/ui", "considered": true, "decision": "selected", "reason": "Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Progress used in wizard layout + sign-in + step stub + WizardNav." },
+    { "packageName": "@caia/state-machine", "considered": true, "decision": "selected", "reason": "ProjectState + canTransition + StateMachine + PgStateStore used for wizard state lookups + transitions. IA states from PR #594 are first-class." },
+    { "packageName": "@chiefaia/event-bus-nats", "considered": true, "decision": "selected", "reason": "Publishes tenant.provisioned after first-touch provisioning." },
+    { "packageName": "@chiefaia/events-taxonomy-internal", "considered": true, "decision": "selected", "reason": "tenant.provisioned added to registry.yaml with the four-field payload." },
+    { "packageName": "@caia/secrets-infisical", "considered": true, "decision": "rejected", "reason": "Wraps secret data CRUD; workspace creation is admin-API territory not in its current surface. Tracked as a Wave 2 extension." },
+    { "packageName": "@chiefaia/http-client", "considered": true, "decision": "rejected", "reason": "Not yet shipped on develop. Native `fetch` used; allowed by reuse-check-strict + Semgrep. Swap when wrapper lands." },
+    { "packageName": "@chiefaia/persistence-postgres", "considered": true, "decision": "rejected", "reason": "Not yet shipped on develop. Raw `pg` driver used; reuse rules don't forbid pg. Swap when wrapper lands." },
+    { "packageName": "@chiefaia/claude-spawner", "considered": true, "decision": "rejected", "reason": "No LLM calls in this PR (auth + provisioning + shell only)." },
+    { "packageName": "@caia/grand-idea", "considered": true, "decision": "rejected", "reason": "Step 2 ships its own UI on a sibling branch; foundation PR only renders the wizard shell." },
+    { "packageName": "@caia/info-architect", "considered": true, "decision": "rejected", "reason": "Step 4 ships its own UI on a sibling branch; foundation PR only catalogues its FSM states." },
+    { "packageName": "@caia/interviewer", "considered": true, "decision": "rejected", "reason": "Step 3 ships its own UI on a sibling branch." },
+    { "packageName": "@caia/architect-kit", "considered": true, "decision": "rejected", "reason": "Used by architect packages, not by auth/tenant infra." },
+    { "packageName": "@chiefaia/logger", "considered": true, "decision": "rejected", "reason": "Wave 1 uses bare console.error for failure paths. Wave 2 adopts the canonical logger once the dashboard's logging surface settles." },
+    { "packageName": "@chiefaia/errors", "considered": true, "decision": "rejected", "reason": "Wave 1 uses thrown Error instances. Wave 2 will adopt the typed hierarchy." },
+    { "packageName": "swr", "considered": true, "decision": "selected", "reason": "Already a workspace dep; used by useWizardState." },
+    { "packageName": "jose", "considered": true, "decision": "selected", "reason": "Standard CF Access JWT verifier per Cloudflare's official docs. No CAIA wrapper exists." }
+  ],
+  "submissionId": "eareview-stub-wizard-shell-2026-05-25",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-25T22:00:00.000Z",
+  "modelTier": "stub"
+}
