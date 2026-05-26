@@ -64,6 +64,13 @@ export const sitemapRoutes = [
   { path: '/changelog', changeFrequency: 'weekly' as const, priority: 0.6 },
   { path: '/contact', changeFrequency: 'yearly' as const, priority: 0.4 },
   { path: '/sign-in', changeFrequency: 'yearly' as const, priority: 0.3 },
+  // Legal pages — added in [chiefaia-site-legal-pages-on-602]. Each surfaces
+  // a "draft — pending counsel review" banner per the hard rules in the
+  // task spec; the `lastUpdated` date comes from the MDX frontmatter, not
+  // from this config, so a doc revision automatically refreshes the banner.
+  { path: '/legal/privacy', changeFrequency: 'yearly' as const, priority: 0.3 },
+  { path: '/legal/terms', changeFrequency: 'yearly' as const, priority: 0.3 },
+  { path: '/legal/aup', changeFrequency: 'yearly' as const, priority: 0.3 },
 ] as const;
 
 /**

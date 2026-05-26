@@ -1,0 +1,248 @@
+---
+title: "Privacy Policy"
+slug: "privacy"
+lastUpdated: "2026-05-25"
+effectiveDate: "2026-05-25"
+summary: "What ChiefAIA collects, what it does NOT collect, who processes it, and the rights you have over it."
+counselReviewPending: true
+---
+
+# Privacy Policy
+
+**Last updated: 2026-05-25.** This policy is a working draft. It has not yet
+been reviewed by counsel. Read it that way. The substantive commitments
+described here are the operating posture today; the legal phrasing will be
+tightened in a subsequent counsel-reviewed revision.
+
+## 1. Who we are
+
+ChiefAIA (also referred to in this policy as "the platform", "we", "us", or
+"our") is a SaaS product operated by the publisher of `chiefaia.com`. The
+platform helps customers ("tenants") generate customer-facing applications
+that run on infrastructure the customer controls. This shapes everything that
+follows: ChiefAIA holds **tenant** metadata and the artifacts produced during
+a build, but it does **not** hold the end-user data of the applications that
+tenants generate.
+
+If you are an end user of a customer-built application running on a customer's
+infrastructure, this policy does **not** describe how your data is handled —
+that customer's own privacy policy does.
+
+## 2. What we collect
+
+We collect only what we need to operate the platform and bill for it.
+
+**Account and tenant data.** Your email address and display name when you
+create an account. Your billing identity (legal name, billing address,
+payment method) when you subscribe — handled by Stripe (see Section 4) and
+referenced in our systems only by Stripe customer ID and last-4 of the card.
+
+**Project artifacts.** The inputs and outputs of a ChiefAIA build, on a
+per-tenant basis: product briefs, requirements you enter into the interview
+flow, information-architecture (IA) outputs, design uploads (e.g. Figma
+exports or screenshots you attach), build specs, and the intermediate
+artifacts the pipeline produces.
+
+**Audit logs.** A record of significant actions performed in the platform —
+sign-ins, project creations, build runs, settings changes — together with
+timestamp, tenant ID, and the operator-initiated trigger when applicable.
+
+**Telemetry traces.** Runtime traces of the build pipeline itself (which
+agent ran, how long it took, what gates passed) used to operate and improve
+the platform. Traces are scoped to the tenant whose build produced them and
+are pruned per the retention rules in Section 6.
+
+**Cookies and similar technologies.** Strictly-necessary cookies for session
+management; we do not currently use analytics or advertising cookies on the
+marketing site or in the product.
+
+## 3. What we do NOT collect
+
+We do not collect, store, route, or process the end-user data of the
+applications a tenant builds with ChiefAIA. Those applications run on the
+tenant's own infrastructure (their VPC, their database, their object
+store). The platform's standing rule is **"never host customer data — only
+interact with customer-owned systems"** and the architecture enforces it.
+
+We do not sell personal data. We do not share it with advertisers or data
+brokers.
+
+## 4. Who processes your data on our behalf (subprocessors)
+
+We use a small number of subprocessors to operate the platform. The list
+below is the operating posture as of the last-updated date at the top of
+this document; counsel review and a public sub-processor page will follow.
+
+- **Cloudflare** — content delivery (CDN), access policies for admin
+  endpoints, and Cloudflare Tunnel ingress to operator-controlled
+  infrastructure.
+- **Anthropic** — large language model inference invoked during the build
+  pipeline.
+- **OpenAI** and **Codex Cloud** — large language model inference invoked
+  during the build pipeline.
+- **OpenRouter** — routing layer between the platform and the LLM
+  subprocessors named above.
+- **Stripe** — subscription billing, payment-method storage, invoicing.
+- **Operator-controlled infrastructure** — Postgres (tenant metadata,
+  audit logs), Infisical (secrets and credentials), NATS (event bus). These
+  run on infrastructure that the platform operator controls directly and are
+  not third-party services.
+
+When we send data to a subprocessor, we send only the minimum that
+subprocessor needs to perform its function (for example, billing metadata
+to Stripe; build prompts to the LLM provider routed via OpenRouter).
+
+## 5. Where your data lives (data residency)
+
+Tenant metadata, project artifacts, audit logs, and telemetry traces are
+stored on operator-controlled infrastructure ("stolution-hosted"). The
+country and region of the stolution server is **TBD pending publication in
+the counsel-reviewed revision of this policy** — we will not state a region
+here until that statement has been verified. EU-resident tenants should
+assume data is processed outside the EEA today; we will publish standard
+contractual clauses (SCCs) and a transfer impact assessment alongside the
+counsel-reviewed revision.
+
+Subprocessor data flows (Cloudflare, Anthropic, OpenAI, Codex Cloud,
+OpenRouter, Stripe) follow each subprocessor's own residency commitments;
+links to those will appear on the sub-processor page when published.
+
+## 6. How long we keep it (retention)
+
+**Project artifacts** are kept while your subscription is active and for
+**ninety (90) days** after cancellation, to allow reactivation without
+data loss. At the end of that window, the platform's `deleteAllForTenant`
+job runs across the artifact snapshotter, the UX upload store, and
+Infisical, removing tenant artifacts and secrets.
+
+**Audit logs and telemetry traces** are retained on a rolling window
+sufficient to operate the platform and meet security obligations. Logs
+older than the active window are pruned.
+
+**Billing records** are retained as required by applicable tax and
+financial-records law. Stripe holds the canonical billing data; we
+hold the tenant ↔ Stripe-customer-ID mapping for as long as billing
+records must be retained.
+
+You can request earlier erasure under Section 7.
+
+## 7. Your rights
+
+This section is written for tenants worldwide. EU residents have these
+rights explicitly under the General Data Protection Regulation (GDPR);
+California residents have parallel rights under the California Consumer
+Privacy Act (CCPA) and its successors. Other jurisdictions grant
+overlapping rights — the standing rule for this product is "honor
+worldwide privacy laws, skip nothing", so we extend the same rights to
+everyone.
+
+- **Right of access.** Ask us what we hold about you. We will return
+  the tenant-record data, audit-log entries for your tenant, and a
+  manifest of project artifacts.
+- **Right of rectification.** Ask us to correct inaccurate data.
+- **Right of erasure ("right to be forgotten").** Ask us to delete your
+  data. We will run `deleteAllForTenant` on demand for an active
+  subscription (cancellation is recommended first to avoid surprise);
+  for cancelled accounts we will accelerate the 90-day window.
+- **Right of portability.** Ask for a machine-readable export of your
+  tenant data and project artifacts.
+- **Right to object.** Object to processing that relies on legitimate
+  interests; we will reassess and stop processing unless we have a
+  compelling overriding ground.
+- **Right of restriction.** Ask us to pause processing while a dispute
+  is resolved.
+- **Right not to be subject to solely-automated decisions** that produce
+  legal or similarly significant effects.
+
+To exercise any of these rights, contact us at
+**privacy@chiefaia.com** or — for tenants with API access — via the
+`/tenants/me/privacy-request` endpoint. We respond within thirty (30)
+days; if the request is complex, we extend the response window once with
+notice to you.
+
+## 8. Legal basis for processing (GDPR-specific)
+
+For EU residents, the legal bases we rely on:
+
+- **Contract.** Processing necessary to deliver the subscription you
+  bought (running builds, storing artifacts, sending build-status email).
+- **Legitimate interest.** Operating audit logs, security tooling, and
+  pipeline telemetry to keep the platform safe and reliable.
+- **Legal obligation.** Retaining billing records as tax and
+  financial-records law requires.
+- **Consent.** Anything that falls outside the bases above is asked of
+  you explicitly; you can withdraw consent at any time.
+
+## 9. California (CCPA / CPRA)
+
+California residents have the same access, deletion, correction, and
+portability rights described in Section 7. We do not "sell" or "share"
+personal information for cross-context behavioural advertising. We do
+not knowingly process the personal information of California residents
+under sixteen (16); see Section 11 on the wider age policy.
+
+## 10. International transfers
+
+If you are an EU/EEA, UK, or Swiss resident, your data may be transferred
+to and processed in jurisdictions outside your home country (see Section
+5 on residency). When we publish the counsel-reviewed revision of this
+policy we will name the country and the transfer mechanism (standard
+contractual clauses, adequacy decision, or other lawful mechanism) we
+rely on.
+
+## 11. Children
+
+ChiefAIA is for use by adults only. Tenants confirm at sign-up that they
+are at least eighteen (18) years of age. We do not knowingly create
+accounts for users under eighteen (18) and we do not knowingly collect
+information from anyone under that age. If we learn that we have done
+so, we will delete the data and close the account.
+
+## 12. Security
+
+We hold tenant data on operator-controlled infrastructure with the
+following controls in place: encryption in transit (TLS for all public
+endpoints, Cloudflare Tunnel for non-public endpoints), encryption at
+rest (Postgres-level), per-tenant access scoping enforced at the
+application layer, and credential storage via Infisical (a secrets
+broker). Audit logging covers significant actions and is reviewed.
+
+We do not currently hold third-party security certifications (SOC 2,
+ISO 27001, HIPAA). We will state any certification status here as soon
+as it is real; we will not state one that does not exist.
+
+## 13. Breach notification
+
+If we determine that a breach of security has led to the unauthorised
+access, alteration, disclosure, or loss of your data, we will notify
+you without undue delay and within the timeframes required by
+applicable law (seventy-two (72) hours for GDPR notifiable breaches).
+The notice will describe what happened, what data was involved, the
+likely consequences, and the measures we have taken.
+
+## 14. Changes to this policy
+
+We will update this policy when our practices change. Material changes
+will be announced in-product and by email to tenants on file. The
+`lastUpdated` date at the top of this page always reflects the most
+recent revision.
+
+## 15. Contact
+
+- Privacy questions and rights requests: **privacy@chiefaia.com**
+- Security reports: **security@chiefaia.com**
+- Abuse reports: **abuse@chiefaia.com**
+- Postal address: TBD pending publication in the counsel-reviewed
+  revision of this policy.
+
+EU/EEA residents who are dissatisfied with our response have the right
+to lodge a complaint with their local supervisory authority. Once a
+designated EU representative is appointed under Article 27 GDPR, that
+appointment will be listed here.
+
+---
+
+*This document is a working draft. It has not been reviewed by counsel.
+Substantive accuracy of the operating-posture statements above is the
+responsibility of the platform; legal sufficiency of the phrasing is
+pending counsel review.*
