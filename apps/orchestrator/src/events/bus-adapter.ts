@@ -1,12 +1,86 @@
 /**
- * Wires the event bus singleton to the conductor SQLite database.
- * Called once during API server startup, after migrations have run.
+ * Wires the event bus to the conductor SQLite database (legacy outbox)
+ * and layers a `HybridEventBus` from `@chiefaia/event-bus-nats` on top so
+ * publishers transparently route per-event-type per the
+ * `BUS_BACKEND_NATS_FOR_EVENT_TYPES` env var.
+ *
+ * Architecture:
+ *   - The legacy `eventBus` singleton from `@chiefaia/event-bus-internal`
+ *     remains the SQLite outbox + in-process EventEmitter. wireDb() is
+ *     still called on it so the projector's SQLite-backed replay keeps
+ *     working unchanged.
+ *   - We construct ONE `HybridEventBus` that wraps the legacy singleton
+ *     and re-export it AS `eventBus` for all orchestrator callers. They
+ *     get the routing behavior for free without any source-level changes.
+ *   - When the flag is empty (default), HybridEventBus skips constructing
+ *     the NATS backend entirely → zero behavioral change vs. pre-Wave-1a.
+ *
+ * Wave 1a (2026-05-25): only `tenant.provisioned`, `worker.heartbeat`,
+ * `pipeline.stage.advanced` should be in the env var. The 118 other
+ * event types continue flowing through the in-process bus.
  */
 
 import { eq, desc } from 'drizzle-orm';
 import type { Db } from '../db/connection';
 import { events } from '../db/schema';
-import { eventBus, type EventDb, type DbEventRow, type EventQueryOpts } from '@chiefaia/event-bus-internal';
+import {
+  eventBus as legacyBus,
+  type EventDb,
+  type DbEventRow,
+  type EventQueryOpts as InternalEventQueryOpts,
+} from '@chiefaia/event-bus-internal';
+import {
+  HybridEventBus,
+  WAVE_1A_CONSUMER_OVERRIDES,
+} from '@chiefaia/event-bus-nats';
+
+let hybridBus: HybridEventBus | null = null;
+let connectPromise: Promise<void> | null = null;
+
+/** Build the HybridEventBus singleton. Idempotent. */
+export function getHybridBus(): HybridEventBus {
+  if (hybridBus) return hybridBus;
+  hybridBus = new HybridEventBus({
+    legacyBus,
+    natsConfig: {
+      servers: (process.env.NATS_SERVERS ?? 'nats://nats.chiefaia.com:4222').split(','),
+      stream: process.env.NATS_STREAM ?? 'chiefaia-events',
+      subjectPrefix: process.env.NATS_SUBJECT_PREFIX ?? 'chiefaia',
+      durableConsumer: process.env.NATS_DURABLE ?? 'chiefaia-orchestrator',
+      consumerOverrides: WAVE_1A_CONSUMER_OVERRIDES,
+      auth: process.env.NATS_NKEY_SEED ? { nkeySeed: process.env.NATS_NKEY_SEED } : undefined,
+      tls: process.env.NATS_TLS_CA ? {
+        caFile: process.env.NATS_TLS_CA,
+        certFile: process.env.NATS_TLS_CERT,
+        keyFile: process.env.NATS_TLS_KEY,
+      } : undefined,
+    },
+  });
+  return hybridBus;
+}
+
+/**
+ * Connect the hybrid bus to NATS (no-op when the flag is empty). Called
+ * from api/start.ts after `wireEventBus(db)`. Errors are surfaced — if
+ * NATS is configured but unreachable, the orchestrator should fail to
+ * start rather than silently dropping events.
+ */
+export async function connectHybridBus(): Promise<void> {
+  if (!connectPromise) {
+    connectPromise = getHybridBus().connect().catch((err) => {
+      connectPromise = null;
+      throw err;
+    });
+  }
+  await connectPromise;
+}
+
+/** Tear down the NATS connection. Called from api/start.ts during shutdown. */
+export async function closeHybridBus(): Promise<void> {
+  if (hybridBus) await hybridBus.close();
+  hybridBus = null;
+  connectPromise = null;
+}
 
 // @no-events — infrastructure startup wiring, not a domain operation
 export function wireEventBus(db: Db): void {
@@ -31,7 +105,7 @@ export function wireEventBus(db: Db): void {
       }).run();
     },
 
-    queryEvents(opts: EventQueryOpts): DbEventRow[] {
+    queryEvents(opts: InternalEventQueryOpts): DbEventRow[] {
       let q = db.select().from(events).orderBy(desc(events.occurredAt)).limit(opts.limit ?? 200);
 
       if (opts.correlationId) {
@@ -64,7 +138,16 @@ export function wireEventBus(db: Db): void {
     },
   };
 
-  eventBus.wireDb(adapter);
+  legacyBus.wireDb(adapter);
 }
 
-export { eventBus } from '@chiefaia/event-bus-internal';
+/**
+ * Re-exported `eventBus` is now the HybridEventBus. Existing imports of
+ * `import { eventBus } from '../events/bus-adapter'` automatically pick
+ * up the routing behavior. The default-empty flag means: zero behavior
+ * change until ops sets `BUS_BACKEND_NATS_FOR_EVENT_TYPES` in env.
+ *
+ * Callers that previously relied on the SYNC return value of publish()
+ * (e.g. POST /events) must now `await` the result — see api/routes/events.ts.
+ */
+export const eventBus = getHybridBus();

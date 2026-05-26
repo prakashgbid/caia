@@ -59,3 +59,4 @@ outputs/
 # Python bytecode caches (from python -m unittest in py-client and similar)
 __pycache__/
 *.pyc
+.caia/scratch/

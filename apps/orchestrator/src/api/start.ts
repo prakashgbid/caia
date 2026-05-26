@@ -14,7 +14,7 @@ import { seedSuggestions } from '../db/seed-suggestions';
 import { migrateFromJsonl } from '../db/migrate-from-jsonl';
 import { attachWsServer } from '../ws/index';
 import { createApp } from './app';
-import { wireEventBus, eventBus } from '../events/bus-adapter';
+import { wireEventBus, eventBus, connectHybridBus, closeHybridBus } from '../events/bus-adapter';
 import { wirePhase2 } from '../agents/wire-phase2';
 import type { Phase2Context } from '../agents/wire-phase2';
 import { resumeStalledPrompts } from '../prompts/resume';
@@ -96,12 +96,17 @@ export function emitExecutorHeartbeat(db: Db): void {
   }
 }
 
-export async function startApiServer(conductorDir?: string): Promise<{ stop: () => void }> {
+export async function startApiServer(conductorDir?: string): Promise<{ stop: () => Promise<void> }> {
   runMigrations();
   const db = getDb();
 
   // Wire event bus to DB before any seeds or route handlers
   wireEventBus(db);
+
+  // Wave 1a NATS migration: open the JetStream connection (no-op when the
+  // BUS_BACKEND_NATS_FOR_EVENT_TYPES env var is empty). Surfaced errors halt
+  // startup so a broker outage is loud, not silent.
+  await connectHybridBus();
 
   await seedProjects(db);
   await seedAdr011(db);
@@ -187,11 +192,14 @@ export async function startApiServer(conductorDir?: string): Promise<{ stop: () 
   log.info('api+ws listening', { port: HTTP_PORT });
 
   return {
-    stop: () => {
+    stop: async () => {
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (phase2) phase2.stopAll();
-      eventBus.publish({ type: 'system.shutdown', actor: 'system', payload: { component: 'conductor-api', reason: 'stop()' } });
+      // Best-effort publish — 'system.shutdown' may route to NATS if flagged.
+      try { await eventBus.publish({ type: 'system.shutdown', actor: 'system', payload: { component: 'conductor-api', reason: 'stop()' } }); } catch { /* swallow */ }
       server.close();
+      // Drain NATS connection last so in-flight publishes complete.
+      try { await closeHybridBus(); } catch { /* swallow */ }
     },
   };
 }

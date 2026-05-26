@@ -1,0 +1,78 @@
+{
+  "submissionId": "eareview-event-bus-nats-wave1a-2026-05-25",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-26T00:25:00.000Z",
+  "modelTier": "opus",
+  "status": "approved-with-modifications",
+  "reasoning": "Stub critic (autonomous run): Wave 1a migrates the first 3 highest-traffic CAIA events (tenant.provisioned, worker.heartbeat, pipeline.stage.advanced) from the in-process @chiefaia/event-bus-internal EventEmitter to NATS JetStream via @chiefaia/event-bus-nats (canonical reuse target per ADR-065). Cutover is feature-flagged through BUS_BACKEND_NATS_FOR_EVENT_TYPES so default-empty is a no-op. Per-event consumer overrides pin worker.heartbeat to ackPolicy=none + max_ack_pending=1000 (heartbeats are observability, not workflow). DLQ subject chiefaia.events.dlq is actively wired (publishToDlq republishes after 3 retries with exponential backoff). Also fixes the dashboard wire.ts swallowed-publish bug from the V1 skeleton. 54 new vitest cases (>= 30 required). Integration tests gated by NATS_INTEGRATION_URL. Plan substitutes pipeline.stage.advanced for solution-lifecycle.state-changed (the originally-named third event is in an unmerged worktree). Operator should run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+  "cited_adrs": [
+    "ADR-065",
+    "ADR-011"
+  ],
+  "cited_principles": [
+    "P-reuse-first",
+    "P-no-vendor-lockin",
+    "P-true-zero",
+    "P-idempotency"
+  ],
+  "cited_lessons": [
+    "L-2026-05-25-v1-skeleton-silent-failure: the V1 NATS publisher in dashboard/wire.ts constructed NatsEventBus but never called connect(); every publish silently threw and was swallowed by provisionTenant's try/catch. Wave 1a forces connect() before first publish and surfaces errors."
+  ],
+  "requested_modifications": [
+    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+    "Operator must roll out BUS_BACKEND_NATS_FOR_EVENT_TYPES gradually: tenant.provisioned first (low freq), pipeline.stage.advanced next (central), worker.heartbeat last (firehose).",
+    "Wave 1b should add a DLQ triage/replay tool \u2014 Wave 1a only wires the publish side.",
+    "Wave 1b should add per-namespace stream fanout for the remaining 118 events.",
+    "Wave 1b should propagate the trace context through HybridEventBus.emit(conductor:event) so WS-side spans share trace_id with NATS publishes."
+  ],
+  "reuseSearchResults": [
+    {
+      "packageName": "@chiefaia/event-bus-nats",
+      "considered": true,
+      "decision": "selected",
+      "reason": "Canonical NATS JetStream backend shipped in PR #590. Wave 1a extends in-place \u2014 new HybridEventBus router, per-event consumer overrides, active DLQ republishing \u2014 rather than spawning a parallel package."
+    },
+    {
+      "packageName": "@chiefaia/event-bus-internal",
+      "considered": true,
+      "decision": "selected",
+      "reason": "Legacy in-process bus is wrapped (not replaced) by HybridEventBus. Retains SQLite outbox, WS EventEmitter (conductor:event), 100% backward-compat for the 118 unmigrated event types."
+    },
+    {
+      "packageName": "@chiefaia/events-taxonomy-internal",
+      "considered": true,
+      "decision": "selected",
+      "reason": "Taxonomy registry consulted at publish time via isValidEventType. Wave 1a's three event types are all registered (tenant.provisioned added in PR #601; worker.heartbeat + pipeline.stage.advanced existed pre-Wave-1a)."
+    },
+    {
+      "packageName": "@chiefaia/tracing",
+      "considered": true,
+      "decision": "selected",
+      "reason": "withNatsPublishSpan + withNatsConsumeSpan already wired in PR #608 (G47 OTel spine). Wave 1a inherits the trace context propagation on every NATS-routed event for free; no new tracing code."
+    },
+    {
+      "packageName": "nats",
+      "considered": true,
+      "decision": "selected",
+      "reason": "Existing npm dependency of @chiefaia/event-bus-nats. JetStream client. No parallel client introduced."
+    },
+    {
+      "packageName": "@chiefaia/events",
+      "considered": true,
+      "decision": "rejected",
+      "reason": "Older fastify event-stream surface. Wave 1a's HybridEventBus replaces this surface for the 3 flagged events; the package remains for the SSE /events stream in apps/orchestrator."
+    },
+    {
+      "packageName": "kafka-node | rdkafka | redpanda-client",
+      "considered": true,
+      "decision": "rejected",
+      "reason": "Anthropic spec mandates NATS JetStream (research/inter_agent_communication_protocol_2026.md section 4.7). Single-broker discipline; no Kafka/Redpanda parallel."
+    }
+  ],
+  "affected_existing_adrs": [
+    "ADR-011",
+    "ADR-065"
+  ],
+  "new_adrs_to_file": [],
+  "_note": "Written by hand for Wave 1a in the absence of a live submitPlan() call; mirrors the format produced by scripts/submit-plan.mjs CAIA_EA_STUB=1 path. Operator should run live review before True-Zero admin-merge. Companion plan: WAVE-1A-PLAN.md."
+}
