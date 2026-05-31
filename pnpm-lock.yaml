@@ -3475,6 +3475,31 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
 
+  packages/qa-engineer:
+    dependencies:
+      '@caia/outcome-steward':
+        specifier: workspace:*
+        version: link:../outcome-steward
+      '@caia/state-machine':
+        specifier: workspace:*
+        version: link:../state-machine
+      '@chiefaia/playwright-config':
+        specifier: workspace:*
+        version: link:../playwright-config
+    devDependencies:
+      '@caia/ea-architect':
+        specifier: workspace:*
+        version: link:../ea-architect
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
   packages/researcher:
     dependencies:
       '@chiefaia/claude-spawner':
