@@ -41,7 +41,69 @@ import {
   CardHeader,
   CardTitle,
 } from '@caia/ui';
-import { createTracer, type Tracer } from '@chiefaia/tracing';
+
+// Tracer surface — we use a structural subset of @chiefaia/tracing's
+// Tracer so the boundary stays compatible with the canonical surface,
+// but we deliberately do NOT import from @chiefaia/tracing here. Its
+// barrel re-exports `initTracing` which transitively requires
+// @opentelemetry/sdk-node + @grpc/grpc-js — node-only modules that
+// fail Next.js's client bundling with `Module not found: Can't resolve
+// 'tls' / 'net'`. The boundary runs in the browser, so we ship a
+// minimal client-safe createTracer that synthesises a stable traceId
+// and emits no-op spans. The server-side tracing pipeline still
+// records the original error via the Next.js error.tsx digest +
+// the framework's own server-side OTel.
+//
+// Tests inject a richer `traceImpl` to spy on attribute setting.
+type SpanAttrs = Record<string, string | number | boolean | undefined>;
+interface Span {
+  context: { traceId: string; spanId: string; parentSpanId?: string };
+  setAttribute(key: string, value: string | number | boolean): void;
+  addEvent(name: string, attrs?: SpanAttrs): void;
+  setStatus(code: 'ok' | 'error', message?: string): void;
+  end(): void;
+}
+interface Tracer {
+  startSpan(name: string, options?: { parent?: Span['context'] }): Span;
+  withSpan<T>(name: string, fn: (s: Span) => T | Promise<T>): Promise<T>;
+}
+
+function randomHex(bytes: number): string {
+  // Browser-safe random hex. Falls back to Math.random when
+  // crypto.getRandomValues is unavailable (jsdom older builds).
+  const out: string[] = [];
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const buf = new Uint8Array(bytes);
+    crypto.getRandomValues(buf);
+    for (const b of buf) out.push(b.toString(16).padStart(2, '0'));
+    return out.join('');
+  }
+  for (let i = 0; i < bytes; i++) {
+    out.push(Math.floor(Math.random() * 256).toString(16).padStart(2, '0'));
+  }
+  return out.join('');
+}
+
+function createTracer(_name: string): Tracer {
+  return {
+    startSpan(_spanName: string): Span {
+      const traceId = randomHex(16);
+      const spanId = randomHex(8);
+      return {
+        context: { traceId, spanId },
+        setAttribute() {
+          /* no-op — client-side boundary; server emits the canonical span */
+        },
+        addEvent() {},
+        setStatus() {},
+        end() {},
+      };
+    },
+    async withSpan(spanName, fn) {
+      return fn(this.startSpan(spanName));
+    },
+  };
+}
 
 export interface WizardStepErrorBoundaryProps {
   /**

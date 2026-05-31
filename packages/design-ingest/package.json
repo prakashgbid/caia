@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/claude-design-adapter.d.ts",
+      "default": "./dist/claude-design-adapter.js"
     }
   },
   "files": [

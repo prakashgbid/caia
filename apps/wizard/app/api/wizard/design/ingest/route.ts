@@ -38,9 +38,8 @@ import { randomUUID } from 'node:crypto';
 import {
   ClaudeDesignAdapter,
   type ClaudeDesignAdapterDeps,
-  type AdapterInput,
-  DesignIngestError,
-} from '@caia/design-ingest';
+} from '@caia/design-ingest/server';
+import { type AdapterInput, DesignIngestError } from '@caia/design-ingest';
 import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
 import { wizardWithRetry } from '../../../../../lib/wizard/retry-spawner';
 import { resolveTenantSchema } from '../../../../../lib/wizard/store-wire';
@@ -218,19 +217,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
 
     if (!retryResult.ok) {
-      const lastErr = retryResult.lastError;
-      const errCode =
-        lastErr && typeof lastErr === 'object' && 'code' in lastErr
-          ? (lastErr as { code: string }).code
-          : 'design_ingest_failed';
+      // WithRetryResult exposes diagnostic + finalErrorClass; the inner
+      // closure throws DesignIngestError so the diagnostic carries the
+      // code (we put 'code: <DesignIngestErrorCode>' in the message
+      // prefix via sanitizeDiagnostic). Fall back to a generic code
+      // when the diagnostic doesn't match the pattern.
+      const diagnostic = retryResult.diagnostic ?? '';
+      const codeMatch = diagnostic.match(/(claude_[a-z_]+)/);
+      const errCode = codeMatch?.[1] ?? 'design_ingest_failed';
       span.setAttribute('wizard.design.error_code', errCode);
-      // 422 for validation/schema, 503 for spawn failure (retry exhausted).
-      const status = errCode === 'claude_spawn_failed' ? 503 : 422;
+      span.setAttribute('wizard.design.retry_class', retryResult.finalErrorClass ?? 'unknown');
+      // 503 for spawn failure (retry exhausted on transient), 422 for
+      // permanent failures (validation / schema / constraint).
+      const status = retryResult.finalErrorClass === 'transient' ? 503 : 422;
       return NextResponse.json(
         {
           ok: false,
           error: errCode,
           attemptsRun: retryResult.attemptsRun,
+          diagnostic,
         },
         { status },
       );
