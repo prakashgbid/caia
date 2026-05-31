@@ -1,110 +1,44 @@
-# `@caia/design-ingest` + `apps/wizard` — real Claude design adapter (WIZARD-B2)
+# `infra/wizard` + `infra/istio/chiefaia` — Phase C7 multi-replica wizard with sticky sessions
 
-**Author:** cowork-mode-claude-phase-b-ui (operator-dispatched 2026-05-31)
+**Author:** autonomous-build (operator-dispatched 2026-05-31)
 **Status:** Implementation complete
-**Branch:** `feature/wizard-b2-real-claude-design-adapter-2026-05-31`
-**True-Zero admin-merge:** Subscription-only, build-phase carve-out applies.
+**Branch:** `feature/c7-wizard-multi-replica-sticky-sessions-2026-05-31`
+**True-Zero admin-merge:** RATIFIED.
+**Depends on:** PR #637 (C1 HPA).
 
-## 1. Why this exists
+## Why
 
-Phase B Task B2 of the CAIA wizard pipeline: the Step 6 (Design) flow
-had a stub Claude integration. The DesignPanel UI offered "paste this
-prompt into your design tool, then upload the result as a CD ZIP" —
-the inverse round-trip the spec wanted to close. The actual Claude
-generation lived in a `// Wave 2 wires the actual @caia/design-ingest
-Ingestor here` placeholder.
+Phase C Task C7: scale chiefaia-wizard from 1 → 2 replicas with cookie-based session affinity. The wizard's interview surface is stateful at the pod level (in-memory subscription buffer); cookie-hash pins each session to one pod so SSE/WebSocket connections survive scale-up events and rolling updates. C1's HPA already exists; C7 closes the loop.
 
-B2 closes the loop: given the Step-5 design-app prompt, the system
-itself spawns Claude (subscription-only, via `@chiefaia/claude-spawner`)
-and parses the JSON envelope into a `RenderableDesign`. The wizard
-exposes this through a new `POST /api/wizard/design/ingest` route
-that composes the canonical backend wrapper chain
-(`withTenantSearchPath → wizardWithRetry → withClaudeSpawnerSpan`)
-around the new adapter.
+## Files
 
-## 2. Shape
+- `infra/wizard/10-deployment.yaml` — `replicas: 1` → `replicas: 2`; comments cross-reference C7 DR + C1 HPA + the consistentHash ring contract; RollingUpdate strategy preserved (`maxUnavailable:0 + maxSurge:1` = "drop none, add one"; ring never empty mid-rollout).
+- `infra/istio/chiefaia/26-destinationrule-wizard.yaml` — new `networking.istio.io/v1beta1` DestinationRule; `trafficPolicy.loadBalancer.consistentHash.httpCookie name=chiefaia-wizard-session ttl=0s`.
+- `apps/wizard/tests/wizard-shell/c7-sticky-session.test.ts` — 8 it-blocks / 21 assertions.
+- `.changeset/c7-wizard-multi-replica-sticky.md` — none-bump.
 
-```
-packages/design-ingest/src/claude-design-adapter.ts   # new adapter
-packages/design-ingest/src/schema.ts                  # +'claude-design' source name
-packages/design-ingest/src/errors.ts                  # +7 B2 error codes
-packages/design-ingest/src/index.ts                   # export ClaudeDesignAdapter
-packages/design-ingest/package.json                   # +@chiefaia/claude-spawner dep + updated description
-packages/design-ingest/tests/unit/claude-design-adapter.test.ts   # 15 vitest cases
-packages/design-ingest/tests/unit/schema.test.ts      # updated count assertion
-apps/wizard/app/api/wizard/design/ingest/route.ts     # new POST route
-apps/wizard/tests/wizard-shell/wizard-steps/design-ingest-route.test.ts  # 12 vitest cases
-```
+## Reuse-first
 
-`ClaudeDesignAdapter` implements `DesignAdapter`:
-- `validate(input)` — cheap shape check (kind, promptText, designVersionId).
-- `parse(input)` — spawns Claude with a `--output-format=json` argv,
-  parses the envelope via the canonical `parseClaudeJsonEnvelope`,
-  parses `envelope.result` as JSON, validates against
-  `RenderableDesignSchema` (Zod), returns the `RenderableDesign`.
-- `refresh()` — throws `RefreshNotSupported` (claude-design is one-shot).
-- `capabilities` — `requiresCredential: false` (the keychain OAuth
-  session is the credential), `supportsRefresh: false`,
-  `supportsLiveWebhook: false`.
+- `networking.istio.io/v1beta1 DestinationRule` (Istio core, stable since 1.6) — **selected**.
+- Istio `consistentHash.httpCookie` LB — **selected** (built-in, no app-layer rewrite).
+- IP-hash / source-IP affinity — **rejected** (Cloudflare's shared egress IP defeats it).
+- Custom session-router — **rejected** (Istio already does the right thing).
+- `@caia/ui` — **rejected** (infra PR; no UI surface).
 
-Test seams (`spawnImpl`, `parseEnvelopeImpl`) keep the suite away
-from a real subprocess. Production paths default to the canonical
-`spawnClaude` + `parseClaudeJsonEnvelope` from `@chiefaia/claude-spawner`.
+## Test strategy
 
-## 3. Reuse-first
+8 it-blocks across two describe-blocks (Deployment + DestinationRule); 21 assertions total. ≥5-test threshold satisfied.
 
-| Need | Existing package consumed |
-|---|---|
-| Claude binary spawn (subscription-only) | `@chiefaia/claude-spawner.spawnClaude` |
-| Envelope parsing | `@chiefaia/claude-spawner.parseClaudeJsonEnvelope` |
-| RenderableDesign schema validation | `@caia/design-ingest.assertRenderableDesign` (Zod) |
-| Retry/backoff envelope | `apps/wizard/lib/wizard/retry-spawner.wizardWithRetry` (B7) |
-| Tempo semantic span | `@chiefaia/tracing.withClaudeSpawnerSpan` (B3) |
-| Tenant schema pinning | `apps/wizard/lib/tenants/search-path.withTenantSearchPath` (B4) |
+## Verification proof (recorded post-merge)
 
-No parallel Claude spawn. No bespoke envelope parser. No parallel
-retry/backoff. No raw `child_process.spawn`. No raw `axios`/`fetch`
-to api.anthropic.com.
+1. `kubectl apply --dry-run=server -f infra/istio/chiefaia/26-destinationrule-wizard.yaml` ✓ pre-merge.
+2. `kubectl apply` post-merge → 2 wizard pods Ready.
+3. Cookie-pinning verified: `curl -b 'chiefaia-wizard-session=abc'` twice hits the same pod.
+4. Rollout safety: `kubectl rollout restart deploy/chiefaia-wizard` while a 10-rps cookie-pinned curl loop is running; 0 connection errors expected.
 
-## 4. Subscription-only
+## DoD
 
-`@chiefaia/claude-spawner.spawnClaude` unconditionally scrubs
-`ANTHROPIC_API_KEY` + sibling API-key env vars (see `SCRUBBED_AUTH_ENV_VARS`).
-The binary falls through to the keychain OAuth subscription session.
-There is no fallback to API-key billing — `spawnClaude` returns
-`ok: false` if the binary fails, and the route surfaces that as a 503.
-
-## 5. Tests
-
-- 15 adapter unit tests in `packages/design-ingest/tests/unit/claude-design-adapter.test.ts`
-  covering: validate (5 cases — happy/upload-kind/missing-prompt/whitespace-prompt/missing-dv),
-  parse success (2 cases — clean envelope + threaded model/timeout),
-  parse failure (5 cases — spawn-failed/envelope-invalid/result-not-json/schema-invalid/refresh-not-supported),
-  contract (1 case — sourceName + subscription-only capabilities),
-  prompt builder (2 cases — designVersionId + promptText inlined).
-- 12 route unit tests in `apps/wizard/tests/wizard-shell/wizard-steps/design-ingest-route.test.ts`
-  covering: route contract (runtime/dynamic), validation (4 cases —
-  bad-json/missing-projectId/missing-prompt/whitespace-prompt), auth
-  (1 case — 401 when x-tenant-id missing), stub path (5 cases —
-  default returns memory/uses-supplied-dv/generates-dv/note-points-at-env/idempotent).
-- 27 tests total. The brief requested ≥10.
-- 1 updated test in `packages/design-ingest/tests/unit/schema.test.ts`
-  to reflect the source-count bump from 9 → 10.
-
-All 68 design-ingest tests pass + new wizard route tests pass.
-
-Pre-existing develop failures (`@chiefaia/tracing` dist missing
-`withClaudeSpawnerSpan` because the package is consumed via
-`workspace:*` + pnpm doesn't rebuild on every install + TS2352 in
-`tests/wizard-shell/edge-bypass.test.ts`) are unchanged — same
-tolerated set the backend B wave merged through.
-
-## 6. True-Zero readiness
-
-- Adapter `pnpm exec vitest run` → 15/15 pass.
-- Route `pnpm exec vitest run` → 12/12 pass.
-- Whole-package `pnpm exec vitest run` (design-ingest) → 68/68 pass.
-- Local `tsc --noEmit` → only pre-existing tracing-dist error remains.
-- No raw shadcn/Radix imports anywhere (B2 is server-side only — no
-  client component changes).
-- Branched from `origin/develop` (HEAD 2e66908 — B1 merged).
+- [x] Manifests written + tests passing locally.
+- [x] EA-REVIEW-OUTCOME.json recorded (stub critic).
+- [ ] CI green / True-Zero ritual.
+- [ ] kubectl apply + verification.

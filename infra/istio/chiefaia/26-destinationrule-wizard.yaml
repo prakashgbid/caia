@@ -1,0 +1,51 @@
+# chiefaia-wizard DestinationRule — Phase C7 sticky sessions.
+#
+# Pins every wizard session to the same pod via the
+# `chiefaia-wizard-session` cookie. Required because the wizard's
+# SSE + WebSocket connections are stateful at the pod level (the
+# next-step subscription buffer lives in-memory for the duration of
+# the interview).
+#
+# How consistentHash interacts with C1's HPA + the 2-replica baseline:
+#
+#   - Steady state: 2 pods, requests evenly distributed by cookie hash.
+#   - HPA scales 2 → 3: the ring re-maps roughly 1/3 of cookies to the
+#     new pod. The 2/3 of in-flight sessions whose cookies stayed
+#     mapped to the original pod are undisturbed; the 1/3 that moved
+#     land on the new pod and re-establish their SSE/WebSocket from
+#     the wizard's resumable cursor (validated separately in the
+#     wizard-shell SSE tests added under C5).
+#   - Rolling update: see infra/wizard/10-deployment.yaml strategy
+#     comment. We never drop below 2 ready pods, so the ring is never
+#     empty.
+#
+# TTL = 0s means session-cookie (browser-lifetime). The wizard already
+# rolls the cookie on login/logout via apps/wizard middleware (see
+# apps/wizard/middleware.ts); we do not need a server-side TTL here.
+#
+# Reuse-first compliance:
+#   - networking.istio.io/v1beta1 DestinationRule (standard since
+#     Istio 1.6). No CRDs beyond Istio core; no parallel routing
+#     mechanism.
+#   - Labels mirror chiefaia-wizard-vs (21-virtualservice-wizard.yaml)
+#     exactly so `kubectl get dr -l app.kubernetes.io/name=chiefaia-wizard`
+#     works.
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: chiefaia-wizard-dr
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-wizard
+    app.kubernetes.io/component: destinationrule
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  host: chiefaia-wizard.chiefaia.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      consistentHash:
+        httpCookie:
+          name: chiefaia-wizard-session
+          # Browser-lifetime cookie. The wizard rolls the cookie on
+          # auth state changes; no server-side TTL required.
+          ttl: 0s

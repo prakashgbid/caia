@@ -31,9 +31,20 @@ metadata:
     app.kubernetes.io/part-of: chiefaia
     net.chiefaia.io/exposed-via: istio
 spec:
-  # V1: single replica. Promotion to HPA happens in Phase C of the
-  # wizard live-end-to-end plan (separate PR).
-  replicas: 1
+  # Phase C7 — bumped from 1 → 2 replicas. The HPA from Phase C1
+  # (infra/wizard/50-hpa.yaml) governs scaling between minReplicas:1
+  # and maxReplicas:5 on CPU/memory, BUT we hold the explicit
+  # `replicas: 2` baseline here so a manual `kubectl apply` (without
+  # the HPA's runtime adjustment) lands two pods immediately.
+  #
+  # Sticky sessions: the DestinationRule at
+  # infra/istio/chiefaia/26-destinationrule-wizard.yaml pins every
+  # session to the same pod via the `chiefaia-wizard-session` cookie
+  # (consistentHash). SSE / WebSocket connections survive across a
+  # rolling update because the consistentHash table re-maps only the
+  # in-flight cookie set that lost its pod, while every other cookie
+  # stays put.
+  replicas: 2
   revisionHistoryLimit: 5
   selector:
     matchLabels:
@@ -41,7 +52,9 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      # 1-replica rollouts need 0 unavailable + 1 surge to stay green.
+      # 2-replica rolling updates: 0 unavailable + 1 surge gives a
+      # "drop none, add one" rollout that never dips below 2 ready
+      # pods, so the consistentHash ring stays stable through the cut.
       maxUnavailable: 0
       maxSurge: 1
   template:
