@@ -703,6 +703,22 @@ events:
     actor: [api, user, system]
     payload: [tenant_id, email, schema_name, infisical_project_id]
 
+  # GDPR Article 17 ("right to erasure") cascade. Emitted by
+  # POST /api/settings/privacy/erase (apps/wizard) after all four
+  # downstream deletes have completed:
+  #   1. @caia/design-ingest.GdprCoordinator.deleteAllForTenant —
+  #      ux_uploads + snapshots + secrets (Infisical workspace) cascade
+  #   2. Infisical workspace deletion (@caia/secrets-adapter)
+  #   3. Per-tenant Postgres schema DROP CASCADE
+  #   4. audit log row in caia_meta.tenant_erasures
+  # Subscribers: Audit Steward (compliance trail), Pipeline Conductor
+  # (cleans up in-flight project state for the tenant), Dashboard
+  # (revokes the session immediately).
+  - type: tenant.erased
+    severity: warning
+    actor: [api, user, system]
+    payload: [tenant_id, email, schema_name, ux_uploads_deleted, secrets_workspace_deleted, schema_dropped, occurred_at_iso]
+
   # ─── Wizard FSM lifecycle (WIZARD-B5) ───────────────────────────────────
   # Three events that fence every wizard FSM transition the Next.js app
   # dispatches via `@caia/state-machine`. The wizard wraps each
