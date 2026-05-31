@@ -561,7 +561,11 @@ export type EventType =
   // ─── AI-First Continuous Discipline — Layer 5 drift events ───────────
   | 'policy.violation.detected'
   | 'memory.consistency.broken'
-  | 'architecture.principle.violated';
+  | 'architecture.principle.violated'
+  // ─── Wizard FSM lifecycle (WIZARD-B5) ────────────────────────────────
+  | 'wizard.step.transitioning'
+  | 'wizard.step.completed'
+  | 'wizard.step.failed';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -696,6 +700,10 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'policy.violation.detected': 'warning',
   'memory.consistency.broken': 'warning',
   'architecture.principle.violated': 'error',
+  // ─── Wizard FSM lifecycle (WIZARD-B5) ────────────────────────────────
+  'wizard.step.transitioning': 'info',
+  'wizard.step.completed': 'info',
+  'wizard.step.failed': 'error',
 };
 
 /** All valid event type strings from the registry */
@@ -792,3 +800,48 @@ export interface ArchitecturePrincipleViolatedPayload {
   detected_at: string;
 }
 
+
+// ─── Wizard FSM lifecycle (WIZARD-B5) ────────────────────────────────────────
+
+/**
+ * Emitted by `apps/wizard` just before each `@caia/state-machine`
+ * `StateMachine.transition()` call. Fire-and-forget: the FSM call is
+ * never blocked on publish.
+ */
+export interface WizardStepTransitioningPayload {
+  /** Project UUID owned by the wizard's @caia/state-machine store. */
+  project_id: string;
+  /** Source step (1-based wizard step index) or null if state outside the wizard. */
+  from_step: number | null;
+  /** Target step (1-based wizard step index) or null if target outside the wizard. */
+  to_step: number | null;
+  /** Per-tenant Postgres schema the FSM call targeted (e.g. `tenant_a_b_com_x`). */
+  tenant_schema: string;
+  /** W3C TraceContext traceId of the FSM-call span (16 hex bytes), or null if no active span. */
+  trace_id: string | null;
+}
+
+/**
+ * Emitted after a successful `StateMachine.transition()` call. `step`
+ * is the to-step index; `duration_ms` is the wall-clock duration of the
+ * wrapping `withFsmPublish` block.
+ */
+export interface WizardStepCompletedPayload {
+  project_id: string;
+  step: number | null;
+  duration_ms: number;
+  tenant_schema: string;
+  trace_id: string | null;
+}
+
+/**
+ * Emitted when `StateMachine.transition()` throws. `error` is the error's
+ * `.message`. `step` is the target step the call was attempting to enter.
+ */
+export interface WizardStepFailedPayload {
+  project_id: string;
+  step: number | null;
+  error: string;
+  tenant_schema: string;
+  trace_id: string | null;
+}

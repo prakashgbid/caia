@@ -41,6 +41,8 @@ import {
   getStateStoreForTenant,
   resolveTenantSchema,
 } from '../../../../../lib/wizard/store-wire';
+import { withFsmPublish } from '../../../../../lib/wizard/fsm-events';
+import { getFsmPublisher, getPool } from '../../../../../lib/tenants/wire';
 import {
   getWizardState,
   ProjectNotFoundError,
@@ -51,7 +53,6 @@ import {
   COMPLETE_THRESHOLD,
   totalScriptedTurns,
 } from '../../../../../lib/wizard/interview-stub';
-import { getPool } from '../../../../../lib/tenants/wire';
 import { withTenantSearchPath } from '../../../../../lib/tenants/search-path';
 import { wizardWithRetry } from '../../../../../lib/wizard/retry-spawner';
 
@@ -287,9 +288,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // `withClaudeSpawnerSpan`. In V1 no claude call happens here —
     // the `caia.claude.live=false` extra makes that visible in Tempo
     // for rollout A/B comparisons.
-    // B7: wrap the FSM transition (and live-mode critic call) under
-    // the retry envelope. On final retry exhaustion we transition to
-    // `interviewing-failed`.
+    // B7 retry envelope (outermost) → B5 NATS publish ring → B3 OTel
+    // span → @caia/state-machine.transition(). On final retry exhaustion
+    // we transition to `interviewing-failed`.
+    const publisher = await getFsmPublisher();
     const retryResult = await wizardWithRetry<void>(
       { key: { tenantId, projectId }, step: 'interview.complete' },
       async () => {
@@ -301,22 +303,34 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             opts?: { reason?: string },
           ): Promise<unknown>;
         })({ store: stateStore });
-        await withClaudeSpawnerSpan(
+        // B5: publish wizard.step.* lifecycle around the FSM call.
+        await withFsmPublish(
           {
-            step: 'interview.complete',
+            publisher,
             projectId,
-            tenantId,
-            promptTemplate: COMPLETE_PROMPT_TEMPLATE,
-            model: COMPLETE_LIVE_MODEL,
-            extra: {
-              'caia.claude.live': false,
-              'caia.wizard.interview.force': force,
-            },
+            fromState: snapshot.state,
+            toState: TARGET_STATE,
+            tenantSchema,
+            actor: 'api',
           },
-          async () =>
-            sm.transition(projectId, TARGET_STATE, {
-              reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
-            }),
+          () =>
+            withClaudeSpawnerSpan(
+              {
+                step: 'interview.complete',
+                projectId,
+                tenantId,
+                promptTemplate: COMPLETE_PROMPT_TEMPLATE,
+                model: COMPLETE_LIVE_MODEL,
+                extra: {
+                  'caia.claude.live': false,
+                  'caia.wizard.interview.force': force,
+                },
+              },
+              async () =>
+                sm.transition(projectId, TARGET_STATE, {
+                  reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
+                }),
+            ),
         );
         return { ok: true, value: undefined };
       },

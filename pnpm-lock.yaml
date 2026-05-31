@@ -689,6 +689,9 @@ importers:
       '@chiefaia/tracing':
         specifier: workspace:*
         version: link:../../packages/tracing
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
       ai:
         specifier: ^4.3.16
         version: 4.3.19(react@19.2.5)(zod@3.25.76)

@@ -4,14 +4,14 @@
  *   GET   → WizardStateSnapshot (server reads @caia/state-machine store)
  *   PATCH → request a transition to `targetState`, validated by the FSM.
  *
- * Tenant isolation: every request must have a `x-tenant-id` header from
- * the middleware. The handler wraps each pg-touching block with
- * `withTenantSearchPath` (Phase B B4) so the per-tenant search_path is
- * scoped to the transaction. PgStateStore's own queries are already
- * schema-prefixed against `caia_meta` (the FSM's meta schema), but any
- * unqualified table reference inside this request — including future
- * additions — will resolve against the tenant's schema, never another
- * tenant's.
+ * Tenant isolation (Phase B B4): every pg-touching block is wrapped with
+ * `withTenantSearchPath` so the per-tenant search_path is scoped to the
+ * transaction.
+ *
+ * FSM lifecycle events (Phase B B5): the PATCH route wraps the
+ * `StateMachine.transition()` call with `withFsmPublish` so every FSM
+ * transition publishes `wizard.step.{transitioning,completed,failed}`
+ * on NATS via `@chiefaia/event-bus-nats`.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
@@ -28,8 +28,9 @@ import {
   getStateStoreForTenant,
   resolveTenantSchema,
 } from '../../../../../lib/wizard/store-wire';
-import { getPool } from '../../../../../lib/tenants/wire';
+import { getFsmPublisher, getPool } from '../../../../../lib/tenants/wire';
 import { withTenantSearchPath } from '../../../../../lib/tenants/search-path';
+import { withFsmPublish } from '../../../../../lib/wizard/fsm-events';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -92,6 +93,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextRe
   try {
     const tenantSchema = await resolveTenantSchema(tenantId);
     const store = await getStateStoreForTenant(tenantId);
+    const publisher = await getFsmPublisher();
     const next = await withTenantSearchPath(getPool(), tenantSchema, async () => {
       const snapshot = await getWizardState(projectId, { store });
       if (!canTransition(snapshot.state, body.targetState as ProjectState)) {
@@ -107,7 +109,18 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextRe
           opts?: { reason?: string },
         ): Promise<unknown>;
       })({ store });
-      await sm.transition(projectId, body.targetState as ProjectState, { reason: body.reason });
+      // Wrap the FSM call with the B5 NATS lifecycle publish ring.
+      await withFsmPublish(
+        {
+          publisher,
+          projectId,
+          fromState: snapshot.state,
+          toState: body.targetState as ProjectState,
+          tenantSchema,
+          actor: 'api',
+        },
+        () => sm.transition(projectId, body.targetState as ProjectState, { reason: body.reason }),
+      );
       return getWizardState(projectId, { store });
     });
     return NextResponse.json(next);

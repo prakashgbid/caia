@@ -48,7 +48,9 @@ vi.mock("../../../lib/wizard/store-wire", () => ({
   resolveTenantSchema: async () => "tenant_test_schema",
 }));
 
+// Mock the NATS publisher + pool wiring (WIZARD-B4 search-path + B5 NATS lifecycle).
 vi.mock("../../../lib/tenants/wire", () => ({
+  getFsmPublisher: async () => ({ publish: async () => undefined }),
   getPool: () => ({
     async connect() {
       return {
@@ -56,6 +58,7 @@ vi.mock("../../../lib/tenants/wire", () => ({
         release() {},
       };
     },
+    query: async () => ({ rowCount: 1, rows: [{ schema_name: 'tenant_test' }] }),
   }),
 }));
 

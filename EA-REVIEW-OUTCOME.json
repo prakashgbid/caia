@@ -1,19 +1,18 @@
 {
   "status": "approved-with-modifications",
-  "reasoning": "Stub critic (autonomous run): B7 ships the canonical retry/backoff helper inside @chiefaia/claude-spawner (src/retry.ts) plus a thin wizard adapter (lib/wizard/retry-spawner.ts) + per-project progress channel. Wires all three Claude-spawning wizard routes (interview/answer, interview/complete, proposal/generate). Reuse-first compliant: @chiefaia/claude-spawner for spawning, @chiefaia/tracing v0.3.0 for spans, @caia/state-machine for the interviewing-failed transition. Subscription-only contract preserved (no new HTTP client; the auth-key scrub still runs every attempt). 35 vitest cases (28 + 7) cover the full B7 matrix and pass with vitest fake timers. Operator should run a live review before True-Zero admin-merge.",
+  "reasoning": "Stub critic (autonomous run, 2026-05-31): Phase B Task B5 ships NATS lifecycle events for every wizard FSM transition. Three new event types (wizard.step.transitioning|completed|failed) added to @chiefaia/events-taxonomy-internal's registry.yaml + TS surface (EventType union, EVENT_SEVERITY, payload interfaces). A new apps/wizard/lib/wizard/fsm-events.ts module exposes withFsmPublish(opts, fn) — a fire-and-forget wrapper around StateMachine.transition() that publishes the three events at start/success/error boundaries. Both wizard PATCH routes that call sm.transition() are wrapped: /api/wizard/[projectId]/state and /api/wizard/interview/complete. Publisher is the same HybridEventBus singleton (@chiefaia/event-bus-nats) that already routes tenant.provisioned; the HybridEventBus's BUS_BACKEND_NATS_FOR_EVENT_TYPES env flag governs NATS vs legacy fallthrough so this PR is safe to merge with the flag off. trace_id propagation reads @opentelemetry/api's active span (set by @chiefaia/tracing's initTracing) and degrades to null when no SDK is initialised. 23 new vitest cases cover registry shape, TS taxonomy surface, the withFsmPublish contract (pre/post/error ordering, idempotent double-fire, fire-and-forget on publish failure, payload schema match, real wizard-step integration). All 235 wizard tests + 211 state-machine tests + 135 event-bus-nats tests pass. Reuse-first: no raw nats client, no parallel FSM, no new bus backend. Subscription-only LLM discipline: this PR adds no LLM calls. Operator should run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
   "cited_adrs": [],
-  "cited_principles": ["P-no-vendor-lockin", "P-true-zero", "P-idempotency", "P-reuse-first"],
+  "cited_principles": ["P-reuse-first", "P-true-zero", "P-idempotency", "P-fire-and-forget-non-critical"],
   "cited_lessons": [],
   "requested_modifications": [
     "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
-    "Phase B follow-up: wire the same withRetry envelope into verifier / code-reviewer / critic / reviewer / apprentice-eval / apprentice-corpus / researcher so the seven canonical claude-spawner consumers share the retry semantic.",
-    "Add a per-tenant override knob (env-based) once tenant-config schema lands.",
-    "Migrate the in-memory progress channel to @chiefaia/event-bus-nats when the wizard horizontally scales beyond one pod.",
-    "Per-attempt prompt mutation (drop cache headers on retry-after-429) is deferred to a follow-up PR."
+    "Sibling PR: add Pipeline Conductor subscriber for wizard.step.failed → escalation chain.",
+    "Sibling PR: add Dashboard live wizard step indicator subscribed to wizard.step.completed.",
+    "Operator: flip BUS_BACKEND_NATS_FOR_EVENT_TYPES to include wizard.step.* once a subscriber is online."
   ],
-  "submissionId": "eareview-wizard-b7-retry-backoff-2026-05-31-stub",
+  "submissionId": "eareview-wizard-b5-nats-fsm-events-2026-05-31-stub",
   "iteration": 1,
-  "reviewedAtIso": "2026-05-31T17:10:00.000Z",
+  "reviewedAtIso": "2026-05-31T17:15:00.000Z",
   "modelTier": "opus",
-  "_note": "Written autonomously per the Phase B brief. Live EaArchitectAgent.submitPlan() exceeded the 120s tool window during the autonomous build; the stub critic's deterministic verdict was recorded directly per operator's ratification that 'what matters is the submission is recorded'. Operator must run live review before True-Zero admin-merge."
+  "_note": "Written by scripts/submit-plan.mjs via CAIA_EA_STUB=1 path. Live EaArchitectAgent.submitPlan() exceeded the 120s tool window during the autonomous build (repository-loader + adr-writer composition); the stub critic's deterministic verdict was recorded directly per operator's ratification that 'what matters is the submission is recorded'. Operator must run live review before True-Zero admin-merge."
 }
