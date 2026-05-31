@@ -122,3 +122,9 @@ export {
   RefreshNotSupported,
 } from './errors.js';
 export type { DesignIngestErrorCode } from './errors.js';
+
+// -- Claude Design adapter (Phase B B2) ---------------------------------------
+// Server-side adapter that spawns Claude (subscription-only) to generate
+// a RenderableDesign from the Step 5 design-app prompt.
+export { ClaudeDesignAdapter, buildClaudeDesignPrompt } from './claude-design-adapter.js';
+export type { ClaudeDesignAdapterDeps } from './claude-design-adapter.js';

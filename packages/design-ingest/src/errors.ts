@@ -16,7 +16,15 @@ export type DesignIngestErrorCode =
   | 'parse_timeout'
   | 'invalid_renderable_design'
   | 'ingestion_failed'
-  | 'gdpr_partial_failure';
+  | 'gdpr_partial_failure'
+  // B2 — ClaudeDesignAdapter error codes
+  | 'claude_design_requires_remote_input'
+  | 'claude_design_prompt_required'
+  | 'claude_design_version_id_required'
+  | 'claude_spawn_failed'
+  | 'claude_envelope_invalid'
+  | 'claude_design_json_parse_failed'
+  | 'claude_design_schema_invalid';
 
 export class DesignIngestError extends Error {
   public readonly code: DesignIngestErrorCode;
