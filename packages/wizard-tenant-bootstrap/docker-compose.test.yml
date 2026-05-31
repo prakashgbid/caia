@@ -1,0 +1,25 @@
+# Docker compose for `@caia/wizard-tenant-bootstrap` integration tests.
+#
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d
+#   PG_INTEGRATION_URL=postgres://caia:caia@localhost:54322/caia_test \
+#     pnpm test:integration
+#   docker compose -f docker-compose.test.yml down -v
+#
+# Port 54322 deliberately avoids 54320 (@caia/secrets-postgres) and
+# 54321 (@caia/atlas-design-snapshotter) so all three packages can run
+# their integration suites concurrently if needed.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: caia
+      POSTGRES_PASSWORD: caia
+      POSTGRES_DB: caia_test
+    ports:
+      - "54322:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caia -d caia_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 20

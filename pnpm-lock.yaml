@@ -209,6 +209,9 @@ importers:
       '@caia/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@caia/wizard-tenant-bootstrap':
+        specifier: workspace:*
+        version: link:../../packages/wizard-tenant-bootstrap
       '@chiefaia/claude-spawner':
         specifier: workspace:*
         version: link:../../packages/claude-spawner
@@ -4343,6 +4346,43 @@ importers:
         version: 1.6.1(vitest@1.6.1(@types/node@20.19.39)(jsdom@26.1.0))
       typescript:
         specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@20.19.39)(jsdom@26.1.0)
+
+  packages/wizard-tenant-bootstrap:
+    dependencies:
+      '@caia/business-proposal-generator':
+        specifier: workspace:*
+        version: link:../business-proposal-generator
+      '@caia/grand-idea':
+        specifier: workspace:*
+        version: link:../grand-idea
+      '@caia/info-architect':
+        specifier: workspace:*
+        version: link:../info-architect
+      '@caia/interviewer':
+        specifier: workspace:*
+        version: link:../interviewer
+      '@chiefaia/event-bus-nats':
+        specifier: workspace:*
+        version: link:../event-bus-nats
+    devDependencies:
+      '@chiefaia/vitest-config':
+        specifier: workspace:*
+        version: link:../../configs/vitest-config
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.20.0
+      pg:
+        specifier: ^8.13.1
+        version: 8.20.0
+      typescript:
+        specifier: ^5.4.5
         version: 5.9.3
       vitest:
         specifier: ^1.6.1

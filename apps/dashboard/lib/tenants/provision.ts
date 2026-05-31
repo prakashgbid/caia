@@ -41,8 +41,10 @@ import {
 } from './store';
 import {
   createInfisicalProject,
+  deleteInfisicalProject,
   type InfisicalProvisionOptions,
 } from './infisical';
+import { bootstrapTenant, dropTenantSchema } from '@caia/wizard-tenant-bootstrap';
 
 /**
  * Subset of @chiefaia/event-bus-nats's EventBus we actually use. Typed
@@ -112,6 +114,52 @@ export async function provisionTenant(
   //    workspace becomes an orphan. Operator policy: a daily janitor in
   //    `@caia/devops-runtime` reconciles orphans. Tracked in PLAN.md §6.
   const project = await createInfisicalProject(workspaceName, deps.infisical);
+
+  // 3.5. Per-tenant migration bootstrap. Applies every wizard step
+  //      package's `{{SCHEMA}}` migration into the new schema so the
+  //      tenant lands fully populated (wizard_state, grand_ideas,
+  //      interviews, pages_catalogue, design_systems, components_library,
+  //      business_proposals, etc.). Idempotent — re-runs are a no-op via
+  //      the per-schema `_migrations_applied` ledger.
+  //
+  //      Failure compensates: drop the new schema (+ tracker), delete the
+  //      Infisical workspace we just created, and throw so the caller
+  //      surfaces the error. The global `tenants` row is NOT inserted
+  //      until after this step, so a partial provisioning leaves no
+  //      orphan row.
+  let bootstrap;
+  try {
+    bootstrap = await bootstrapTenant({
+      pool: deps.pool,
+      schemaName,
+      publisher: deps.publisher,
+    });
+  } catch (err) {
+    await dropTenantSchema(deps.pool, schemaName).catch((dropErr) => {
+      // eslint-disable-next-line no-console
+      console.error('[provisionTenant] rollback dropTenantSchema failed:', dropErr);
+    });
+    await deleteInfisicalProject(project.projectId, deps.infisical).catch((delErr) => {
+      // eslint-disable-next-line no-console
+      console.error('[provisionTenant] rollback deleteInfisicalProject failed:', delErr);
+    });
+    throw err;
+  }
+
+  if (!bootstrap.success) {
+    await dropTenantSchema(deps.pool, schemaName).catch((dropErr) => {
+      // eslint-disable-next-line no-console
+      console.error('[provisionTenant] rollback dropTenantSchema failed:', dropErr);
+    });
+    await deleteInfisicalProject(project.projectId, deps.infisical).catch((delErr) => {
+      // eslint-disable-next-line no-console
+      console.error('[provisionTenant] rollback deleteInfisicalProject failed:', delErr);
+    });
+    const summary = bootstrap.failures
+      .map((f) => `${f.packageName}/${f.filename}: ${f.error}`)
+      .join('; ');
+    throw new Error(`provisionTenant: bootstrap failed for ${schemaName} — ${summary}`);
+  }
 
   // 4. Insert the tenants row idempotently.
   const { tenant, created } = await deps.tenantStore.insertIfAbsent({

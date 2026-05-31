@@ -1,0 +1,66 @@
+{
+  "name": "@caia/wizard-tenant-bootstrap",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Per-tenant migration orchestrator for the CAIA wizard. On provisionTenant() this package applies every per-tenant package's `{{SCHEMA}}` migration into the new tenant's schema (grand-idea, info-architect, interviewer, business-proposal-generator, dashboard/wizard_state). Tracks applied migrations via a per-schema `_migrations_applied` ledger so re-runs are no-ops. Emits `tenant.migrations.complete` on the bus.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./runner": {
+      "types": "./dist/runner.d.ts",
+      "default": "./dist/runner.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "default": "./dist/manifest.js"
+    },
+    "./tracker": {
+      "types": "./dist/tracker.d.ts",
+      "default": "./dist/tracker.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "AUDIT.md",
+    "PLAN.md",
+    "README.md",
+    "docker-compose.test.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "lint": "eslint src tests",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@caia/business-proposal-generator": "workspace:*",
+    "@caia/grand-idea": "workspace:*",
+    "@caia/info-architect": "workspace:*",
+    "@caia/interviewer": "workspace:*",
+    "@chiefaia/event-bus-nats": "workspace:*"
+  },
+  "peerDependencies": {
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@chiefaia/vitest-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.10",
+    "pg": "^8.13.1",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

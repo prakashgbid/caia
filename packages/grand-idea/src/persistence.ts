@@ -89,17 +89,32 @@ export class GrandIdeaPersistence implements IGrandIdeaPersistence {
     this.quotedSchema = quoteIdent(this.tenantSchema);
   }
 
-  public async ensureSchema(): Promise<void> {
-    if (this.schemaEnsured) return;
+  /**
+   * Apply the grand-ideas migration.
+   *
+   * @param overrideSchemaName optional canonical schema name (e.g. from
+   * `apps/dashboard/lib/tenants/store.ts::schemaNameForEmail`). When
+   * supplied, the migration applies to this schema instead of the
+   * constructor-derived `tenantSchema`. Used by
+   * `@caia/wizard-tenant-bootstrap` to align all per-tenant packages on
+   * the provisioning-canonical `tenant_<safe>_<hash>` name. Backward
+   * compatible — existing callers pass nothing and get unchanged behavior.
+   */
+  public async ensureSchema(overrideSchemaName?: string): Promise<void> {
+    const targetSchema = overrideSchemaName ?? this.tenantSchema;
+    const targetQuoted = overrideSchemaName ? quoteIdent(overrideSchemaName) : this.quotedSchema;
+    // The in-memory `schemaEnsured` guard is per-target — if the caller
+    // passes a different override, we re-apply (cheap, SQL is idempotent).
+    if (this.schemaEnsured && targetSchema === this.tenantSchema) return;
     const template = await readFile(this.migrationPath, 'utf8');
-    const sql = template.replace(/\{\{SCHEMA\}\}/g, this.quotedSchema);
+    const sql = template.replace(/\{\{SCHEMA\}\}/g, targetQuoted);
     try {
       await this.pool.query(sql);
-      this.schemaEnsured = true;
+      if (targetSchema === this.tenantSchema) this.schemaEnsured = true;
     } catch (err) {
       throw new GrandIdeaError(
         'persistence_failed',
-        `failed to apply grand-ideas migration to ${this.tenantSchema}`,
+        `failed to apply grand-ideas migration to ${targetSchema}`,
         err,
       );
     }
