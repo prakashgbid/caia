@@ -80,18 +80,17 @@ export function createDefaultOutcomeStewardAdapter(
       }
 
       const joined = joinManifestAndExpectations(manifest, [expectations]);
-      const since = new Date(opts.now().getTime() - opts.windowHours * 3600 * 1000);
-      const results: CrossCheckResult[] = [];
-      for (const row of joined) {
-        if (!row.expectations) continue;
-        for (const sli of row.expectations.expectedSli) {
-          const result = await crossCheck(opts.backend, row.entry.name, row.solutionId ?? '', sli, {
-            since,
-            until: opts.now(),
-          });
-          results.push(result);
-        }
-      }
+      const rows = joined
+        .filter((r) => r.expectations !== null)
+        .map((r) => ({
+          packageName: r.packageName,
+          expectations: r.expectations,
+          ...(r.entry?.solutionId !== undefined ? { solutionIdFromManifest: r.entry.solutionId } : {}),
+        }));
+      const crossCheckResults = await crossCheck(opts.backend, rows, {
+        now: opts.now,
+      });
+      const results: CrossCheckResult[] = [...crossCheckResults];
 
       const matrix = buildAttestationMatrix(results, { backend: health.backend });
       const cells: AttestationCell[] = [];
