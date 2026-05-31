@@ -11,16 +11,26 @@
  * pure in-memory in V1, so the pinning is forward-compat for the live
  * path.
  *
+ * Phase B B3 (2026-05-31): the FSM transition dispatch is also wrapped
+ * in `withClaudeSpawnerSpan` so Tempo carries the wizard step
+ * attributes (`caia.wizard.step=interview.complete`, project_id,
+ * prompt_template, model). In V1 no claude call happens here — the
+ * `caia.claude.live=false` extra makes that visible in Tempo. When the
+ * Wave 2 live critic-coverage decision drops into this path, the inner
+ * `claude.spawn` span will be parented under the wizard wrapper
+ * automatically via the OTel context manager.
+ *
  * Reuse-first compliance:
  *   - Uses `@caia/state-machine`'s `canTransition` + `StateMachine`.
  *   - Uses `getStateStoreForTenant` from `lib/wizard/store-wire.ts`.
  *   - Uses `withTenantSearchPath` from `lib/tenants/search-path.ts`.
+ *   - Uses `withClaudeSpawnerSpan` from `@chiefaia/tracing`.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { headers } from 'next/headers';
 import { canTransition, type ProjectState } from '@caia/state-machine';
-import { createTracer } from '@chiefaia/tracing';
+import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
 import {
   getStateStoreForTenant,
   resolveTenantSchema,
@@ -49,6 +59,12 @@ interface RequestBody {
 const tracer = createTracer('chiefaia.dashboard.wizard.interview');
 
 const TARGET_STATE: ProjectState = 'interview-complete';
+
+/** Claude model the live critic-coverage decision uses (Wave 2). */
+const COMPLETE_LIVE_MODEL = 'claude-opus-4-6';
+
+/** Prompt template the critic-coverage path invokes (Wave 2). */
+const COMPLETE_PROMPT_TEMPLATE = 'critic:coverage-decision.v1';
 
 async function readTenantId(): Promise<string | null> {
   const h = await headers();
@@ -226,11 +242,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // The FSM dispatch happens OUTSIDE our wrapper because
+    // The FSM dispatch happens OUTSIDE our search_path wrapper because
     // PgStateStore.transitionAtomic opens its own transaction. Its own
     // queries are schema-qualified against `caia_meta`, so they don't
     // need the tenant search_path; only the post-step thread-store
     // write does, and we wrap it below.
+    //
+    // Phase B B3: wrap the FSM transition (which the Wave 2 path will
+    // extend with a live critic-coverage claude-spawner call) with
+    // `withClaudeSpawnerSpan`. In V1 no claude call happens here —
+    // the `caia.claude.live=false` extra makes that visible in Tempo
+    // for rollout A/B comparisons.
     try {
       const { StateMachine } = await import('@caia/state-machine');
       const sm = new (StateMachine as unknown as new (opts: { store: unknown }) => {
@@ -240,9 +262,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           opts?: { reason?: string },
         ): Promise<unknown>;
       })({ store: stateStore });
-      await sm.transition(projectId, TARGET_STATE, {
-        reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
-      });
+      await withClaudeSpawnerSpan(
+        {
+          step: 'interview.complete',
+          projectId,
+          tenantId,
+          promptTemplate: COMPLETE_PROMPT_TEMPLATE,
+          model: COMPLETE_LIVE_MODEL,
+          extra: {
+            'caia.claude.live': false,
+            'caia.wizard.interview.force': force,
+          },
+        },
+        async () =>
+          sm.transition(projectId, TARGET_STATE, {
+            reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
+          }),
+      );
     } catch (err) {
       return NextResponse.json(
         {
