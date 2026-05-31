@@ -671,6 +671,9 @@ importers:
       '@caia/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@chiefaia/claude-spawner':
+        specifier: workspace:*
+        version: link:../../packages/claude-spawner
       '@chiefaia/event-bus-internal':
         specifier: workspace:*
         version: link:../../packages/event-bus-internal

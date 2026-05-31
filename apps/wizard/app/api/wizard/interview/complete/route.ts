@@ -1,6 +1,12 @@
 /**
  * `POST /api/wizard/interview/complete` — finalise the Step 3 interview.
  *
+ * Phase B B7 (2026-05-31): the FSM transition runs under
+ * `wizardWithRetry` so transient failures retry with 30s/60s/120s
+ * backoff. On final retry exhaustion the route best-effort transitions
+ * the project to `interviewing-failed` via `@caia/state-machine` so the
+ * UI shows an explicit error state.
+ *
  * Phase B B4 (2026-05-31): the FSM dispatch + thread mark-complete now
  * run inside `withTenantSearchPath` so the per-tenant schema is pinned
  * for the duration of the transition. The `StateMachine.transition` call
@@ -48,6 +54,7 @@ import {
   totalScriptedTurns,
 } from '../../../../../lib/wizard/interview-stub';
 import { withTenantSearchPath } from '../../../../../lib/tenants/search-path';
+import { wizardWithRetry } from '../../../../../lib/wizard/retry-spawner';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -60,6 +67,33 @@ interface RequestBody {
 const tracer = createTracer('chiefaia.dashboard.wizard.interview');
 
 const TARGET_STATE: ProjectState = 'interview-complete';
+const FAILURE_STATE: ProjectState = 'interviewing-failed';
+
+/** Best-effort transition to `interviewing-failed` after retry exhaustion. */
+async function transitionToFailure(
+  stateStore: unknown,
+  projectId: string,
+  reason: string,
+): Promise<void> {
+  try {
+    const { StateMachine } = await import('@caia/state-machine');
+    const sm = new (StateMachine as unknown as new (opts: { store: unknown }) => {
+      transition(
+        projectId: string,
+        target: ProjectState,
+        opts?: { reason?: string },
+      ): Promise<unknown>;
+    })({ store: stateStore });
+    await sm.transition(projectId, FAILURE_STATE, { reason });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[wizard.interview.complete] failed to record interviewing-failed state: ${
+        e instanceof Error ? e.message : String(e)
+      }`,
+    );
+  }
+}
 
 /** Claude model the live critic-coverage decision uses (Wave 2). */
 const COMPLETE_LIVE_MODEL = 'claude-opus-4-6';
@@ -254,54 +288,72 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // `withClaudeSpawnerSpan`. In V1 no claude call happens here —
     // the `caia.claude.live=false` extra makes that visible in Tempo
     // for rollout A/B comparisons.
-    try {
-      const { StateMachine } = await import('@caia/state-machine');
-      const sm = new (StateMachine as unknown as new (opts: { store: unknown }) => {
-        transition(
-          projectId: string,
-          target: ProjectState,
-          opts?: { reason?: string },
-        ): Promise<unknown>;
-      })({ store: stateStore });
-      const publisher = await getFsmPublisher();
-      // B5: publish wizard.step.* lifecycle around the FSM call.
-      // B3: also keep the OTel withClaudeSpawnerSpan wrapper that
-      // landed on develop so traces still propagate through this hot path.
-      await withFsmPublish(
-        {
-          publisher,
-          projectId,
-          fromState: snapshot.state,
-          toState: TARGET_STATE,
-          tenantSchema,
-          actor: 'api',
-        },
-        () =>
-          withClaudeSpawnerSpan(
-            {
-              step: 'interview.complete',
-              projectId,
-              tenantId,
-              promptTemplate: COMPLETE_PROMPT_TEMPLATE,
-              model: COMPLETE_LIVE_MODEL,
-              extra: {
-                'caia.claude.live': false,
-                'caia.wizard.interview.force': force,
+    // B7 retry envelope (outermost) → B5 NATS publish ring → B3 OTel
+    // span → @caia/state-machine.transition(). On final retry exhaustion
+    // we transition to `interviewing-failed`.
+    const publisher = await getFsmPublisher();
+    const retryResult = await wizardWithRetry<void>(
+      { key: { tenantId, projectId }, step: 'interview.complete' },
+      async () => {
+        const { StateMachine } = await import('@caia/state-machine');
+        const sm = new (StateMachine as unknown as new (opts: { store: unknown }) => {
+          transition(
+            projectId: string,
+            target: ProjectState,
+            opts?: { reason?: string },
+          ): Promise<unknown>;
+        })({ store: stateStore });
+        // B5: publish wizard.step.* lifecycle around the FSM call.
+        await withFsmPublish(
+          {
+            publisher,
+            projectId,
+            fromState: snapshot.state,
+            toState: TARGET_STATE,
+            tenantSchema,
+            actor: 'api',
+          },
+          () =>
+            withClaudeSpawnerSpan(
+              {
+                step: 'interview.complete',
+                projectId,
+                tenantId,
+                promptTemplate: COMPLETE_PROMPT_TEMPLATE,
+                model: COMPLETE_LIVE_MODEL,
+                extra: {
+                  'caia.claude.live': false,
+                  'caia.wizard.interview.force': force,
+                },
               },
-            },
-            async () =>
-              sm.transition(projectId, TARGET_STATE, {
-                reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
-              }),
-          ),
+              async () =>
+                sm.transition(projectId, TARGET_STATE, {
+                  reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
+                }),
+            ),
+        );
+        return { ok: true, value: undefined };
+      },
+    );
+
+    span.setAttribute('caia.retry.attempts_run', retryResult.attemptsRun);
+    span.setAttribute('caia.retry.final_class', retryResult.finalErrorClass ?? 'none');
+
+    if (!retryResult.ok) {
+      await transitionToFailure(
+        stateStore,
+        projectId,
+        `interview-complete retry exhausted: ${retryResult.diagnostic ?? 'unknown'}`,
       );
-    } catch (err) {
       return NextResponse.json(
         {
-          error: 'transition-failed',
-          detail: err instanceof Error ? err.message : String(err),
+          error: 'interview-complete-retry-exhausted',
+          attemptsRun: retryResult.attemptsRun,
+          errorClass: retryResult.finalErrorClass,
+          detail: retryResult.diagnostic,
+          failureState: FAILURE_STATE,
         },
-        { status: 500 },
+        { status: 503 },
       );
     }
 
@@ -317,6 +369,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         aggregateScore: pre.score,
         completedAt: completed.completedAt,
         forced: force,
+        attemptsRun: retryResult.attemptsRun,
       },
       { status: 200 },
     );
