@@ -43,15 +43,21 @@ vi.mock('@caia/state-machine', async () => {
   };
 });
 
-vi.mock('../../../lib/wizard/store-wire', () => ({
+vi.mock("../../../lib/wizard/store-wire", () => ({
   getStateStoreForTenant: async () => ({ __mock: true }),
+  resolveTenantSchema: async () => "tenant_test_schema",
 }));
 
-// Mock the NATS publisher + pool wiring added by WIZARD-B5 so the route
-// doesn't try to open a real Postgres pool from inside the unit test.
-vi.mock('../../../lib/tenants/wire', () => ({
+// Mock the NATS publisher + pool wiring (WIZARD-B4 search-path + B5 NATS lifecycle).
+vi.mock("../../../lib/tenants/wire", () => ({
   getFsmPublisher: async () => ({ publish: async () => undefined }),
   getPool: () => ({
+    async connect() {
+      return {
+        async query() { return { rows: [], rowCount: 0 }; },
+        release() {},
+      };
+    },
     query: async () => ({ rowCount: 1, rows: [{ schema_name: 'tenant_test' }] }),
   }),
 }));

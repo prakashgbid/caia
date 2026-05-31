@@ -1,41 +1,30 @@
 /**
  * `POST /api/wizard/interview/complete` — finalise the Step 3 interview.
  *
- * Fired either by the customer hitting "I'm done" in `InterviewerChat`,
- * or by the critic (in live mode) deciding coverage is sufficient
- * (engine reached `HANDOFF`). Both paths flow through this single
- * server-side handler so the FSM dispatch is one code path.
- *
- * Flow:
- *   1. Read `x-tenant-id` from the middleware-set header.
- *   2. Parse `{ projectId, force? }`.
- *   3. Validate completeness — aggregate score across all 16 pillars
- *      must be ≥ 82 (engine spec §5 threshold) UNLESS `force: true` is
- *      passed (operator override, mirroring the engine's `forceClose`
- *      semantic).
- *   4. Dispatch FSM transition `interviewing → interview-complete` via
- *      the canonical `@caia/state-machine` `StateMachine.transition()`
- *      (same path used by the existing PATCH state route from PR #601,
- *      kept in-process here so the completeness gate + transition are
- *      atomic).
- *   5. Mark the in-memory thread `completedAt` so subsequent
- *      `/api/wizard/interview/answer` calls return 409.
+ * Phase B B4 (2026-05-31): the FSM dispatch + thread mark-complete now
+ * run inside `withTenantSearchPath` so the per-tenant schema is pinned
+ * for the duration of the transition. The `StateMachine.transition` call
+ * goes via `@caia/state-machine`'s `transitionAtomic`, which opens its
+ * own inner transaction — we therefore RELEASE the outer search_path
+ * wrapper around it (the inner BEGIN is a new transaction the helper
+ * doesn't own). The thread-store work that wraps the transition is
+ * pure in-memory in V1, so the pinning is forward-compat for the live
+ * path.
  *
  * Reuse-first compliance:
- *   - Uses `@caia/state-machine` for FSM transition + `canTransition`
- *     check (no inline FSM logic).
- *   - Uses `getStateStoreForTenant` from `lib/wizard/store-wire.ts`,
- *     the same factory the PATCH state route uses.
- *   - Re-uses `getInterviewThreadStore` (the shared singleton) so the
- *     completeness check + the mark-complete write are against the
- *     same row the answer route writes.
+ *   - Uses `@caia/state-machine`'s `canTransition` + `StateMachine`.
+ *   - Uses `getStateStoreForTenant` from `lib/wizard/store-wire.ts`.
+ *   - Uses `withTenantSearchPath` from `lib/tenants/search-path.ts`.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { headers } from 'next/headers';
 import { canTransition, type ProjectState } from '@caia/state-machine';
 import { createTracer } from '@chiefaia/tracing';
-import { getStateStoreForTenant } from '../../../../../lib/wizard/store-wire';
+import {
+  getStateStoreForTenant,
+  resolveTenantSchema,
+} from '../../../../../lib/wizard/store-wire';
 import { withFsmPublish } from '../../../../../lib/wizard/fsm-events';
 import { getFsmPublisher, getPool } from '../../../../../lib/tenants/wire';
 import {
@@ -48,17 +37,13 @@ import {
   COMPLETE_THRESHOLD,
   totalScriptedTurns,
 } from '../../../../../lib/wizard/interview-stub';
+import { withTenantSearchPath } from '../../../../../lib/tenants/search-path';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 interface RequestBody {
   projectId?: string;
-  /**
-   * Operator override — set to true to bypass the aggregate-score
-   * threshold (mirrors `Interviewer.forceClose`). Useful when the
-   * customer wants to advance with partial coverage.
-   */
   force?: boolean;
 }
 
@@ -94,57 +79,101 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     span.setAttribute('wizard.project_id', projectId);
     span.setAttribute('wizard.interview.force', force);
 
+    // Phase B B4: resolve tenant schema up-front so a malformed tenant
+    // never gets past authn.
+    let tenantSchema: string;
+    try {
+      tenantSchema = await resolveTenantSchema(tenantId);
+    } catch (err) {
+      return NextResponse.json(
+        {
+          error: 'tenant-schema-failed',
+          detail: err instanceof Error ? err.message : String(err),
+        },
+        { status: 500 },
+      );
+    }
+    span.setAttribute('wizard.tenant_schema', tenantSchema);
+
     const store = getInterviewThreadStore();
-    const thread = await store.read({ tenantId, projectId });
-    if (!thread) {
-      return NextResponse.json(
-        { error: 'no-thread', detail: 'start an interview before completing' },
-        { status: 404 },
+
+    // ----- Pre-check: thread state + coverage gate. Run inside a
+    // search-path-pinned transaction so future pg-backed checks resolve
+    // against the right schema. -----
+    type PreCheckResult =
+      | { kind: 'response'; status: number; body: Record<string, unknown> }
+      | {
+          kind: 'proceed';
+          score: number;
+          threadId: string;
+        };
+
+    let pre: PreCheckResult;
+    try {
+      pre = await withTenantSearchPath<PreCheckResult>(
+        getPool(),
+        tenantSchema,
+        async () => {
+          const thread = await store.read({ tenantId, projectId });
+          if (!thread) {
+            return {
+              kind: 'response',
+              status: 404,
+              body: { error: 'no-thread', detail: 'start an interview before completing' },
+            };
+          }
+          if (thread.completedAt) {
+            return {
+              kind: 'response',
+              status: 200,
+              body: {
+                ok: true,
+                alreadyComplete: true,
+                threadId: thread.threadId,
+                completedAt: thread.completedAt,
+              },
+            };
+          }
+
+          const score = aggregateScore(thread.pillarCoverage);
+          const userTurnCount = thread.qaPairs.filter((p) => p.role === 'user').length;
+          const isExhausted = userTurnCount >= totalScriptedTurns();
+          span.setAttribute('wizard.interview.aggregate_score', score);
+          span.setAttribute('wizard.interview.threshold', COMPLETE_THRESHOLD);
+          span.setAttribute('wizard.interview.exhausted', isExhausted);
+          if (!force && score < COMPLETE_THRESHOLD && !isExhausted) {
+            return {
+              kind: 'response',
+              status: 412,
+              body: {
+                error: 'coverage-below-threshold',
+                aggregateScore: score,
+                threshold: COMPLETE_THRESHOLD,
+                exhausted: isExhausted,
+              },
+            };
+          }
+          return { kind: 'proceed', score, threadId: thread.threadId };
+        },
       );
-    }
-    if (thread.completedAt) {
+    } catch (err) {
       return NextResponse.json(
         {
-          ok: true,
-          alreadyComplete: true,
-          threadId: thread.threadId,
-          completedAt: thread.completedAt,
+          error: 'precheck-failed',
+          detail: err instanceof Error ? err.message : String(err),
         },
-        { status: 200 },
+        { status: 500 },
       );
     }
 
-    // 1) Completeness gate (unless force).
-    //
-    // Either path passes:
-    //   (a) aggregate score across pillars >= 82 (engine spec §5), OR
-    //   (b) the customer has exhausted the scripted question bank —
-    //       in V1 that means they answered every available question and
-    //       there's nothing left to ask. Treat that as "done with what
-    //       we could ask" since the live critic path (Wave 2) is what
-    //       enforces the strict score floor; the wizard V1 stub bank
-    //       deliberately spans only a subset of pillars, so requiring
-    //       the full 82 here would make the gate unreachable without
-    //       force.
-    const score = aggregateScore(thread.pillarCoverage);
-    const userTurnCount = thread.qaPairs.filter((p) => p.role === 'user').length;
-    const isExhausted = userTurnCount >= totalScriptedTurns();
-    span.setAttribute('wizard.interview.aggregate_score', score);
-    span.setAttribute('wizard.interview.threshold', COMPLETE_THRESHOLD);
-    span.setAttribute('wizard.interview.exhausted', isExhausted);
-    if (!force && score < COMPLETE_THRESHOLD && !isExhausted) {
-      return NextResponse.json(
-        {
-          error: 'coverage-below-threshold',
-          aggregateScore: score,
-          threshold: COMPLETE_THRESHOLD,
-          exhausted: isExhausted,
-        },
-        { status: 412 },
-      );
+    if (pre.kind === 'response') {
+      return NextResponse.json(pre.body, { status: pre.status });
     }
 
-    // 2) Resolve the project's current state and check the FSM edge.
+    // ----- Resolve state store + current snapshot. We pin search_path
+    // again because the state-machine schema queries don't share the
+    // outer transaction (PgStateStore.transitionAtomic opens its own
+    // BEGIN). -----
     let stateStore;
     try {
       stateStore = await getStateStoreForTenant(tenantId);
@@ -160,7 +189,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     let snapshot;
     try {
-      snapshot = await getWizardState(projectId, { store: stateStore });
+      snapshot = await withTenantSearchPath(getPool(), tenantSchema, async () => {
+        return getWizardState(projectId, { store: stateStore });
+      });
     } catch (err) {
       if (err instanceof ProjectNotFoundError) {
         return NextResponse.json({ error: 'project-not-found', projectId }, { status: 404 });
@@ -175,13 +206,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     if (snapshot.state === TARGET_STATE) {
-      // Idempotent: already advanced, just mark the thread.
-      await store.markComplete({ tenantId, projectId });
+      await withTenantSearchPath(getPool(), tenantSchema, async () => {
+        await store.markComplete({ tenantId, projectId });
+      });
       return NextResponse.json(
         {
           ok: true,
           alreadyAdvanced: true,
-          threadId: thread.threadId,
+          threadId: pre.threadId,
           state: snapshot.state,
         },
         { status: 200 },
@@ -190,16 +222,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     if (!canTransition(snapshot.state, TARGET_STATE)) {
       return NextResponse.json(
-        {
-          error: 'invalid-transition',
-          from: snapshot.state,
-          to: TARGET_STATE,
-        },
+        { error: 'invalid-transition', from: snapshot.state, to: TARGET_STATE },
         { status: 409 },
       );
     }
 
-    // 3) Dispatch — same shape as the PATCH state route.
+    // The FSM dispatch happens OUTSIDE our wrapper because
+    // PgStateStore.transitionAtomic opens its own transaction. Its own
+    // queries are schema-qualified against `caia_meta`, so they don't
+    // need the tenant search_path; only the post-step thread-store
+    // write does, and we wrap it below.
     try {
       const { StateMachine } = await import('@caia/state-machine');
       const sm = new (StateMachine as unknown as new (opts: { store: unknown }) => {
@@ -210,14 +242,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         ): Promise<unknown>;
       })({ store: stateStore });
       const publisher = await getFsmPublisher();
-      const pool = getPool();
-      const tenantRow = await pool.query(
-        'SELECT schema_name FROM tenants WHERE tenant_id = $1 LIMIT 1',
-        [tenantId],
-      );
-      const tenantSchema = tenantRow.rowCount && tenantRow.rows[0]
-        ? String(tenantRow.rows[0].schema_name)
-        : 'unknown';
       await withFsmPublish(
         {
           publisher,
@@ -241,15 +265,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // 4) Mark the thread complete so future answer-route calls 409.
-    const completed = await store.markComplete({ tenantId, projectId });
+    const completed = await withTenantSearchPath(getPool(), tenantSchema, async () => {
+      return store.markComplete({ tenantId, projectId });
+    });
 
     return NextResponse.json(
       {
         ok: true,
         threadId: completed.threadId,
         state: TARGET_STATE,
-        aggregateScore: score,
+        aggregateScore: pre.score,
         completedAt: completed.completedAt,
         forced: force,
       },

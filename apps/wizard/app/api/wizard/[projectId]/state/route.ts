@@ -4,12 +4,14 @@
  *   GET   → WizardStateSnapshot (server reads @caia/state-machine store)
  *   PATCH → request a transition to `targetState`, validated by the FSM.
  *
- * Tenant isolation: every request must have a `x-tenant-id` header from
- * the middleware. We don't (yet) verify that the project belongs to the
- * tenant — that check happens inside the per-tenant Postgres schema (the
- * StateStore is constructed against the tenant's schema, so a foreign
- * project_id simply returns "not found"). Follow-up PR will add the
- * explicit cross-tenant audit log.
+ * Tenant isolation (Phase B B4): every pg-touching block is wrapped with
+ * `withTenantSearchPath` so the per-tenant search_path is scoped to the
+ * transaction.
+ *
+ * FSM lifecycle events (Phase B B5): the PATCH route wraps the
+ * `StateMachine.transition()` call with `withFsmPublish` so every FSM
+ * transition publishes `wizard.step.{transitioning,completed,failed}`
+ * on NATS via `@chiefaia/event-bus-nats`.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
@@ -22,24 +24,16 @@ import {
   getWizardState,
   ProjectNotFoundError,
 } from '../../../../../lib/wizard/state.server';
-import { getStateStoreForTenant } from '../../../../../lib/wizard/store-wire';
-import { withFsmPublish } from '../../../../../lib/wizard/fsm-events';
+import {
+  getStateStoreForTenant,
+  resolveTenantSchema,
+} from '../../../../../lib/wizard/store-wire';
 import { getFsmPublisher, getPool } from '../../../../../lib/tenants/wire';
-import type { Pool } from 'pg';
+import { withTenantSearchPath } from '../../../../../lib/tenants/search-path';
+import { withFsmPublish } from '../../../../../lib/wizard/fsm-events';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-
-async function resolveTenantSchema(tenantId: string): Promise<string> {
-  const pool: Pool = getPool();
-  const r = await pool.query(
-    'SELECT schema_name FROM tenants WHERE tenant_id = $1 LIMIT 1',
-    [tenantId],
-  );
-  if (r.rowCount === 0) throw new Error('tenant-not-found');
-  return String(r.rows[0].schema_name);
-}
 
 interface RouteContext {
   params: Promise<{ projectId: string }>;
@@ -57,8 +51,11 @@ export async function GET(_req: NextRequest, ctx: RouteContext): Promise<NextRes
   }
   const { projectId } = await Promise.resolve(ctx.params);
   try {
+    const tenantSchema = await resolveTenantSchema(tenantId);
     const store = await getStateStoreForTenant(tenantId);
-    const snapshot = await getWizardState(projectId, { store });
+    const snapshot = await withTenantSearchPath(getPool(), tenantSchema, async () => {
+      return getWizardState(projectId, { store });
+    });
     return NextResponse.json(snapshot);
   } catch (err) {
     if (err instanceof ProjectNotFoundError) {
@@ -94,46 +91,48 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextRe
   }
 
   try {
-    const store = await getStateStoreForTenant(tenantId);
-    const snapshot = await getWizardState(projectId, { store });
-    if (!canTransition(snapshot.state, body.targetState)) {
-      return NextResponse.json(
-        {
-          error: 'invalid-transition',
-          from: snapshot.state,
-          to: body.targetState,
-        },
-        { status: 409 },
-      );
-    }
-    // The actual transition is delegated to @caia/state-machine's
-    // StateMachine.transition(). We construct it on-demand here.
-    const { StateMachine } = await import('@caia/state-machine');
-    const sm = new (StateMachine as unknown as new (opts: { store: unknown }) => {
-      transition(
-        projectId: string,
-        target: ProjectState,
-        opts?: { reason?: string },
-      ): Promise<unknown>;
-    })({ store });
-    const publisher = await getFsmPublisher();
     const tenantSchema = await resolveTenantSchema(tenantId);
-    await withFsmPublish(
-      {
-        publisher,
-        projectId,
-        fromState: snapshot.state,
-        toState: body.targetState,
-        tenantSchema,
-        actor: 'api',
-      },
-      () => sm.transition(projectId, body.targetState as ProjectState, { reason: body.reason }),
-    );
-    const next = await getWizardState(projectId, { store });
+    const store = await getStateStoreForTenant(tenantId);
+    const publisher = await getFsmPublisher();
+    const next = await withTenantSearchPath(getPool(), tenantSchema, async () => {
+      const snapshot = await getWizardState(projectId, { store });
+      if (!canTransition(snapshot.state, body.targetState as ProjectState)) {
+        throw new InvalidTransitionError(snapshot.state, body.targetState as ProjectState);
+      }
+      // The actual transition is delegated to @caia/state-machine's
+      // StateMachine.transition(). We construct it on-demand here.
+      const { StateMachine } = await import('@caia/state-machine');
+      const sm = new (StateMachine as unknown as new (opts: { store: unknown }) => {
+        transition(
+          projectId: string,
+          target: ProjectState,
+          opts?: { reason?: string },
+        ): Promise<unknown>;
+      })({ store });
+      // Wrap the FSM call with the B5 NATS lifecycle publish ring.
+      await withFsmPublish(
+        {
+          publisher,
+          projectId,
+          fromState: snapshot.state,
+          toState: body.targetState as ProjectState,
+          tenantSchema,
+          actor: 'api',
+        },
+        () => sm.transition(projectId, body.targetState as ProjectState, { reason: body.reason }),
+      );
+      return getWizardState(projectId, { store });
+    });
     return NextResponse.json(next);
   } catch (err) {
     if (err instanceof ProjectNotFoundError) {
       return NextResponse.json({ error: 'not-found', projectId }, { status: 404 });
+    }
+    if (err instanceof InvalidTransitionError) {
+      return NextResponse.json(
+        { error: 'invalid-transition', from: err.from, to: err.to },
+        { status: 409 },
+      );
     }
     return NextResponse.json(
       {
@@ -142,5 +141,18 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextRe
       },
       { status: 500 },
     );
+  }
+}
+
+/**
+ * Internal-only — surfaces an FSM "this is not a legal edge" rejection
+ * out of the `withTenantSearchPath` callback so the wrapper can roll the
+ * transaction back. Caught at the outer try/catch and translated to a
+ * 409 response.
+ */
+class InvalidTransitionError extends Error {
+  constructor(public readonly from: ProjectState, public readonly to: ProjectState) {
+    super(`invalid-transition: ${from} -> ${to}`);
+    this.name = 'InvalidTransitionError';
   }
 }
