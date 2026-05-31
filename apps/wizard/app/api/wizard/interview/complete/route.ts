@@ -29,12 +29,19 @@
  *   - Re-uses `getInterviewThreadStore` (the shared singleton) so the
  *     completeness check + the mark-complete write are against the
  *     same row the answer route writes.
+ *   - Phase B B3: when live-mode wires a critic-coverage decision
+ *     through `@chiefaia/claude-spawner`, the call site is wrapped
+ *     with `withClaudeSpawnerSpan` so Tempo sees the wizard step
+ *     attributes (`caia.wizard.step=interview.complete`, project_id,
+ *     prompt_template, model). V1 has no live critic call — we wrap
+ *     the FSM transition closure anyway so the span shows up with
+ *     `caia.claude.live=false` and operators can A/B the rollout.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { headers } from 'next/headers';
 import { canTransition, type ProjectState } from '@caia/state-machine';
-import { createTracer } from '@chiefaia/tracing';
+import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
 import { getStateStoreForTenant } from '../../../../../lib/wizard/store-wire';
 import {
   getWizardState,
@@ -63,6 +70,12 @@ interface RequestBody {
 const tracer = createTracer('chiefaia.dashboard.wizard.interview');
 
 const TARGET_STATE: ProjectState = 'interview-complete';
+
+/** Claude model the live critic-coverage decision uses (Wave 2). */
+const COMPLETE_LIVE_MODEL = 'claude-opus-4-6';
+
+/** Prompt template the critic-coverage path invokes (Wave 2). */
+const COMPLETE_PROMPT_TEMPLATE = 'critic:coverage-decision.v1';
 
 async function readTenantId(): Promise<string | null> {
   const h = await headers();
@@ -197,7 +210,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // 3) Dispatch — same shape as the PATCH state route.
+    // 3) Dispatch — same shape as the PATCH state route. Wrap the
+    //    transition (which will fan out to a live critic-coverage
+    //    claude-spawner call in Wave 2) with `withClaudeSpawnerSpan`
+    //    so Tempo always carries the wizard step attributes — even in
+    //    V1 where no claude call actually happens.
     try {
       const { StateMachine } = await import('@caia/state-machine');
       const sm = new (StateMachine as unknown as new (opts: { store: unknown }) => {
@@ -207,9 +224,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           opts?: { reason?: string },
         ): Promise<unknown>;
       })({ store: stateStore });
-      await sm.transition(projectId, TARGET_STATE, {
-        reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
-      });
+      await withClaudeSpawnerSpan(
+        {
+          step: 'interview.complete',
+          projectId,
+          tenantId,
+          promptTemplate: COMPLETE_PROMPT_TEMPLATE,
+          model: COMPLETE_LIVE_MODEL,
+          extra: {
+            'caia.claude.live': false,
+            'caia.wizard.interview.force': force,
+          },
+        },
+        async () =>
+          sm.transition(projectId, TARGET_STATE, {
+            reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
+          }),
+      );
     } catch (err) {
       return NextResponse.json(
         {

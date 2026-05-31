@@ -4222,6 +4222,9 @@ importers:
       '@chiefaia/vitest-config':
         specifier: workspace:*
         version: link:../../configs/vitest-config
+      '@opentelemetry/context-async-hooks':
+        specifier: ^2.7.0
+        version: 2.7.0(@opentelemetry/api@1.9.1)
       typescript:
         specifier: ^5.4.5
         version: 5.9.3

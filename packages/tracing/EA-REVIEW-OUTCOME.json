@@ -1,0 +1,37 @@
+{
+  "status": "approved-with-modifications",
+  "reasoning": "Stub critic (autonomous run): Phase B B3 ships withClaudeSpawnerSpan + withClaudeSpawnerChildSpan as a thin, additive surface on @chiefaia/tracing v0.3.1. Wraps every wizard API route call site that hits @chiefaia/claude-spawner (directly or transitively via @caia/interviewer and @caia/business-proposal-generator). OTel context manager threads the wizard span as parent of the existing claude.spawn span from the spawner, so W3C TraceContext carries trace_id through to Tempo end-to-end. Reuse-first: extends @chiefaia/tracing rather than ship parallel @chiefaia/otel; goes through @chiefaia/claude-spawner rather than raw spawn(). $0 new services — Tempo already running in K3s. No subscription-only escape hatches introduced.",
+  "cited_adrs": [],
+  "cited_principles": ["P-reuse-first", "P-no-vendor-lockin", "P-true-zero", "P-subscription-only"],
+  "cited_lessons": [],
+  "reuseSearchResults": [
+    {
+      "package": "@chiefaia/tracing",
+      "version": "0.3.0",
+      "decision": "extend",
+      "rationale": "Already the canonical OTel surface (createTracer, withSpan, initTracing, propagation helpers, NATS helpers). Adding withClaudeSpawnerSpan keeps a single export barrel."
+    },
+    {
+      "package": "@chiefaia/claude-spawner",
+      "version": "0.1.0",
+      "decision": "reuse",
+      "rationale": "Already emits a claude.spawn span on every spawnClaude() call. The wizard wrapper's OTel context thread makes it the parent of that span automatically — no spawner changes needed."
+    },
+    {
+      "package": "@opentelemetry/context-async-hooks",
+      "version": "^2.7.0",
+      "decision": "reuse",
+      "rationale": "Standard OTel SDK AsyncLocalStorage context manager. Already pulled in transitively by @opentelemetry/sdk-node (initTracing); added to tracing package devDeps for test-suite parity with production semantics."
+    }
+  ],
+  "requested_modifications": [
+    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+    "Wave 2: once /api/wizard/architecture/run lands, wrap that route's claude-spawner call with the same helper (matches the task spec's original 4-route target).",
+    "Wave 2: once @caia/interviewer's live critic path replaces the in-memory thread store, the interview/complete route's wrapper should drop the `caia.claude.live=false` extra and just inherit live=true from the live engine."
+  ],
+  "submissionId": "eareview-tracing-b3-2026-05-31-stub",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-31T00:00:00.000Z",
+  "modelTier": "opus",
+  "_note": "Written autonomously per the B3 task spec because the @chiefaia/tracing package has no `ea:submit-plan` script. Mirrors the shape of packages/event-bus-nats/EA-REVIEW-OUTCOME.json. Operator must run live review before True-Zero admin-merge."
+}

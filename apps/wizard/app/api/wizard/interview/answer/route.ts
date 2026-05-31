@@ -22,6 +22,12 @@
  *   - Uses the canonical `withSpan` tracer from `@chiefaia/tracing` to
  *     wrap each turn (so Tempo gets one span per Q&A pair when the
  *     dashboard pod has the tracer initialized).
+ *   - Phase B B3: wraps the live-path claude-spawner call site with
+ *     `withClaudeSpawnerSpan` so Tempo sees a `claude.spawn.wizard`
+ *     child span carrying `caia.wizard.step`, `caia.wizard.project_id`,
+ *     `caia.claude.prompt_template`, and `caia.claude.model`. The
+ *     OTel context manager threads the wizard span as the parent of
+ *     the inner `claude.spawn` span the spawner emits.
  *   - Does NOT import shadcn / raw Radix.
  *
  * Subscription-only contract: the live path goes through
@@ -35,7 +41,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { headers } from 'next/headers';
 import { randomUUID } from 'node:crypto';
 import { PILLAR_IDS } from '@caia/interviewer';
-import { createTracer } from '@chiefaia/tracing';
+import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
 import {
   emptyPillarCoverage,
   type PillarCoverageMap,
@@ -85,6 +91,20 @@ async function readTenantId(): Promise<string | null> {
 }
 
 const tracer = createTracer('chiefaia.dashboard.wizard.interview');
+
+/**
+ * Claude model the live interviewer path uses. Hard-coded here so the
+ * span's `caia.claude.model` attribute matches what the engine
+ * ultimately spawns. Wave 2 may surface this via env / config.
+ */
+const INTERVIEW_LIVE_MODEL = 'claude-opus-4-6';
+
+/**
+ * Prompt template identifier the wizard interviewer step invokes. Used
+ * for Tempo filtering when one wizard step issues several prompts —
+ * here it's a single deterministic playbook lookup per turn.
+ */
+const INTERVIEW_PROMPT_TEMPLATE = 'interviewer:playbook.v1';
 
 function projectQuestion(q: ScriptedQuestion | null): InterviewAnswerResponse['nextQuestion'] {
   if (!q) return null;
@@ -146,14 +166,40 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       span.setAttribute('wizard.tenant_id', tenantId);
       span.setAttribute('wizard.project_id', projectId);
       span.setAttribute('wizard.interview.source', useLive ? 'live' : 'memory');
+
+      // Build the claude-spawner span helper closure once per request.
+      // In the memory/V1 path, the inner store.start/advance calls
+      // don't actually hit claude — but we still wrap so the span
+      // appears in Tempo with a `caia.claude.live=false` attribute,
+      // making it trivial to count V1 vs live usage. Live-path calls
+      // (Wave 2 `@caia/interviewer`'s `Interviewer.advance` → engine →
+      // claude-spawner) flow through this same wrapper, and the OTel
+      // context manager threads our wizard span as parent of the
+      // `claude.spawn` span emitted by `@chiefaia/claude-spawner`.
+      const wrapClaude = <T,>(turn: number, fn: () => Promise<T>): Promise<T> =>
+        withClaudeSpawnerSpan(
+          {
+            step: 'interview.answer',
+            projectId,
+            tenantId,
+            promptTemplate: INTERVIEW_PROMPT_TEMPLATE,
+            model: INTERVIEW_LIVE_MODEL,
+            turn,
+            extra: { 'caia.claude.live': useLive },
+          },
+          fn,
+        );
+
       const existing = await store.read({ tenantId, projectId });
       // First call: start the thread.
       if (!existing) {
-        const started = await store.start({
-          tenantId,
-          projectId,
-          threadId: randomUUID(),
-        });
+        const started = await wrapClaude(1, () =>
+          store.start({
+            tenantId,
+            projectId,
+            threadId: randomUUID(),
+          }),
+        );
         return NextResponse.json(envelope(started, useLive ? 'live' : 'memory'));
       }
       if (existing.completedAt) {
@@ -164,18 +210,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
       if (!reply || reply.trim().length === 0) {
         // Idempotent re-read — caller is asking for the current state.
-        const reread = await store.start({
-          tenantId,
-          projectId,
-          threadId: existing.threadId,
-        });
+        const currentTurn =
+          existing.qaPairs.filter((p) => p.role === 'user').length + 1;
+        const reread = await wrapClaude(currentTurn, () =>
+          store.start({
+            tenantId,
+            projectId,
+            threadId: existing.threadId,
+          }),
+        );
         return NextResponse.json(envelope(reread, useLive ? 'live' : 'memory'));
       }
-      const advanced = await store.advance({
-        tenantId,
-        projectId,
-        userReply: reply,
-      });
+      const nextTurn = existing.qaPairs.filter((p) => p.role === 'user').length + 1;
+      const advanced = await wrapClaude(nextTurn, () =>
+        store.advance({
+          tenantId,
+          projectId,
+          userReply: reply,
+        }),
+      );
       return NextResponse.json(envelope(advanced, useLive ? 'live' : 'memory'));
     });
   } catch (err) {
@@ -188,6 +241,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 }
+
+// Touch the stub helper so the import isn't tree-shaken (used by
+// the test suite's hot-path that asserts on the empty coverage map).
+void emptyPillarCoverage;
 
 // (Test-only helpers like `__emptyPillarCoverageForTests` are NOT
 // re-exported from a route module — Next.js's route export validator

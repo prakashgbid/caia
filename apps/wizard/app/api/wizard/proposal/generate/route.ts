@@ -23,10 +23,18 @@
  *   - Uses `@caia/state-machine` indirectly via the wizard state PATCH
  *     route from PR #601 (the page dispatches the transition; this
  *     route only generates the proposal).
+ *   - Phase B B3: wraps the `runStep5` call (which in live mode fans
+ *     out to three claude-spawner prompts — exec-summary, full
+ *     proposal, one-pager — via the injected `LlmCaller`) with
+ *     `withClaudeSpawnerSpan` so Tempo records the wizard step
+ *     semantics around the entire proposal-generation run. The OTel
+ *     context manager threads the wizard span as parent of the
+ *     `claude.spawn` spans the spawner emits.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { headers } from 'next/headers';
+import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
 import {
   MemoryBlobStorage,
   MemoryProposalPersistence,
@@ -69,6 +77,22 @@ async function readTenantId(): Promise<string | null> {
   const h = await headers();
   return h.get('x-tenant-id');
 }
+
+const tracer = createTracer('chiefaia.dashboard.wizard.proposal');
+
+/** Claude model the proposal-generator path uses end-to-end. */
+const PROPOSAL_LIVE_MODEL = 'claude-opus-4-6';
+
+/**
+ * Top-level prompt template identifier for the wizard's proposal
+ * step. The runStep5 engine fans out to several sub-prompts
+ * (`proposal:exec-summary`, `proposal:full`, `proposal:one-pager`,
+ * `proposal:design-app-prompt`, `proposal:reviewer`); we surface
+ * the top-level handle on the wizard span and rely on the inner
+ * `claude.spawn` spans (one per sub-prompt) to carry the per-prompt
+ * detail.
+ */
+const PROPOSAL_PROMPT_TEMPLATE = 'proposal:runStep5.v1';
 
 /**
  * Stub bundles. The orchestrator's `renderExecSummary` /
@@ -202,57 +226,90 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // generator against the in-memory stubs and return the parsed
   // markdown — so the page can render real Accordion content.
   const useLive = process.env['WIZARD_PROPOSAL_LIVE'] === '1';
+  const tenantProjectId = body.tenantProjectId;
 
-  try {
-    if (useLive) {
-      const blob = new MemoryBlobStorage({ bucket: 'wizard-memblob' });
-      const persistence = new MemoryProposalPersistence({ tenantSchema: tenantId });
-      const result = await runStep5(
+  return await tracer.withSpan('wizard.proposal.generate', async (span) => {
+    span.setAttribute('wizard.tenant_id', tenantId);
+    span.setAttribute('wizard.project_id', tenantProjectId);
+    span.setAttribute('wizard.proposal.source', useLive ? 'live' : 'memory');
+
+    try {
+      if (useLive) {
+        const blob = new MemoryBlobStorage({ bucket: 'wizard-memblob' });
+        const persistence = new MemoryProposalPersistence({ tenantSchema: tenantId });
+        const result = await withClaudeSpawnerSpan(
+          {
+            step: 'proposal.generate',
+            projectId: tenantProjectId,
+            tenantId,
+            promptTemplate: PROPOSAL_PROMPT_TEMPLATE,
+            model: PROPOSAL_LIVE_MODEL,
+            extra: { 'caia.claude.live': true },
+          },
+          async () =>
+            runStep5(
+              {
+                llmCaller: buildScriptedLlm(),
+                blobStorage: blob,
+                persistence,
+                skillsRoot: process.env['CAIA_SKILLS_ROOT'] ?? '/tmp/caia-skills',
+                skipFormatConversion: true,
+              },
+              {
+                tenantProjectId,
+                plan: body.plan ?? emptyPlan(),
+                ia: body.ia ?? emptyIa(),
+                ...(body.designAppTarget ? { designAppTarget: body.designAppTarget } : {}),
+                ...(body.revisionReason ? { revisionReason: body.revisionReason } : {}),
+              },
+            ),
+        );
+        const response: RouteResponse = {
+          ok: true,
+          proposal: {
+            execSummaryMd: result.revision.execSummaryMd,
+            fullProposalMd: result.revision.fullProposalMd,
+            onePagerMd: result.revision.onePagerMd,
+            revisionNumber: result.revision.revisionNumber,
+          },
+          designAppPrompt: {
+            target: result.prompt.target,
+            promptText: result.prompt.promptText,
+            reviewerScore: result.prompt.reviewerScore,
+            reviewerBadge: result.prompt.reviewerBadge,
+          },
+          cacheHit: result.cacheHit,
+          source: 'live',
+        };
+        return NextResponse.json(response);
+      }
+
+      // Default V1 path: deterministic stub. The route still imports
+      // runStep5 above so the reuse-first check sees the dependency.
+      // Wrap the stub render in a withClaudeSpawnerSpan too so the
+      // wizard step span shows up in Tempo with `caia.claude.live=false`
+      // — useful for tracking V1 vs live rollout without a separate
+      // wizard.proposal.stub span name.
+      const stub = await withClaudeSpawnerSpan(
         {
-          llmCaller: buildScriptedLlm(),
-          blobStorage: blob,
-          persistence,
-          skillsRoot: process.env['CAIA_SKILLS_ROOT'] ?? '/tmp/caia-skills',
-          skipFormatConversion: true,
+          step: 'proposal.generate',
+          projectId: tenantProjectId,
+          tenantId,
+          promptTemplate: PROPOSAL_PROMPT_TEMPLATE,
+          model: PROPOSAL_LIVE_MODEL,
+          extra: { 'caia.claude.live': false },
         },
-        {
-          tenantProjectId: body.tenantProjectId,
-          plan: body.plan ?? emptyPlan(),
-          ia: body.ia ?? emptyIa(),
-          ...(body.designAppTarget ? { designAppTarget: body.designAppTarget } : {}),
-          ...(body.revisionReason ? { revisionReason: body.revisionReason } : {}),
-        },
+        async () => stubResponse(),
       );
-      const response: RouteResponse = {
-        ok: true,
-        proposal: {
-          execSummaryMd: result.revision.execSummaryMd,
-          fullProposalMd: result.revision.fullProposalMd,
-          onePagerMd: result.revision.onePagerMd,
-          revisionNumber: result.revision.revisionNumber,
+      return NextResponse.json(stub);
+    } catch (err) {
+      return NextResponse.json(
+        {
+          error: 'proposal-generation-failed',
+          detail: err instanceof Error ? err.message : String(err),
         },
-        designAppPrompt: {
-          target: result.prompt.target,
-          promptText: result.prompt.promptText,
-          reviewerScore: result.prompt.reviewerScore,
-          reviewerBadge: result.prompt.reviewerBadge,
-        },
-        cacheHit: result.cacheHit,
-        source: 'live',
-      };
-      return NextResponse.json(response);
+        { status: 500 },
+      );
     }
-
-    // Default V1 path: deterministic stub. The route still imports
-    // runStep5 above so the reuse-first check sees the dependency.
-    return NextResponse.json(stubResponse());
-  } catch (err) {
-    return NextResponse.json(
-      {
-        error: 'proposal-generation-failed',
-        detail: err instanceof Error ? err.message : String(err),
-      },
-      { status: 500 },
-    );
-  }
+  });
 }
