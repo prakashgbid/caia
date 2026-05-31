@@ -12,6 +12,13 @@
  * global `tenants` table on every request that's just rendering canned
  * markdown.
  *
+ * Phase B B7 (2026-05-31): the generator invocation runs under
+ * `wizardWithRetry`. `runStep5` calls Claude up to four times and may
+ * fail mid-way on transient Claude issues; the wrapper retries the
+ * whole run and surfaces progress events to the wizard UI via the
+ * progress channel. On final exhaustion the response is a 503 with
+ * `errorClass`.
+ *
  * Phase B B3 (2026-05-31): `runStep5` (which in live mode fans out to
  * multiple claude-spawner prompts via the injected `LlmCaller`) is
  * wrapped in `withClaudeSpawnerSpan` so Tempo records the wizard
@@ -41,6 +48,7 @@ import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
 import { resolveTenantSchema } from '../../../../../lib/wizard/store-wire';
 import { getPool } from '../../../../../lib/tenants/wire';
 import { withTenantSearchPath } from '../../../../../lib/tenants/search-path';
+import { wizardWithRetry } from '../../../../../lib/wizard/retry-spawner';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -69,6 +77,8 @@ interface RouteResponse {
   };
   cacheHit: boolean;
   source: 'memory' | 'live';
+  /** B7 — number of attempts the retry envelope actually ran (1..4). */
+  attemptsRun: number;
 }
 
 async function readTenantId(): Promise<string | null> {
@@ -161,7 +171,7 @@ function emptyPlan(): GenerateProposalInput['plan'] {
   };
 }
 
-function stubResponse(): RouteResponse {
+function stubResponse(attemptsRun = 1): RouteResponse {
   return {
     ok: true,
     proposal: {
@@ -182,6 +192,7 @@ function stubResponse(): RouteResponse {
     },
     cacheHit: false,
     source: 'memory',
+    attemptsRun,
   };
 }
 
@@ -208,8 +219,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     span.setAttribute('wizard.project_id', tenantProjectId);
     span.setAttribute('wizard.proposal.source', useLive ? 'live' : 'memory');
 
-    try {
-      if (useLive) {
+    const retryResult = await wizardWithRetry<RouteResponse>(
+      { key: { tenantId, projectId: tenantProjectId }, step: 'proposal.generate' },
+      async () => {
+        try {
+          if (useLive) {
         // Phase B B4: resolve + pin the tenant search_path only on the
         // live path (the stub path is pure in-memory and never touches
         // pg). Wrap the whole generator call so any persistence write
@@ -268,37 +282,56 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                   },
                   cacheHit: result.cacheHit,
                   source: 'live',
+                  attemptsRun: 1,
                 };
               },
             ),
         );
-        return NextResponse.json(response);
-      }
+        return { ok: true, value: response };
+          }
 
-      // Phase B B3: wrap the stub render so the wizard step span shows
+          // Phase B B3: wrap the stub render so the wizard step span shows
       // up in Tempo with `caia.claude.live=false` — useful for tracking
       // V1 vs live rollout without a separate wizard.proposal.stub
       // span name.
-      const stub = await withClaudeSpawnerSpan(
-        {
-          step: 'proposal.generate',
-          projectId: tenantProjectId,
-          tenantId,
-          promptTemplate: PROPOSAL_PROMPT_TEMPLATE,
-          model: PROPOSAL_LIVE_MODEL,
-          extra: { 'caia.claude.live': false },
-        },
-        async () => stubResponse(),
-      );
-      return NextResponse.json(stub);
-    } catch (err) {
+          const stub = await withClaudeSpawnerSpan(
+            {
+              step: 'proposal.generate',
+              projectId: tenantProjectId,
+              tenantId,
+              promptTemplate: PROPOSAL_PROMPT_TEMPLATE,
+              model: PROPOSAL_LIVE_MODEL,
+              extra: { 'caia.claude.live': false },
+            },
+            async () => stubResponse(),
+          );
+          return { ok: true, value: stub };
+        } catch (err) {
+          return {
+            ok: false,
+            error: err instanceof Error ? err : new Error(String(err)),
+          };
+        }
+      },
+    );
+
+    span.setAttribute('caia.retry.attempts_run', retryResult.attemptsRun);
+    span.setAttribute('caia.retry.final_class', retryResult.finalErrorClass ?? 'none');
+
+    if (!retryResult.ok) {
       return NextResponse.json(
         {
-          error: 'proposal-generation-failed',
-          detail: err instanceof Error ? err.message : String(err),
+          error: 'proposal-generation-retry-exhausted',
+          attemptsRun: retryResult.attemptsRun,
+          errorClass: retryResult.finalErrorClass,
+          detail: retryResult.diagnostic,
         },
-        { status: 500 },
+        { status: 503 },
       );
     }
+
+    const response = retryResult.value!;
+    response.attemptsRun = retryResult.attemptsRun;
+    return NextResponse.json(response);
   });
 }

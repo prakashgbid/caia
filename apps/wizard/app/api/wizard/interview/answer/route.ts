@@ -19,6 +19,16 @@
  * span as the parent of the inner `claude.spawn` span the spawner
  * emits — W3C TraceContext flows through to Tempo end-to-end.
  *
+ * Phase B B7 (2026-05-31): the store advance call runs under
+ * `wizardWithRetry` (the wizard adapter around
+ * `@chiefaia/claude-spawner.withRetry`). On the V1 memory path this
+ * fires `onAttempt(1)` + `onFinal(1)` and that's it; on the live path
+ * a transient Claude failure triggers up to 3 retries with 30s/60s/120s
+ * backoff. The UI polls `/api/wizard/[projectId]/progress` to render
+ * the retry timer. On final retry exhaustion the route returns 503
+ * with a sanitised `errorClass` so the wizard step UI shows an explicit
+ * failure state.
+ *
  * Reuse-first compliance:
  *   - Pulls `PILLAR_IDS` from `@caia/interviewer`.
  *   - Uses `withSpan` + `withClaudeSpawnerSpan` from `@chiefaia/tracing`.
@@ -43,6 +53,7 @@ import {
   type AdvanceResult,
 } from '../../../../../lib/wizard/interview-thread-store';
 import { withTenantSearchPath } from '../../../../../lib/tenants/search-path';
+import { wizardWithRetry } from '../../../../../lib/wizard/retry-spawner';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -197,7 +208,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           fn,
         );
 
-      const result = await runStoreWork(tenantSchema, async () => {
+      type StoreOk =
+        | { kind: 'envelope'; body: ReturnType<typeof envelope> }
+        | { kind: 'error'; status: number; body: Record<string, unknown> };
+      const retryResult = await wizardWithRetry<StoreOk>(
+        { key: { tenantId, projectId }, step: 'interview.answer' },
+        async () => {
+          const inner = await runStoreWork(tenantSchema, async () => {
         const existing = await store.read({ tenantId, projectId });
         if (!existing) {
           return {
@@ -240,12 +257,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             useLive ? 'live' : 'memory',
           ),
         };
-      });
+          });
+          return { ok: true, value: inner } as { ok: true; value: StoreOk };
+        },
+      );
 
+      span.setAttribute('caia.retry.attempts_run', retryResult.attemptsRun);
+      span.setAttribute('caia.retry.final_class', retryResult.finalErrorClass ?? 'none');
+
+      if (!retryResult.ok) {
+        return NextResponse.json(
+          {
+            error: 'interview-advance-retry-exhausted',
+            attemptsRun: retryResult.attemptsRun,
+            errorClass: retryResult.finalErrorClass,
+            detail: retryResult.diagnostic,
+          },
+          { status: 503 },
+        );
+      }
+      const result = retryResult.value!;
       if (result.kind === 'error') {
         return NextResponse.json(result.body, { status: result.status });
       }
-      return NextResponse.json(result.body);
+      return NextResponse.json({ ...result.body, attemptsRun: retryResult.attemptsRun });
     });
   } catch (err) {
     return NextResponse.json(

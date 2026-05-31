@@ -2,6 +2,7 @@
  * @chiefaia/claude-spawner — public surface.
  *
  * See `spawn.ts` file-level comment for design + constraint rationale.
+ * See `retry.ts` for the B7 retry/backoff wrapper.
  */
 
 export {
@@ -35,3 +36,20 @@ export {
 } from './claude-wrap.js';
 
 export type { ClaudeWrapDeps, ClaudeWrapResult, ParsedArgs, RouteDecision } from './claude-wrap.js';
+
+export {
+  withRetry,
+  defaultClassifyError,
+  computeBackoffDelay,
+  defaultSleep,
+  fromSpawnResult,
+  sanitizeDiagnostic,
+} from './retry.js';
+
+export type {
+  RetryAttemptOutcome,
+  RetryErrorClass,
+  RetryProgressEvent,
+  WithRetryOptions,
+  WithRetryResult,
+} from './retry.js';

@@ -22,6 +22,7 @@
     "@caia/onboarding": "workspace:*",
     "@caia/state-machine": "workspace:*",
     "@caia/ui": "workspace:*",
+    "@chiefaia/claude-spawner": "workspace:*",
     "@chiefaia/event-bus-internal": "workspace:*",
     "@chiefaia/event-bus-nats": "workspace:*",
     "@chiefaia/events": "workspace:*",
