@@ -1,0 +1,87 @@
+# chiefaia-wizard HorizontalPodAutoscaler — Phase C1.
+#
+# Scales `deployment.apps/chiefaia-wizard` between 1 and 5 replicas based
+# on average CPU and memory utilisation per pod. The Deployment ships
+# resource requests of cpu=250m / memory=512Mi (see 10-deployment.yaml),
+# so the autoscaler treats those values as 100% utilisation.
+#
+# Threshold rationale (operator-ratified for V1):
+#   - CPU 70%:    p99 of the post-launch baseline averaged ~30% per
+#                 replica during a 10-rps wizard step burst; 70% leaves
+#                 headroom for OTel + tracing overhead before adding pods.
+#   - Memory 80%: Next.js standalone holds the .next cache hot; memory
+#                 trends upward over hours of uptime. 80% is the
+#                 conservative "scale before we get OOMKilled" line that
+#                 chiefaia-dashboard (sibling) uses too.
+#
+# Sticky-session interaction (Phase C7):
+#   The Istio DestinationRule added in C7 routes by the
+#   `chiefaia-wizard-session` cookie via consistentHash, so scale events
+#   produced by this HPA only drain *new* sessions to fresh pods —
+#   in-flight SSE/WebSocket connections stay pinned to their original
+#   replica until the cookie rolls.
+#
+# behavior block:
+#   Default upscale and downscale stabilisation windows are deliberately
+#   conservative to avoid flapping under bursty wizard traffic. The
+#   `scaleDown.stabilizationWindowSeconds: 300` (5 min) matches the
+#   wizard's median session length: we don't want to evict a replica
+#   that still has live wizard interviewers on it.
+#
+# Reuse-first compliance:
+#   - autoscaling/v2 (standard since k8s 1.23). No CRDs, no Helm chart,
+#     no parallel autoscaler. metrics-server in kube-system provides
+#     the CPU/memory signal already used by chiefaia-dashboard's HPA.
+#   - Labels mirror the chiefaia-wizard Deployment exactly so kustomize
+#     overlays + label-selector queries (`kubectl get hpa -l
+#     app.kubernetes.io/name=chiefaia-wizard`) work out of the box.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: chiefaia-wizard
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-wizard
+    app.kubernetes.io/component: autoscaler
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: chiefaia-wizard
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      selectPolicy: Max
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      selectPolicy: Min
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+        - type: Pods
+          value: 1
+          periodSeconds: 120

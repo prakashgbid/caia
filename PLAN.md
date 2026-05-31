@@ -35,7 +35,8 @@ downscale event.
 2. **`infra/dashboard/50-hpa.yaml`** — structurally symmetric HPA
    targeting `deployment.apps/chiefaia-dashboard`.
 3. **`apps/wizard/tests/wizard-shell/hpa-manifest.test.ts`** —
-   7 vitest cases asserting both manifests' contract:
+   7 vitest cases (13 it-blocks via it.each) asserting both manifests'
+   contract:
    - autoscaling/v2 apiVersion + kind (x2)
    - scaleTargetRef → Deployment in chiefaia ns (x2)
    - 1..5 replica band (x2)
@@ -43,9 +44,7 @@ downscale event.
    - canonical chiefaia labels (x2)
    - anti-flap behavior block w/ 300s scale-down window (x2)
    - structural symmetry between the two HPAs (x1)
-   ⇒ 13 assertions across 7 `it`-blocks (the first 6 are `it.each` over
-   `[wizard, dashboard]`, the 7th is a cross-manifest invariant).
-4. **`.changeset/c1-hpa-wizard-dashboard.md`** — `none` bump (infra
+4. **`.changeset/c1-hpa-wizard-dashboard.md`** — none-bump (infra
    only; no published package surface changes).
 
 ### 2.2 Out of scope
@@ -73,7 +72,7 @@ downscale event.
 
 ## 4. Test strategy
 
-| Layer | File | `it`-blocks | Assertions |
+| Layer | File | it-blocks | Assertions |
 | --- | --- | --- | --- |
 | autoscaling/v2 apiVersion + kind | `apps/wizard/tests/wizard-shell/hpa-manifest.test.ts` | 1 (×2 targets) | 4 |
 | scaleTargetRef Deployment shape | same file | 1 (×2 targets) | 8 |
@@ -82,24 +81,24 @@ downscale event.
 | Canonical labels | same file | 1 (×2 targets) | 6 |
 | Anti-flap behavior block | same file | 1 (×2 targets) | 8 |
 | Cross-manifest symmetry | same file | 1 | 1 |
-| **Total new** | | **7** | **35** |
+| **Total new** | | **7 it-blocks / 13 cases via it.each** | **35** |
 
-7 new vitest cases ≥ the brief's "≥5 tests" requirement. All 7 + all
-prior wizard tests pass.
+7 new vitest cases ≥ the brief's "≥5 tests" requirement. All 13 pass
+locally (verified pre-push via `pnpm vitest run tests/wizard-shell/hpa-manifest.test.ts`).
 
 ## 5. Verification proof (recorded post-merge in PR body)
 
 1. `kubectl apply --dry-run=server -f infra/wizard/50-hpa.yaml -f infra/dashboard/50-hpa.yaml`
-   → exit 0, both HPAs validated server-side.
+   → exit 0, both HPAs validated server-side (already verified pre-merge).
 2. `kubectl apply -f infra/wizard/50-hpa.yaml -f infra/dashboard/50-hpa.yaml`
    → `horizontalpodautoscaler.autoscaling/chiefaia-wizard created`,
      `horizontalpodautoscaler.autoscaling/chiefaia-dashboard created`.
 3. `kubectl -n chiefaia get hpa -o wide` → TARGETS column shows live
    `<cpu>%/70%, <mem>%/80%` values (metrics-server feeding data).
-4. Synthetic-load verification — `hey -z 60s -c 50` against
-   `https://dashboard.chiefaia.com/api/health` (warm path) drives CPU
-   over the 70% threshold for >60s; `kubectl -n chiefaia get hpa
-   chiefaia-wizard --watch` shows `REPLICAS` rise from 1→{2,3}.
+4. Synthetic-load verification — `hey -z 60s -c 50` against the dashboard
+   health endpoint drives CPU over the 70% threshold for >60s;
+   `kubectl -n chiefaia get hpa chiefaia-wizard --watch` shows `REPLICAS`
+   rise from 1→{2,3}.
 5. Scale-down validated by stopping the load + waiting 300s + observing
    `REPLICAS` return to 1.
 
@@ -107,10 +106,11 @@ prior wizard tests pass.
 
 - [x] `infra/wizard/50-hpa.yaml` created with V1-ratified thresholds.
 - [x] `infra/dashboard/50-hpa.yaml` created (structurally symmetric).
-- [x] 7 new vitest cases (`hpa-manifest.test.ts`) pass.
+- [x] 13 new vitest cases (`hpa-manifest.test.ts`) pass.
 - [x] EA-REVIEW-OUTCOME.json recorded (stub critic; live submitPlan
       deferred per #635 precedent).
-- [ ] CI green (`Build · Test · Lint · Typecheck`).
+- [ ] CI green (`Build · Test · Lint · Typecheck`) — tolerating same
+      pre-existing TS2352 + lighthouse fails as PR #625.
 - [ ] True-Zero admin-merge ritual completed.
 - [ ] HPAs `kubectl apply`ed to chiefaia ns.
 - [ ] Synthetic load drives `REPLICAS` from 1→≥2; recorded in PR comment.

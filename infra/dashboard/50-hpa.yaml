@@ -1,0 +1,76 @@
+# chiefaia-dashboard HorizontalPodAutoscaler — Phase C1.
+#
+# Scales `deployment.apps/chiefaia-dashboard` between 1 and 5 replicas
+# based on average CPU and memory utilisation per pod. The Deployment
+# ships resource requests of cpu=250m / memory=512Mi (see
+# 10-deployment.yaml), so the autoscaler treats those values as 100%
+# utilisation.
+#
+# Threshold rationale (operator-ratified for V1):
+#   - CPU 70%:    The dashboard's hot paths are operator-only (small N),
+#                 so steady-state utilisation is well under the threshold.
+#                 70% triggers on sustained background-task bursts (live
+#                 wizard smoke + post-merge signal) without flapping.
+#   - Memory 80%: Mirrors chiefaia-wizard. Conservative "scale before
+#                 OOMKill" line; Next.js standalone + .next cache holds
+#                 memory hot, so headroom matters.
+#
+# Identical shape to chiefaia-wizard HPA so operators have one mental
+# model for both customer-facing surfaces.
+#
+# Reuse-first compliance:
+#   - autoscaling/v2 (standard since k8s 1.23). No CRDs, no Helm chart,
+#     no parallel autoscaler. metrics-server in kube-system provides
+#     the CPU/memory signal.
+#   - Labels mirror the chiefaia-dashboard Deployment exactly so
+#     label-selector queries work out of the box.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: chiefaia-dashboard
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: chiefaia-dashboard
+    app.kubernetes.io/component: autoscaler
+    app.kubernetes.io/part-of: chiefaia
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: chiefaia-dashboard
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      selectPolicy: Max
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      selectPolicy: Min
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+        - type: Pods
+          value: 1
+          periodSeconds: 120
