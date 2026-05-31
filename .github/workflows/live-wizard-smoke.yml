@@ -1,0 +1,139 @@
+name: Live Wizard Smoke
+
+# Walks all 7 wizard steps for a fictional project against the LIVE
+# `dashboard.chiefaia.com` deployment. The smoke is the integration-test
+# signal for "is the wizard live-demoable yet?".
+#
+# When this runs:
+#   - schedule:        nightly at 07:00 UTC (00:00 PT) — surfaces drift
+#   - workflow_dispatch: on-demand from the GitHub Actions UI
+#
+# It does NOT run on pull_request — we don't want every PR hitting prod.
+# Local-mode E2E (`apps/dashboard/tests/wizard-shell/*.spec.ts`) covers
+# PR-time regression; this workflow exists purely for live-cluster
+# observability.
+#
+# Auth: CF Access service-token (CF_ACCESS_CLIENT_ID/SECRET) — preferred
+# over storageState for CI because service tokens are long-lived.
+#
+# Status — on the day this lands, the smoke is EXPECTED to fail because
+# A1-A10 are sibling tasks running in parallel. `continue-on-error: true`
+# below keeps the workflow green so the artifact upload still runs and
+# the operator can read the report. Flip to `false` once A1-A10 ship —
+# see SMOKE_RUNBOOK.md §7.
+
+on:
+  schedule:
+    # 07:00 UTC daily = 00:00 PT (PST) / 01:00 PDT. Avoids the post-merge
+    # gaggle on develop.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      live_dashboard_url:
+        description: 'Live dashboard URL (default https://dashboard.chiefaia.com)'
+        required: false
+        default: 'https://dashboard.chiefaia.com'
+      live_smoke_email:
+        description: 'Operator email for the smoke run'
+        required: false
+        default: 'prakash.stolution@gmail.com'
+
+permissions:
+  contents: read
+  # `actions: write` lets the workflow upload artifacts; `issues: write`
+  # is reserved for a future Slack/issue-creation step once we wire the
+  # chiefaia status channel.
+  actions: write
+
+concurrency:
+  # Only one live smoke at a time — they share the live tenant row.
+  group: live-wizard-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: live-wizard-smoke
+    runs-on: ubuntu-latest
+    # The smoke spec budgets 30 minutes; allow CI 45 to leave room for
+    # repo checkout, pnpm install, and Playwright browser fetch.
+    timeout-minutes: 45
+    # Day-1: don't fail the workflow on smoke red. Flip to `false` once
+    # A1-A10 ship. See SMOKE_RUNBOOK.md §7.
+    continue-on-error: true
+
+    env:
+      LIVE_DASHBOARD_URL: ${{ github.event.inputs.live_dashboard_url || 'https://dashboard.chiefaia.com' }}
+      LIVE_SMOKE_EMAIL: ${{ github.event.inputs.live_smoke_email || 'prakash.stolution@gmail.com' }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+      # The smoke runs without Postgres/Tempo port-forwards in CI by
+      # default — only the UI walk + screenshot capture run. Operators
+      # can extend this workflow with a `kubectl port-forward` step
+      # once a runner has cluster credentials (out-of-scope today).
+      LIVE_SMOKE_DATABASE_URL: ${{ secrets.LIVE_SMOKE_DATABASE_URL }}
+      LIVE_SMOKE_TEMPO_URL: ${{ secrets.LIVE_SMOKE_TEMPO_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm + node + cache
+        uses: ./.github/actions/setup-pnpm-mono
+
+      - name: Install Playwright browsers
+        # `--with-deps chromium` pulls system libs on ubuntu-latest.
+        run: pnpm --filter @caia-app/dashboard exec playwright install --with-deps chromium
+
+      - name: Pre-flight — assert auth env present
+        run: |
+          if [[ -z "${CF_ACCESS_CLIENT_ID:-}" || -z "${CF_ACCESS_CLIENT_SECRET:-}" ]]; then
+            echo "::warning::CF_ACCESS_CLIENT_ID/SECRET not set — smoke will bounce on /sign-in."
+            echo "Set repository secrets: CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET."
+          fi
+        shell: bash
+
+      - name: Run live wizard smoke
+        run: ./apps/dashboard/scripts/run-live-smoke.sh
+        shell: bash
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-wizard-smoke-report-${{ github.run_id }}
+          path: apps/dashboard/playwright-report-live-smoke
+          retention-days: 14
+
+      - name: Upload screenshots + traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-wizard-smoke-artifacts-${{ github.run_id }}
+          path: apps/dashboard/test-results-live-smoke
+          retention-days: 14
+
+      - name: Summary
+        if: always()
+        run: |
+          set -e
+          REPORT=apps/dashboard/playwright-report-live-smoke/results.json
+          if [[ -f "$REPORT" ]]; then
+            echo "## Live wizard smoke" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- target: \`${LIVE_DASHBOARD_URL}\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "- email:  \`${LIVE_SMOKE_EMAIL}\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Per-step result (parsed from results.json):" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            # Top-level stats + step titles + statuses, without dumping
+            # the entire JSON (which contains base64 screenshots).
+            jq '{ stats: .stats, suites: [.suites[] | { title, specs: [.specs[] | { title, ok }] }] }' "$REPORT" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || \
+              echo '{ "error": "could not parse results.json" }' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Live wizard smoke" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "_Smoke did not produce a results.json. See raw logs above._" >> "$GITHUB_STEP_SUMMARY"
+          fi
+        shell: bash

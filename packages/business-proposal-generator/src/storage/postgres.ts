@@ -90,13 +90,26 @@ export class PgProposalPersistence implements IProposalPersistence {
     this.migrationSql = opts.migrationSql ?? null;
   }
 
-  public async ensureSchema(): Promise<void> {
-    if (this.schemaEnsured) return;
+  /**
+   * Apply the business-proposals migration.
+   *
+   * @param overrideSchemaName optional canonical schema name (e.g. from
+   * `apps/dashboard/lib/tenants/store.ts::schemaNameForEmail`). When
+   * supplied, the migration applies to this schema instead of the
+   * constructor-derived `tenantSchema`. Used by
+   * `@caia/wizard-tenant-bootstrap` to align all per-tenant packages on
+   * the provisioning-canonical `tenant_<safe>_<hash>` name. Backward
+   * compatible — existing callers pass nothing and get unchanged behavior.
+   */
+  public async ensureSchema(overrideSchemaName?: string): Promise<void> {
+    const targetSchema = overrideSchemaName ?? this.tenantSchema;
+    const targetQuoted = overrideSchemaName ? quoteIdent(overrideSchemaName) : this.quoted;
+    if (this.schemaEnsured && targetSchema === this.tenantSchema) return;
     if (this.migrationSql) {
-      const sql = this.migrationSql.replace(/\{\{SCHEMA\}\}/g, this.quoted);
+      const sql = this.migrationSql.replace(/\{\{SCHEMA\}\}/g, targetQuoted);
       await this.pool.query(sql);
     }
-    this.schemaEnsured = true;
+    if (targetSchema === this.tenantSchema) this.schemaEnsured = true;
   }
 
   public async readLatestProposal(tenantProjectId: string): Promise<BusinessProposalRow | null> {

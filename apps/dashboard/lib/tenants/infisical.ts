@@ -100,3 +100,44 @@ export async function createInfisicalProject(
   }
   return { projectId: id, name };
 }
+
+/**
+ * Compensating-action: delete a workspace by id. Used by `provisionTenant`
+ * to roll back the Infisical side when a downstream step (e.g. per-tenant
+ * migration bootstrap) fails.
+ *
+ * Self-hosted Infisical V3 admin API:
+ *   DELETE {baseUrl}/api/v2/workspace/{projectId}
+ *   auth: Bearer <admin token>
+ *
+ * Best-effort: a 404 (workspace already deleted) is treated as success
+ * because that's the desired end-state. Other non-2xx responses throw so
+ * the caller can surface the partial-rollback state.
+ */
+export async function deleteInfisicalProject(
+  projectId: string,
+  opts: InfisicalProvisionOptions,
+): Promise<void> {
+  const fetchImpl = opts.fetchImpl ?? globalThis.fetch;
+  const url = `${opts.baseUrl.replace(/\/+$/, '')}/api/v2/workspace/${encodeURIComponent(projectId)}`;
+  const res = await fetchImpl(url, {
+    method: 'DELETE',
+    headers: {
+      authorization: `Bearer ${opts.adminToken}`,
+    },
+  });
+  if (res.status === 404) return; // already gone — desired end state
+  if (!res.ok) {
+    let body: unknown = undefined;
+    try {
+      body = await res.json();
+    } catch {
+      // ignored
+    }
+    throw new InfisicalProvisionError(
+      `Infisical workspace delete failed: HTTP ${res.status}`,
+      res.status,
+      body,
+    );
+  }
+}

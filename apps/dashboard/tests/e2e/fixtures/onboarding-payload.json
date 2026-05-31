@@ -1,0 +1,13 @@
+{
+  "_comment": "Fixture for Step 1 (Onboarding) of the live-wizard smoke. Picks a category from the canonical 19-category catalog shipped by @caia/onboarding (PR #544). Used by live-wizard-smoke.spec.ts.",
+  "category": "ecommerce",
+  "displayName": "Live Smoke Bot",
+  "company": "Smoke Ceramics Co.",
+  "country": "United States",
+  "timezone": "America/Los_Angeles",
+  "primaryGoal": "Validate the full 7-step wizard end-to-end against the live cluster.",
+  "consents": {
+    "termsAcceptedAt": "2026-05-26T00:00:00.000Z",
+    "subscriptionAccepted": true
+  }
+}

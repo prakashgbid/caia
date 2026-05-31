@@ -16,6 +16,8 @@ coverage/
 .nyc_output/
 playwright-report/
 test-results/
+playwright-report-live-smoke/
+test-results-live-smoke/
 
 # Turbo
 .turbo/
