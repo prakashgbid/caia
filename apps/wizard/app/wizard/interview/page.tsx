@@ -28,6 +28,7 @@
 import { headers } from 'next/headers';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 import { InterviewerChat } from '../../../components/wizard/InterviewerChat';
+import { InterviewCriticBridge } from '../../../components/wizard/InterviewCriticBridge';
 import { getInterviewThreadStore } from '../../../lib/wizard/interview-thread-store';
 import { getStateStoreForTenant } from '../../../lib/wizard/store-wire';
 import { getWizardState, ProjectNotFoundError } from '../../../lib/wizard/state.server';
@@ -35,7 +36,11 @@ import { getWizardState, ProjectNotFoundError } from '../../../lib/wizard/state.
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  searchParams: Promise<{ projectId?: string; tenantSlug?: string }>;
+  searchParams: Promise<{
+    projectId?: string;
+    tenantSlug?: string;
+    criticKind?: 'approved-with-modifications' | 'coverage-insufficient';
+  }>;
 }
 
 interface SummaryPair {
@@ -88,6 +93,7 @@ export default async function InterviewPage({
   const sp = await Promise.resolve(searchParams);
   const projectId = sp.projectId ?? 'p-pending';
   const tenantSlug = sp.tenantSlug ?? 'tenant-pending';
+  const criticKind = sp.criticKind ?? null;
   const tenantId = await readTenantId();
 
   // 1) If the FSM is past interview-complete, surface the summary view.
@@ -153,6 +159,9 @@ export default async function InterviewPage({
           Project: {projectId} · Tenant: {tenantSlug}
         </div>
         <InterviewerChat projectId={projectId} />
+        <div style={{ marginTop: 16 }}>
+          <InterviewCriticBridge projectId={projectId} criticKind={criticKind} />
+        </div>
       </CardContent>
     </Card>
   );

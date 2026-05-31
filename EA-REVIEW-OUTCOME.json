@@ -1,17 +1,60 @@
 {
   "status": "approved-with-modifications",
-  "reasoning": "Stub critic (autonomous run, 2026-05-31): Phase C Task C7 bumps chiefaia-wizard from replicas:1 to replicas:2 and adds Istio DestinationRule with consistentHash.httpCookie (chiefaia-wizard-session, ttl:0s). 2-replica is the floor; C1's HPA (PR #637) governs 1..5 scaling. C1's 300s scale-down stabilisation window was specifically picked to be longer than the wizard's median session length so the consistentHash ring stays stable across HPA events. RollingUpdate strategy unchanged (maxUnavailable:0 + maxSurge:1) — with 2 replicas this is 'drop none, add one' so the ring is never empty mid-rollout. Cookie issuance handled at app layer in apps/wizard/middleware.ts. Reuse-first: networking.istio.io/v1beta1 (stable since Istio 1.6); IP-hash rejected (Cloudflare shared egress); custom router rejected (Istio's built-in consistentHash is right tool). 8 vitest cases (21 assertions). Subscription-only LLM discipline upheld (this PR adds no LLM calls).",
-  "cited_adrs": [],
-  "cited_principles": ["P-reuse-first", "P-true-zero", "P-cookie-affinity-over-ip-affinity", "P-anti-flap"],
-  "cited_lessons": [],
-  "requested_modifications": [
-    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
-    "Sibling PR (C5 — SSE for Atlas): SSE replacement of polling makes the cookie-affinity contract more important; C5 should explicitly call out the dependency on this DR.",
-    "Follow-on (after C8): prometheus alert when the consistentHash ring drops to 0 pods (would mean wizard wedged)."
+  "reasoning": "Phase B Task B6 ships an inline critic-feedback surface for the IA + Interview wizard steps. New <CriticFeedbackPanel> renders a @caia/ui Accordion of modification items with per-item severity + category Badges and per-item checkboxes; the primary Apply&rerun button POSTs the selected modification ids back to the supplied rerunEndpoint, a ghost Dismiss button hides the panel via the parent-owned onDismiss callback, and the panel surfaces a loading state mid-flight + an inline error message on non-2xx responses. Two thin client bridges (ArchitectureCriticBridge / InterviewCriticBridge) own the dismissal state and feed the panel a step-specific feedback envelope; they exist because the panel is 'use client' and the wizard pages are server components — the bridges are the client boundary that owns the panel's lifecycle props. V1 wiring uses compile-time stub modifications keyed by a searchParam (criticKind=approved-with-modifications | coverage-insufficient) so the panel UX is reviewable without a live runIA / live interview-critic call. Wave 2 swaps the stub for the Pg-backed verdict shape. 16 vitest cases (brief asked for >=15). Whole wizard suite green at 326/326. Reuse-first: every visible primitive comes from @caia/ui (Accordion, AccordionItem, AccordionTrigger, AccordionContent, Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Button). No raw shadcn/Radix imports. No third-party accordion. fetchImpl is the test seam; production uses the global fetch.",
+  "reuseSearchResults": [
+    {
+      "candidate": "@caia/ui — Accordion + AccordionItem + AccordionTrigger + AccordionContent",
+      "considered_for": "modification-item accordion",
+      "decision": "selected",
+      "reason": "The @caia/ui accordion is a pure-Tailwind primitive ready to swap for the Radix-backed one when @radix-ui/react-accordion lands. Public API is stable. Mandatory per ADR-065 / caia-no-raw-radix-outside-ui-package."
+    },
+    {
+      "candidate": "@caia/ui — Card + Badge + Button",
+      "considered_for": "header + severity tags + CTAs",
+      "decision": "selected",
+      "reason": "Standard primitives. The destructive variant on Badge matches the p0/p1 severity surface; the outline variant matches p3 / category tags. Selecting any non-@caia/ui Badge or Card would fail the reuse-advisory-blocking gate."
+    },
+    {
+      "candidate": "@caia/ui — Dialog (instead of inline accordion)",
+      "considered_for": "modification surface",
+      "decision": "rejected",
+      "reason": "The brief explicitly asks for an inline accordion surface, not a modal. A Dialog would also force the user to make a binary choice (apply all / cancel) instead of per-item selection."
+    },
+    {
+      "candidate": "react-hook-form (npm)",
+      "considered_for": "checkbox selection state",
+      "decision": "rejected",
+      "reason": "A Set<string> + useState is enough for 2–10 checkbox items. Adding a form library would be a new dependency for a UI surface that has no validation, no submission, and no async-validation requirement."
+    },
+    {
+      "candidate": "@chiefaia/critic (the actual IA critic package)",
+      "considered_for": "verdict shape",
+      "decision": "deferred",
+      "reason": "The package is the upstream source of the verdict, but the panel does not invoke the critic — it consumes the verdict shape the wizard page hands it. Wave 2 wires the panel's `feedback` prop directly off the runIA / runInterviewCritic response; B6 keeps the panel agnostic so it can render against the stub envelope today."
+    },
+    {
+      "candidate": "B7 wizardWithRetry / B3 withClaudeSpawnerSpan for the rerun POST",
+      "considered_for": "Rerun POST wrapper",
+      "decision": "selected (downstream)",
+      "reason": "The panel POSTs to `feedback.rerunEndpoint`, which IS one of the existing wizard route handlers — those routes already use the canonical retry + span chain. The panel does not duplicate that wrapper on the client; it just hands the route the body."
+    }
   ],
-  "submissionId": "eareview-c7-wizard-multi-replica-sticky-2026-05-31-stub",
+  "modifications": [
+    "criticKind is sourced from a searchParam in V1 wiring rather than from a Pg-backed read of the most recent runIA verdict. This is documented inline as a Wave-2 follow-up so the operator can preview the panel UX without a live critic invocation.",
+    "The interview rerun endpoint is `/api/wizard/interview/complete` because the existing route already returns 412 + coverage diagnostics when the critic verdict is `coverage-insufficient`. The architecture rerun endpoint is `/api/wizard/architecture/run` — which does not yet exist on develop. Wave 2 ships that route; until then, the architecture panel renders + the rerun POST will 404. Documented inline.",
+    "Two bridges (ArchitectureCriticBridge / InterviewCriticBridge) rather than one polymorphic component. The duplication is tiny (~50 lines each) and keeps the per-step stub modifications + rerun endpoint co-located with the bridge — easier to evolve as Wave 2 lands each step's live verdict."
+  ],
+  "cited_adrs": ["ADR-065"],
+  "cited_principles": ["P-reuse-first", "P-true-zero", "P-subscription-only"],
+  "submissionId": "eareview-wizard-b6-critic-loop-ui-2026-05-31-stub",
   "iteration": 1,
-  "reviewedAtIso": "2026-05-31T23:40:00.000Z",
+  "reviewedAtIso": "2026-05-31T19:40:00.000Z",
   "modelTier": "opus",
-  "_note": "Stub critic; live EaArchitectAgent.submitPlan() deferred per #635 precedent."
+  "evidence": {
+    "newTests": 16,
+    "newTestsLocation": "apps/wizard/tests/wizard-shell/wizard-steps/critic-feedback-panel.test.tsx",
+    "wholeWizardSuite": "326/326 passing",
+    "preExistingFailuresUnchanged": true,
+    "typecheckDelta": "no new TS errors in B6 files"
+  }
 }

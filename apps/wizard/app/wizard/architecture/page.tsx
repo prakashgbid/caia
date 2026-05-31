@@ -1,29 +1,40 @@
 /**
- * Wizard Step 4 — Information Architecture (placeholder).
+ * Wizard Step 4 — Information Architecture.
  *
- * Materialising the `architecture/` route segment as its own directory
- * (rather than letting the parent `[step]/page.tsx` catch it) lets the
- * sibling `error.tsx` (B1) attach to this specific segment and gives
- * B6 (CriticFeedbackPanel + runIA wiring) a place to land its UI
- * without churning the dynamic fallback.
- *
- * For now this is a thin server component that mirrors the same
- * `<Card>` stub the [step] page renders — once B6 lands, the runIA
- * orchestration + Critic panel replace the placeholder body.
+ * Phase B B6 (2026-05-31): now renders the live architecture step
+ * stub PLUS the `<CriticFeedbackPanel>` underneath when the prior
+ * runIA returned `approved-with-modifications`. The runIA verdict is
+ * passed in via searchParams (`criticKind=approved-with-modifications`)
+ * so this server component can stay statically-render-friendly. A
+ * follow-up minor PR will swap the searchParam wiring for a live
+ * Pg-backed read of the most recent runIA verdict for the project.
  *
  * Reuse-first: every primitive comes from `@caia/ui`; step metadata
- * comes from `lib/wizard/steps.ts`.
+ * comes from `lib/wizard/steps.ts`; the modification surface is the
+ * shared `<CriticFeedbackPanel>` (also used by the interview step).
  */
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 import { findStepBySlug } from '../../../lib/wizard/steps';
+import { ArchitectureCriticBridge } from '../../../components/wizard/ArchitectureCriticBridge';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ArchitecturePage(): Promise<React.JSX.Element> {
+interface PageProps {
+  searchParams: Promise<{
+    projectId?: string;
+    criticKind?: 'approved-with-modifications' | 'coverage-insufficient';
+  }>;
+}
+
+export default async function ArchitecturePage({
+  searchParams,
+}: PageProps): Promise<React.JSX.Element> {
+  const sp = await Promise.resolve(searchParams);
+  const projectId = sp.projectId ?? 'p-pending';
+  const criticKind = sp.criticKind;
+
   const step = findStepBySlug('architecture');
-  // The slug is canonical (compile-time-checked via the union), so
-  // findStepBySlug always returns a step — narrow for the typechecker.
   if (!step) {
     throw new Error('architecture-step-missing-from-catalog');
   }
@@ -34,12 +45,18 @@ export default async function ArchitecturePage(): Promise<React.JSX.Element> {
         <CardDescription>{step.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <p style={{ opacity: 0.7 }}>
-          Step {step.index} of 7 — runIA orchestration + the Critic feedback
-          loop land in B6. The route is reachable now so the wizard nav
-          stays unbroken and the sibling error boundary (B1) covers this
-          segment.
+        <p style={{ opacity: 0.7, marginBottom: 16 }}>
+          Step {step.index} of 7 — runIA orchestration lands in a Wave 2
+          minor PR. When that ships, this page reads the IA verdict +
+          modifications from the run endpoint and the panel below
+          renders inline. For now, append
+          {' '}<code>?criticKind=approved-with-modifications</code> to the URL
+          to preview the panel against a stub feedback envelope.
         </p>
+        <ArchitectureCriticBridge
+          projectId={projectId}
+          criticKind={criticKind ?? null}
+        />
       </CardContent>
     </Card>
   );
