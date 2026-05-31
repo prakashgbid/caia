@@ -1,44 +1,111 @@
-# `infra/wizard` + `infra/istio/chiefaia` — Phase C7 multi-replica wizard with sticky sessions
+# `apps/wizard` — Critic-loop UI for IA + Interview steps (WIZARD-B6)
 
-**Author:** autonomous-build (operator-dispatched 2026-05-31)
+**Author:** cowork-mode-claude-phase-b-ui (operator-dispatched 2026-05-31)
 **Status:** Implementation complete
-**Branch:** `feature/c7-wizard-multi-replica-sticky-sessions-2026-05-31`
-**True-Zero admin-merge:** RATIFIED.
-**Depends on:** PR #637 (C1 HPA).
+**Branch:** `feature/wizard-b6-critic-loop-ui-2026-05-31`
+**True-Zero admin-merge:** Subscription-only, build-phase carve-out applies.
 
-## Why
+## 1. Why this exists
 
-Phase C Task C7: scale chiefaia-wizard from 1 → 2 replicas with cookie-based session affinity. The wizard's interview surface is stateful at the pod level (in-memory subscription buffer); cookie-hash pins each session to one pod so SSE/WebSocket connections survive scale-up events and rolling updates. C1's HPA already exists; C7 closes the loop.
+Phase B Task B6 of the CAIA wizard pipeline: when the IA critic returns
+`approved-with-modifications` (Step 4) OR when the Interviewer's critic
+flags coverage as `coverage-insufficient` (Step 3), the user needs an
+inline surface to review the modifications and rerun the step with the
+ones they want to apply. B6 ships that surface.
 
-## Files
+## 2. Shape
 
-- `infra/wizard/10-deployment.yaml` — `replicas: 1` → `replicas: 2`; comments cross-reference C7 DR + C1 HPA + the consistentHash ring contract; RollingUpdate strategy preserved (`maxUnavailable:0 + maxSurge:1` = "drop none, add one"; ring never empty mid-rollout).
-- `infra/istio/chiefaia/26-destinationrule-wizard.yaml` — new `networking.istio.io/v1beta1` DestinationRule; `trafficPolicy.loadBalancer.consistentHash.httpCookie name=chiefaia-wizard-session ttl=0s`.
-- `apps/wizard/tests/wizard-shell/c7-sticky-session.test.ts` — 8 it-blocks / 21 assertions.
-- `.changeset/c7-wizard-multi-replica-sticky.md` — none-bump.
+```
+apps/wizard/components/wizard/CriticFeedbackPanel.tsx          # shared panel
+apps/wizard/components/wizard/ArchitectureCriticBridge.tsx     # IA step bridge
+apps/wizard/components/wizard/InterviewCriticBridge.tsx        # Interview step bridge
+apps/wizard/app/wizard/architecture/page.tsx                   # mounts ArchitectureCriticBridge
+apps/wizard/app/wizard/interview/page.tsx                      # mounts InterviewCriticBridge
+apps/wizard/tests/wizard-shell/wizard-steps/critic-feedback-panel.test.tsx  # 16 vitest cases
+```
 
-## Reuse-first
+`<CriticFeedbackPanel>` renders:
+- a header with the kind-specific title + step badge.
+- a `@caia/ui` Accordion of modification items. Each item carries an
+  inline severity Badge (p0..p3) + category Badge + a checkbox.
+- "Apply & rerun" primary button that POSTs `{ ...rerunBody,
+  applyModifications: [...selectedIds] }` to `feedback.rerunEndpoint`.
+- "Dismiss" secondary button that fires `onDismiss` so the parent can
+  hide the panel without rerunning.
+- a loading state while the rerun POST is in flight (button label
+  changes to "Rerunning…" and both buttons are disabled).
+- an inline error message when the POST returns non-2xx.
 
-- `networking.istio.io/v1beta1 DestinationRule` (Istio core, stable since 1.6) — **selected**.
-- Istio `consistentHash.httpCookie` LB — **selected** (built-in, no app-layer rewrite).
-- IP-hash / source-IP affinity — **rejected** (Cloudflare's shared egress IP defeats it).
-- Custom session-router — **rejected** (Istio already does the right thing).
-- `@caia/ui` — **rejected** (infra PR; no UI surface).
+Two bridges (`ArchitectureCriticBridge` / `InterviewCriticBridge`)
+wrap the panel for each step and own the local dismissal state. They
+exist because the panel is `'use client'` (it owns selection + fetch
+state) and the wizard pages are server components; the bridges are
+the client boundary that owns the panel's lifecycle props.
 
-## Test strategy
+## 3. Reuse-first
 
-8 it-blocks across two describe-blocks (Deployment + DestinationRule); 21 assertions total. ≥5-test threshold satisfied.
+| Need | Existing package consumed |
+|---|---|
+| Accordion + AccordionItem + AccordionTrigger + AccordionContent | `@caia/ui` |
+| Card + CardHeader + CardTitle + CardDescription + CardContent | `@caia/ui` |
+| Badge (p0..p3 severity + category) | `@caia/ui` |
+| Button (primary + ghost variants) | `@caia/ui` |
 
-## Verification proof (recorded post-merge)
+No raw shadcn/Radix imports outside `packages/ui/**`. No third-party
+collapsible / accordion / dialog libs. `fetchImpl` is the test seam;
+production uses the global `fetch` (Next.js polyfill on the client).
 
-1. `kubectl apply --dry-run=server -f infra/istio/chiefaia/26-destinationrule-wizard.yaml` ✓ pre-merge.
-2. `kubectl apply` post-merge → 2 wizard pods Ready.
-3. Cookie-pinning verified: `curl -b 'chiefaia-wizard-session=abc'` twice hits the same pod.
-4. Rollout safety: `kubectl rollout restart deploy/chiefaia-wizard` while a 10-rps cookie-pinned curl loop is running; 0 connection errors expected.
+## 4. Wiring
 
-## DoD
+The architecture page (`apps/wizard/app/wizard/architecture/page.tsx`)
+mounts the `<ArchitectureCriticBridge>` underneath its placeholder
+copy. The bridge reads a `criticKind` searchParam:
+`?criticKind=approved-with-modifications` mounts the panel against a
+stub feedback envelope so the operator can preview the UX without a
+live runIA. Wave 2 swaps the searchParam wiring for a Pg-backed read
+of the most recent runIA verdict.
 
-- [x] Manifests written + tests passing locally.
-- [x] EA-REVIEW-OUTCOME.json recorded (stub critic).
-- [ ] CI green / True-Zero ritual.
-- [ ] kubectl apply + verification.
+The interview page (`apps/wizard/app/wizard/interview/page.tsx`)
+mounts the `<InterviewCriticBridge>` beneath the chat surface, behind
+the same `criticKind` searchParam. The interview rerun endpoint is the
+existing `/api/wizard/interview/complete` route (which already returns
+412 + coverage diagnostics when the critic flags coverage-insufficient).
+
+## 5. Tests
+
+16 vitest cases in `tests/wizard-shell/wizard-steps/critic-feedback-panel.test.tsx`:
+
+- Rendering (5): approved-with-modifications title for IA, coverage-insufficient
+  title for Interview, accordion items per modification, severity badges
+  rendered, category badges rendered.
+- Selection + dismissal (4): all modifications selected by default,
+  checkbox toggles off when clicked, onDismiss fires on Dismiss click,
+  Dismiss does not trigger a fetch.
+- Apply-and-rerun (4): POSTs the selected ids to the rerunEndpoint,
+  omits unchecked modifications from the body, calls onRerunSuccess
+  with the parsed body, surfaces server error messages on non-2xx.
+- Loading state (2): "Rerunning…" copy appears mid-flight, both buttons
+  disabled mid-flight.
+- Empty modifications (1): placeholder copy + no accordion.
+
+Brief requested ≥15. Whole wizard suite: 326/326 pass.
+
+Pre-existing develop failures (TS2352 in `tests/wizard-shell/edge-bypass.test.ts`,
+lighthouse warn-only) unchanged. The Build·Test·Lint·Typecheck wedge
+that B1 introduced was FIXED by B2 (client-safe tracer + `/server`
+subpath export); B6 inherits that fix.
+
+## 6. Subscription-only
+
+The panel never invokes Claude directly. The Apply-and-rerun button
+POSTs to the existing wizard endpoints which already use the
+canonical wrapper chain (B7 retry + B3 OTel span + B4 search-path).
+No new LLM call surface is added by B6.
+
+## 7. True-Zero readiness
+
+- Panel tests `pnpm exec vitest run` → 16/16 pass.
+- Whole wizard suite `pnpm exec vitest run` → 326/326 pass.
+- Local `tsc --noEmit` clean for B6 files.
+- No raw shadcn/Radix imports outside `packages/ui/**`.
+- Branched from `origin/develop` (HEAD a8f41d3 — B2 merged).
