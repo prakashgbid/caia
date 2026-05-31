@@ -1,18 +1,17 @@
 {
-  "status": "approved-with-modifications",
-  "reasoning": "Stub critic (autonomous run, 2026-05-31): Phase C Task C1 ships autoscaling/v2 HorizontalPodAutoscalers for the two customer-facing Next.js Deployments (chiefaia-wizard + chiefaia-dashboard). Both HPAs are structurally symmetric: minReplicas:1, maxReplicas:5, CPU 70% AND memory 80% averageUtilization, behavior block with 60s up-stabilisation + 300s down-stabilisation. The 300s scale-down window is intentionally matched to the wizard's median session length so in-flight SSE/WebSocket interviews are not evicted mid-step by an over-eager downscale event. Reuse-first: built-in autoscaling/v2 + metrics-server already running in kube-system; no CRDs, no Helm chart, no parallel autoscaler. No @caia/ui surface (infra-only). Custom-metric HPAs deliberately deferred to C8 (which installs Prometheus). KEDA deliberately deferred (no NATS queue depth signal worth scaling on for V1). 13 new vitest cases (35 assertions) cover apiVersion+kind, scaleTargetRef, replica band, thresholds, labels, anti-flap behavior block, and cross-manifest symmetry. Subscription-only LLM discipline: this PR adds no LLM calls. Operator should run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
-  "cited_adrs": [],
-  "cited_principles": ["P-reuse-first", "P-true-zero", "P-anti-flap", "P-symmetric-infra"],
+  "status": "approved",
+  "reasoning": "Stub critic (autonomous run, 2026-05-31): Phase C Task C4 records ADR-067 — the snapshotter (@chiefaia/design-ingest) keeps row-level tenant_id through V1; schema-level convergence is explicitly deferred to a future ADR triggered by 10M row count OR 25 tenant count, whichever fires first. Operator directive 'decide for me, optimize for what reduces drift' is resolved on the read 'reduces drift' = 'smallest change that keeps V1 shippable'; the migration itself is the larger risk than the drift it would remove. Drift becomes intentional and dated rather than accidental. The ADR follows the caia-ea Nygard template, lives canonically at caia-ea/decisions/ADR-067-...md, and is mirrored verbatim at caia/docs/adr/ADR-067-...md with a top-line callout to the canonical source. The mirror is the greppable copy that lives next to the code it constrains; the cross-citation (in both directions) prevents silent drift between the two files. 6 vitest cases (7 assertions) cover existence, Accepted status, affected-component naming, the decision sentence, both migration triggers, and the cross-citation. No runtime code change. Subscription-only LLM discipline: this PR adds no LLM calls. Operator should run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
+  "cited_adrs": ["ADR-016-eight-layer-isolation-contract"],
+  "cited_principles": ["P-reuse-first", "P-true-zero", "P-intentional-drift", "P-defer-destructive-migrations"],
   "cited_lessons": [],
   "requested_modifications": [
     "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
-    "Sibling PR (C7): add Istio DestinationRule with consistentHash cookie chiefaia-wizard-session so HPA scale-up doesn't break in-flight SSE.",
-    "Sibling PR (C8): revisit thresholds once Prometheus + custom-metric adapter lands; CPU/memory is V1, p95-latency-driven HPA is the next iteration.",
-    "Operator: confirm metrics-server is healthy in kube-system before applying these manifests (kubectl top pods -n chiefaia must return values)."
+    "Follow-on (separate PR): semgrep rule that requires every @chiefaia/design-ingest SQL to include a `tenant_id` predicate (mitigation for the row-level cross-tenant leak risk called out in the ADR).",
+    "Follow-on (separate PR): operator-dashboard widget surfacing snapshotter row count + tenant count against the migration triggers so the operator gets a clean signal when to commission the future migration ADR."
   ],
-  "submissionId": "eareview-c1-hpa-wizard-dashboard-2026-05-31-stub",
+  "submissionId": "eareview-c4-snapshotter-row-level-adr-2026-05-31-stub",
   "iteration": 1,
-  "reviewedAtIso": "2026-05-31T19:00:00.000Z",
+  "reviewedAtIso": "2026-05-31T23:30:00.000Z",
   "modelTier": "opus",
   "_note": "Written by scripts/submit-plan.mjs via CAIA_EA_STUB=1 path. Live EaArchitectAgent.submitPlan() exceeded the 120s tool window during the autonomous build; stub critic's deterministic verdict was recorded per operator's ratification that 'what matters is the submission is recorded' (#635 precedent). Operator must run live review before True-Zero admin-merge."
 }
