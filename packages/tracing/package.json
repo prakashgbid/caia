@@ -1,7 +1,7 @@
 {
   "name": "@chiefaia/tracing",
-  "version": "0.3.0",
-  "description": "OpenTelemetry distributed tracing for the CAIA spine. Provides init / withSpan / W3C TraceContext inject+extract / NATS span helpers + pg/http/undici auto-instrumentations. Canonical reuse target (no parallel @chiefaia/otel).",
+  "version": "0.3.1",
+  "description": "OpenTelemetry distributed tracing for the CAIA spine. Provides init / withSpan / W3C TraceContext inject+extract / NATS span helpers + wizard claude-spawner span wrapper + pg/http/undici auto-instrumentations. Canonical reuse target (no parallel @chiefaia/otel).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -45,6 +45,7 @@
     "@chiefaia/eslint-config": "workspace:*",
     "@chiefaia/tsconfig": "workspace:*",
     "@chiefaia/vitest-config": "workspace:*",
+    "@opentelemetry/context-async-hooks": "^2.7.0",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   },

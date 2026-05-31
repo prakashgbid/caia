@@ -11,9 +11,17 @@
  * thread store and therefore makes zero pg calls — we skip the wrap
  * there to avoid acquiring a pool client we'd never use.
  *
+ * Phase B B3 (2026-05-31): the (transitive) claude-spawner call site
+ * is wrapped in `withClaudeSpawnerSpan` so Tempo sees a
+ * `claude.spawn.wizard` child span carrying `caia.wizard.step`,
+ * `caia.wizard.project_id`, `caia.claude.prompt_template`, and
+ * `caia.claude.model`. The OTel context manager threads the wizard
+ * span as the parent of the inner `claude.spawn` span the spawner
+ * emits — W3C TraceContext flows through to Tempo end-to-end.
+ *
  * Reuse-first compliance:
  *   - Pulls `PILLAR_IDS` from `@caia/interviewer`.
- *   - Uses `withSpan` from `@chiefaia/tracing`.
+ *   - Uses `withSpan` + `withClaudeSpawnerSpan` from `@chiefaia/tracing`.
  *   - Uses `withTenantSearchPath` from `lib/tenants/search-path.ts`
  *     (live path only — see note above).
  *
@@ -24,7 +32,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { headers } from 'next/headers';
 import { randomUUID } from 'node:crypto';
 import { PILLAR_IDS } from '@caia/interviewer';
-import { createTracer } from '@chiefaia/tracing';
+import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
 import {
   emptyPillarCoverage,
   type PillarCoverageMap,
@@ -67,6 +75,20 @@ async function readTenantId(): Promise<string | null> {
 }
 
 const tracer = createTracer('chiefaia.dashboard.wizard.interview');
+
+/**
+ * Claude model the live interviewer path uses. Hard-coded here so the
+ * span's `caia.claude.model` attribute matches what the engine
+ * ultimately spawns. Wave 2 may surface this via env / config.
+ */
+const INTERVIEW_LIVE_MODEL = 'claude-opus-4-6';
+
+/**
+ * Prompt template identifier the wizard interviewer step invokes. Used
+ * for Tempo filtering when one wizard step issues several prompts —
+ * here it's a single deterministic playbook lookup per turn.
+ */
+const INTERVIEW_PROMPT_TEMPLATE = 'interviewer:playbook.v1';
 
 function projectQuestion(q: ScriptedQuestion | null): InterviewAnswerResponse['nextQuestion'] {
   if (!q) return null;
@@ -155,13 +177,35 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       span.setAttribute('wizard.interview.source', useLive ? 'live' : 'memory');
       if (tenantSchema) span.setAttribute('wizard.tenant_schema', tenantSchema);
 
+      // Phase B B3: every store mutation is wrapped in
+      // `withClaudeSpawnerSpan` so the span tree carries the wizard
+      // step attributes regardless of whether the underlying store is
+      // the V1 in-memory stub or the Wave 2 live engine that fans out
+      // to `@chiefaia/claude-spawner`. The `caia.claude.live`
+      // attribute lets operators A/B the rollout in Tempo.
+      const wrapClaude = <T,>(turn: number, fn: () => Promise<T>): Promise<T> =>
+        withClaudeSpawnerSpan(
+          {
+            step: 'interview.answer',
+            projectId,
+            tenantId,
+            promptTemplate: INTERVIEW_PROMPT_TEMPLATE,
+            model: INTERVIEW_LIVE_MODEL,
+            turn,
+            extra: { 'caia.claude.live': useLive },
+          },
+          fn,
+        );
+
       const result = await runStoreWork(tenantSchema, async () => {
         const existing = await store.read({ tenantId, projectId });
         if (!existing) {
           return {
             kind: 'envelope' as const,
             body: envelope(
-              await store.start({ tenantId, projectId, threadId: randomUUID() }),
+              await wrapClaude(1, () =>
+                store.start({ tenantId, projectId, threadId: randomUUID() }),
+              ),
               useLive ? 'live' : 'memory',
             ),
           };
@@ -174,18 +218,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           };
         }
         if (!reply || reply.trim().length === 0) {
+          const currentTurn =
+            existing.qaPairs.filter((p) => p.role === 'user').length + 1;
           return {
             kind: 'envelope' as const,
             body: envelope(
-              await store.start({ tenantId, projectId, threadId: existing.threadId }),
+              await wrapClaude(currentTurn, () =>
+                store.start({ tenantId, projectId, threadId: existing.threadId }),
+              ),
               useLive ? 'live' : 'memory',
             ),
           };
         }
+        const nextTurn = existing.qaPairs.filter((p) => p.role === 'user').length + 1;
         return {
           kind: 'envelope' as const,
           body: envelope(
-            await store.advance({ tenantId, projectId, userReply: reply }),
+            await wrapClaude(nextTurn, () =>
+              store.advance({ tenantId, projectId, userReply: reply }),
+            ),
             useLive ? 'live' : 'memory',
           ),
         };
