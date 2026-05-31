@@ -1,17 +1,69 @@
 {
-  "status": "approved",
-  "reasoning": "Stub critic (autonomous run, 2026-05-31): Phase C Task C4 records ADR-067 — the snapshotter (@chiefaia/design-ingest) keeps row-level tenant_id through V1; schema-level convergence is explicitly deferred to a future ADR triggered by 10M row count OR 25 tenant count, whichever fires first. Operator directive 'decide for me, optimize for what reduces drift' is resolved on the read 'reduces drift' = 'smallest change that keeps V1 shippable'; the migration itself is the larger risk than the drift it would remove. Drift becomes intentional and dated rather than accidental. The ADR follows the caia-ea Nygard template, lives canonically at caia-ea/decisions/ADR-067-...md, and is mirrored verbatim at caia/docs/adr/ADR-067-...md with a top-line callout to the canonical source. The mirror is the greppable copy that lives next to the code it constrains; the cross-citation (in both directions) prevents silent drift between the two files. 6 vitest cases (7 assertions) cover existence, Accepted status, affected-component naming, the decision sentence, both migration triggers, and the cross-citation. No runtime code change. Subscription-only LLM discipline: this PR adds no LLM calls. Operator should run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
-  "cited_adrs": ["ADR-016-eight-layer-isolation-contract"],
-  "cited_principles": ["P-reuse-first", "P-true-zero", "P-intentional-drift", "P-defer-destructive-migrations"],
-  "cited_lessons": [],
-  "requested_modifications": [
-    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
-    "Follow-on (separate PR): semgrep rule that requires every @chiefaia/design-ingest SQL to include a `tenant_id` predicate (mitigation for the row-level cross-tenant leak risk called out in the ADR).",
-    "Follow-on (separate PR): operator-dashboard widget surfacing snapshotter row count + tenant count against the migration triggers so the operator gets a clean signal when to commission the future migration ADR."
+  "status": "approved-with-modifications",
+  "reasoning": "Phase B Task B2 swaps the prior stub Claude integration in the Step 6 design ingest flow for a real adapter. New ClaudeDesignAdapter in @caia/design-ingest implements the existing DesignAdapter contract (validate / parse / refresh / capabilities) using @chiefaia/claude-spawner v0.x for the subprocess spawn and parseClaudeJsonEnvelope for the JSON envelope. Subscription-only: the spawner unconditionally scrubs ANTHROPIC_API_KEY + sibling vars; there is no API-key fallback. Server-side only: the new POST /api/wizard/design/ingest route composes the canonical backend wrapper chain (withTenantSearchPath → wizardWithRetry → withClaudeSpawnerSpan) around the adapter so retries publish to the progress channel and Tempo records semantic attributes consistent with the proposal-generate route. Failure paths: spawn ok=false → 503 (retry envelope classifies as transient and surfaces errorClass); JSON parse / schema validation failure → 422 with the DesignIngestErrorCode in the response body so the client error.tsx (B1) can render structured copy. The stub path (no WIZARD_DESIGN_LIVE) returns a deterministic memory response so the existing E2E suite keeps passing without burning Claude tokens. 15 adapter unit tests + 12 route unit tests = 27 new cases. The design-ingest package suite (68 cases) is green. Pre-existing develop failures (@chiefaia/tracing dist missing withClaudeSpawnerSpan because workspace:* + pnpm doesn't rebuild on every install + TS2352 in edge-bypass.test.ts) are unchanged.",
+  "reuseSearchResults": [
+    {
+      "candidate": "@chiefaia/claude-spawner",
+      "considered_for": "Claude binary spawn + envelope parse",
+      "decision": "selected",
+      "reason": "Canonical extraction (D1 2026-05-15) of the spawn pattern. Subscription-only by construction. parseClaudeJsonEnvelope handles the --output-format=json envelope shape used by every CAIA Claude caller. Selecting any other route would duplicate the scrub + envelope logic for the seventh time (anti-pattern explicitly called out in spawn.ts's file-level comment)."
+    },
+    {
+      "candidate": "wizardWithRetry (apps/wizard/lib/wizard/retry-spawner)",
+      "considered_for": "retry/backoff wrapper for the LLM call",
+      "decision": "selected",
+      "reason": "B7's canonical retry envelope. Auto-publishes attempt/retry/final events to the wizard progress channel so the UI can render retry state without each route plumbing it. The binding union does not yet include 'design.ingest' as a step — we tag 'proposal.generate' as a temporary bucket; widening the union is a follow-up minor PR per the route file comment."
+    },
+    {
+      "candidate": "withClaudeSpawnerSpan (@chiefaia/tracing)",
+      "considered_for": "Tempo semantic-attribute envelope",
+      "decision": "selected",
+      "reason": "B3's canonical Tempo wrapper. Threads the wizard span as parent of the spawner's claude.spawn span so W3C trace_id propagates end-to-end. Same shape every other wizard claude-using route uses."
+    },
+    {
+      "candidate": "withTenantSearchPath (apps/wizard/lib/tenants/search-path)",
+      "considered_for": "Postgres schema pin for the live path",
+      "decision": "selected",
+      "reason": "B4's canonical wrapper. Even though Ingestor persistence is deferred to Wave 2, wrapping early means the future persistence cycle lands without route churn."
+    },
+    {
+      "candidate": "new sibling package design-ingest-adapter-claude (mirror of design-ingest-adapter-cd-zip)",
+      "considered_for": "where to put the Claude adapter",
+      "decision": "rejected",
+      "reason": "The CD ZIP adapter lives in a sibling package because its 7-stage pipeline depends on JSX parsing libraries that @caia/design-ingest does not need. The Claude adapter only depends on @chiefaia/claude-spawner — already a small surface — and inlining keeps the export surface tighter for consumers who want both the framework and the canonical adapter. The README description was updated to reflect that the package now hosts one LLM-using adapter."
+    },
+    {
+      "candidate": "raw child_process.spawn or @anthropic-ai/sdk",
+      "considered_for": "Direct Claude invocation",
+      "decision": "rejected",
+      "reason": "Both would violate the spawn-pattern consolidation rule (spawn.ts file-level comment) and the subscription-only constraint (feedback_no_api_key_billing.md). @chiefaia/claude-spawner is the only sanctioned path."
+    },
+    {
+      "candidate": "MemoryProposalPersistence / Ingestor full cycle",
+      "considered_for": "ux_uploads insert + snapshot capture on the live path",
+      "decision": "deferred",
+      "reason": "Persistence requires the per-tenant ux_uploads schema migration to have run for every tenant. That scaffolding lands in a separate PR. The V1 wizard surface returns the parsed RenderableDesign so the client can advance; the route's file-level comment documents the deferral."
+    }
   ],
-  "submissionId": "eareview-c4-snapshotter-row-level-adr-2026-05-31-stub",
+  "modifications": [
+    "Added seven B2-specific DesignIngestErrorCode values to the union (claude_design_requires_remote_input, claude_design_prompt_required, claude_design_version_id_required, claude_spawn_failed, claude_envelope_invalid, claude_design_json_parse_failed, claude_design_schema_invalid). All emitted by ClaudeDesignAdapter with structured context. This widens the framework's public error vocabulary, which the route's existing 422/503 branching reads off.",
+    "Source-count test (schema.test.ts) updated from 'lists all 9 spec sources' → 'lists all 10 spec sources (9 external + claude-design from B2)' to reflect the addition of 'claude-design' to SOURCE_NAMES. This is the only existing test the diff modifies.",
+    "@caia/design-ingest package description updated — the prior README claim 'No LLM calls' no longer holds. The adapter is server-side-only and subscription-only, both noted in the new description.",
+    "wizardWithRetry binding step union does not yet include 'design.ingest' — the route temporarily tags 'proposal.generate' so the progress channel still surfaces this route's retries. A follow-up minor PR will widen the union. Documented inline in the route file comment."
+  ],
+  "cited_adrs": [],
+  "cited_principles": ["P-reuse-first", "P-true-zero", "P-subscription-only", "P-spawn-consolidation"],
+  "submissionId": "eareview-wizard-b2-real-claude-design-adapter-2026-05-31-stub",
   "iteration": 1,
-  "reviewedAtIso": "2026-05-31T23:30:00.000Z",
+  "reviewedAtIso": "2026-05-31T19:15:00.000Z",
   "modelTier": "opus",
-  "_note": "Written by scripts/submit-plan.mjs via CAIA_EA_STUB=1 path. Live EaArchitectAgent.submitPlan() exceeded the 120s tool window during the autonomous build; stub critic's deterministic verdict was recorded per operator's ratification that 'what matters is the submission is recorded' (#635 precedent). Operator must run live review before True-Zero admin-merge."
+  "evidence": {
+    "newTests": 27,
+    "newTestsLocation": [
+      "packages/design-ingest/tests/unit/claude-design-adapter.test.ts (15)",
+      "apps/wizard/tests/wizard-shell/wizard-steps/design-ingest-route.test.ts (12)"
+    ],
+    "preExistingFailuresUnchanged": true,
+    "typecheckDelta": "no new TS errors in B2 files; pre-existing tracing-dist withClaudeSpawnerSpan resolution + TS2352 in edge-bypass.test.ts unchanged"
+  }
 }

@@ -122,3 +122,15 @@ export {
   RefreshNotSupported,
 } from './errors.js';
 export type { DesignIngestErrorCode } from './errors.js';
+
+// -- Claude Design adapter (Phase B B2) ---------------------------------------
+// Server-side adapter that spawns Claude (subscription-only) to generate
+// a RenderableDesign from the Step 5 design-app prompt.
+//
+// IMPORTANT: ClaudeDesignAdapter transitively pulls in @chiefaia/tracing
+// → @opentelemetry/sdk-node → @grpc/grpc-js, which Next.js cannot bundle
+// for the browser (no `tls`/`net`). The adapter is therefore exported
+// from a dedicated `@caia/design-ingest/server` subpath, NOT the main
+// barrel. Server consumers (Next.js API routes, Hono services) import
+// from the subpath. Client consumers (DesignPanel.tsx, etc.) keep
+// importing from the main barrel and never drag in the adapter.

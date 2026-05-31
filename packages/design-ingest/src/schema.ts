@@ -40,6 +40,7 @@ export type {
 
 export const SOURCE_NAMES = [
   'cd-zip',
+  'claude-design',
   'figma-json',
   'v0',
   'lovable',

@@ -1,96 +1,110 @@
-# `caia-ea` + `caia/docs/adr` — ADR-067 snapshotter convergence decision (Phase C4)
+# `@caia/design-ingest` + `apps/wizard` — real Claude design adapter (WIZARD-B2)
 
-**Author:** autonomous-build (operator-dispatched 2026-05-31)
+**Author:** cowork-mode-claude-phase-b-ui (operator-dispatched 2026-05-31)
 **Status:** Implementation complete
-**Branch:** `feature/c4-snapshotter-row-level-adr-2026-05-31`
-**True-Zero admin-merge:** RATIFIED (subscription-only Claude Max; `.caia/build-phase-active` carve-out continues to apply; ritual per AGENTS.md §156–§163).
+**Branch:** `feature/wizard-b2-real-claude-design-adapter-2026-05-31`
+**True-Zero admin-merge:** Subscription-only, build-phase carve-out applies.
 
 ## 1. Why this exists
 
-Phase C Task C4 of the CAIA wizard pipeline: resolve the snapshotter ↔
-rest-of-system tenant-isolation drift with a recorded ADR.
+Phase B Task B2 of the CAIA wizard pipeline: the Step 6 (Design) flow
+had a stub Claude integration. The DesignPanel UI offered "paste this
+prompt into your design tool, then upload the result as a CD ZIP" —
+the inverse round-trip the spec wanted to close. The actual Claude
+generation lived in a `// Wave 2 wires the actual @caia/design-ingest
+Ingestor here` placeholder.
 
-The design-ingest snapshotter (`@chiefaia/design-ingest`) is the lone
-surface in the platform that uses **row-level tenant_id** persistence —
-everything else (wizard, dashboard, `@caia/wizard-tenant-bootstrap`) is
-**schema-level**. Operator directive: "decide for me, optimize for what
-reduces drift."
+B2 closes the loop: given the Step-5 design-app prompt, the system
+itself spawns Claude (subscription-only, via `@chiefaia/claude-spawner`)
+and parses the JSON envelope into a `RenderableDesign`. The wizard
+exposes this through a new `POST /api/wizard/design/ingest` route
+that composes the canonical backend wrapper chain
+(`withTenantSearchPath → wizardWithRetry → withClaudeSpawnerSpan`)
+around the new adapter.
 
-**Decision: keep row-level for V1; defer the destructive migration to a
-future ADR triggered by row count (>10M) or tenant count (>25).** This
-is the cleanest V1 path because the migration itself is the larger risk
-than the drift it removes, and the drift is now intentional and dated.
+## 2. Shape
 
-## 2. Scope of this PR
+```
+packages/design-ingest/src/claude-design-adapter.ts   # new adapter
+packages/design-ingest/src/schema.ts                  # +'claude-design' source name
+packages/design-ingest/src/errors.ts                  # +7 B2 error codes
+packages/design-ingest/src/index.ts                   # export ClaudeDesignAdapter
+packages/design-ingest/package.json                   # +@chiefaia/claude-spawner dep + updated description
+packages/design-ingest/tests/unit/claude-design-adapter.test.ts   # 15 vitest cases
+packages/design-ingest/tests/unit/schema.test.ts      # updated count assertion
+apps/wizard/app/api/wizard/design/ingest/route.ts     # new POST route
+apps/wizard/tests/wizard-shell/wizard-steps/design-ingest-route.test.ts  # 12 vitest cases
+```
 
-### 2.1 In scope
+`ClaudeDesignAdapter` implements `DesignAdapter`:
+- `validate(input)` — cheap shape check (kind, promptText, designVersionId).
+- `parse(input)` — spawns Claude with a `--output-format=json` argv,
+  parses the envelope via the canonical `parseClaudeJsonEnvelope`,
+  parses `envelope.result` as JSON, validates against
+  `RenderableDesignSchema` (Zod), returns the `RenderableDesign`.
+- `refresh()` — throws `RefreshNotSupported` (claude-design is one-shot).
+- `capabilities` — `requiresCredential: false` (the keychain OAuth
+  session is the credential), `supportsRefresh: false`,
+  `supportsLiveWebhook: false`.
 
-1. **`caia-ea/decisions/ADR-067-snapshotter-row-level-tenant-id-canonical-for-v1.md`**
-   — the canonical EA decision record (Nygard-style; written per the
-   `caia-ea/templates/adr-template.md` shape). Lives outside this repo
-   because caia-ea is a separate, non-git'd EA notes directory; the
-   mirror at `caia/docs/adr/ADR-067-...md` is the in-monorepo greppable
-   copy.
-2. **`caia/docs/adr/ADR-067-snapshotter-row-level-tenant-id-canonical-for-v1.md`**
-   — verbatim mirror of the caia-ea ADR with a top-line callout to
-   the canonical source.
-3. **`apps/wizard/tests/wizard-shell/adr-067-snapshotter-shape.test.ts`**
-   — 6 vitest cases asserting the ADR mirror exists, declares Accepted
-   status, names the snapshotter as affected, commits to row-level for
-   V1, carries both migration triggers (10M / 25), and cites its
-   canonical source.
-4. **`.changeset/c4-adr-snapshotter-convergence.md`** — none-bump
-   (docs/EA only; no published package surface change).
+Test seams (`spawnImpl`, `parseEnvelopeImpl`) keep the suite away
+from a real subprocess. Production paths default to the canonical
+`spawnClaude` + `parseClaudeJsonEnvelope` from `@chiefaia/claude-spawner`.
 
-### 2.2 Out of scope
+## 3. Reuse-first
 
-- The schema-level migration itself — DEFERRED per the ADR's decision.
-  Future ADR-XXX owns the migration when triggers fire.
-- The semgrep rule enforcing `WHERE tenant_id = $1` on snapshotter
-  SQL — listed in the ADR's "Neutral / follow-on work" but not in C4.
-- The operator-dashboard widget surfacing snapshotter row count / tenant
-  count vs. triggers — also listed, also deferred.
-- Any change to `@chiefaia/design-ingest` runtime behaviour — this PR
-  is documentation-only.
+| Need | Existing package consumed |
+|---|---|
+| Claude binary spawn (subscription-only) | `@chiefaia/claude-spawner.spawnClaude` |
+| Envelope parsing | `@chiefaia/claude-spawner.parseClaudeJsonEnvelope` |
+| RenderableDesign schema validation | `@caia/design-ingest.assertRenderableDesign` (Zod) |
+| Retry/backoff envelope | `apps/wizard/lib/wizard/retry-spawner.wizardWithRetry` (B7) |
+| Tempo semantic span | `@chiefaia/tracing.withClaudeSpawnerSpan` (B3) |
+| Tenant schema pinning | `apps/wizard/lib/tenants/search-path.withTenantSearchPath` (B4) |
 
-## 3. Reuse-first compliance
+No parallel Claude spawn. No bespoke envelope parser. No parallel
+retry/backoff. No raw `child_process.spawn`. No raw `axios`/`fetch`
+to api.anthropic.com.
 
-| Dep | Use | Decision |
-| --- | --- | --- |
-| `caia-ea/templates/adr-template.md` | Nygard ADR shape | **selected** — every section in this ADR follows the template's structure. |
-| `caia/docs/adr/` directory | In-monorepo ADR mirror surface | **selected** — extends the existing curated mirror (last entry was ADR-016) with a single high-leverage decision; full resync of ADRs 017–066 is out of scope. |
-| `@caia/ui` | (not used) | **rejected** — docs/EA PR; no UI surface. |
-| New ADR schema / Decision Records framework | Decision tracking | **rejected** — we already have a working ADR convention. |
+## 4. Subscription-only
 
-## 4. Test strategy
+`@chiefaia/claude-spawner.spawnClaude` unconditionally scrubs
+`ANTHROPIC_API_KEY` + sibling API-key env vars (see `SCRUBBED_AUTH_ENV_VARS`).
+The binary falls through to the keychain OAuth subscription session.
+There is no fallback to API-key billing — `spawnClaude` returns
+`ok: false` if the binary fails, and the route surfaces that as a 503.
 
-| Layer | File | it-blocks | Assertions |
-| --- | --- | --- | --- |
-| ADR mirror exists in caia/docs/adr/ | `apps/wizard/tests/wizard-shell/adr-067-snapshotter-shape.test.ts` | 1 | 1 |
-| Status: Accepted | same file | 1 | 1 |
-| @chiefaia/design-ingest named as affected | same file | 1 | 1 |
-| Decision sentence: keep row-level for V1 | same file | 1 | 1 |
-| Both migration triggers (10M, 25) present | same file | 1 | 2 |
-| Cites canonical source in caia-ea | same file | 1 | 1 |
-| **Total new** | | **6** | **7** |
+## 5. Tests
 
-6 new vitest cases ≥ the brief's de-facto "≥5 tests" minimum.
+- 15 adapter unit tests in `packages/design-ingest/tests/unit/claude-design-adapter.test.ts`
+  covering: validate (5 cases — happy/upload-kind/missing-prompt/whitespace-prompt/missing-dv),
+  parse success (2 cases — clean envelope + threaded model/timeout),
+  parse failure (5 cases — spawn-failed/envelope-invalid/result-not-json/schema-invalid/refresh-not-supported),
+  contract (1 case — sourceName + subscription-only capabilities),
+  prompt builder (2 cases — designVersionId + promptText inlined).
+- 12 route unit tests in `apps/wizard/tests/wizard-shell/wizard-steps/design-ingest-route.test.ts`
+  covering: route contract (runtime/dynamic), validation (4 cases —
+  bad-json/missing-projectId/missing-prompt/whitespace-prompt), auth
+  (1 case — 401 when x-tenant-id missing), stub path (5 cases —
+  default returns memory/uses-supplied-dv/generates-dv/note-points-at-env/idempotent).
+- 27 tests total. The brief requested ≥10.
+- 1 updated test in `packages/design-ingest/tests/unit/schema.test.ts`
+  to reflect the source-count bump from 9 → 10.
 
-## 5. Verification proof
+All 68 design-ingest tests pass + new wizard route tests pass.
 
-1. `cat caia-ea/decisions/ADR-067-...md` returns the canonical ADR text.
-2. `cat caia/docs/adr/ADR-067-...md` returns the verbatim mirror with
-   canonical-source callout.
-3. `pnpm vitest run tests/wizard-shell/adr-067-snapshotter-shape.test.ts`
-   — 6/6 pass.
+Pre-existing develop failures (`@chiefaia/tracing` dist missing
+`withClaudeSpawnerSpan` because the package is consumed via
+`workspace:*` + pnpm doesn't rebuild on every install + TS2352 in
+`tests/wizard-shell/edge-bypass.test.ts`) are unchanged — same
+tolerated set the backend B wave merged through.
 
-## 6. Definition of Done
+## 6. True-Zero readiness
 
-- [x] ADR-067 written in caia-ea (canonical).
-- [x] ADR-067 mirrored in caia/docs/adr/.
-- [x] 6 new vitest cases pass locally.
-- [x] EA-REVIEW-OUTCOME.json recorded (stub critic; live submitPlan
-      deferred per #635 precedent).
-- [ ] CI green.
-- [ ] True-Zero admin-merge ritual completed.
-- [ ] PR comment links the ADR location.
+- Adapter `pnpm exec vitest run` → 15/15 pass.
+- Route `pnpm exec vitest run` → 12/12 pass.
+- Whole-package `pnpm exec vitest run` (design-ingest) → 68/68 pass.
+- Local `tsc --noEmit` → only pre-existing tracing-dist error remains.
+- No raw shadcn/Radix imports anywhere (B2 is server-side only — no
+  client component changes).
+- Branched from `origin/develop` (HEAD 2e66908 — B1 merged).

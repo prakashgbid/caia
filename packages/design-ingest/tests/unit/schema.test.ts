@@ -66,9 +66,10 @@ describe('RenderableDesignSchema', () => {
 });
 
 describe('SourceNameSchema', () => {
-  it('lists all 9 spec sources', () => {
-    expect(SOURCE_NAMES).toHaveLength(9);
+  it('lists all 10 spec sources (9 external + claude-design from B2)', () => {
+    expect(SOURCE_NAMES).toHaveLength(10);
     expect(SOURCE_NAMES).toContain('cd-zip');
+    expect(SOURCE_NAMES).toContain('claude-design');
     expect(SOURCE_NAMES).toContain('figma-json');
   });
 

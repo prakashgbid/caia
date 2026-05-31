@@ -2,7 +2,7 @@
   "name": "@caia/design-ingest",
   "version": "0.1.0",
   "private": true,
-  "description": "Multi-source design-ingest framework: validate / parse / snapshot adapter contract, registry dispatch, ux_uploads persistence, GDPR delete-all-for-tenant orchestration. Wraps @caia/atlas-design-snapshotter for versioning + @chiefaia/atlas-mapper for stable DOM-ID assignment. CAIA Step 5. No LLM calls.",
+  "description": "Multi-source design-ingest framework: validate / parse / snapshot adapter contract, registry dispatch, ux_uploads persistence, GDPR delete-all-for-tenant orchestration. Wraps @caia/atlas-design-snapshotter for versioning + @chiefaia/atlas-mapper for stable DOM-ID assignment. Phase B B2 adds a server-side ClaudeDesignAdapter (subscription-only via @chiefaia/claude-spawner) so CAIA can generate a RenderableDesign directly from the Step 5 design-app prompt. CAIA Step 5+6.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/claude-design-adapter.d.ts",
+      "default": "./dist/claude-design-adapter.js"
     }
   },
   "files": [
@@ -32,7 +36,8 @@
     "@caia/secrets-adapter": "workspace:*",
     "@chiefaia/atlas-mapper": "workspace:*",
     "pg": "^8.13.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@chiefaia/claude-spawner": "workspace:*"
   },
   "devDependencies": {
     "@chiefaia/eslint-config": "workspace:*",
