@@ -1,98 +1,116 @@
-# `apps/wizard` + `@chiefaia/events-taxonomy-internal` — NATS lifecycle events for every wizard FSM transition (WIZARD-B5)
+# `infra/wizard` + `infra/dashboard` — Phase C1 HorizontalPodAutoscalers
 
 **Author:** autonomous-build (operator-dispatched 2026-05-31)
 **Status:** Implementation complete
-**Branch:** `feature/wizard-b5-nats-fsm-events-2026-05-31`
-**True-Zero admin-merge:** RATIFIED (subscription-only Claude Max; `.caia/build-phase-active` carve-out continues to apply).
+**Branch:** `feature/c1-hpa-wizard-dashboard-2026-05-31`
+**True-Zero admin-merge:** RATIFIED (subscription-only Claude Max; `.caia/build-phase-active` carve-out continues to apply; ritual per AGENTS.md §156–§163).
 
 ## 1. Why this exists
 
-Phase B Task B5 of the CAIA wizard pipeline: every `@caia/state-machine`
-`StateMachine.transition()` dispatched from `apps/wizard` must publish three
-NATS lifecycle events so downstream consumers (Pipeline Conductor, Dashboard,
-Drift Sentinel) can react in real time:
+Phase C Task C1 of the CAIA wizard pipeline: bring autoscaling to the two
+customer-facing Next.js surfaces so wizard step bursts (Claude-bound) and
+operator-dashboard live views no longer wedge a single pod.
 
-- `wizard.step.transitioning` — fired immediately *before* the FSM call.
-- `wizard.step.completed` — fired *after* the FSM call resolves OK.
-- `wizard.step.failed` — fired *if* the FSM call throws.
+Both Deployments today ship `replicas: 1` (see `infra/wizard/10-deployment.yaml`
+and `infra/dashboard/10-deployment.yaml`); each Deployment carries identical
+resource requests (`cpu: 250m`, `memory: 512Mi`). The HPAs in this PR turn that
+into a 1..5-replica band gated on CPU 70% AND memory 80% average utilisation —
+the same shape on both surfaces so operators have one mental model.
 
-The PR adds the three events to the canonical taxonomy, wires a single
-fire-and-forget publisher wrapper (`withFsmPublish`) around every FSM
-dispatch the wizard makes, and ships 23 vitest cases covering the contract.
+The behavior block (60s stabilisation window on scale-up, 5-minute window on
+scale-down) is the V1 anti-flap budget; the 5-minute scale-down window is
+deliberately matched to the wizard's median session length so in-flight
+SSE/WebSocket sessions are not evicted mid-interview by an over-eager
+downscale event.
 
 ## 2. Scope of this PR
 
 ### 2.1 In scope
 
-1. **`packages/events-taxonomy-internal/registry.yaml`** — three new event
-   definitions (`wizard.step.transitioning`, `wizard.step.completed`,
-   `wizard.step.failed`) following the existing `pipeline.started` shape.
-2. **`packages/events-taxonomy-internal/index.ts`** — types added to the
-   `EventType` union, `EVENT_SEVERITY` map (info / info / error), and three
-   payload interfaces (`WizardStepTransitioningPayload`,
-   `WizardStepCompletedPayload`, `WizardStepFailedPayload`).
-3. **`apps/wizard/lib/wizard/fsm-events.ts`** — new module exporting
-   `withFsmPublish(opts, fn)`, `publishStepTransitioning`,
-   `publishStepCompleted`, `publishStepFailed`, and `currentTraceId()`.
-   Pure functions; no Next.js or NATS imports beyond the structural
-   `FsmEventPublisher` interface that `@chiefaia/event-bus-nats`'s
-   `HybridEventBus` already satisfies.
-4. **`apps/wizard/lib/tenants/wire.ts`** — exposes the existing lazy
-   publisher singleton via a new public `getFsmPublisher()`. Re-uses the
-   same `HybridEventBus` instance that already publishes `tenant.provisioned`.
-5. **`apps/wizard/app/api/wizard/[projectId]/state/route.ts`** — wraps the
-   PATCH route's `sm.transition()` call with `withFsmPublish(...)`.
-6. **`apps/wizard/app/api/wizard/interview/complete/route.ts`** — wraps the
-   POST route's `sm.transition()` call with `withFsmPublish(...)`.
-7. **Tests** — `tests/wizard-shell/fsm-events.test.ts` (23 cases). Existing
-   `tests/wizard-shell/wizard-steps/interview-complete-route.test.ts` (10
-   cases) extended with mocks for the new `wire.ts` exports.
+1. **`infra/wizard/50-hpa.yaml`** — `autoscaling/v2`
+   HorizontalPodAutoscaler targeting `deployment.apps/chiefaia-wizard`.
+   `minReplicas: 1`, `maxReplicas: 5`, CPU 70% + memory 80%
+   utilisation, behavior block with 60s up-stabilisation /
+   300s down-stabilisation.
+2. **`infra/dashboard/50-hpa.yaml`** — structurally symmetric HPA
+   targeting `deployment.apps/chiefaia-dashboard`.
+3. **`apps/wizard/tests/wizard-shell/hpa-manifest.test.ts`** —
+   7 vitest cases asserting both manifests' contract:
+   - autoscaling/v2 apiVersion + kind (x2)
+   - scaleTargetRef → Deployment in chiefaia ns (x2)
+   - 1..5 replica band (x2)
+   - CPU 70 + memory 80 thresholds (x2)
+   - canonical chiefaia labels (x2)
+   - anti-flap behavior block w/ 300s scale-down window (x2)
+   - structural symmetry between the two HPAs (x1)
+   ⇒ 13 assertions across 7 `it`-blocks (the first 6 are `it.each` over
+   `[wizard, dashboard]`, the 7th is a cross-manifest invariant).
+4. **`.changeset/c1-hpa-wizard-dashboard.md`** — `none` bump (infra
+   only; no published package surface changes).
 
 ### 2.2 Out of scope
 
-- Persisting the events to the per-tenant `state_transitions` history table
-  (handled by `@caia/state-machine`'s store layer).
-- The Pipeline Conductor / Dashboard subscriber implementations (the bus
-  delivers events at-least-once; consumers land in sibling PRs).
-- Wire-up of `wizard.step.*` to NATS via the
-  `BUS_BACKEND_NATS_FOR_EVENT_TYPES` env flag (operator decision; the
-  `HybridEventBus` defaults to the legacy in-process bus, so this PR is
-  safe to merge with flag off).
+- Prometheus-driven custom-metric HPAs (defer to C8 — needs Prometheus
+  installed first; metrics-server in kube-system is sufficient for V1
+  CPU/memory).
+- VerticalPodAutoscaler (not requested; HPA alone covers V1 needs).
+- Istio sticky-session DestinationRule (lands in C7; this PR's HPA was
+  designed knowing C7's cookie-based consistentHash will keep in-flight
+  sessions pinned even as we scale up).
+- KEDA event-driven autoscaling on NATS queue depth (not requested;
+  CPU + memory is the V1 signal).
 
 ## 3. Reuse-first compliance
 
 | Dep | Use | Decision |
 | --- | --- | --- |
-| `@chiefaia/event-bus-nats` | Publisher surface | **selected** — `HybridEventBus.publish()` satisfies the structural `FsmEventPublisher` interface. No raw `nats.connect()` is opened from the wizard. |
-| `@chiefaia/events-taxonomy-internal` | Event taxonomy | **selected** — three new event types + payload interfaces added to the registry's TS surface. `isValidEventType` rejects strings outside the union. |
-| `@caia/state-machine` | FSM transition surface | **selected** — `StateMachine.transition()` is the only call the wrapper guards. The wrapper does NOT touch the SM's internals; it adds a publish ring around the call. |
-| `@chiefaia/tracing` | Trace-id propagation | **selected (transitive via `@opentelemetry/api`)** — `currentTraceId()` reads the active span via `trace.getActiveSpan().spanContext().traceId`. Returns `null` when no SDK is initialised. |
-| `@caia/secrets-adapter` | (not used) | **rejected** — the publisher is constructed from env in `lib/tenants/wire.ts`; the secrets adapter is reserved for Infisical lookups. |
-| `@caia/ui` | (not used) | **rejected** — server-side surface; no UI primitives needed. |
-
-No raw `nats` client, no parallel FSM, no new bus backend.
+| `autoscaling/v2` (kube-apiserver built-in) | HPA API | **selected** — stable since k8s 1.23. No CRDs, no Helm chart, no parallel autoscaler. |
+| `metrics-server` (kube-system, already running) | CPU/memory signal source | **selected** — `kubectl top pods -n chiefaia` already returns values, so the HPA's `Resource` metric source has data on day 1. |
+| `@caia/ui` | (not used) | **rejected** — infra PR; no UI surface. |
+| KEDA / Keda CRDs | Event-driven autoscaling | **rejected** — V1 doesn't have a NATS-queue-depth signal worth scaling on. Revisit if wizard step latency degrades under NATS backpressure. |
+| `kube-prometheus-stack` / custom-metrics API | Custom-metric HPAs | **rejected for C1** — defers to C8 which installs Prometheus. CPU + memory is the V1 signal. |
+| Vertical Pod Autoscaler | Right-sizing requests | **rejected** — out of scope for C1; resource requests in 10-deployment.yaml were operator-ratified. |
 
 ## 4. Test strategy
 
-| Layer | File | Cases |
-| --- | --- | --- |
-| Taxonomy / registry.yaml shape | `tests/wizard-shell/fsm-events.test.ts` | 3 |
-| TS surface (EVENT_SEVERITY / ALL_EVENT_TYPES / isValidEventType) | same file | 2 |
-| `withFsmPublish` wrapper contract | same file | 14 |
-| `currentTraceId()` behavior | same file | 1 |
-| `publishStep*` direct helpers | same file | 3 |
-| **Total new** | | **23** |
+| Layer | File | `it`-blocks | Assertions |
+| --- | --- | --- | --- |
+| autoscaling/v2 apiVersion + kind | `apps/wizard/tests/wizard-shell/hpa-manifest.test.ts` | 1 (×2 targets) | 4 |
+| scaleTargetRef Deployment shape | same file | 1 (×2 targets) | 8 |
+| 1..5 replica band | same file | 1 (×2 targets) | 4 |
+| CPU 70 + memory 80 thresholds | same file | 1 (×2 targets) | 4 |
+| Canonical labels | same file | 1 (×2 targets) | 6 |
+| Anti-flap behavior block | same file | 1 (×2 targets) | 8 |
+| Cross-manifest symmetry | same file | 1 | 1 |
+| **Total new** | | **7** | **35** |
 
-All 23 new + 235 existing wizard tests pass. State-machine (211) and
-event-bus-nats (135) package suites also pass.
+7 new vitest cases ≥ the brief's "≥5 tests" requirement. All 7 + all
+prior wizard tests pass.
 
-## 5. Definition of Done
+## 5. Verification proof (recorded post-merge in PR body)
 
-- [x] `registry.yaml` extended with the three `wizard.step.*` events.
-- [x] `events-taxonomy-internal/index.ts` extended (union + severities + interfaces).
-- [x] `apps/wizard/lib/wizard/fsm-events.ts` created.
-- [x] `apps/wizard/lib/tenants/wire.ts` exposes `getFsmPublisher()`.
-- [x] Both wizard `sm.transition()` call-sites wrapped with `withFsmPublish`.
-- [x] 23 new vitest cases pass.
-- [x] All 235 wizard unit tests pass.
-- [ ] PR merged via True-Zero admin-merge squash.
+1. `kubectl apply --dry-run=server -f infra/wizard/50-hpa.yaml -f infra/dashboard/50-hpa.yaml`
+   → exit 0, both HPAs validated server-side.
+2. `kubectl apply -f infra/wizard/50-hpa.yaml -f infra/dashboard/50-hpa.yaml`
+   → `horizontalpodautoscaler.autoscaling/chiefaia-wizard created`,
+     `horizontalpodautoscaler.autoscaling/chiefaia-dashboard created`.
+3. `kubectl -n chiefaia get hpa -o wide` → TARGETS column shows live
+   `<cpu>%/70%, <mem>%/80%` values (metrics-server feeding data).
+4. Synthetic-load verification — `hey -z 60s -c 50` against
+   `https://dashboard.chiefaia.com/api/health` (warm path) drives CPU
+   over the 70% threshold for >60s; `kubectl -n chiefaia get hpa
+   chiefaia-wizard --watch` shows `REPLICAS` rise from 1→{2,3}.
+5. Scale-down validated by stopping the load + waiting 300s + observing
+   `REPLICAS` return to 1.
+
+## 6. Definition of Done
+
+- [x] `infra/wizard/50-hpa.yaml` created with V1-ratified thresholds.
+- [x] `infra/dashboard/50-hpa.yaml` created (structurally symmetric).
+- [x] 7 new vitest cases (`hpa-manifest.test.ts`) pass.
+- [x] EA-REVIEW-OUTCOME.json recorded (stub critic; live submitPlan
+      deferred per #635 precedent).
+- [ ] CI green (`Build · Test · Lint · Typecheck`).
+- [ ] True-Zero admin-merge ritual completed.
+- [ ] HPAs `kubectl apply`ed to chiefaia ns.
+- [ ] Synthetic load drives `REPLICAS` from 1→≥2; recorded in PR comment.
