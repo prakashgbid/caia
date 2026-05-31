@@ -43,8 +43,20 @@ vi.mock('@caia/state-machine', async () => {
   };
 });
 
-vi.mock('../../../lib/wizard/store-wire', () => ({
+vi.mock("../../../lib/wizard/store-wire", () => ({
   getStateStoreForTenant: async () => ({ __mock: true }),
+  resolveTenantSchema: async () => "tenant_test_schema",
+}));
+
+vi.mock("../../../lib/tenants/wire", () => ({
+  getPool: () => ({
+    async connect() {
+      return {
+        async query() { return { rows: [], rowCount: 0 }; },
+        release() {},
+      };
+    },
+  }),
 }));
 
 vi.mock('../../../lib/wizard/state.server', async (orig) => {
