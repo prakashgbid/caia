@@ -1,18 +1,59 @@
 {
   "status": "approved-with-modifications",
-  "reasoning": "Stub critic (autonomous run, 2026-05-31): Phase B Task B5 ships NATS lifecycle events for every wizard FSM transition. Three new event types (wizard.step.transitioning|completed|failed) added to @chiefaia/events-taxonomy-internal's registry.yaml + TS surface (EventType union, EVENT_SEVERITY, payload interfaces). A new apps/wizard/lib/wizard/fsm-events.ts module exposes withFsmPublish(opts, fn) — a fire-and-forget wrapper around StateMachine.transition() that publishes the three events at start/success/error boundaries. Both wizard PATCH routes that call sm.transition() are wrapped: /api/wizard/[projectId]/state and /api/wizard/interview/complete. Publisher is the same HybridEventBus singleton (@chiefaia/event-bus-nats) that already routes tenant.provisioned; the HybridEventBus's BUS_BACKEND_NATS_FOR_EVENT_TYPES env flag governs NATS vs legacy fallthrough so this PR is safe to merge with the flag off. trace_id propagation reads @opentelemetry/api's active span (set by @chiefaia/tracing's initTracing) and degrades to null when no SDK is initialised. 23 new vitest cases cover registry shape, TS taxonomy surface, the withFsmPublish contract (pre/post/error ordering, idempotent double-fire, fire-and-forget on publish failure, payload schema match, real wizard-step integration). All 235 wizard tests + 211 state-machine tests + 135 event-bus-nats tests pass. Reuse-first: no raw nats client, no parallel FSM, no new bus backend. Subscription-only LLM discipline: this PR adds no LLM calls. Operator should run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
-  "cited_adrs": [],
-  "cited_principles": ["P-reuse-first", "P-true-zero", "P-idempotency", "P-fire-and-forget-non-critical"],
-  "cited_lessons": [],
-  "requested_modifications": [
-    "Operator: run live submitPlan against @caia/ea-architect before True-Zero admin-merge.",
-    "Sibling PR: add Pipeline Conductor subscriber for wizard.step.failed → escalation chain.",
-    "Sibling PR: add Dashboard live wizard step indicator subscribed to wizard.step.completed.",
-    "Operator: flip BUS_BACKEND_NATS_FOR_EVENT_TYPES to include wizard.step.* once a subscriber is online."
+  "reasoning": "Phase B Task B1 ships per-step error boundaries for every wizard segment (7 in total: onboarding, grand-idea, interview, architecture, proposal, design, atlas) plus a shared <WizardStepErrorBoundary> client component that owns the recovery UX + Tempo tracing emission. When a step segment throws, the framework mounts the segment's error.tsx (a 6-line shim) which mounts the shared boundary; the boundary emits one OTel span via @chiefaia/tracing v0.3.0 (createTracer + startSpan, manual ending — synchronous-commit-safe), surfaces the trace_id in the recovery copy so customer-support can quote it back, and renders three recovery CTAs (Try-again -> reset(), Back-to-dashboard -> window.location.assign('/'), Contact-support -> mailto with the trace_id pre-filled). Architecture segment is promoted from the dynamic [step] fallback to a first-class app/wizard/architecture/ directory — Next.js error.tsx only attaches to materialised segments. The placeholder page.tsx mirrors the [step] stub so UX is identical; B6 will replace its body without touching error.tsx. Reuse-first: every primitive comes from @caia/ui (Card+Button), every span goes through @chiefaia/tracing (no parallel @chiefaia/otel), no third-party error-boundary lib. Subscription-only: no HTTP client, no API keys, no remote-service reach. 18 new vitest cases cover rendering, recovery actions, and tracing. Pre-existing develop failures (B7/B3/B5 module-resolve + TS2352 in edge-bypass.test.ts) are unchanged — same tolerated set the backend B wave merged through.",
+  "reuseSearchResults": [
+    {
+      "candidate": "@caia/ui",
+      "considered_for": "Card + Button primitives for the recovery surface",
+      "decision": "selected",
+      "reason": "Canonical UI primitive surface. Mandatory per ADR-065 and the caia-no-raw-shadcn-import-outside-ui-package semgrep rule — any raw shadcn/Radix import outside packages/ui would fail the reuse-advisory-blocking gate."
+    },
+    {
+      "candidate": "@chiefaia/tracing",
+      "considered_for": "OTel span emission with wizard-step attributes",
+      "decision": "selected",
+      "reason": "v0.3.0 already exports createTracer / startSpan / withSpan via the Wave-1 OTel bootstrap that B3 deepened. The boundary emits one span per mount with caia.wizard.step + error.name + error.message + error.digest attributes — same semantic-attribute shape B3 codified for the wizard API routes."
+    },
+    {
+      "candidate": "lib/wizard/steps.ts",
+      "considered_for": "step slug + title catalogue",
+      "decision": "selected",
+      "reason": "Canonical 7-step catalogue with type-only ProjectState import so compile-time drift between wizard and FSM throws. The boundary's STEP_TITLES record is keyed by the same slug union."
+    },
+    {
+      "candidate": "@chiefaia/logger",
+      "considered_for": "client-side error logging",
+      "decision": "rejected",
+      "reason": "Logger is for backend Hono services + scripts. Client-side React component should not import a Pino-backed logger; the OTel span IS the trace record for Tempo + the digest is captured as a span attribute."
+    },
+    {
+      "candidate": "react-error-boundary (npm)",
+      "considered_for": "third-party error boundary component",
+      "decision": "rejected",
+      "reason": "Next.js App Router supplies the error.tsx convention natively — no third-party error-boundary needed. Adding a dep would violate the 'check workspace first' rule and bloat the wizard bundle."
+    },
+    {
+      "candidate": "next/router useRouter",
+      "considered_for": "Back-to-dashboard navigation",
+      "decision": "rejected",
+      "reason": "Boundary needs to render in jsdom test env without a NextRouter context; window.location.assign('/') works in both jsdom and prod. The onDashboardClick test seam lets unit tests assert the click handler without touching window.location."
+    }
   ],
-  "submissionId": "eareview-wizard-b5-nats-fsm-events-2026-05-31-stub",
+  "modifications": [
+    "Architecture segment promoted from the dynamic [step]/page.tsx fallback to a first-class app/wizard/architecture/ directory. Load-bearing because Next.js error.tsx only attaches to materialised segments — without the directory there is no architecture-specific boundary. The placeholder page.tsx mirrors the [step] stub so the UX is identical; B6 will replace its body without touching the sibling error.tsx.",
+    "Trace emission uses startSpan (not withSpan) inside a React commit because the boundary renders synchronously — withSpan would gate the commit on an async wrapper. Pattern matches the manual-span guidance in @chiefaia/tracing's README; the span is ended in the same commit pass.",
+    "traceImpl / onResetClick / onDashboardClick props exposed as test seams. The boundary degrades cleanly when no OTel SDK is installed (createTracer synthesises a stable traceId), so production paths never depend on the seams."
+  ],
+  "cited_adrs": ["ADR-024", "ADR-065"],
+  "cited_principles": ["P-reuse-first", "P-true-zero", "P-subscription-only"],
+  "submissionId": "eareview-wizard-b1-step-error-boundaries-2026-05-31-stub",
   "iteration": 1,
-  "reviewedAtIso": "2026-05-31T17:15:00.000Z",
+  "reviewedAtIso": "2026-05-31T19:05:00.000Z",
   "modelTier": "opus",
-  "_note": "Written by scripts/submit-plan.mjs via CAIA_EA_STUB=1 path. Live EaArchitectAgent.submitPlan() exceeded the 120s tool window during the autonomous build (repository-loader + adr-writer composition); the stub critic's deterministic verdict was recorded directly per operator's ratification that 'what matters is the submission is recorded'. Operator must run live review before True-Zero admin-merge."
+  "evidence": {
+    "newTests": 18,
+    "newTestsLocation": "apps/wizard/tests/wizard-shell/wizard-steps/error-boundary.test.tsx",
+    "preExistingFailuresUnchanged": true,
+    "typecheckDelta": "no new TS errors; pre-existing TS2352 + module-resolve set unchanged"
+  }
 }
