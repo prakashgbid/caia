@@ -2,39 +2,33 @@
  * `POST /api/wizard/proposal/generate` — Step 5 proposal generator.
  *
  * Server-side handler that imports `runStep5` from
- * `@caia/business-proposal-generator` and runs the V1 wizard flow. The
- * wizard's V1 path uses:
+ * `@caia/business-proposal-generator` and runs the V1 wizard flow.
  *
- *   - `MemoryBlobStorage` — no live BYOC R2/S3 hookup yet.
- *   - `MemoryProposalPersistence` — no live per-tenant DB writes yet.
- *   - `ScriptedLlmCaller` — deterministic canned responses so the
- *     wizard page renders without a Claude subscription wired through.
- *   - `skipFormatConversion: true` — pandoc binary isn't available in
- *     the wizard's Node runtime; the route returns markdown only.
+ * Phase B B4 (2026-05-31): the live path wraps `runStep5` with
+ * `withTenantSearchPath` so every Postgres call the generator makes
+ * resolves against the tenant's schema. The default V1 stub path is
+ * 100% in-memory and never touches pg, so we deliberately skip the
+ * `resolveTenantSchema` lookup there — it would needlessly call the
+ * global `tenants` table on every request that's just rendering canned
+ * markdown.
  *
- * Wave 2 will swap each of those for the production counterpart behind
- * an env flag (`WIZARD_PROPOSAL_LIVE=1`) once the cloud + DB + LLM
- * surfaces stabilize.
+ * Phase B B3 (2026-05-31): `runStep5` (which in live mode fans out to
+ * multiple claude-spawner prompts via the injected `LlmCaller`) is
+ * wrapped in `withClaudeSpawnerSpan` so Tempo records the wizard
+ * step semantics around the entire proposal-generation run. The OTel
+ * context manager threads the wizard span as parent of the
+ * `claude.spawn` spans the spawner emits.
  *
  * Reuse-first compliance:
  *   - Uses `@caia/business-proposal-generator`'s `runStep5`,
  *     `MemoryBlobStorage`, `MemoryProposalPersistence`,
  *     `ScriptedLlmCaller`.
- *   - Uses `@caia/state-machine` indirectly via the wizard state PATCH
- *     route from PR #601 (the page dispatches the transition; this
- *     route only generates the proposal).
- *   - Phase B B3: wraps the `runStep5` call (which in live mode fans
- *     out to three claude-spawner prompts — exec-summary, full
- *     proposal, one-pager — via the injected `LlmCaller`) with
- *     `withClaudeSpawnerSpan` so Tempo records the wizard step
- *     semantics around the entire proposal-generation run. The OTel
- *     context manager threads the wizard span as parent of the
- *     `claude.spawn` spans the spawner emits.
+ *   - Uses `withTenantSearchPath` from `lib/tenants/search-path.ts`.
+ *   - Uses `createTracer` + `withClaudeSpawnerSpan` from `@chiefaia/tracing`.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { headers } from 'next/headers';
-import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
 import {
   MemoryBlobStorage,
   MemoryProposalPersistence,
@@ -43,6 +37,10 @@ import {
   type GenerateProposalInput,
   type LlmCaller,
 } from '@caia/business-proposal-generator';
+import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
+import { resolveTenantSchema } from '../../../../../lib/wizard/store-wire';
+import { getPool } from '../../../../../lib/tenants/wire';
+import { withTenantSearchPath } from '../../../../../lib/tenants/search-path';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -94,36 +92,29 @@ const PROPOSAL_LIVE_MODEL = 'claude-opus-4-6';
  */
 const PROPOSAL_PROMPT_TEMPLATE = 'proposal:runStep5.v1';
 
-/**
- * Stub bundles. The orchestrator's `renderExecSummary` /
- * `renderFullProposal` / `renderOnePager` all call the injected
- * `LlmCaller` once each and parse a JSON envelope. We feed three
- * deterministic envelopes here.
- */
 function buildScriptedLlm(): LlmCaller {
   return new ScriptedLlmCaller([
     {
       kind: 'ok',
       text: JSON.stringify({
         markdown:
-          '# Executive Summary\n\nA concise overview of the product and the target customer. The product solves a specific problem for a specific audience and aims to monetize through a recurring subscription.',
+          '# Executive Summary\n\nA concise overview of the product and the target customer.',
       }),
     },
     {
       kind: 'ok',
       text: JSON.stringify({
         markdown:
-          '# Technical Scope\n\n## Architecture\nThe system splits into a Next.js dashboard, a `@caia/*` workspace of agents, and a per-tenant Postgres schema.\n\n## Build phases\n1. Step 1 — Onboarding.\n2. Step 2 — Grand Idea.\n3. Step 5 — Proposal.\n4. Step 6 — Design.\n5. Step 7 — Atlas.\n',
+          '# Technical Scope\n\n## Architecture\nThe system splits into a Next.js dashboard, a `@caia/*` workspace of agents, and a per-tenant Postgres schema.',
       }),
     },
     {
       kind: 'ok',
       text: JSON.stringify({
         markdown:
-          '# Go-to-Market Plan\n\n- ICP: solo founders + small product teams.\n- Channels: developer-led growth, content, design-community partnerships.\n- Pricing: tiered subscription with a free explore tier.',
+          '# Go-to-Market Plan\n\n- ICP: solo founders + small product teams.',
       }),
     },
-    // Reviewer & design-app prompt (best-effort additional scripted responses).
     {
       kind: 'ok',
       text: JSON.stringify({
@@ -147,12 +138,7 @@ function emptyIa(): GenerateProposalInput['ia'] {
     pages: {
       schema_version: '1.0',
       pages: [
-        {
-          id: 'home',
-          title: 'Home',
-          slug: '/',
-          description: 'Landing page',
-        },
+        { id: 'home', title: 'Home', slug: '/', description: 'Landing page' },
       ],
     },
     designSystem: {
@@ -163,24 +149,18 @@ function emptyIa(): GenerateProposalInput['ia'] {
       layout_patterns: [],
       reference_urls: [],
     },
-    components: {
-      schema_version: '1.0',
-      components: [],
-    },
+    components: { schema_version: '1.0', components: [] },
   };
 }
 
 function emptyPlan(): GenerateProposalInput['plan'] {
   return {
     schemaVersion: '2.0',
-    sections: {
-      executive_summary: 'A short, structured pitch.',
-    },
+    sections: { executive_summary: 'A short, structured pitch.' },
     rubricScores: { aggregateScore: 82 },
   };
 }
 
-/** Synthesize a deterministic stub response without invoking the engine. */
 function stubResponse(): RouteResponse {
   return {
     ok: true,
@@ -220,11 +200,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'tenantProjectId-required' }, { status: 400 });
   }
 
-  // Live path is gated behind WIZARD_PROPOSAL_LIVE=1 because runStep5's
-  // full dependency graph (claude-spawner, pandoc, BYOC blob) isn't
-  // wired into the dashboard's runtime yet. For V1, we run the
-  // generator against the in-memory stubs and return the parsed
-  // markdown — so the page can render real Accordion content.
   const useLive = process.env['WIZARD_PROPOSAL_LIVE'] === '1';
   const tenantProjectId = body.tenantProjectId;
 
@@ -235,61 +210,75 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     try {
       if (useLive) {
-        const blob = new MemoryBlobStorage({ bucket: 'wizard-memblob' });
-        const persistence = new MemoryProposalPersistence({ tenantSchema: tenantId });
-        const result = await withClaudeSpawnerSpan(
-          {
-            step: 'proposal.generate',
-            projectId: tenantProjectId,
-            tenantId,
-            promptTemplate: PROPOSAL_PROMPT_TEMPLATE,
-            model: PROPOSAL_LIVE_MODEL,
-            extra: { 'caia.claude.live': true },
-          },
+        // Phase B B4: resolve + pin the tenant search_path only on the
+        // live path (the stub path is pure in-memory and never touches
+        // pg). Wrap the whole generator call so any persistence write
+        // inside `runStep5` lands in the right schema.
+        const tenantSchema = await resolveTenantSchema(tenantId);
+        span.setAttribute('wizard.tenant_schema', tenantSchema);
+        const response: RouteResponse = await withTenantSearchPath(
+          getPool(),
+          tenantSchema,
           async () =>
-            runStep5(
+            // Phase B B3: wrap the whole runStep5 fan-out so Tempo
+            // records the wizard step semantics around every
+            // claude-spawner prompt the engine fires (exec-summary,
+            // full proposal, one-pager, design-app prompt, reviewer).
+            withClaudeSpawnerSpan(
               {
-                llmCaller: buildScriptedLlm(),
-                blobStorage: blob,
-                persistence,
-                skillsRoot: process.env['CAIA_SKILLS_ROOT'] ?? '/tmp/caia-skills',
-                skipFormatConversion: true,
+                step: 'proposal.generate',
+                projectId: tenantProjectId,
+                tenantId,
+                promptTemplate: PROPOSAL_PROMPT_TEMPLATE,
+                model: PROPOSAL_LIVE_MODEL,
+                extra: { 'caia.claude.live': true },
               },
-              {
-                tenantProjectId,
-                plan: body.plan ?? emptyPlan(),
-                ia: body.ia ?? emptyIa(),
-                ...(body.designAppTarget ? { designAppTarget: body.designAppTarget } : {}),
-                ...(body.revisionReason ? { revisionReason: body.revisionReason } : {}),
+              async () => {
+                const blob = new MemoryBlobStorage({ bucket: 'wizard-memblob' });
+                const persistence = new MemoryProposalPersistence({ tenantSchema: tenantId });
+                const result = await runStep5(
+                  {
+                    llmCaller: buildScriptedLlm(),
+                    blobStorage: blob,
+                    persistence,
+                    skillsRoot: process.env['CAIA_SKILLS_ROOT'] ?? '/tmp/caia-skills',
+                    skipFormatConversion: true,
+                  },
+                  {
+                    tenantProjectId,
+                    plan: body.plan ?? emptyPlan(),
+                    ia: body.ia ?? emptyIa(),
+                    ...(body.designAppTarget ? { designAppTarget: body.designAppTarget } : {}),
+                    ...(body.revisionReason ? { revisionReason: body.revisionReason } : {}),
+                  },
+                );
+                return {
+                  ok: true,
+                  proposal: {
+                    execSummaryMd: result.revision.execSummaryMd,
+                    fullProposalMd: result.revision.fullProposalMd,
+                    onePagerMd: result.revision.onePagerMd,
+                    revisionNumber: result.revision.revisionNumber,
+                  },
+                  designAppPrompt: {
+                    target: result.prompt.target,
+                    promptText: result.prompt.promptText,
+                    reviewerScore: result.prompt.reviewerScore,
+                    reviewerBadge: result.prompt.reviewerBadge,
+                  },
+                  cacheHit: result.cacheHit,
+                  source: 'live',
+                };
               },
             ),
         );
-        const response: RouteResponse = {
-          ok: true,
-          proposal: {
-            execSummaryMd: result.revision.execSummaryMd,
-            fullProposalMd: result.revision.fullProposalMd,
-            onePagerMd: result.revision.onePagerMd,
-            revisionNumber: result.revision.revisionNumber,
-          },
-          designAppPrompt: {
-            target: result.prompt.target,
-            promptText: result.prompt.promptText,
-            reviewerScore: result.prompt.reviewerScore,
-            reviewerBadge: result.prompt.reviewerBadge,
-          },
-          cacheHit: result.cacheHit,
-          source: 'live',
-        };
         return NextResponse.json(response);
       }
 
-      // Default V1 path: deterministic stub. The route still imports
-      // runStep5 above so the reuse-first check sees the dependency.
-      // Wrap the stub render in a withClaudeSpawnerSpan too so the
-      // wizard step span shows up in Tempo with `caia.claude.live=false`
-      // — useful for tracking V1 vs live rollout without a separate
-      // wizard.proposal.stub span name.
+      // Phase B B3: wrap the stub render so the wizard step span shows
+      // up in Tempo with `caia.claude.live=false` — useful for tracking
+      // V1 vs live rollout without a separate wizard.proposal.stub
+      // span name.
       const stub = await withClaudeSpawnerSpan(
         {
           step: 'proposal.generate',

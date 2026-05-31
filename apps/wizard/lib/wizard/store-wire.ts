@@ -7,23 +7,28 @@
  *
  * Reuse-first: uses `@caia/state-machine`'s `PgStateStore` directly. No
  * inline FSM, no parallel persistence.
+ *
+ * Phase B Task B4 (2026-05-31): also exposes `resolveTenantSchema` so
+ * route handlers can wrap their pg work with `withTenantSearchPath`.
+ * The schema name is cached alongside the StateStore so repeated calls
+ * don't re-hit the global `tenants` table.
  */
 
 import { Pool } from 'pg';
 import { getPool } from '../tenants/wire';
 import type { StateStore } from '@caia/state-machine';
 
-const cache = new Map<string, StateStore>();
+interface TenantWiring {
+  store: StateStore;
+  schemaName: string;
+}
 
-export async function getStateStoreForTenant(tenantId: string): Promise<StateStore> {
+const cache = new Map<string, TenantWiring>();
+
+async function loadTenantWiring(tenantId: string): Promise<TenantWiring> {
   const existing = cache.get(tenantId);
   if (existing) return existing;
   const { PgStateStore } = await import('@caia/state-machine');
-  // PgStateStore takes a pool + schema/table options. The tenants table
-  // gives us `schema_name`; for the wizard MVP we use the **global** pool
-  // and tell PgStateStore which schema to target. We re-derive the schema
-  // name from the tenantId via a one-shot lookup (cached upstream by the
-  // TenantStore — see `lib/tenants/store.ts`).
   const { TenantStore } = await import('../tenants/store');
   const pool: Pool = getPool();
   const ts = new TenantStore({ pool });
@@ -36,19 +41,29 @@ export async function getStateStoreForTenant(tenantId: string): Promise<StateSto
     throw new Error(`No tenant for id=${tenantId}`);
   }
   const schemaName = String(res.rows[0].schema_name);
-  // We construct PgStateStore against the resolved schema. The full
-  // option shape depends on the @caia/state-machine version; we
-  // intentionally use a structural cast to avoid version-pinning the
-  // app to its private options surface.
   const store = new (PgStateStore as unknown as new (opts: {
     pool: Pool;
     schema?: string;
   }) => StateStore)({ pool, schema: schemaName });
-  cache.set(tenantId, store);
-  // ts is unused but exposes the lookup pattern for future per-tenant
-  // schema invalidation; suppressing the unused-locals warning explicitly.
+  const wiring: TenantWiring = { store, schemaName };
+  cache.set(tenantId, wiring);
   void ts;
-  return store;
+  return wiring;
+}
+
+export async function getStateStoreForTenant(tenantId: string): Promise<StateStore> {
+  const w = await loadTenantWiring(tenantId);
+  return w.store;
+}
+
+/**
+ * Resolve the Postgres schema name for `tenantId`. Used by route
+ * handlers to wire `withTenantSearchPath`. Cached for the process
+ * lifetime via the same map as `getStateStoreForTenant`.
+ */
+export async function resolveTenantSchema(tenantId: string): Promise<string> {
+  const w = await loadTenantWiring(tenantId);
+  return w.schemaName;
 }
 
 /** Test-only — drop the cache. */
