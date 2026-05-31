@@ -36,6 +36,8 @@ import { headers } from 'next/headers';
 import { canTransition, type ProjectState } from '@caia/state-machine';
 import { createTracer } from '@chiefaia/tracing';
 import { getStateStoreForTenant } from '../../../../../lib/wizard/store-wire';
+import { withFsmPublish } from '../../../../../lib/wizard/fsm-events';
+import { getFsmPublisher, getPool } from '../../../../../lib/tenants/wire';
 import {
   getWizardState,
   ProjectNotFoundError,
@@ -207,9 +209,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           opts?: { reason?: string },
         ): Promise<unknown>;
       })({ store: stateStore });
-      await sm.transition(projectId, TARGET_STATE, {
-        reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
-      });
+      const publisher = await getFsmPublisher();
+      const pool = getPool();
+      const tenantRow = await pool.query(
+        'SELECT schema_name FROM tenants WHERE tenant_id = $1 LIMIT 1',
+        [tenantId],
+      );
+      const tenantSchema = tenantRow.rowCount && tenantRow.rows[0]
+        ? String(tenantRow.rows[0].schema_name)
+        : 'unknown';
+      await withFsmPublish(
+        {
+          publisher,
+          projectId,
+          fromState: snapshot.state,
+          toState: TARGET_STATE,
+          tenantSchema,
+          actor: 'api',
+        },
+        () => sm.transition(projectId, TARGET_STATE, {
+          reason: force ? 'operator-force-close' : 'critic-coverage-sufficient',
+        }),
+      );
     } catch (err) {
       return NextResponse.json(
         {

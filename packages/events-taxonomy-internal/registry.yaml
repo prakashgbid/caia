@@ -702,3 +702,29 @@ events:
     severity: info
     actor: [api, user, system]
     payload: [tenant_id, email, schema_name, infisical_project_id]
+
+  # ─── Wizard FSM lifecycle (WIZARD-B5) ───────────────────────────────────
+  # Three events that fence every wizard FSM transition the Next.js app
+  # dispatches via `@caia/state-machine`. The wizard wraps each
+  # `StateMachine.transition()` call: it publishes `wizard.step.transitioning`
+  # immediately before the FSM call, `wizard.step.completed` after the call
+  # resolves successfully, or `wizard.step.failed` if the FSM throws.
+  # Publish is fire-and-forget (never blocks the FSM call); publish errors
+  # are logged via console + recorded on the current OTel span.
+  #
+  # Subscribers: Pipeline Conductor (per-project stage forecast), Dashboard
+  # (wizard step indicator), Drift Sentinel (slow-step escalation).
+  - type: wizard.step.transitioning
+    severity: info
+    actor: [api, user, system]
+    payload: [project_id, from_step, to_step, tenant_schema, trace_id]
+
+  - type: wizard.step.completed
+    severity: info
+    actor: [api, user, system]
+    payload: [project_id, step, duration_ms, tenant_schema, trace_id]
+
+  - type: wizard.step.failed
+    severity: error
+    actor: [api, user, system]
+    payload: [project_id, step, error, tenant_schema, trace_id]

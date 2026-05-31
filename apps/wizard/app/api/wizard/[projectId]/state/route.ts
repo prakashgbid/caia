@@ -23,9 +23,23 @@ import {
   ProjectNotFoundError,
 } from '../../../../../lib/wizard/state.server';
 import { getStateStoreForTenant } from '../../../../../lib/wizard/store-wire';
+import { withFsmPublish } from '../../../../../lib/wizard/fsm-events';
+import { getFsmPublisher, getPool } from '../../../../../lib/tenants/wire';
+import type { Pool } from 'pg';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+
+async function resolveTenantSchema(tenantId: string): Promise<string> {
+  const pool: Pool = getPool();
+  const r = await pool.query(
+    'SELECT schema_name FROM tenants WHERE tenant_id = $1 LIMIT 1',
+    [tenantId],
+  );
+  if (r.rowCount === 0) throw new Error('tenant-not-found');
+  return String(r.rows[0].schema_name);
+}
 
 interface RouteContext {
   params: Promise<{ projectId: string }>;
@@ -102,7 +116,19 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextRe
         opts?: { reason?: string },
       ): Promise<unknown>;
     })({ store });
-    await sm.transition(projectId, body.targetState, { reason: body.reason });
+    const publisher = await getFsmPublisher();
+    const tenantSchema = await resolveTenantSchema(tenantId);
+    await withFsmPublish(
+      {
+        publisher,
+        projectId,
+        fromState: snapshot.state,
+        toState: body.targetState,
+        tenantSchema,
+        actor: 'api',
+      },
+      () => sm.transition(projectId, body.targetState as ProjectState, { reason: body.reason }),
+    );
     const next = await getWizardState(projectId, { store });
     return NextResponse.json(next);
   } catch (err) {

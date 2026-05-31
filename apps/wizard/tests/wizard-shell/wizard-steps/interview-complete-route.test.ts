@@ -47,6 +47,15 @@ vi.mock('../../../lib/wizard/store-wire', () => ({
   getStateStoreForTenant: async () => ({ __mock: true }),
 }));
 
+// Mock the NATS publisher + pool wiring added by WIZARD-B5 so the route
+// doesn't try to open a real Postgres pool from inside the unit test.
+vi.mock('../../../lib/tenants/wire', () => ({
+  getFsmPublisher: async () => ({ publish: async () => undefined }),
+  getPool: () => ({
+    query: async () => ({ rowCount: 1, rows: [{ schema_name: 'tenant_test' }] }),
+  }),
+}));
+
 vi.mock('../../../lib/wizard/state.server', async (orig) => {
   const real = (await orig()) as Record<string, unknown>;
   return {

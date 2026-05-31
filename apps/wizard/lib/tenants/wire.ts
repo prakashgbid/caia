@@ -98,6 +98,16 @@ export function getHybridBus(): HybridEventBus {
  * try/catch decides whether a publish failure should block the response
  * (currently: no, but the error is logged with a real reason now).
  */
+/**
+ * Public accessor for the same lazy-connected publisher that
+ * `provisionTenant` consumes. Reuses the singleton HybridEventBus so
+ * wizard FSM lifecycle events (`wizard.step.*`) ride the same NATS
+ * connection / consumer overrides / DLQ pipeline as `tenant.provisioned`.
+ */
+export async function getFsmPublisher(): Promise<EventPublisher> {
+  return getPublisher();
+}
+
 async function getPublisher(): Promise<EventPublisher> {
   const bus = getHybridBus();
   if (!connectPromise) {
