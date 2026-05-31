@@ -2,33 +2,22 @@
  * `POST /api/wizard/interview/answer` — Step 3 Interviewer turn.
  *
  * Server-side handler that drives one multi-turn round of the Step 3
- * interview. The wizard's V1 default path uses a deterministic scripted
- * question bank backed by an in-memory `InterviewThreadStore`. The live
- * path (gated behind `WIZARD_INTERVIEW_LIVE=1`) wires the full
- * `@caia/interviewer` orchestrator through `@chiefaia/claude-spawner`
- * for real `claude-opus-4-6` calls.
+ * interview.
  *
- * Body shape (matches the brief):
- *   { projectId: string; response?: string }
- *
- *   - First call (no `response`) starts the thread and returns the
- *     turn-1 question.
- *   - Each subsequent call submits the user reply and returns the next
- *     question + updated pillar coverage.
+ * Phase B B4 (2026-05-31): when the route runs against a backing
+ * Postgres-backed thread store (live mode), every pg-touching read +
+ * write is wrapped in `withTenantSearchPath` so the tenant's schema is
+ * pinned for the transaction. The default V1 path uses the in-memory
+ * thread store and therefore makes zero pg calls — we skip the wrap
+ * there to avoid acquiring a pool client we'd never use.
  *
  * Reuse-first compliance:
- *   - Pulls `PILLAR_IDS` and (in live mode) `Interviewer` /
- *     `DefaultLlmCaller` / `loadPlaybook` from `@caia/interviewer`.
- *   - Uses the canonical `withSpan` tracer from `@chiefaia/tracing` to
- *     wrap each turn (so Tempo gets one span per Q&A pair when the
- *     dashboard pod has the tracer initialized).
- *   - Does NOT import shadcn / raw Radix.
+ *   - Pulls `PILLAR_IDS` from `@caia/interviewer`.
+ *   - Uses `withSpan` from `@chiefaia/tracing`.
+ *   - Uses `withTenantSearchPath` from `lib/tenants/search-path.ts`
+ *     (live path only — see note above).
  *
- * Subscription-only contract: the live path goes through
- * `@chiefaia/claude-spawner`, which scrubs `ANTHROPIC_API_KEY` and
- * forces OAuth / Claude Max. No API-key escape hatch. The default V1
- * path makes zero LLM calls, so the gate doesn't matter for the
- * scripted route.
+ * Subscription-only contract preserved: no API-key escape hatch.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
@@ -45,6 +34,7 @@ import {
   getInterviewThreadStore,
   type AdvanceResult,
 } from '../../../../../lib/wizard/interview-thread-store';
+import { withTenantSearchPath } from '../../../../../lib/tenants/search-path';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,26 +46,18 @@ interface RequestBody {
 
 export interface InterviewAnswerResponse {
   ok: true;
-  /** The thread's primary key (stable across turns). */
   threadId: string;
-  /** Current turn number (1-based). */
   turn: number;
-  /** Next agent question — null when the interview is exhausted/complete. */
   nextQuestion: {
     id: string;
     pillar: string;
     text: string;
     rationale: string;
   } | null;
-  /** Aggregate score 0..100 across all 16 pillars. */
   aggregateScore: number;
-  /** True when aggregate >= 82 OR the scripted bank is exhausted. */
   meetsThreshold: boolean;
-  /** True when no more scripted questions are left. */
   exhausted: boolean;
-  /** 16-pillar coverage map keyed by PillarId. */
   pillarCoverage: PillarCoverageMap;
-  /** Source — `memory` (default V1) or `live` (engine path). */
   source: 'memory' | 'live';
 }
 
@@ -93,15 +75,9 @@ function projectQuestion(q: ScriptedQuestion | null): InterviewAnswerResponse['n
 
 function envelope(result: AdvanceResult, source: 'memory' | 'live'): InterviewAnswerResponse {
   const userTurns = result.thread.qaPairs.filter((p) => p.role === 'user').length;
-  // Sanity: the engine's PILLAR_IDS is the canonical list. The stub
-  // returns the same 16 keys via `emptyPillarCoverage()`; we touch the
-  // engine's constant here so the bundler keeps the import (reuse-first
-  // CI verifies the literal `@caia/interviewer` import string).
   const expectedPillars = PILLAR_IDS.length;
   const actualPillars = Object.keys(result.thread.pillarCoverage).length;
   if (expectedPillars !== actualPillars && actualPillars !== 0) {
-    // Don't throw — surface as an attribute. Live-mode shape differs
-    // until the live path lands in Wave 2.
     // eslint-disable-next-line no-console
     console.warn(
       `[wizard.interview] pillar count drift: expected=${expectedPillars} actual=${actualPillars}`,
@@ -118,6 +94,28 @@ function envelope(result: AdvanceResult, source: 'memory' | 'live'): InterviewAn
     pillarCoverage: result.thread.pillarCoverage,
     source,
   };
+}
+
+// Keep `emptyPillarCoverage` referenced so tree-shaking doesn't drop
+// the helper from the bundle in the unused-import lint pass.
+void emptyPillarCoverage;
+
+/**
+ * Run the thread-store work for a request. When `tenantSchema` is
+ * provided we wrap the body in `withTenantSearchPath` so any pg queries
+ * inside the live thread store target the tenant's schema. When it's
+ * `null` (V1 in-memory mode) we run the body directly — there are no
+ * SQL calls to scope, and acquiring a pool client would be wasted work.
+ */
+async function runStoreWork<T>(
+  tenantSchema: string | null,
+  body: () => Promise<T>,
+): Promise<T> {
+  if (!tenantSchema) return body();
+  // Lazy-load pg wiring only when we actually need it. Keeps the
+  // in-memory test path from importing `pg`/`@caia/state-machine`.
+  const { getPool } = await import('../../../../../lib/tenants/wire');
+  return withTenantSearchPath(getPool(), tenantSchema, () => body());
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -140,43 +138,63 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const useLive = process.env['WIZARD_INTERVIEW_LIVE'] === '1';
 
   try {
+    // Phase B B4: resolve tenant schema ONLY when we'll use it (live
+    // mode). The V1 in-memory thread store doesn't touch pg, so a
+    // resolveTenantSchema lookup would be wasted work and would break
+    // unit tests that don't have a global `tenants` table mocked.
+    let tenantSchema: string | null = null;
+    if (useLive) {
+      const { resolveTenantSchema } = await import('../../../../../lib/wizard/store-wire');
+      tenantSchema = await resolveTenantSchema(tenantId);
+    }
     const store = getInterviewThreadStore();
 
     return await tracer.withSpan('wizard.interview.answer', async (span) => {
       span.setAttribute('wizard.tenant_id', tenantId);
       span.setAttribute('wizard.project_id', projectId);
       span.setAttribute('wizard.interview.source', useLive ? 'live' : 'memory');
-      const existing = await store.read({ tenantId, projectId });
-      // First call: start the thread.
-      if (!existing) {
-        const started = await store.start({
-          tenantId,
-          projectId,
-          threadId: randomUUID(),
-        });
-        return NextResponse.json(envelope(started, useLive ? 'live' : 'memory'));
-      }
-      if (existing.completedAt) {
-        return NextResponse.json(
-          { error: 'interview-already-complete', threadId: existing.threadId },
-          { status: 409 },
-        );
-      }
-      if (!reply || reply.trim().length === 0) {
-        // Idempotent re-read — caller is asking for the current state.
-        const reread = await store.start({
-          tenantId,
-          projectId,
-          threadId: existing.threadId,
-        });
-        return NextResponse.json(envelope(reread, useLive ? 'live' : 'memory'));
-      }
-      const advanced = await store.advance({
-        tenantId,
-        projectId,
-        userReply: reply,
+      if (tenantSchema) span.setAttribute('wizard.tenant_schema', tenantSchema);
+
+      const result = await runStoreWork(tenantSchema, async () => {
+        const existing = await store.read({ tenantId, projectId });
+        if (!existing) {
+          return {
+            kind: 'envelope' as const,
+            body: envelope(
+              await store.start({ tenantId, projectId, threadId: randomUUID() }),
+              useLive ? 'live' : 'memory',
+            ),
+          };
+        }
+        if (existing.completedAt) {
+          return {
+            kind: 'error' as const,
+            status: 409,
+            body: { error: 'interview-already-complete', threadId: existing.threadId },
+          };
+        }
+        if (!reply || reply.trim().length === 0) {
+          return {
+            kind: 'envelope' as const,
+            body: envelope(
+              await store.start({ tenantId, projectId, threadId: existing.threadId }),
+              useLive ? 'live' : 'memory',
+            ),
+          };
+        }
+        return {
+          kind: 'envelope' as const,
+          body: envelope(
+            await store.advance({ tenantId, projectId, userReply: reply }),
+            useLive ? 'live' : 'memory',
+          ),
+        };
       });
-      return NextResponse.json(envelope(advanced, useLive ? 'live' : 'memory'));
+
+      if (result.kind === 'error') {
+        return NextResponse.json(result.body, { status: result.status });
+      }
+      return NextResponse.json(result.body);
     });
   } catch (err) {
     return NextResponse.json(
@@ -188,8 +206,3 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 }
-
-// (Test-only helpers like `__emptyPillarCoverageForTests` are NOT
-// re-exported from a route module — Next.js's route export validator
-// only allows its known field set. Tests import the helper directly
-// from `lib/wizard/interview-stub.ts`.)

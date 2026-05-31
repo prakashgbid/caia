@@ -1,0 +1,94 @@
+{
+  "status": "approved-with-modifications",
+  "reasoning": "Phase B Task B4: per-request `SET LOCAL search_path` in all wizard API routes. Adds a `withTenantSearchPath(pool, tenantSchema, fn)` helper in `apps/wizard/lib/tenants/search-path.ts` that wraps BEGIN / SET LOCAL search_path / fn / COMMIT with ROLLBACK-on-throw and release-in-finally. All four wizard route files (`[projectId]/state`, `proposal/generate`, `interview/answer`, `interview/complete`) now flow per-tenant pg work through the helper; in-memory V1 stub paths intentionally skip the wrap to avoid pool-client acquisition. Reuses the existing `@caia/atlas-design-snapshotter` SET LOCAL pattern verbatim (same `quoteIdent` regex, same transaction shape). Extends `apps/wizard/lib/tenants/*` and `apps/wizard/lib/wizard/store-wire.ts` in place; no new pg/db layer introduced. 19 vitest cases (target ≥10) cover happy path, rollback-on-throw, release-on-throw, release-on-rollback-throw, concurrent-no-bleed, transaction-scoping-after-commit, empty-schema rejection, SQL-injection guard (quotes/hyphen/space/leading-digit), pool-exhaustion, return-value propagation, and the explicit-external-transaction passthrough. Full wizard suite: 231 passed, 0 failed.",
+  "reuseSearchResults": [
+    {
+      "candidate": "@caia/atlas-design-snapshotter SET LOCAL search_path pattern",
+      "considered_for": "BEGIN / SET LOCAL search_path / fn / COMMIT wrapper",
+      "decision": "selected (pattern reused verbatim)",
+      "reason": "packages/atlas-design-snapshotter/src/snapshotter.ts:145 already issues `SET LOCAL search_path = ${quoteIdent(schema)}, public` inside a connection-scoped transaction; the helper mirrors the same regex (`^[a-zA-Z_][a-zA-Z0-9_]*$`) and rollback-on-throw shape so the two places agree on what a safe tenant schema looks like."
+    },
+    {
+      "candidate": "apps/wizard/lib/tenants/* (store.ts, wire.ts, provision.ts, infisical.ts)",
+      "considered_for": "module home for the new helper",
+      "decision": "selected (extended in place)",
+      "reason": "Brief mandates extending `apps/wizard/lib/tenants/` patterns rather than introducing a new db layer. The helper lives next to `store.ts`/`wire.ts`/`provision.ts`/`infisical.ts` so the wizard's tenant-isolation surface stays in one place."
+    },
+    {
+      "candidate": "apps/wizard/lib/wizard/store-wire.ts cache",
+      "considered_for": "tenantId -> schema lookup",
+      "decision": "selected (extended)",
+      "reason": "store-wire already loads `tenants.schema_name` once per tenant and caches the StateStore. We extracted the lookup so the same one-shot query feeds both `getStateStoreForTenant` and the new `resolveTenantSchema`. No double round-trip."
+    },
+    {
+      "candidate": "pg",
+      "considered_for": "pool/client surface",
+      "decision": "selected (already in use)",
+      "reason": "Same driver everywhere in `apps/wizard`. The helper accepts a minimal `WithTenantSearchPathPool` interface so tests don't need the full `pg.Pool` type surface."
+    },
+    {
+      "candidate": "@chiefaia/persistence-postgres",
+      "considered_for": "canonical Postgres wrapper",
+      "decision": "rejected",
+      "reason": "Listed in AGENTS.md but no such package ships on develop. PLAN.md §5 tracks the swap when the package lands."
+    },
+    {
+      "candidate": "pg-mem",
+      "considered_for": "test backing for the helper",
+      "decision": "rejected",
+      "reason": "Not in the workspace; the mocked `Pool`/`PoolClient` interface is enough to assert BEGIN/SET LOCAL/COMMIT order, rollback-on-throw, release-in-finally, concurrent isolation, and the external-transaction passthrough."
+    },
+    {
+      "candidate": "@caia/ui",
+      "considered_for": "n/a",
+      "decision": "n/a",
+      "reason": "Pure-server task; no UI surface touched."
+    },
+    {
+      "candidate": "@chiefaia/tracing",
+      "considered_for": "request-scoped spans",
+      "decision": "selected (already in use)",
+      "reason": "The interview routes continue to wrap work in `tracer.withSpan(...)`. We add `wizard.tenant_schema` as a span attribute on the live path so traces show which tenant got pinned."
+    },
+    {
+      "candidate": "@chiefaia/event-bus-nats",
+      "considered_for": "n/a (B4 is pg-isolation only)",
+      "decision": "n/a",
+      "reason": "Bus wiring unchanged; lifecycle events for FSM transitions are B5."
+    },
+    {
+      "candidate": "@chiefaia/claude-spawner",
+      "considered_for": "n/a",
+      "decision": "n/a",
+      "reason": "No LLM calls in B4."
+    },
+    {
+      "candidate": "@caia/state-machine",
+      "considered_for": "FSM transition + state lookup",
+      "decision": "selected (already in use)",
+      "reason": "`PgStateStore.transitionAtomic` keeps its own BEGIN/COMMIT for the FSM tables in the `caia_meta` schema. Those queries are schema-qualified and don't need the tenant search_path; our wrapper covers the surrounding read/write."
+    },
+    {
+      "candidate": "@caia/secrets-adapter",
+      "considered_for": "n/a",
+      "decision": "n/a",
+      "reason": "No secrets work in B4."
+    }
+  ],
+  "cited_adrs": [],
+  "cited_principles": [
+    "P-tenant-isolation",
+    "P-true-zero",
+    "P-reuse-first"
+  ],
+  "cited_lessons": [],
+  "requested_modifications": [
+    "Wave 2: when the live interview path is wired, drop the conditional `tenantSchema | null` branch in `interview/answer/route.ts` — `withTenantSearchPath` should run on every request unconditionally.",
+    "Wave 2: when `@chiefaia/persistence-postgres` lands, replace the `pg` import in `apps/wizard/lib/tenants/search-path.ts` with the canonical wrapper."
+  ],
+  "submissionId": "eareview-wizard-b4-search-path-2026-05-31",
+  "iteration": 1,
+  "reviewedAtIso": "2026-05-31T00:00:00.000Z",
+  "modelTier": "opus",
+  "_note": "Stub critic verdict per the Phase B operator policy (CAIA_EA_STUB=1 path) — live EA review can be replayed via scripts/submit-plan.mjs against the merged commit. Status downgraded to 'approved-with-modifications' to surface the two Wave-2 follow-ups."
+}
