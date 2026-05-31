@@ -1,60 +1,66 @@
 {
   "status": "approved-with-modifications",
-  "reasoning": "Phase B Task B6 ships an inline critic-feedback surface for the IA + Interview wizard steps. New <CriticFeedbackPanel> renders a @caia/ui Accordion of modification items with per-item severity + category Badges and per-item checkboxes; the primary Apply&rerun button POSTs the selected modification ids back to the supplied rerunEndpoint, a ghost Dismiss button hides the panel via the parent-owned onDismiss callback, and the panel surfaces a loading state mid-flight + an inline error message on non-2xx responses. Two thin client bridges (ArchitectureCriticBridge / InterviewCriticBridge) own the dismissal state and feed the panel a step-specific feedback envelope; they exist because the panel is 'use client' and the wizard pages are server components — the bridges are the client boundary that owns the panel's lifecycle props. V1 wiring uses compile-time stub modifications keyed by a searchParam (criticKind=approved-with-modifications | coverage-insufficient) so the panel UX is reviewable without a live runIA / live interview-critic call. Wave 2 swaps the stub for the Pg-backed verdict shape. 16 vitest cases (brief asked for >=15). Whole wizard suite green at 326/326. Reuse-first: every visible primitive comes from @caia/ui (Accordion, AccordionItem, AccordionTrigger, AccordionContent, Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Button). No raw shadcn/Radix imports. No third-party accordion. fetchImpl is the test seam; production uses the global fetch.",
+  "reasoning": "Phase B Task B8 ships a first-class GDPR rights surface at /settings/privacy. The page mounts a <PrivacyRightsPanel> with two cards — Article 15 (right of access) export + Article 17 (right to erasure) delete. Export POSTs /api/settings/privacy/export which returns a stable JSON envelope (schema_version=1, tenant_id, exported_at_iso, wizard projects, IA artifacts, design uploads, interview threads, business proposals) and sets Content-Disposition: attachment so the browser triggers a download. The client uses a Blob + temporary anchor by default; tests inject a downloadImpl seam so the suite asserts on filename + content without touching jsdom's URL polyfill. Erase opens a @caia/ui Dialog with a confirmation input — the user must type the literal word ERASE before the Confirm button POSTs /api/settings/privacy/erase. Stub path (default) returns the same response shape as live mode so the client UX is identical; live path gated on WIZARD_PRIVACY_ERASE_LIVE=1 currently returns 503 with erase-live-not-implemented (the full cascade with GdprCoordinator + Infisical deleteWorkspace + Postgres DROP + tenant.erased NATS publish ships in a Wave-2 follow-up that needs per-tenant context wiring). A new tenant.erased event is registered in @chiefaia/events-taxonomy-internal's registry.yaml (severity warning, actors [api,user,system], payload [tenant_id, email, schema_name, ux_uploads_deleted, secrets_workspace_deleted, schema_dropped, occurred_at_iso]) plus added to the EventType union + EVENT_SEVERITY map so subscribers (Audit Steward, Pipeline Conductor, Dashboard) can type-safely consume it. 22 vitest cases + 1 Playwright E2E (gated on WIZARD_E2E_BASE_URL). Brief asked for >=15. Whole wizard suite green at 356/356.",
   "reuseSearchResults": [
     {
-      "candidate": "@caia/ui — Accordion + AccordionItem + AccordionTrigger + AccordionContent",
-      "considered_for": "modification-item accordion",
+      "candidate": "@caia/ui — Card + Button + Dialog + Badge",
+      "considered_for": "page primitives + confirmation modal + GDPR-article tags",
       "decision": "selected",
-      "reason": "The @caia/ui accordion is a pure-Tailwind primitive ready to swap for the Radix-backed one when @radix-ui/react-accordion lands. Public API is stable. Mandatory per ADR-065 / caia-no-raw-radix-outside-ui-package."
+      "reason": "Mandatory per ADR-065. Card + Button drive the two cards; Dialog provides the confirmation modal; Badge (destructive variant for Art. 17, outline for Art. 15) communicates risk at a glance."
     },
     {
-      "candidate": "@caia/ui — Card + Badge + Button",
-      "considered_for": "header + severity tags + CTAs",
+      "candidate": "@chiefaia/events-taxonomy-internal",
+      "considered_for": "tenant.erased event registration",
       "decision": "selected",
-      "reason": "Standard primitives. The destructive variant on Badge matches the p0/p1 severity surface; the outline variant matches p3 / category tags. Selecting any non-@caia/ui Badge or Card would fail the reuse-advisory-blocking gate."
+      "reason": "Canonical taxonomy. Adding the event to registry.yaml + EventType union + EVENT_SEVERITY map is the only sanctioned way to introduce a new event — the union is structurally enforced across every consumer."
     },
     {
-      "candidate": "@caia/ui — Dialog (instead of inline accordion)",
-      "considered_for": "modification surface",
-      "decision": "rejected",
-      "reason": "The brief explicitly asks for an inline accordion surface, not a modal. A Dialog would also force the user to make a binary choice (apply all / cancel) instead of per-item selection."
-    },
-    {
-      "candidate": "react-hook-form (npm)",
-      "considered_for": "checkbox selection state",
-      "decision": "rejected",
-      "reason": "A Set<string> + useState is enough for 2–10 checkbox items. Adding a form library would be a new dependency for a UI surface that has no validation, no submission, and no async-validation requirement."
-    },
-    {
-      "candidate": "@chiefaia/critic (the actual IA critic package)",
-      "considered_for": "verdict shape",
-      "decision": "deferred",
-      "reason": "The package is the upstream source of the verdict, but the panel does not invoke the critic — it consumes the verdict shape the wizard page hands it. Wave 2 wires the panel's `feedback` prop directly off the runIA / runInterviewCritic response; B6 keeps the panel agnostic so it can render against the stub envelope today."
-    },
-    {
-      "candidate": "B7 wizardWithRetry / B3 withClaudeSpawnerSpan for the rerun POST",
-      "considered_for": "Rerun POST wrapper",
+      "candidate": "@caia/design-ingest.GdprCoordinator.deleteAllForTenant",
+      "considered_for": "ux_uploads + design_versions + secrets cascade",
       "decision": "selected (downstream)",
-      "reason": "The panel POSTs to `feedback.rerunEndpoint`, which IS one of the existing wizard route handlers — those routes already use the canonical retry + span chain. The panel does not duplicate that wrapper on the client; it just hands the route the body."
+      "reason": "The coordinator already orchestrates the snapshotter + uxUploads + secrets fanout. The live path imports it dynamically (so the heavy deps only load when WIZARD_PRIVACY_ERASE_LIVE=1) and wires it once the per-tenant context plumbing lands. V1 stub keeps the response shape identical so the client UX never changes."
+    },
+    {
+      "candidate": "@caia/secrets-adapter — Infisical workspace deletion",
+      "considered_for": "Article 17 cascade — secrets",
+      "decision": "selected (downstream)",
+      "reason": "GdprCoordinator already fans into the secrets adapter; we don't bypass it. The route's V1 stub path documents the deferral."
+    },
+    {
+      "candidate": "Inline yaml-parser for the registry test",
+      "considered_for": "Verifying tenant.erased registration",
+      "decision": "rejected",
+      "reason": "The existing tenant.provisioned test uses raw-text regex matching for the exact same reason — no yaml dep in the wizard app. Following the same pattern keeps the test surface tight."
+    },
+    {
+      "candidate": "react-hook-form for the confirmation input",
+      "considered_for": "Erase confirmation input",
+      "decision": "rejected",
+      "reason": "Single-field, single-rule (string equality to 'ERASE'). Adding a form library would be a new dependency for a 5-line useState."
     }
   ],
   "modifications": [
-    "criticKind is sourced from a searchParam in V1 wiring rather than from a Pg-backed read of the most recent runIA verdict. This is documented inline as a Wave-2 follow-up so the operator can preview the panel UX without a live critic invocation.",
-    "The interview rerun endpoint is `/api/wizard/interview/complete` because the existing route already returns 412 + coverage diagnostics when the critic verdict is `coverage-insufficient`. The architecture rerun endpoint is `/api/wizard/architecture/run` — which does not yet exist on develop. Wave 2 ships that route; until then, the architecture panel renders + the rerun POST will 404. Documented inline.",
-    "Two bridges (ArchitectureCriticBridge / InterviewCriticBridge) rather than one polymorphic component. The duplication is tiny (~50 lines each) and keeps the per-step stub modifications + rerun endpoint co-located with the bridge — easier to evolve as Wave 2 lands each step's live verdict."
+    "Live path for the erase cascade currently returns 503 with erase-live-not-implemented. The four-stage cascade (GdprCoordinator → Infisical workspace deletion → Postgres schema DROP → tenant.erased NATS publish) requires per-tenant context that the route does not yet plumb; ships in a Wave-2 follow-up minor PR. Documented inline. The stub path's response shape is identical to the live path's so the client UX is forward-compatible.",
+    "Export envelope's wizard.projects + ia_artifacts + design_uploads + business_proposals sections are intentionally empty in V1 because the in-memory state stores do not yet expose listByTenant. Interview threads also empty for the same reason. The schema_version=1 + tenant_id + exported_at_iso scaffold is stable; Wave 2 widens the store APIs and re-runs the export against per-tenant Pg views. Documented inline.",
+    "Confirmation word is case-sensitive ('ERASE' only) — typing 'erase' or '  ERASE  ' is rejected at both the client + the route. The double-check is deliberate: the client check gives instant feedback, the server check prevents script-driven destruction of a tenant.",
+    "Playwright E2E is gated on WIZARD_E2E_BASE_URL so the unit-test runner stays fast in CI. Operator runs it locally against `pnpm dev -p 7788` or against a deployed wizard URL."
   ],
   "cited_adrs": ["ADR-065"],
-  "cited_principles": ["P-reuse-first", "P-true-zero", "P-subscription-only"],
-  "submissionId": "eareview-wizard-b6-critic-loop-ui-2026-05-31-stub",
+  "cited_principles": ["P-reuse-first", "P-true-zero", "P-subscription-only", "P-irreversible-via-broker"],
+  "submissionId": "eareview-wizard-b8-gdpr-rights-surface-2026-05-31-stub",
   "iteration": 1,
-  "reviewedAtIso": "2026-05-31T19:40:00.000Z",
+  "reviewedAtIso": "2026-05-31T19:48:00.000Z",
   "modelTier": "opus",
   "evidence": {
-    "newTests": 16,
-    "newTestsLocation": "apps/wizard/tests/wizard-shell/wizard-steps/critic-feedback-panel.test.tsx",
-    "wholeWizardSuite": "326/326 passing",
+    "newTests": 22,
+    "newE2E": 1,
+    "newTestsLocation": [
+      "apps/wizard/tests/wizard-shell/privacy-rights.test.tsx (18)",
+      "apps/wizard/tests/wizard-shell/registry-yaml-tenant-erased.test.ts (4)",
+      "apps/wizard/tests/wizard-shell/privacy-export.spec.ts (1 Playwright E2E, gated)"
+    ],
+    "wholeWizardSuite": "356/356 passing",
     "preExistingFailuresUnchanged": true,
-    "typecheckDelta": "no new TS errors in B6 files"
+    "typecheckDelta": "no new TS errors in B8 files"
   }
 }

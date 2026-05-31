@@ -565,7 +565,9 @@ export type EventType =
   // ─── Wizard FSM lifecycle (WIZARD-B5) ────────────────────────────────
   | 'wizard.step.transitioning'
   | 'wizard.step.completed'
-  | 'wizard.step.failed';
+  | 'wizard.step.failed'
+  // ─── GDPR Article 17 — tenant data erasure (WIZARD-B8) ───────────────
+  | 'tenant.erased';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -704,6 +706,8 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'wizard.step.transitioning': 'info',
   'wizard.step.completed': 'info',
   'wizard.step.failed': 'error',
+  // ─── GDPR Article 17 — tenant data erasure (WIZARD-B8) ───────────────
+  'tenant.erased': 'warning',
 };
 
 /** All valid event type strings from the registry */
