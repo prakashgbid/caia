@@ -3,20 +3,21 @@
  * `<AtlasWizardClient>` — Step 7 client shim.
  *
  * Composes `@caia/atlas-ui`'s primitives (AtlasShell + DesignPane +
- * TicketPane + PromptDock + SelectionBreadcrumb) on top of
- * `createMockClient` from the package's fixtures. The per-element
- * prompt submit POSTs to `/api/wizard/atlas/[projectId]/prompt`, which
- * uses `@caia/atlas-prompt-router.createAtlasPromptApiHandler` to
- * validate + classify the request server-side.
+ * TicketPane + PromptDock + SelectionBreadcrumb) on top of a *hybrid*
+ * Atlas client: the V1 wizard still serves design + tickets-tree from
+ * `@caia/atlas-ui/fixtures` (no live Atlas backend in-tree yet), but
+ * `subscribeEvents` is wired through `createHttpClient` so the
+ * existing `useAtlasSse` hook talks to the new
+ * `/api/atlas/project/:id/events` route end-to-end. This is the C5
+ * swap that replaces the all-mock client path PR #545 shipped.
  *
- * Wave 2 swaps the mock client for the live atlas HTTP client and the
- * inline no-op Mapper for the real `@chiefaia/atlas-mapper.buildMapper`
- * call. The V1 wizard surface uses an inline no-op Mapper because
- * @chiefaia/atlas-mapper ships uncompiled source (no `dist/` build),
- * which Next.js's webpack can't resolve through `.js` extension imports
- * without an additional path alias config. The selection model still
- * works for fixture data because `useAtlasSelection` only calls the
- * mapper for cross-references that the V1 fixtures don't exercise.
+ * The per-element prompt submit still POSTs to
+ * `/api/wizard/atlas/[projectId]/prompt`, which uses
+ * `@caia/atlas-prompt-router.createAtlasPromptApiHandler` server-side.
+ *
+ * Wave 3 will swap the remaining mock surface (latest-design +
+ * tickets-tree) once the Atlas backend lands. The inline no-op Mapper
+ * stays until `@chiefaia/atlas-mapper` ships a published `dist/`.
  */
 
 import { useCallback, useMemo, useState } from 'react';
@@ -26,9 +27,13 @@ import {
   PromptDock,
   SelectionBreadcrumb,
   TicketPane,
+  createHttpClient,
   createMockClient,
   useAtlasSelection,
+  useAtlasSse,
+  type AtlasApiClient,
   type AtlasMockFixtures,
+  type AtlasSseEvent,
   type AtlasSubmitPromptRequest,
   type AtlasSubmitPromptResponse,
 } from '@caia/atlas-ui';
@@ -46,6 +51,12 @@ export interface AtlasWizardClientProps {
   fetchImpl?: typeof fetch;
   /** Override the mock fixtures (tests). */
   fixturesOverride?: AtlasMockFixtures;
+  /**
+   * Override the full HTTP-side AtlasApiClient (tests). When set, the
+   * component uses this client's `subscribeEvents` (and other methods
+   * are not overridden because mock fixtures still serve them).
+   */
+  clientOverride?: AtlasApiClient;
 }
 
 /**
@@ -81,7 +92,39 @@ export function AtlasWizardClient(props: AtlasWizardClientProps): React.JSX.Elem
     [props.fixturesOverride],
   );
 
-  const client = useMemo(() => createMockClient(fixtures), [fixtures]);
+  // Mock surface for fetch endpoints (no live Atlas backend yet); HTTP
+  // client for `subscribeEvents` so SSE lands on the new route. Tests
+  // can override either half via props.
+  const mockClient = useMemo(() => createMockClient(fixtures), [fixtures]);
+  const httpClient = useMemo(
+    () =>
+      props.clientOverride ??
+      createHttpClient({
+        baseUrl: '',
+        fetchImpl: fetchFn,
+      }),
+    [fetchFn, props.clientOverride],
+  );
+  const client = useMemo<AtlasApiClient>(
+    () => ({
+      getLatestDesign: mockClient.getLatestDesign,
+      getTicketsTree: mockClient.getTicketsTree,
+      submitPrompt: mockClient.submitPrompt,
+      getTicketVersions: mockClient.getTicketVersions,
+      subscribeEvents: httpClient.subscribeEvents,
+    }),
+    [mockClient, httpClient],
+  );
+
+  // Live atlas events — `useAtlasSse` opens an EventSource via the
+  // injected client.subscribeEvents (HTTP path above) against
+  // `/api/atlas/project/${projectId}/events`.
+  const [lastEvent, setLastEvent] = useState<AtlasSseEvent | null>(null);
+  const { connected: sseConnected, error: sseError } = useAtlasSse({
+    projectId: props.projectId,
+    client,
+    onEvent: (e) => setLastEvent(e),
+  });
 
   const mapper = useMemo(
     () => makeNoopMapper(fixtures.latestDesign.designVersion.id),
@@ -193,6 +236,19 @@ export function AtlasWizardClient(props: AtlasWizardClientProps): React.JSX.Elem
           <code>{lastResponse.ticketState}</code>
         </div>
       )}
+      {/* Live SSE indicator — Playwright asserts this flips when the
+          server publishes an atlas.* event. The badge is the smallest
+          observable hook for end-to-end realtime-delivery proof. */}
+      <div
+        data-testid="atlas-sse-status"
+        data-connected={sseConnected ? '1' : '0'}
+        data-last-event-type={lastEvent?.type ?? ''}
+        style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}
+      >
+        SSE: {sseConnected ? 'connected' : 'disconnected'}
+        {lastEvent ? ` — last: ${lastEvent.type}` : ''}
+        {sseError ? ` — error: ${sseError.message}` : ''}
+      </div>
       <noscript>
         {/* Hide the noscript wrapper from the React tree but include a hint
            in the SSR'd HTML so the page reports the canonical default ticket

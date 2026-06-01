@@ -744,3 +744,38 @@ events:
     severity: error
     actor: [api, user, system]
     payload: [project_id, step, error, tenant_schema, trace_id]
+
+  # ─── Atlas split-screen ticket-to-design surface (C5) ────────────────────
+  # Three events that fence the Atlas server's outward-facing SSE stream.
+  # `@caia/atlas-ui`'s `AtlasApiClient.subscribeEvents` opens an EventSource
+  # against `/api/atlas/project/:id/events` (apps/wizard) which subscribes
+  # to these three types on `@chiefaia/event-bus-internal` and forwards
+  # them — scoped to the project_slug — as SSE frames. The atlas-ui hook
+  # `useAtlasSse` then surfaces them as React state.
+  #
+  # Publishers:
+  #   - atlas.element.highlighted — UI / cross-pane selection sync (host app
+  #     posts this when it wants the design-iframe ↔ ticket-tree to track
+  #     a programmatic selection, e.g. from a deep-link).
+  #   - atlas.prompt.completed — emitted by the worker that ran a per-element
+  #     prompt; signals the ticket version is queued or live.
+  #   - atlas.version.changed — emitted by `@caia/atlas-design-snapshotter`
+  #     when a new design version supersedes the iframe.
+  #
+  # Subscribers: the wizard's atlas SSE route (apps/wizard/app/api/atlas/
+  # project/[projectId]/events/route.ts) is the only in-tree subscriber
+  # today; sibling apps (dashboard / executor) may add their own later.
+  - type: atlas.element.highlighted
+    severity: info
+    actor: [user, api, system]
+    payload: [project_id, ticket_id, dom_id, design_version_id, ts]
+
+  - type: atlas.prompt.completed
+    severity: info
+    actor: [executor, worker, system]
+    payload: [project_id, ticket_id, prompt_group_id, result, version_id, ts]
+
+  - type: atlas.version.changed
+    severity: info
+    actor: [executor, system]
+    payload: [project_id, design_version_id, previous_version_id, ts]

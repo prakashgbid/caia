@@ -567,7 +567,11 @@ export type EventType =
   | 'wizard.step.completed'
   | 'wizard.step.failed'
   // ─── GDPR Article 17 — tenant data erasure (WIZARD-B8) ───────────────
-  | 'tenant.erased';
+  | 'tenant.erased'
+  // ─── Atlas split-screen ticket-to-design surface (C5) ────────────────
+  | 'atlas.element.highlighted'
+  | 'atlas.prompt.completed'
+  | 'atlas.version.changed';
 
 /** Default severity for each event type */
 export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
@@ -708,6 +712,10 @@ export const EVENT_SEVERITY: Record<EventType, EventSeverity> = {
   'wizard.step.failed': 'error',
   // ─── GDPR Article 17 — tenant data erasure (WIZARD-B8) ───────────────
   'tenant.erased': 'warning',
+  // ─── Atlas split-screen ticket-to-design surface (C5) ────────────────
+  'atlas.element.highlighted': 'info',
+  'atlas.prompt.completed': 'info',
+  'atlas.version.changed': 'info',
 };
 
 /** All valid event type strings from the registry */
@@ -848,4 +856,57 @@ export interface WizardStepFailedPayload {
   error: string;
   tenant_schema: string;
   trace_id: string | null;
+}
+
+// ─── Atlas split-screen ticket-to-design surface (C5) ────────────────────────
+
+/**
+ * Emitted when an Atlas surface (UI / API / programmatic) wants the
+ * design-iframe ↔ ticket-tree selection to track a specific
+ * (ticket, DOM-id) pair. The wizard's atlas SSE route forwards this
+ * onto `useAtlasSse` so cross-pane highlighting stays in sync without
+ * client-side polling.
+ */
+export interface AtlasElementHighlightedPayload {
+  /** Project UUID owned by the wizard's @caia/state-machine store. */
+  project_id: string;
+  /** Ticket whose binding is being highlighted. */
+  ticket_id: string;
+  /** DOM-id bound to the ticket on the current design version. */
+  dom_id: string;
+  /** Design version the dom_id resolves against. */
+  design_version_id: string;
+  /** ISO 8601 timestamp of the highlight. */
+  ts: string;
+}
+
+/**
+ * Emitted by the worker that ran a per-element prompt once it has
+ * enqueued the resulting ticket version. The atlas SSE route forwards
+ * this so the prompt-dock shell can flip its busy-state.
+ */
+export interface AtlasPromptCompletedPayload {
+  project_id: string;
+  ticket_id: string;
+  /** Groups prompts dispatched from the same user submit. */
+  prompt_group_id: string;
+  /** Worker outcome. */
+  result: 'ok' | 'fail';
+  /** Ticket version id (omitted on `fail`). */
+  version_id?: string;
+  ts: string;
+}
+
+/**
+ * Emitted by `@caia/atlas-design-snapshotter` when a new design
+ * version supersedes the iframe. Surfaces to the design-pane shell so
+ * it can reload the iframe URL.
+ */
+export interface AtlasVersionChangedPayload {
+  project_id: string;
+  /** New design version id (the one to render). */
+  design_version_id: string;
+  /** Prior design version id, or null on the first version. */
+  previous_version_id: string | null;
+  ts: string;
 }

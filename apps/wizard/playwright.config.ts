@@ -41,5 +41,11 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
     stderr: 'pipe',
+    env: {
+      // C5 atlas-SSE spec needs middleware bypassed + test-publish
+      // route enabled. Both flags are scoped to the Playwright run.
+      WIZARD_AUTH_MODE: 'disabled',
+      ATLAS_SSE_TEST_PUBLISH: '1',
+    },
   },
 });
