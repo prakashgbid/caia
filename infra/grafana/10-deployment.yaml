@@ -35,6 +35,11 @@ spec:
       labels:
         app.kubernetes.io/name: grafana
         app.kubernetes.io/part-of: caia-observability
+        # Required by `chiefaia/allow-ingress-from-tunnel` NetworkPolicy — pods
+        # exposed via the Cloudflare tunnel + Istio gateway must carry this label
+        # for cross-ns ingress from istio-system to land. Same convention as
+        # chiefaia-api / chiefaia-wizard / chiefaia-web / chiefaia-dashboard.
+        net.chiefaia.io/exposed-via: tunnel
       annotations:
         # Force pod restart when datasource/dashboard ConfigMap changes.
         checksum/config: "c2-2026-05-30"
