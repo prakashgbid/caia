@@ -47,7 +47,7 @@
     "@chiefaia/vitest-config": "workspace:*",
     "@opentelemetry/context-async-hooks": "^2.7.0",
     "typescript": "^5.4.5",
-    "vitest": "^1.6.0"
+    "vitest": "^4.1.0"
   },
   "license": "MIT",
   "publishConfig": {
