@@ -1,0 +1,23 @@
+# Grafana Service — ClusterIP only. External access flows through
+# Istio + Cloudflare Tunnel + Cloudflare Access (see 60-istio-vs.yaml
+# and infra/cloudflare-tunnel/README.md).
+#
+# Port map:
+#   80 → 3000  → HTTP — Grafana UI + /api
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: grafana
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

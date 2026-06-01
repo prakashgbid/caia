@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Phase C2 — service-wide trace health for the chiefaia spine: P95 latency, error rate, top slow spans. Sourced from Tempo.",
+  "description": "Phase C2 — @chiefaia/claude-spawner instrumentation. All `claude.spawn` spans: rate per hour, P95 duration, error rate, broken down by claude.model. Sourced from Tempo.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -22,78 +22,58 @@
   "panels": [
     {
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "description": "P95 span duration in the last 1h, grouped by resource.service.name. Backed by TraceQL metrics over Tempo's local blocks.",
+      "description": "Count of claude.spawn spans bucketed by hour. Broken down by claude.model attribute (opus, sonnet, haiku, etc.).",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "p95 duration",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "axisLabel": "spawns / interval",
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "stacking": { "group": "A", "mode": "normal" }
           },
           "mappings": [],
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
-          "unit": "ns"
+          "unit": "short"
         },
         "overrides": []
       },
       "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
       "id": 1,
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "right", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
           "datasource": { "type": "tempo", "uid": "tempo" },
           "queryType": "traceqlMetrics",
-          "query": "{ resource.service.name=~\"chiefaia-.+\" } | quantile_over_time(duration, .95) by (resource.service.name)",
+          "query": "{ name = \"claude.spawn\" } | rate() by (span.claude.model)",
           "refId": "A"
         }
       ],
-      "title": "P95 latency per service",
+      "title": "claude.spawn count per hour (by model)",
       "type": "timeseries"
     },
     {
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "description": "Rate of spans with status_code = error, per resource.service.name, in the last 1h.",
+      "description": "P95 span duration for `claude.spawn`, grouped by claude.model.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisLabel": "error rate (spans/s)",
+            "axisLabel": "p95 duration",
             "drawStyle": "line",
             "fillOpacity": 10,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" }
+            "showPoints": "auto"
           },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 0.1 }
-            ]
-          },
-          "unit": "short"
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "ns"
         },
         "overrides": []
       },
@@ -107,16 +87,60 @@
         {
           "datasource": { "type": "tempo", "uid": "tempo" },
           "queryType": "traceqlMetrics",
-          "query": "{ resource.service.name=~\"chiefaia-.+\" && status = error } | rate() by (resource.service.name)",
+          "query": "{ name = \"claude.spawn\" } | quantile_over_time(duration, .95) by (span.claude.model)",
           "refId": "A"
         }
       ],
-      "title": "Error rate per service",
+      "title": "claude.spawn P95 duration (by model)",
       "type": "timeseries"
     },
     {
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "description": "Top 10 slowest spans in the last 1h across chiefaia-dashboard, chiefaia-wizard, chiefaia-site.",
+      "description": "Rate of claude.spawn spans with status = error, grouped by claude.model.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "errors/s",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.05 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "id": 3,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlMetrics",
+          "query": "{ name = \"claude.spawn\" && status = error } | rate() by (span.claude.model)",
+          "refId": "A"
+        }
+      ],
+      "title": "claude.spawn error rate (by model)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "description": "Recent claude.spawn invocations — useful for confirming model selection and spawn outcomes.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -127,48 +151,41 @@
         "overrides": [
           {
             "matcher": { "id": "byName", "options": "Duration" },
-            "properties": [
-              { "id": "unit", "value": "ns" },
-              { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Trace ID" },
-            "properties": [{ "id": "custom.width", "value": 280 }]
+            "properties": [{ "id": "unit", "value": "ns" }]
           }
         ]
       },
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
-      "id": 3,
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 18 },
+      "id": 4,
       "options": {
         "cellHeight": "sm",
         "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Duration" }]
+        "sortBy": [{ "desc": true, "displayName": "Start time" }]
       },
       "targets": [
         {
           "datasource": { "type": "tempo", "uid": "tempo" },
           "queryType": "traceql",
-          "query": "{ resource.service.name=~\"chiefaia-.+\" } | by(resource.service.name) | select(duration)",
-          "limit": 10,
-          "tableType": "traces",
+          "query": "{ name = \"claude.spawn\" }",
+          "limit": 25,
+          "tableType": "spans",
           "refId": "A"
         }
       ],
-      "title": "Top 10 slowest spans (1h)",
+      "title": "Recent claude.spawn spans",
       "type": "table"
     }
   ],
-  "refresh": "30s",
+  "refresh": "1m",
   "schemaVersion": 39,
-  "tags": ["caia", "tempo", "observability"],
+  "tags": ["caia", "tempo", "claude"],
   "templating": { "list": [] },
-  "time": { "from": "now-1h", "to": "now" },
+  "time": { "from": "now-6h", "to": "now" },
   "timepicker": {},
   "timezone": "",
-  "title": "CAIA Traces",
-  "uid": "caia-traces",
+  "title": "CAIA Claude Calls",
+  "uid": "caia-claude-calls",
   "version": 1,
   "weekStart": ""
 }
