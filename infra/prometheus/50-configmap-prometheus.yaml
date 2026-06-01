@@ -1,0 +1,451 @@
+# Prometheus configuration — scrape jobs + recording rules + alerts.
+#
+# Source of truth for the burn-rate alerting surface. Pairs with
+# infra/slo/slos.yaml (the targets) and infra/prometheus/60-configmap-alertmanager.yaml
+# (the receiver).
+#
+# Recording rules layout follows the "RED + USE + SLO" naming
+# convention with `:` separators (Prometheus style guide). Recording
+# rules pre-compute the SLI inputs at multiple windows (5m / 1h / 24h)
+# so the multi-window multi-burn-rate alerts have cheap, fast lookups.
+#
+# Burn-rate math (Google SRE Workbook ch 5):
+#
+#   error_budget = 1 - SLO          (e.g. 0.001 for 99.9% / month)
+#   burn_rate    = actual_error_ratio / error_budget
+#
+#   A burn rate of 14.4× over 1h consumes ~2% of the monthly budget
+#   in 1 hour — operator paging is justified.
+#   A burn rate of 6× over 24h consumes ~20% of the monthly budget
+#   in a day — INBOX-only warning is justified.
+#
+# The two-window approach (1h AND 24h) cuts false positives from
+# transient blips: a 5-minute spike that drives 1h burn rate high
+# is filtered out because 24h burn rate stays calm.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: caia-observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 30s
+      scrape_timeout: 10s
+      evaluation_interval: 30s
+      external_labels:
+        cluster: stolution
+        env: prod
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - alertmanager.chiefaia.svc.cluster.local:9093
+
+    rule_files:
+      - /etc/prometheus/recording-rules.yml
+      - /etc/prometheus/alerting-rules.yml
+
+    scrape_configs:
+      # Prometheus itself — useful for verifying the binary is healthy
+      # and as a smoke test that scraping works end-to-end.
+      - job_name: prometheus
+        static_configs:
+          - targets: [localhost:9090]
+
+      # Tempo — exposes /metrics on :3200 (its HTTP listen port).
+      # Includes tempo_*, traces_received_*, traces_spanmetrics_*
+      # (only the operator/api metrics; the span-derived metrics
+      # come in via remote_write below).
+      - job_name: tempo
+        metrics_path: /metrics
+        static_configs:
+          - targets: [tempo.chiefaia.svc.cluster.local:3200]
+            labels:
+              service: tempo
+
+      # Alertmanager — /metrics on :9093.
+      - job_name: alertmanager
+        metrics_path: /metrics
+        static_configs:
+          - targets: [alertmanager.chiefaia.svc.cluster.local:9093]
+            labels:
+              service: alertmanager
+
+      # Grafana — /metrics on :3000 (exposed as port 80 by the Service).
+      - job_name: grafana
+        metrics_path: /metrics
+        static_configs:
+          - targets: [grafana.chiefaia.svc.cluster.local:80]
+            labels:
+              service: grafana
+
+      # chiefaia-wizard — Next.js. Exposes /metrics via prom-client
+      # once the instrumentation lands; until then the target reports
+      # as `down` in Prometheus UI which is the desired signal.
+      - job_name: chiefaia-wizard
+        metrics_path: /metrics
+        static_configs:
+          - targets: [chiefaia-wizard.chiefaia.svc.cluster.local:80]
+            labels:
+              service: chiefaia-wizard
+
+      # chiefaia-dashboard — same shape as wizard.
+      - job_name: chiefaia-dashboard
+        metrics_path: /metrics
+        static_configs:
+          - targets: [chiefaia-dashboard.chiefaia.svc.cluster.local:80]
+            labels:
+              service: chiefaia-dashboard
+
+      # chiefaia-web (marketing site).
+      - job_name: chiefaia-web
+        metrics_path: /metrics
+        static_configs:
+          - targets: [chiefaia-web.chiefaia.svc.cluster.local:80]
+            labels:
+              service: chiefaia-web
+
+      # chiefaia-api (orchestrator) — exposes prom text on /prom-metrics.
+      - job_name: chiefaia-api
+        metrics_path: /prom-metrics
+        static_configs:
+          - targets: [chiefaia-api.chiefaia.svc.cluster.local:80]
+            labels:
+              service: chiefaia-api
+
+      # NATS — built-in monitor on :8222. Exposes /varz (JSON, not
+      # Prom text) by default. The /metrics endpoint requires the
+      # `prometheus-nats-exporter` sidecar — tracked as a follow-up.
+      # We still configure the scrape job so the target list is
+      # discoverable; it will report `down` until the exporter ships.
+      - job_name: nats
+        metrics_path: /metrics
+        static_configs:
+          - targets: [nats.chiefaia.svc.cluster.local:7777]    # exporter port (placeholder)
+            labels:
+              service: nats
+
+  # ─── Recording rules ─────────────────────────────────────────────────
+  # Pre-compute SLI inputs at the windows used by burn-rate alerts.
+  # Series naming: `<scope>:<metric>:<window>` (Prometheus style guide).
+  recording-rules.yml: |
+    groups:
+      - name: wizard.step_render.p95
+        interval: 30s
+        rules:
+          # Wizard step render P95 — derived from Tempo span-metrics.
+          # histogram_quantile on the `_bucket` series with `le` label.
+          - record: wizard:step_render_p95:5m
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (le) (
+                  rate(traces_spanmetrics_latency_bucket{service="chiefaia-wizard", span_name=~"wizard.step.*"}[5m])
+                )
+              )
+          - record: wizard:step_render_p95:1h
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (le) (
+                  rate(traces_spanmetrics_latency_bucket{service="chiefaia-wizard", span_name=~"wizard.step.*"}[1h])
+                )
+              )
+          - record: wizard:step_render_p95:24h
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (le) (
+                  rate(traces_spanmetrics_latency_bucket{service="chiefaia-wizard", span_name=~"wizard.step.*"}[24h])
+                )
+              )
+
+      - name: wizard.claude_call.p95
+        interval: 30s
+        rules:
+          # claude.spawn P95 — the wizard's longest-tail span.
+          - record: wizard:claude_call_p95:5m
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (le) (
+                  rate(traces_spanmetrics_latency_bucket{span_name="claude.spawn"}[5m])
+                )
+              )
+          - record: wizard:claude_call_p95:1h
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (le) (
+                  rate(traces_spanmetrics_latency_bucket{span_name="claude.spawn"}[1h])
+                )
+              )
+          - record: wizard:claude_call_p95:24h
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (le) (
+                  rate(traces_spanmetrics_latency_bucket{span_name="claude.spawn"}[24h])
+                )
+              )
+
+      - name: wizard.step.error_ratio
+        interval: 30s
+        rules:
+          # Step-level error ratio: errored steps / all steps.
+          # `status_code` label is emitted by the Tempo metrics generator.
+          - record: wizard:step_error_ratio:5m
+            expr: |
+              (
+                sum(rate(traces_spanmetrics_calls_total{service="chiefaia-wizard", span_name=~"wizard.step.*", status_code="STATUS_CODE_ERROR"}[5m]))
+                /
+                clamp_min(sum(rate(traces_spanmetrics_calls_total{service="chiefaia-wizard", span_name=~"wizard.step.*"}[5m])), 0.001)
+              )
+          - record: wizard:step_error_ratio:1h
+            expr: |
+              (
+                sum(rate(traces_spanmetrics_calls_total{service="chiefaia-wizard", span_name=~"wizard.step.*", status_code="STATUS_CODE_ERROR"}[1h]))
+                /
+                clamp_min(sum(rate(traces_spanmetrics_calls_total{service="chiefaia-wizard", span_name=~"wizard.step.*"}[1h])), 0.001)
+              )
+          - record: wizard:step_error_ratio:1d
+            expr: |
+              (
+                sum(rate(traces_spanmetrics_calls_total{service="chiefaia-wizard", span_name=~"wizard.step.*", status_code="STATUS_CODE_ERROR"}[1d]))
+                /
+                clamp_min(sum(rate(traces_spanmetrics_calls_total{service="chiefaia-wizard", span_name=~"wizard.step.*"}[1d])), 0.001)
+              )
+
+      - name: http.availability
+        interval: 30s
+        rules:
+          # Per-service HTTP availability — ratio of non-5xx server
+          # spans to total server spans, broken down by `service`.
+          - record: http:availability_ratio_5m
+            expr: |
+              (
+                sum by (service) (
+                  rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER", status_code!="STATUS_CODE_ERROR"}[5m])
+                )
+                /
+                clamp_min(
+                  sum by (service) (
+                    rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER"}[5m])
+                  ),
+                  0.001
+                )
+              )
+          - record: http:availability_ratio_1h
+            expr: |
+              (
+                sum by (service) (
+                  rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER", status_code!="STATUS_CODE_ERROR"}[1h])
+                )
+                /
+                clamp_min(
+                  sum by (service) (
+                    rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER"}[1h])
+                  ),
+                  0.001
+                )
+              )
+          - record: http:availability_ratio_24h
+            expr: |
+              (
+                sum by (service) (
+                  rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER", status_code!="STATUS_CODE_ERROR"}[24h])
+                )
+                /
+                clamp_min(
+                  sum by (service) (
+                    rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER"}[24h])
+                  ),
+                  0.001
+                )
+              )
+
+  # ─── Alerting rules ──────────────────────────────────────────────────
+  # Multi-window multi-burn-rate, per Google SRE Workbook ch 5.
+  #
+  # Burn-rate threshold derivation for SLO 99% (error budget 1%):
+  #   14.4 × budget × 1h  = 0.144     → 14.4% of budget in 1h  → page
+  #    6.0 × budget × 24h = 1.44      → 144% of budget in 1d   → page
+  #    6.0 × budget × 24h = 1.44      → 144% in 1d alone → warn-only
+  # We split into two alerts: Critical (BOTH windows breach) and
+  # Warning (24h window only).
+  #
+  # For SLO 99.9% (error budget 0.1%):
+  #   thresholds are the same multipliers; the budget number is
+  #   simply 10× smaller. PromQL expresses this with `> bool` against
+  #   the error budget directly.
+  alerting-rules.yml: |
+    groups:
+      # ─── Wizard step render P95 latency ──────────────────────────────
+      - name: slo.wizard_step_render_p95
+        interval: 30s
+        rules:
+          # CRITICAL — burn rate is BOTH high (1h) AND sustained (24h).
+          # Page operator. The two-window AND-gate filters out
+          # transient spikes that would otherwise wake the operator.
+          - alert: WizardStepRenderP95BurnRateCritical
+            expr: |
+              (
+                wizard:step_render_p95:1h > (0.5 * 1.44)
+              )
+              and
+              (
+                wizard:step_render_p95:24h > (0.5 * 1.06)
+              )
+            for: 2m
+            labels:
+              severity: critical
+              slo: wizard_step_render_p95
+              page: "true"
+            annotations:
+              summary: Wizard step render P95 burning > 14.4× over 1h AND > 6× over 24h
+              description: |
+                P95 step render latency is {{ $value | humanizeDuration }} on the 1h window —
+                ABOVE the 500ms SLO by enough to consume 2% of the monthly error budget in 1h
+                AND sustained over 24h. Operator paging justified.
+              runbook: https://github.com/prakashgbid/caia/blob/develop/infra/prometheus/README.md#wizard-step-render-p95
+
+          # WARNING — slow burn (24h only). INBOX-only.
+          - alert: WizardStepRenderP95BurnRateWarning
+            expr: |
+              wizard:step_render_p95:24h > (0.5 * 1.06)
+            for: 15m
+            labels:
+              severity: warning
+              slo: wizard_step_render_p95
+              page: "false"
+            annotations:
+              summary: Wizard step render P95 burning > 6× over 24h
+              description: |
+                P95 step render latency on the 24h window is {{ $value | humanizeDuration }} —
+                consuming the monthly error budget faster than 30 days will replenish it.
+              runbook: https://github.com/prakashgbid/caia/blob/develop/infra/prometheus/README.md#wizard-step-render-p95
+
+      # ─── Wizard Claude call P95 latency ──────────────────────────────
+      - name: slo.wizard_claude_call_p95
+        interval: 30s
+        rules:
+          - alert: WizardClaudeCallP95BurnRateCritical
+            expr: |
+              (
+                wizard:claude_call_p95:1h > (30 * 1.44)
+              )
+              and
+              (
+                wizard:claude_call_p95:24h > (30 * 1.06)
+              )
+            for: 2m
+            labels:
+              severity: critical
+              slo: wizard_claude_call_p95
+              page: "true"
+            annotations:
+              summary: Wizard claude.spawn P95 burning > 14.4× over 1h AND > 6× over 24h
+              description: |
+                P95 claude.spawn latency is {{ $value | humanizeDuration }} on the 1h window —
+                30s ceiling is being burned through fast enough to page.
+              runbook: https://github.com/prakashgbid/caia/blob/develop/infra/prometheus/README.md#wizard-claude-call-p95
+
+          - alert: WizardClaudeCallP95BurnRateWarning
+            expr: |
+              wizard:claude_call_p95:24h > (30 * 1.06)
+            for: 15m
+            labels:
+              severity: warning
+              slo: wizard_claude_call_p95
+              page: "false"
+            annotations:
+              summary: Wizard claude.spawn P95 burning > 6× over 24h
+              description: |
+                Slow burn on Claude call latency over 24h — INBOX entry only.
+              runbook: https://github.com/prakashgbid/caia/blob/develop/infra/prometheus/README.md#wizard-claude-call-p95
+
+      # ─── Wizard step error ratio ─────────────────────────────────────
+      # SLO 99.9% → error budget 0.001. Burn rates apply to the
+      # error ratio directly.
+      - name: slo.wizard_step_error_ratio
+        interval: 30s
+        rules:
+          - alert: WizardStepErrorRatioBurnRateCritical
+            expr: |
+              (
+                wizard:step_error_ratio:1h > (0.001 * 14.4)
+              )
+              and
+              (
+                wizard:step_error_ratio:1d > (0.001 * 6.0)
+              )
+            for: 2m
+            labels:
+              severity: critical
+              slo: wizard_step_error_ratio
+              page: "true"
+            annotations:
+              summary: Wizard step error ratio burning > 14.4× over 1h AND > 6× over 24h
+              description: |
+                Step error ratio is {{ $value | humanizePercentage }} on the 1h window —
+                consuming the 0.1%/month error budget at a pageable rate.
+              runbook: https://github.com/prakashgbid/caia/blob/develop/infra/prometheus/README.md#wizard-step-error-ratio
+
+          - alert: WizardStepErrorRatioBurnRateWarning
+            expr: |
+              wizard:step_error_ratio:1d > (0.001 * 6.0)
+            for: 15m
+            labels:
+              severity: warning
+              slo: wizard_step_error_ratio
+              page: "false"
+            annotations:
+              summary: Wizard step error ratio burning > 6× over 24h
+              description: |
+                Slow burn on step error ratio over 24h — INBOX entry only.
+              runbook: https://github.com/prakashgbid/caia/blob/develop/infra/prometheus/README.md#wizard-step-error-ratio
+
+      # ─── Per-service HTTP availability ───────────────────────────────
+      # SLO 99.9% → budget 0.001.  Alert when (1 - availability) burns.
+      - name: slo.http_availability
+        interval: 30s
+        rules:
+          - alert: HttpAvailabilityBurnRateCritical
+            expr: |
+              (
+                (1 - http:availability_ratio_1h) > (0.001 * 14.4)
+              )
+              and
+              (
+                (1 - http:availability_ratio_24h) > (0.001 * 6.0)
+              )
+            for: 2m
+            labels:
+              severity: critical
+              slo: http_availability
+              page: "true"
+            annotations:
+              summary: "{{ $labels.service }} HTTP availability burning > 14.4× over 1h AND > 6× over 24h"
+              description: |
+                Availability on {{ $labels.service }} is {{ $value | humanizePercentage }}
+                below 99.9% — consuming the monthly budget at a pageable rate.
+              runbook: https://github.com/prakashgbid/caia/blob/develop/infra/prometheus/README.md#http-availability
+
+          - alert: HttpAvailabilityBurnRateWarning
+            expr: |
+              (1 - http:availability_ratio_24h) > (0.001 * 6.0)
+            for: 15m
+            labels:
+              severity: warning
+              slo: http_availability
+              page: "false"
+            annotations:
+              summary: "{{ $labels.service }} HTTP availability burning > 6× over 24h"
+              description: |
+                Slow burn on availability for {{ $labels.service }} — INBOX entry only.
+              runbook: https://github.com/prakashgbid/caia/blob/develop/infra/prometheus/README.md#http-availability

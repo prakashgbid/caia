@@ -1,0 +1,111 @@
+# Alertmanager Deployment — single replica.
+#
+# Phase C8 deliverable. Receives alerts from Prometheus, fans them
+# out to a single webhook receiver (the Python pod from
+# webhook-receiver/) which writes structured entries into the
+# operator INBOX. No paging integrations in V1 — the INBOX is the
+# pager substitute.
+#
+# Single replica because:
+#   - Local disk for nflog / silences (1Gi emptyDir is fine; we don't
+#     persist silences across restarts in V1 — silences are rare and
+#     the operator owns them).
+#   - HA-Alertmanager (gossip mesh) is a Phase D concern. With a
+#     single Prometheus, deduplication doesn't buy anything yet.
+#
+# Runs as non-root uid 65534 (Alertmanager container default).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alertmanager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alertmanager
+        app.kubernetes.io/part-of: caia-observability
+        net.chiefaia.io/exposed-via: tunnel
+      annotations:
+        checksum/config: "c8-2026-05-30"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.27.0
+          args:
+            - --config.file=/etc/alertmanager/alertmanager.yml
+            - --storage.path=/alertmanager
+            - --web.external-url=https://alertmanager.chiefaia.com
+            - --web.route-prefix=/
+            - --cluster.listen-address=                # disable gossip — single replica
+            - --log.level=info
+          ports:
+            - name: http
+              containerPort: 9093
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            # Phase C8 — limit trimmed from 200m to 100m so the pod
+            # fits within the chiefaia-quota cap of limits.cpu: 8.
+            # Alertmanager idles at < 20m; 100m is comfortable headroom.
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - name: storage
+              mountPath: /alertmanager
+            - name: config
+              mountPath: /etc/alertmanager
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: storage
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: config
+          configMap:
+            name: alertmanager-config
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

@@ -1,0 +1,22 @@
+# Prometheus Service — ClusterIP. External access flows through
+# Istio + Cloudflare Tunnel + Cloudflare Access (see 80-istio-vs-prometheus.yaml).
+#
+# Port map:
+#   9090 → 9090 → HTTP — Prometheus UI, /api, /-/reload, remote_write receiver
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: http
+      protocol: TCP

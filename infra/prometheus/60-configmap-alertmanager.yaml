@@ -1,0 +1,61 @@
+# Alertmanager configuration — single webhook receiver.
+#
+# Routes EVERY alert (including resolves) to the in-cluster
+# alertmanager-webhook-receiver Pod, which translates each
+# notification into a structured INBOX entry in the operator
+# memory bank.
+#
+# Route tree:
+#   - default → operator-inbox
+#     - severity=critical → operator-inbox (no change; just labelled)
+#     - severity=warning  → operator-inbox
+#
+# In a HA-Alertmanager world we'd split critical → PagerDuty and
+# warning → INBOX. For V1 the INBOX is the single sink; the
+# `severity` label propagates so the receiver can prefix entries
+# with `[CRITICAL]` or `[WARNING]`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: caia-observability
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
+    route:
+      receiver: operator-inbox
+      # Short timers in V1 — the INBOX is the only sink; aggressive
+      # grouping would just hide signal. Reconsider when we add a
+      # paging receiver.
+      group_by: ["alertname", "service", "slo"]
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 4h
+      routes:
+        - matchers: ['severity="critical"']
+          receiver: operator-inbox
+          group_wait: 5s            # page-level: fan out fast
+          repeat_interval: 1h
+        - matchers: ['severity="warning"']
+          receiver: operator-inbox
+          repeat_interval: 12h
+
+    receivers:
+      - name: operator-inbox
+        webhook_configs:
+          - url: http://alertmanager-webhook-receiver.chiefaia.svc.cluster.local:8080/alerts
+            send_resolved: true
+            # Alertmanager wraps the payload in its standard
+            # `data: { alerts: [...] }` envelope; the receiver
+            # parses that envelope.
+            max_alerts: 32
+
+    # No inhibition rules in V1.  Add `critical inhibits warning for
+    # the same alertname+service` once we accumulate evidence that
+    # the duplicates are noisy.
+    inhibit_rules: []

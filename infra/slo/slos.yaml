@@ -1,0 +1,94 @@
+# CAIA Service Level Objectives — source of truth for Phase C8 alerting.
+#
+# This file is the single source of truth for the SLO targets that
+# back the recording rules and burn-rate alerts in infra/prometheus.
+# It is intentionally separate from the Prometheus config so the
+# product side can evolve targets without thrashing the rules YAML.
+#
+# Schema:
+#   slos[]:
+#     id:        stable identifier, used in recording rule prefix
+#     name:      human-friendly title surfaced in dashboards
+#     service:   Tempo / Prometheus label scope for this SLO
+#     sli:       short description of the indicator
+#     indicator: {kind: latency|error_ratio|availability,
+#                 target_le?: <max acceptable latency seconds>,
+#                 metric: <PromQL series the SLI is computed from>}
+#     objective: target compliance ratio (1.0 = perfect, 0.999 = 99.9%)
+#     window:    rolling evaluation window (30d standard)
+#
+# Multi-window multi-burn-rate alerts (Google SRE Workbook ch 5) are
+# generated off these objectives. The error budget is derived as
+# `1 - objective` over `window`.
+#
+# Phase C8 ships 4 SLOs covering the chiefaia spine:
+#   wizard.step_render.p95
+#   wizard.claude_call.p95
+#   wizard.step.error_rate
+#   http.availability
+#
+# Adding more SLOs is a documented runbook task — see
+# infra/slo/README.md (TBD in C9).
+
+apiVersion: slo.chiefaia.io/v1
+kind: SLOSet
+metadata:
+  name: caia-spine
+  owner: operator
+  phase: C8
+
+slos:
+  - id: wizard_step_render_p95
+    name: Wizard step render P95 latency
+    service: chiefaia-wizard
+    sli: P95 latency of wizard step render spans (`wizard.step.*`)
+    indicator:
+      kind: latency
+      target_le: 0.5            # 500 ms
+      # Span-derived metric emitted by the Tempo metrics generator
+      # (infra/tempo/10-configmap.yaml processors). Bucket suffix
+      # added by the recording rule.
+      metric: traces_spanmetrics_latency_bucket{service="chiefaia-wizard", span_name=~"wizard.step.*"}
+    objective: 0.99             # 99% of step renders complete < 500 ms
+    window: 30d
+
+  - id: wizard_claude_call_p95
+    name: Wizard Claude call P95 latency
+    service: chiefaia-wizard
+    sli: P95 latency of `claude.spawn` spans originating in the wizard
+    indicator:
+      kind: latency
+      target_le: 30.0           # 30 seconds — model-call ceiling
+      metric: traces_spanmetrics_latency_bucket{span_name="claude.spawn"}
+    objective: 0.99             # 99% of Claude calls complete < 30 s
+    window: 30d
+
+  - id: wizard_step_error_ratio
+    name: Wizard step error rate
+    service: chiefaia-wizard
+    sli: Ratio of error-status step spans to total step spans
+    indicator:
+      kind: error_ratio
+      # 0.1% = 0.001 — flips the meaning of "objective" to the
+      # complement: we want the error ratio at or below this number.
+      target_le: 0.001
+      metric: traces_spanmetrics_calls_total{service="chiefaia-wizard", span_name=~"wizard.step.*"}
+    objective: 0.999            # ≤ 0.1% step errors / month
+    window: 30d
+
+  - id: http_availability
+    name: Per-service HTTP availability
+    service: chiefaia-*         # broadcast — applied per service via recording-rule by()
+    sli: Ratio of 2xx/3xx HTTP responses to total HTTP responses
+    indicator:
+      kind: availability
+      # All non-5xx responses count as "available". 4xx is a client
+      # problem, not an availability one.
+      metric: traces_spanmetrics_calls_total{span_kind="server"}
+    objective: 0.999            # 99.9% — 3 nines per service per month
+    window: 30d
+    services:
+      - chiefaia-wizard
+      - chiefaia-dashboard
+      - chiefaia-web
+      - chiefaia-api
