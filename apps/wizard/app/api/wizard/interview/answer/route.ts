@@ -43,6 +43,9 @@ import { headers } from 'next/headers';
 import { randomUUID } from 'node:crypto';
 import { PILLAR_IDS } from '@caia/interviewer';
 import { createTracer, withClaudeSpawnerSpan } from '@chiefaia/tracing';
+// Phase C3 — per-tenant usage meter integration.
+import { recordWizardClaudeUsage } from '../../../../../lib/wizard/claude-meter';
+import { resolveTenantTierForMeter } from '../../../../../lib/wizard/tier-resolver';
 import {
   emptyPillarCoverage,
   type PillarCoverageMap,
@@ -264,6 +267,33 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
       span.setAttribute('caia.retry.attempts_run', retryResult.attemptsRun);
       span.setAttribute('caia.retry.final_class', retryResult.finalErrorClass ?? 'none');
+
+      // Phase C3 — usage meter. Fires only when the wizard ran the
+      // live engine and returned a successful Claude envelope. The
+      // memory-mode V1 path returns no envelope so the meter write is
+      // skipped silently. Errors are swallowed because metering is
+      // non-critical to the wizard's response contract.
+      if (useLive && retryResult.ok) {
+        try {
+          const tier = await resolveTenantTierForMeter(tenantId);
+          await recordWizardClaudeUsage(
+            {
+              tenantId,
+              projectId,
+              tier,
+              model: INTERVIEW_LIVE_MODEL,
+            },
+            undefined,
+          );
+          span.setAttribute('caia.meter.recorded', true);
+        } catch (meterErr) {
+          span.setAttribute('caia.meter.recorded', false);
+          span.setAttribute(
+            'caia.meter.error',
+            meterErr instanceof Error ? meterErr.message : String(meterErr),
+          );
+        }
+      }
 
       if (!retryResult.ok) {
         return NextResponse.json(

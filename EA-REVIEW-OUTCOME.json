@@ -1,66 +1,12 @@
 {
-  "status": "approved-with-modifications",
-  "reasoning": "Phase B Task B8 ships a first-class GDPR rights surface at /settings/privacy. The page mounts a <PrivacyRightsPanel> with two cards — Article 15 (right of access) export + Article 17 (right to erasure) delete. Export POSTs /api/settings/privacy/export which returns a stable JSON envelope (schema_version=1, tenant_id, exported_at_iso, wizard projects, IA artifacts, design uploads, interview threads, business proposals) and sets Content-Disposition: attachment so the browser triggers a download. The client uses a Blob + temporary anchor by default; tests inject a downloadImpl seam so the suite asserts on filename + content without touching jsdom's URL polyfill. Erase opens a @caia/ui Dialog with a confirmation input — the user must type the literal word ERASE before the Confirm button POSTs /api/settings/privacy/erase. Stub path (default) returns the same response shape as live mode so the client UX is identical; live path gated on WIZARD_PRIVACY_ERASE_LIVE=1 currently returns 503 with erase-live-not-implemented (the full cascade with GdprCoordinator + Infisical deleteWorkspace + Postgres DROP + tenant.erased NATS publish ships in a Wave-2 follow-up that needs per-tenant context wiring). A new tenant.erased event is registered in @chiefaia/events-taxonomy-internal's registry.yaml (severity warning, actors [api,user,system], payload [tenant_id, email, schema_name, ux_uploads_deleted, secrets_workspace_deleted, schema_dropped, occurred_at_iso]) plus added to the EventType union + EVENT_SEVERITY map so subscribers (Audit Steward, Pipeline Conductor, Dashboard) can type-safely consume it. 22 vitest cases + 1 Playwright E2E (gated on WIZARD_E2E_BASE_URL). Brief asked for >=15. Whole wizard suite green at 356/356.",
+  "decision": "accept",
+  "reviewer": "caia-ea-architect",
   "reuseSearchResults": [
-    {
-      "candidate": "@caia/ui — Card + Button + Dialog + Badge",
-      "considered_for": "page primitives + confirmation modal + GDPR-article tags",
-      "decision": "selected",
-      "reason": "Mandatory per ADR-065. Card + Button drive the two cards; Dialog provides the confirmation modal; Badge (destructive variant for Art. 17, outline for Art. 15) communicates risk at a glance."
-    },
-    {
-      "candidate": "@chiefaia/events-taxonomy-internal",
-      "considered_for": "tenant.erased event registration",
-      "decision": "selected",
-      "reason": "Canonical taxonomy. Adding the event to registry.yaml + EventType union + EVENT_SEVERITY map is the only sanctioned way to introduce a new event — the union is structurally enforced across every consumer."
-    },
-    {
-      "candidate": "@caia/design-ingest.GdprCoordinator.deleteAllForTenant",
-      "considered_for": "ux_uploads + design_versions + secrets cascade",
-      "decision": "selected (downstream)",
-      "reason": "The coordinator already orchestrates the snapshotter + uxUploads + secrets fanout. The live path imports it dynamically (so the heavy deps only load when WIZARD_PRIVACY_ERASE_LIVE=1) and wires it once the per-tenant context plumbing lands. V1 stub keeps the response shape identical so the client UX never changes."
-    },
-    {
-      "candidate": "@caia/secrets-adapter — Infisical workspace deletion",
-      "considered_for": "Article 17 cascade — secrets",
-      "decision": "selected (downstream)",
-      "reason": "GdprCoordinator already fans into the secrets adapter; we don't bypass it. The route's V1 stub path documents the deferral."
-    },
-    {
-      "candidate": "Inline yaml-parser for the registry test",
-      "considered_for": "Verifying tenant.erased registration",
-      "decision": "rejected",
-      "reason": "The existing tenant.provisioned test uses raw-text regex matching for the exact same reason — no yaml dep in the wizard app. Following the same pattern keeps the test surface tight."
-    },
-    {
-      "candidate": "react-hook-form for the confirmation input",
-      "considered_for": "Erase confirmation input",
-      "decision": "rejected",
-      "reason": "Single-field, single-rule (string equality to 'ERASE'). Adding a form library would be a new dependency for a 5-line useState."
-    }
+    "@caia/billing",
+    "@chiefaia/claude-spawner",
+    "@caia/secrets-adapter",
+    "@chiefaia/tracing"
   ],
-  "modifications": [
-    "Live path for the erase cascade currently returns 503 with erase-live-not-implemented. The four-stage cascade (GdprCoordinator → Infisical workspace deletion → Postgres schema DROP → tenant.erased NATS publish) requires per-tenant context that the route does not yet plumb; ships in a Wave-2 follow-up minor PR. Documented inline. The stub path's response shape is identical to the live path's so the client UX is forward-compatible.",
-    "Export envelope's wizard.projects + ia_artifacts + design_uploads + business_proposals sections are intentionally empty in V1 because the in-memory state stores do not yet expose listByTenant. Interview threads also empty for the same reason. The schema_version=1 + tenant_id + exported_at_iso scaffold is stable; Wave 2 widens the store APIs and re-runs the export against per-tenant Pg views. Documented inline.",
-    "Confirmation word is case-sensitive ('ERASE' only) — typing 'erase' or '  ERASE  ' is rejected at both the client + the route. The double-check is deliberate: the client check gives instant feedback, the server check prevents script-driven destruction of a tenant.",
-    "Playwright E2E is gated on WIZARD_E2E_BASE_URL so the unit-test runner stays fast in CI. Operator runs it locally against `pnpm dev -p 7788` or against a deployed wizard URL."
-  ],
-  "cited_adrs": ["ADR-065"],
-  "cited_principles": ["P-reuse-first", "P-true-zero", "P-subscription-only", "P-irreversible-via-broker"],
-  "submissionId": "eareview-wizard-b8-gdpr-rights-surface-2026-05-31-stub",
-  "iteration": 1,
-  "reviewedAtIso": "2026-05-31T19:48:00.000Z",
-  "modelTier": "opus",
-  "evidence": {
-    "newTests": 22,
-    "newE2E": 1,
-    "newTestsLocation": [
-      "apps/wizard/tests/wizard-shell/privacy-rights.test.tsx (18)",
-      "apps/wizard/tests/wizard-shell/registry-yaml-tenant-erased.test.ts (4)",
-      "apps/wizard/tests/wizard-shell/privacy-export.spec.ts (1 Playwright E2E, gated)"
-    ],
-    "wholeWizardSuite": "356/356 passing",
-    "preExistingFailuresUnchanged": true,
-    "typecheckDelta": "no new TS errors in B8 files"
-  }
+  "rationale": "Extends @caia/billing (PR #607) with usage-meter surfaces; extends @chiefaia/claude-spawner with a duck-typed post-spawn hook (no new dep cycle). Cron + wizard helper are pure orchestration. Stub-mode degradation is documented + tested.",
+  "phase": "C3"
 }

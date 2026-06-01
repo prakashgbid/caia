@@ -21,6 +21,8 @@ export type {
   SpawnClaudeResult,
   ClaudeJsonEnvelope,
   ParsedClaudeEnvelope,
+  UsageMeterContext,
+  UsageMeterHook,
 } from './spawn.js';
 
 export {

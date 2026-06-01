@@ -246,6 +246,54 @@ export function buildSpawnArgs(opts: SpawnClaudeOptions): string[] {
   return out;
 }
 
+/**
+ * Per-tenant usage metering context (Phase C3).
+ *
+ * Supplied by callers that want post-spawn usage metering — typically
+ * the wizard API routes that already have `(tenantId, tier, model)` in
+ * scope by the time they invoke `spawnClaude`. The spawner does NOT
+ * import `@caia/billing` directly to avoid a dependency cycle (billing
+ * declares the meter; spawner is upstream). Instead, the caller passes
+ * a `usageMeterHook` function — typically a closure around the
+ * dashboard's `meter.recordUsage` — which the spawner invokes after a
+ * successful spawn with the parsed envelope's `usage` field.
+ *
+ * BYOK callers set `skipReason: 'byok'` so the hook can no-op
+ * uniformly without re-checking the secrets adapter at every call
+ * site. This keeps the spawner contract "ask the hook to record" and
+ * defers policy to the meter.
+ *
+ * SUBSCRIPTION-ONLY note: this context is purely descriptive — it
+ * does not influence the binary path or env scrub. Metering is a
+ * write-after-success side effect.
+ */
+export interface UsageMeterContext {
+  readonly tenantId: string;
+  readonly tier: 'free' | 'professional' | 'team';
+  readonly model: string;
+  /** When set, the hook MUST be a no-op. Used by BYOK detection upstream. */
+  readonly skipReason?: 'byok' | 'free-tier' | null;
+}
+
+/**
+ * Post-spawn metering hook. The spawner calls this AFTER a successful
+ * spawn — never on failure. Hook errors are caught and surfaced via
+ * the OTel span (`meter.error=<message>`) but never re-thrown into the
+ * caller — metering is non-critical to the spawn's contract.
+ */
+export type UsageMeterHook = (
+  ctx: UsageMeterContext,
+  payload: {
+    model: string;
+    input_tokens: number;
+    output_tokens: number;
+    cache_creation_input_tokens: number;
+    cache_read_input_tokens: number;
+    ts: Date;
+  },
+  result: SpawnClaudeResult,
+) => Promise<void>;
+
 /** Inputs to {@link spawnClaude}. */
 export interface SpawnClaudeInput {
   /** Prompt content written to the child's stdin. */
@@ -254,6 +302,15 @@ export interface SpawnClaudeInput {
   options?: SpawnClaudeOptions;
   /** Hard constraints applied before the spawn. */
   constraints?: SpawnClaudeConstraints;
+  /**
+   * Per-tenant metering context (Phase C3). When supplied along with
+   * `usageMeterHook`, the spawner invokes the hook after a successful
+   * spawn so per-tenant usage can be persisted (typically via
+   * `@caia/billing.recordUsage`). See {@link UsageMeterContext}.
+   */
+  usageMeterContext?: UsageMeterContext;
+  /** Post-spawn metering callback. See {@link UsageMeterHook}. */
+  usageMeterHook?: UsageMeterHook;
 }
 
 /**
@@ -486,6 +543,55 @@ export async function spawnClaude(input: SpawnClaudeInput): Promise<SpawnClaudeR
     if (!result.ok && result.diagnostic !== null) {
       span.setStatus('error', result.diagnostic);
     }
+
+    // Phase C3 — post-spawn usage metering hook.
+    //
+    // Invoked only when:
+    //   - the spawn succeeded (so we don't double-bill on retries),
+    //   - the caller supplied both ctx and hook,
+    //   - the envelope parses to a successful result (no malformed
+    //     output blocks the meter — we just skip it).
+    //
+    // Errors thrown by the hook are caught + recorded on the span;
+    // they NEVER propagate to the caller. Metering is non-critical
+    // to the spawn contract — if the meter PG connection dies, the
+    // spawn still returns ok=true and the caller proceeds.
+    if (
+      result.ok &&
+      input.usageMeterContext !== undefined &&
+      input.usageMeterHook !== undefined
+    ) {
+      const ctx = input.usageMeterContext;
+      span.setAttribute('caia.meter.tenant_id', ctx.tenantId);
+      span.setAttribute('caia.meter.tier', ctx.tier);
+      if (ctx.skipReason !== undefined && ctx.skipReason !== null) {
+        span.setAttribute('caia.meter.skip_reason', ctx.skipReason);
+      }
+      try {
+        const parsed = parseClaudeJsonEnvelope(result.stdout);
+        const usage = parsed.envelope?.usage ?? {};
+        const payload = {
+          model: parsed.envelope?.modelUsage
+            ? Object.keys(parsed.envelope.modelUsage)[0] ?? ctx.model
+            : ctx.model,
+          input_tokens: usage.input_tokens ?? 0,
+          output_tokens: usage.output_tokens ?? 0,
+          cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
+          cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
+          ts: new Date(),
+        };
+        span.setAttribute('caia.meter.input_tokens', payload.input_tokens);
+        span.setAttribute('caia.meter.output_tokens', payload.output_tokens);
+        await input.usageMeterHook(ctx, payload, result);
+        span.setAttribute('caia.meter.recorded', true);
+      } catch (meterErr) {
+        const msg = meterErr instanceof Error ? meterErr.message : String(meterErr);
+        span.setAttribute('caia.meter.recorded', false);
+        span.setAttribute('caia.meter.error', msg);
+        // Intentionally swallowed: metering is best-effort.
+      }
+    }
+
     return result;
   });
 }

@@ -371,3 +371,97 @@ describe('spawnClaude — env scrub end-to-end', () => {
     }
   });
 });
+
+// ============================================================
+// Phase C3 — UsageMeterContext / UsageMeterHook
+// ============================================================
+
+describe('spawnClaude — usage meter hook (Phase C3)', () => {
+  const goodEnvelope = JSON.stringify({
+    type: 'result',
+    result: 'ok',
+    is_error: false,
+    usage: { input_tokens: 123, output_tokens: 456, cache_read_input_tokens: 7 },
+  });
+
+  it('invokes usageMeterHook after a successful spawn with envelope token counts', async () => {
+    const fake = makeFakeChild({ stdoutChunks: [goodEnvelope], exitCode: 0 });
+    const hook = vi.fn(async () => {});
+    await spawnClaude({
+      prompt: 'p',
+      options: { spawnFn: fakeSpawnFactory(fake) },
+      usageMeterContext: {
+        tenantId: 'tenant-A',
+        tier: 'professional',
+        model: 'claude-opus-4-6',
+      },
+      usageMeterHook: hook,
+    });
+    await fake.promise;
+    // Allow the post-spawn hook microtask to flush.
+    await new Promise((r) => setImmediate(r));
+    expect(hook).toHaveBeenCalledTimes(1);
+    const [ctx, payload] = hook.mock.calls[0]!;
+    expect((ctx as { tenantId: string }).tenantId).toBe('tenant-A');
+    expect((payload as { input_tokens: number }).input_tokens).toBe(123);
+    expect((payload as { output_tokens: number }).output_tokens).toBe(456);
+    expect((payload as { cache_read_input_tokens: number }).cache_read_input_tokens).toBe(7);
+  });
+
+  it('does NOT invoke hook when spawn fails (non-zero exit)', async () => {
+    const fake = makeFakeChild({ exitCode: 1, stderrChunks: ['oops'] });
+    const hook = vi.fn(async () => {});
+    await spawnClaude({
+      prompt: 'p',
+      options: { spawnFn: fakeSpawnFactory(fake) },
+      usageMeterContext: { tenantId: 'tenant-A', tier: 'professional', model: 'claude-opus-4-6' },
+      usageMeterHook: hook,
+    });
+    await fake.promise;
+    await new Promise((r) => setImmediate(r));
+    expect(hook).not.toHaveBeenCalled();
+  });
+
+  it('swallows hook errors so the spawn result is unaffected', async () => {
+    const fake = makeFakeChild({ stdoutChunks: [goodEnvelope], exitCode: 0 });
+    const hook = vi.fn(async () => { throw new Error('pg down'); });
+    const result = await spawnClaude({
+      prompt: 'p',
+      options: { spawnFn: fakeSpawnFactory(fake) },
+      usageMeterContext: { tenantId: 'tenant-A', tier: 'professional', model: 'claude-opus-4-6' },
+      usageMeterHook: hook,
+    });
+    await fake.promise;
+    await new Promise((r) => setImmediate(r));
+    expect(result.ok).toBe(true);
+    expect(hook).toHaveBeenCalledTimes(1);
+  });
+
+  it('no-ops when usageMeterContext is omitted', async () => {
+    const fake = makeFakeChild({ stdoutChunks: [goodEnvelope], exitCode: 0 });
+    const hook = vi.fn(async () => {});
+    await spawnClaude({
+      prompt: 'p',
+      options: { spawnFn: fakeSpawnFactory(fake) },
+      usageMeterHook: hook,
+    });
+    await fake.promise;
+    await new Promise((r) => setImmediate(r));
+    expect(hook).not.toHaveBeenCalled();
+  });
+
+  it('passes the byok skipReason verbatim so the hook can short-circuit', async () => {
+    const fake = makeFakeChild({ stdoutChunks: [goodEnvelope], exitCode: 0 });
+    const seen: Array<unknown> = [];
+    const hook = vi.fn(async (ctx: unknown) => { seen.push(ctx); });
+    await spawnClaude({
+      prompt: 'p',
+      options: { spawnFn: fakeSpawnFactory(fake) },
+      usageMeterContext: { tenantId: 't', tier: 'professional', model: 'm', skipReason: 'byok' },
+      usageMeterHook: hook,
+    });
+    await fake.promise;
+    await new Promise((r) => setImmediate(r));
+    expect((seen[0] as { skipReason?: string }).skipReason).toBe('byok');
+  });
+});
