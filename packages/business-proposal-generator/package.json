@@ -35,7 +35,7 @@
     "@types/node": "^20",
     "@types/pg": "^8.11.6",
     "typescript": "^5.4.5",
-    "vitest": "^1.6.0"
+    "vitest": "^4.1.0"
   },
   "engines": { "node": ">=20" },
   "license": "MIT",

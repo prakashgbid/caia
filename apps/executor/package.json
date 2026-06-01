@@ -22,7 +22,7 @@
   "devDependencies": {
     "@types/node": "*",
     "typescript": "*",
-    "vitest": "^1.6.0"
+    "vitest": "^4.1.0"
   },
   "private": true
 }

@@ -27,7 +27,7 @@
     "@types/babel__traverse": "^7.20.6",
     "@types/node": "^20.14.0",
     "typescript": "^5.4.5",
-    "vitest": "^1.6.0"
+    "vitest": "^4.1.0"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.40.0"

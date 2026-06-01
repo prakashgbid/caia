@@ -28,7 +28,7 @@
     "@types/node": "^20",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
-    "vitest": "^1.6.0",
+    "vitest": "^4.1.0",
     "@opentelemetry/sdk-trace-base": "^2.7.0"
   },
   "license": "MIT",
