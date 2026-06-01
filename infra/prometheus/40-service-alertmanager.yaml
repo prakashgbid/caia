@@ -1,0 +1,23 @@
+# Alertmanager Service — ClusterIP. External access flows through
+# Istio + Cloudflare Tunnel + Cloudflare Access (alertmanager.chiefaia.com
+# can be added later; not in V1 scope).
+#
+# Port map:
+#   9093 → 9093 → HTTP — Alertmanager UI, /api, /-/reload
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: alertmanager
+  ports:
+    - name: http
+      port: 9093
+      targetPort: http
+      protocol: TCP

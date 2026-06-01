@@ -42,7 +42,7 @@ spec:
         net.chiefaia.io/exposed-via: tunnel
       annotations:
         # Force pod restart when datasource/dashboard ConfigMap changes.
-        checksum/config: "c2-2026-05-30"
+        checksum/config: "c8-2026-05-30"
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -153,6 +153,9 @@ spec:
                 path: caia-wizard-flow.json
               - key: caia-claude-calls.json
                 path: caia-claude-calls.json
+              # Phase C8 — SLO compliance dashboard (Prometheus-backed)
+              - key: caia-slo-compliance.json
+                path: caia-slo-compliance.json
         - name: tmp
           emptyDir:
             sizeLimit: 128Mi

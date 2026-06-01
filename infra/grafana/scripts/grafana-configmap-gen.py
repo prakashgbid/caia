@@ -12,6 +12,9 @@ Source of truth for each dashboard is the JSON file in
 The Grafana sidecar provisioning also picks up ConfigMap changes
 within ~30s without a pod restart, but the restart is the
 documented path because it guarantees the new state is loaded.
+
+Phase C8 update: adds the Prometheus datasource (UID `prometheus`)
+and the `caia-slo-compliance.json` dashboard.
 """
 import json
 import os
@@ -26,17 +29,21 @@ DASHBOARDS = [
     "caia-traces.json",
     "caia-wizard-flow.json",
     "caia-claude-calls.json",
+    "caia-slo-compliance.json",
 ]
 
 HEADER = """# Grafana provisioning — datasources, dashboard provider, dashboards JSON.
 #
-# Phase C2 deliverable. Single ConfigMap holds:
-#   - datasources.yaml          → Tempo data source (uid: tempo)
-#   - dashboards.yaml           → file provider pointing at
-#                                  /var/lib/grafana/dashboards
-#   - caia-traces.json          → service-wide trace health
-#   - caia-wizard-flow.json     → wizard step breakdown
-#   - caia-claude-calls.json    → @chiefaia/claude-spawner panel
+# Phase C2 deliverable (Tempo + 3 trace dashboards) extended in Phase
+# C8 with the Prometheus datasource and the SLO compliance dashboard.
+# Single ConfigMap holds:
+#   - datasources.yaml            → Tempo (uid: tempo) + Prometheus (uid: prometheus)
+#   - dashboards.yaml             → file provider pointing at
+#                                    /var/lib/grafana/dashboards
+#   - caia-traces.json            → service-wide trace health
+#   - caia-wizard-flow.json       → wizard step breakdown
+#   - caia-claude-calls.json      → @chiefaia/claude-spawner panel
+#   - caia-slo-compliance.json    → SLO burn-rate + error budget + firing alerts
 #
 # The Deployment mounts each key at the path Grafana expects via
 # explicit `items:` in 10-deployment.yaml. Editing any dashboard
@@ -74,6 +81,28 @@ data:
             enabled: true
           tracesToLogs:
             datasourceUid: ""
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        access: proxy
+        url: http://prometheus.chiefaia.svc.cluster.local:9090
+        isDefault: false
+        editable: false
+        jsonData:
+          httpMethod: GET
+          timeInterval: 30s
+          manageAlerts: false
+          alertmanagerUid: alertmanager
+      - name: Alertmanager
+        type: alertmanager
+        uid: alertmanager
+        access: proxy
+        url: http://alertmanager.chiefaia.svc.cluster.local:9093
+        isDefault: false
+        editable: false
+        jsonData:
+          implementation: prometheus
+          handleGrafanaManagedAlerts: false
   dashboards.yaml: |
     apiVersion: 1
     providers:

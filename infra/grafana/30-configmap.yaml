@@ -1,12 +1,15 @@
 # Grafana provisioning — datasources, dashboard provider, dashboards JSON.
 #
-# Phase C2 deliverable. Single ConfigMap holds:
-#   - datasources.yaml          → Tempo data source (uid: tempo)
-#   - dashboards.yaml           → file provider pointing at
-#                                  /var/lib/grafana/dashboards
-#   - caia-traces.json          → service-wide trace health
-#   - caia-wizard-flow.json     → wizard step breakdown
-#   - caia-claude-calls.json    → @chiefaia/claude-spawner panel
+# Phase C2 deliverable (Tempo + 3 trace dashboards) extended in Phase
+# C8 with the Prometheus datasource and the SLO compliance dashboard.
+# Single ConfigMap holds:
+#   - datasources.yaml            → Tempo (uid: tempo) + Prometheus (uid: prometheus)
+#   - dashboards.yaml             → file provider pointing at
+#                                    /var/lib/grafana/dashboards
+#   - caia-traces.json            → service-wide trace health
+#   - caia-wizard-flow.json       → wizard step breakdown
+#   - caia-claude-calls.json      → @chiefaia/claude-spawner panel
+#   - caia-slo-compliance.json    → SLO burn-rate + error budget + firing alerts
 #
 # The Deployment mounts each key at the path Grafana expects via
 # explicit `items:` in 10-deployment.yaml. Editing any dashboard
@@ -44,6 +47,28 @@ data:
             enabled: true
           tracesToLogs:
             datasourceUid: ""
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        access: proxy
+        url: http://prometheus.chiefaia.svc.cluster.local:9090
+        isDefault: false
+        editable: false
+        jsonData:
+          httpMethod: GET
+          timeInterval: 30s
+          manageAlerts: false
+          alertmanagerUid: alertmanager
+      - name: Alertmanager
+        type: alertmanager
+        uid: alertmanager
+        access: proxy
+        url: http://alertmanager.chiefaia.svc.cluster.local:9093
+        isDefault: false
+        editable: false
+        jsonData:
+          implementation: prometheus
+          handleGrafanaManagedAlerts: false
   dashboards.yaml: |
     apiVersion: 1
     providers:
@@ -574,6 +599,286 @@ data:
       "timezone": "",
       "title": "CAIA Claude Calls",
       "uid": "caia-claude-calls",
+      "version": 1,
+      "weekStart": ""
+    }
+  caia-slo-compliance.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "description": "Phase C8 — SLO compliance + burn-rate dashboard for the chiefaia spine. Sourced from Prometheus.",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Wizard step render P95 latency, 1h window. Red threshold at 720ms (= 500ms SLO × 1.44 burn-rate multiplier). Critical alert fires above this AND when the 24h window also breaches 530ms.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "custom": {
+                "axisLabel": "P95 latency",
+                "drawStyle": "line",
+                "fillOpacity": 30,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "auto",
+                "thresholdsStyle": { "mode": "line" }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 0.53 },
+                  { "color": "red", "value": 0.72 }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "wizard:step_render_p95:1h",
+              "legendFormat": "P95 step render (1h)",
+              "refId": "A"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "wizard:step_render_p95:24h",
+              "legendFormat": "P95 step render (24h)",
+              "refId": "B"
+            }
+          ],
+          "title": "Wizard step render P95 — burn-rate windows",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Wizard Claude call P95 latency. Red threshold at 43.2s (= 30s SLO × 1.44). Critical alert fires above this AND when the 24h window also breaches 31.8s.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "custom": {
+                "axisLabel": "P95 latency",
+                "drawStyle": "line",
+                "fillOpacity": 30,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "auto",
+                "thresholdsStyle": { "mode": "line" }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 31.8 },
+                  { "color": "red", "value": 43.2 }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "id": 2,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "wizard:claude_call_p95:1h",
+              "legendFormat": "P95 claude.spawn (1h)",
+              "refId": "A"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "wizard:claude_call_p95:24h",
+              "legendFormat": "P95 claude.spawn (24h)",
+              "refId": "B"
+            }
+          ],
+          "title": "Wizard Claude call P95 — burn-rate windows",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Error budget remaining for the wizard step error ratio SLO (≤ 0.1% / month). 100% = full budget intact. 0% = budget exhausted.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "max": 100,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "yellow", "value": 25 },
+                  { "color": "green", "value": 75 }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+          "id": 3,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "clamp(100 * (1 - wizard:step_error_ratio:1d / 0.001), 0, 100)",
+              "legendFormat": "Error budget remaining",
+              "refId": "A"
+            }
+          ],
+          "title": "Wizard step error budget remaining (24h)",
+          "type": "gauge"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Per-service HTTP availability over 24h. Each service has its own 99.9% SLO; this panel shows them stacked.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "availability",
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "auto",
+                "thresholdsStyle": { "mode": "line" }
+              },
+              "mappings": [],
+              "max": 1,
+              "min": 0.99,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "yellow", "value": 0.995 },
+                  { "color": "green", "value": 0.999 }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 16, "x": 8, "y": 8 },
+          "id": 4,
+          "options": {
+            "legend": { "calcs": ["mean", "min"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "http:availability_ratio_24h",
+              "legendFormat": "{{service}}",
+              "refId": "A"
+            }
+          ],
+          "title": "HTTP availability per service (24h)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Active alerts firing right now — sourced from Prometheus' ALERTS metric. Includes severity and SLO labels.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": true, "inspect": false },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "severity" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "mode": "basic",
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      { "type": "value", "options": { "critical": { "color": "red", "index": 0 } } },
+                      { "type": "value", "options": { "warning":  { "color": "orange", "index": 1 } } }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": { "h": 9, "w": 24, "x": 0, "y": 16 },
+          "id": 5,
+          "options": {
+            "cellHeight": "sm",
+            "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+            "showHeader": true,
+            "sortBy": [{ "desc": true, "displayName": "Time" }]
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "ALERTS{alertstate=\"firing\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Active alerts (firing)",
+          "type": "table"
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["caia", "slo", "prometheus", "alerting"],
+      "templating": { "list": [] },
+      "time": { "from": "now-6h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "CAIA SLO Compliance",
+      "uid": "caia-slo-compliance",
       "version": 1,
       "weekStart": ""
     }

@@ -1,0 +1,35 @@
+# prom.chiefaia.com — Prometheus UI behind Cloudflare Access.
+#
+# Attaches to the existing istio-system/stolution-gateway. Same
+# pattern as grafana.chiefaia.com (infra/grafana/60-istio-vs.yaml):
+# the gateway already accepts *.chiefaia.com on port 80; this
+# VirtualService is the only routing change required.
+#
+# Operator-only access enforcement:
+#   - Cloudflare Access app: `CAIA Prometheus (operator-only)`
+#     (created out-of-band; same SSO group as Grafana).
+#   - Operator IP 69.118.44.175/32 is a precedence-1 bypass policy.
+#
+# Traffic path:
+#   client → Cloudflare edge → cloudflared tunnel → host:31346
+#          → istio-ingressgateway → this VirtualService
+#          → prometheus.chiefaia.svc.cluster.local:9090
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: prometheus-vs
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  hosts:
+    - prom.chiefaia.com
+  gateways:
+    - istio-system/stolution-gateway
+  http:
+    - route:
+        - destination:
+            host: prometheus.chiefaia.svc.cluster.local
+            port:
+              number: 9090

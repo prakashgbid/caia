@@ -1,0 +1,146 @@
+# Prometheus Deployment — bare 2.x, single replica.
+#
+# Phase C8 deliverable. Pairs with Grafana (PR #643) — Grafana adds
+# the Prometheus data source through its existing ConfigMap update.
+# Pairs with Tempo (PR #608) — Tempo's metrics generator is reconfigured
+# to remote_write span-derived metrics into this Prometheus, which
+# becomes the source of truth for SLO recording rules and burn-rate
+# alerts.
+#
+# Deliberately bare:
+#   - No kube-prometheus-stack. The operator decided the operator
+#     pattern was out of scope for $0 net-new services (KPS pulls in
+#     prometheus-operator + thanos-sidecar + state-metrics + many
+#     CRDs). We need exactly two binaries: prometheus + alertmanager.
+#   - No service discovery beyond static_configs. The chiefaia ns is
+#     small and well-known; static targets are clearer than relabel
+#     gymnastics. Reconsider when the spine grows past ~10 services.
+#
+# Single replica because:
+#   - Local TSDB (10Gi PVC) does not support multi-writer access.
+#   - Alertmanager dedup happens client-side; single Prometheus is
+#     fine for current scrape volume.
+#   - HA-Prometheus (federation or Thanos) is a Phase D concern.
+#
+# Runs as non-root uid 65534 (Prometheus container default, `nobody`).
+# Read-only root filesystem; TSDB on the PVC; tmp via emptyDir.
+#
+# Feature flags:
+#   --web.enable-lifecycle           — POST /-/reload for hot config
+#   --web.enable-remote-write-receiver — accept Tempo span-metrics
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate          # local TSDB + ReadWriteOnce PVC → no rolling
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus
+        app.kubernetes.io/part-of: caia-observability
+        # Required by `chiefaia/allow-ingress-from-tunnel` NetworkPolicy.
+        # Same convention as grafana, chiefaia-wizard, etc.
+        net.chiefaia.io/exposed-via: tunnel
+      annotations:
+        # Bump when the scrape/rules ConfigMap changes intentionally.
+        checksum/config: "c8-2026-05-30"
+    spec:
+      serviceAccountName: prometheus
+      # Static target lists in 50-configmap.yaml — no K8s API needed.
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.54.1
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=30d
+            - --storage.tsdb.retention.size=8GB        # PVC is 10Gi; leave 2Gi headroom for WAL + compaction
+            - --web.console.libraries=/usr/share/prometheus/console_libraries
+            - --web.console.templates=/usr/share/prometheus/consoles
+            - --web.external-url=https://prom.chiefaia.com
+            - --web.route-prefix=/
+            - --web.enable-lifecycle                   # POST /-/reload
+            - --web.enable-remote-write-receiver       # Tempo span-metrics ingress
+            - --log.level=info
+          ports:
+            - name: http
+              containerPort: 9090
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            # Phase C8 — limit trimmed from 1000m to 700m so the new
+            # observability stack fits within the chiefaia-quota cap of
+            # limits.cpu: 8.  Prometheus is rarely CPU-bound under our
+            # scrape volume; bump back to 1000m if eval queue depth grows.
+            limits:
+              cpu: 700m
+              memory: 1Gi
+          volumeMounts:
+            - name: storage
+              mountPath: /prometheus
+            - name: config
+              mountPath: /etc/prometheus
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: prometheus-data
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: tmp
+          emptyDir:
+            sizeLimit: 128Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: caia-observability
+automountServiceAccountToken: false

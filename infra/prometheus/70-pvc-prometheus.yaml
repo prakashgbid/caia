@@ -1,0 +1,26 @@
+# Prometheus TSDB storage — 10Gi PVC.
+#
+# Prometheus stores its compacted blocks under /prometheus.
+# Capacity sizing:
+#   - 30d retention (storage.tsdb.retention.time=30d)
+#   - 8GB cap        (storage.tsdb.retention.size=8GB)
+#   - 2GB headroom for WAL + in-progress compaction
+#
+# StorageClass left unset — picks up the cluster default (K3s ships
+# `local-path` as default). On stolution K3s this lands on the single
+# node's local disk, which matches the Recreate strategy on the
+# Deployment. ReadWriteOnce is enforced by local-path.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
