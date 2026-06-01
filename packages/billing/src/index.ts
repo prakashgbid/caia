@@ -15,6 +15,8 @@ export * from './byok.js';
 export * from './runtime-key-audit-store.js';
 export * from './events.js';
 export * from './api.js';
+export * from './usage-meter.js';
+export * from './claude-spawner-meter-hook.js';
 export type {
   AccessContext,
   CallerType,

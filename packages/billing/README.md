@@ -195,3 +195,100 @@ tenant, audit logging, and the route factories.
 - Gap analysis: A2 (P1) + W11 (P1)
 - ADR-061 / ADR-065 — `@caia/ui` lock
 - `research/multi_tenant_secrets_architecture_2026.md` §6
+
+---
+
+## Phase C3 — per-tenant usage meter (2026-05-31)
+
+The C3 work threads a per-tenant Claude usage meter through the
+spawner → billing stack. Operators see two new artifacts:
+
+1. **`migrations/0003_tenant_usage_meter.sql`** — adds
+   `{{SCHEMA}}.tenant_usage_meter` (one row per spawn) and
+   `{{SCHEMA}}.tenant_usage_meter_aggregates` (monthly aggregate
+   posted to Stripe). Run alongside the other migrations.
+
+2. **`apps/dashboard/scripts/aggregate-usage.ts`** — monthly cron.
+   Schedule via:
+
+   ```cron
+   30 0 1 * *   node apps/dashboard/scripts/aggregate-usage.ts
+   ```
+
+### Stub mode vs live mode
+
+The cron + meter are **stub-mode tolerant**: when `STRIPE_SECRET_KEY`
+is unset (the default until operator drops a key in), the meter
+still writes per-spawn rows and the cron still computes aggregates —
+only the final `subscriptionItems.createUsageRecord` call to Stripe
+becomes a no-op. The aggregate row's `stripe_post_status` column is
+the boundary marker:
+
+| `STRIPE_SECRET_KEY` | `SDK init` | `aggregate.stripe_post_status` |
+| ------------------- | ---------- | ------------------------------ |
+| unset               | n/a        | `stubbed`                      |
+| set, invalid        | throws     | `stubbed` (init-failed)        |
+| set, valid          | ok         | `posted` (or `failed` on API error) |
+
+### Operator runbook — activating real Stripe
+
+1. **Create a Stripe metered-billing product**
+   - Stripe Dashboard → Products → Add product
+   - Pricing model: **Recurring → Usage-based → Per unit**
+   - Set the per-unit price to your "per 1000 tokens" rate (the
+     meter posts raw token counts; the divide-by-1000 lives in
+     Stripe's price config).
+   - Note the resulting `price_xxx` id.
+
+2. **Paste the secret into Infisical**
+   - Project: `caia_global`
+   - Path: `billing/stripe_secret_key`
+   - Value: `sk_live_...` (or `sk_test_...` for staging)
+   - The dashboard's boot path reads this on the next deploy via
+     the existing `@caia/secrets-adapter` wiring.
+
+3. **Wire each tenant's `subscription_item` id**
+   - When a tenant upgrades to a metered tier, Stripe creates a
+     `subscription_item` for the metered price.
+   - Persist `(tenant_id, subscription_item_id)` to
+     `{{SCHEMA}}.tenant_subscription_items` — the cron's resolver
+     reads this table.
+   - When the table doesn't exist OR a tenant has no row, the cron
+     stubs that tenant's post (logs a warning, sets
+     `stripe_post_status='stubbed'`).
+
+4. **First live cron tick**
+   - On the next 1st-of-the-month run, the cron will re-aggregate
+     any `stripe_post_status='stubbed'` rows from earlier months
+     and POST them now that the key is live. This automatic
+     back-fill is why stub mode is safe to ship.
+
+5. **Verify**
+   ```sql
+   SELECT yyyymm,
+          stripe_post_status,
+          stripe_usage_record_id,
+          posted_at
+     FROM caia_meta.tenant_usage_meter_aggregates
+    ORDER BY yyyymm DESC, tenant_id
+    LIMIT 20;
+   ```
+   You should see `posted` (with `mbur_*` ids) for tenants whose
+   `subscription_item_id` you wired.
+
+### BYOK tenants
+
+Tenants who pasted their own Anthropic key into the BYOK runtime-
+credits vault are detected automatically via
+`@caia/secrets-adapter.list(tenantId, 'runtime_credits')` and the
+spawner-side hook short-circuits them BEFORE the meter write. There
+is no operator action required — when a tenant becomes BYOK their
+rows simply stop being written. (Audited via the
+`caia_meta.audit_runtime_key_reads` ledger.)
+
+### Tests
+
+```sh
+pnpm --filter @caia/billing test            # 115 cases (+ 1 skipped real-key path)
+pnpm --filter @chiefaia/claude-spawner test # 82 cases (+5 C3 hook cases)
+```
