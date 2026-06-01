@@ -145,11 +145,54 @@ export interface AtlasDesignRebuiltEvent {
   ts: string;
 }
 
+/* ─── C5 — server-emitted atlas.* events ────────────────────────── */
+
+/**
+ * `atlas.element.highlighted` — cross-pane selection sync. The atlas
+ * SSE route forwards this so the design-iframe and ticket-tree can
+ * track a programmatic selection (e.g. from a deep-link) without
+ * round-tripping through the host app.
+ */
+export interface AtlasElementHighlightedEvent {
+  type: 'atlas.element.highlighted';
+  ticketId: string;
+  domId: string;
+  designVersionId: string;
+  ts: string;
+}
+
+/**
+ * `atlas.prompt.completed` — emitted by the worker that ran a
+ * per-element prompt. `result === 'ok'` carries `versionId`.
+ */
+export interface AtlasPromptCompletedEvent {
+  type: 'atlas.prompt.completed';
+  ticketId: string;
+  promptGroupId: string;
+  result: 'ok' | 'fail';
+  versionId?: string;
+  ts: string;
+}
+
+/**
+ * `atlas.version.changed` — emitted when a new design version
+ * supersedes the iframe. The design-pane reloads on receipt.
+ */
+export interface AtlasVersionChangedEvent {
+  type: 'atlas.version.changed';
+  designVersionId: string;
+  previousVersionId: string | null;
+  ts: string;
+}
+
 export type AtlasSseEvent =
   | AtlasTicketStateChangedEvent
   | AtlasAgentRunStartedEvent
   | AtlasAgentRunFinishedEvent
-  | AtlasDesignRebuiltEvent;
+  | AtlasDesignRebuiltEvent
+  | AtlasElementHighlightedEvent
+  | AtlasPromptCompletedEvent
+  | AtlasVersionChangedEvent;
 
 /* ─── Spec §5.6 — ticket version history ────────────────────────── */
 

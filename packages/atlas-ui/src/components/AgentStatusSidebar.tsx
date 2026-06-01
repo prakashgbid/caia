@@ -57,6 +57,14 @@ function renderLine(e: AtlasSseEvent): string {
       }`;
     case 'design.version-rebuilt':
       return `Design rebuilt: ${e.designVersionId}`;
+    case 'atlas.element.highlighted':
+      return `Element highlighted: ${e.ticketId} → ${e.domId}`;
+    case 'atlas.prompt.completed':
+      return `Prompt ${e.result === 'ok' ? 'completed' : 'failed'} for ${e.ticketId}${
+        e.versionId ? ` · ${e.versionId}` : ''
+      }`;
+    case 'atlas.version.changed':
+      return `Design version changed: ${e.designVersionId}`;
     /* istanbul ignore next */
     default: {
       const _e: never = e;

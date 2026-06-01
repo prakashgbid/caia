@@ -1,57 +1,62 @@
 {
   "status": "self-approved-true-zero",
-  "branch": "feature/wizard-middleware-cf-bypass-mode-2026-05-26",
+  "branch": "feature/c5-atlas-sse-2026-05-30",
+  "phase": "C5",
   "adr_refs": ["ADR-065"],
-  "reasoning": "Adds env-var-driven three-mode branch (cloudflare default / cf-edge-only / disabled) to the existing Cloudflare-Access JWT middleware so the operator's allowlisted Mac IP can reach dashboard.chiefaia.com and ops.chiefaia.com without a sign-in prompt. Defence-in-depth bypass requires three signals: Cf-Ray header (CF-injected, absent on direct-to-origin), Cf-Connecting-Ip in BYPASS_ALLOWED_IPS allow-list, and X-Caia-Edge-Token constant-time-matched against EDGE_SHARED_SECRET (which a Cloudflare WAF Transform Rule sets/overwrites at the edge). Any failure falls through to the strict JWT path. Apps duplicate the middleware + lib/auth/* + lib/tenants/* with explicit REUSE-FIRST EXCEPTION markers; the operator-instructed B-task to extract @chiefaia/wizard-auth is documented in PLAN.md §7. Default-cloudflare behaviour is unchanged byte-for-byte. 50 vitest cases pass across both apps (full mode × JWT × bypass-header matrix).",
+  "reasoning": "Delivers the missing server half of the SSE wire contract that PR #545 (@caia/atlas-ui) declared but never landed. The atlas-ui client's `AtlasApiClient.subscribeEvents` has been calling `/api/atlas/project/${projectId}/events` since #545 — this PR adds the Next.js streaming route, the in-process bus subscription, the project-scope filter, the ConductorEvent → wire-shape adapter, and the three taxonomy entries (atlas.element.highlighted, atlas.prompt.completed, atlas.version.changed) the route forwards. The wizard's AtlasWizardClient is swapped from a full-mock client to a hybrid (mock fixtures for fetch endpoints, createHttpClient for subscribeEvents) so the existing useAtlasSse hook hits the new route end-to-end. The PR explicitly does NOT rename useAtlasSse to use-atlas-events as the original brief suggested — that would churn the public API for no behavioural benefit, and the revised brief authorised skipping it. 17 vitest cases cover the adapter, framing, bus integration, and route handler; 2 Playwright cases prove sub-750ms realtime delivery and project-scope isolation. Path adjustment: brief said `apps/wizard/app/api/atlas/[projectId]/events/route.ts`; the route file lives at `apps/wizard/app/api/atlas/project/[projectId]/events/route.ts` to match the wire path the PR-#545 client already calls (`/api/atlas/project/:id/events`).",
   "reuseSearchResults": [
     {
-      "candidate": "@chiefaia/wizard-auth",
-      "considered_for": "shared middleware + auth helpers",
-      "decision": "rejected",
-      "reason": "Does not exist yet on develop. Operator instructed inline duplication with REUSE-FIRST EXCEPTION marker + B-task tracker."
+      "candidate": "@caia/state-machine",
+      "considered_for": "canonical SSE pattern (handleProjectSse + SseConnection)",
+      "decision": "rejected — incompatible runtime",
+      "reason": "The canonical helper takes `node:http` IncomingMessage/ServerResponse; the Next.js App Router uses Web-API Response + ReadableStream. We replicate the EventSource-spec wire format (governed by W3C) in `lib/atlas/sse.ts` so the framing is byte-identical without dragging the helper's node:http shape into a Web-API context. Documented in the file header."
     },
     {
-      "candidate": "@chiefaia/http-client",
-      "considered_for": "Cloudflare JWKS fetch",
-      "decision": "rejected",
-      "reason": "Referenced in AGENTS.md but not shipped. Native fetch is allowlisted."
+      "candidate": "@chiefaia/event-bus-internal",
+      "considered_for": "in-process event source for the SSE pipe",
+      "decision": "selected",
+      "reason": "The route subscribes via `eventBus.subscribe(type, handler)` exactly as `apps/wizard/lib/tenants/wire.ts` already does for tenant events. Same singleton, same handler shape, same picomatch glob support (we use exact types). No new dependency, no new abstraction."
     },
     {
-      "candidate": "@chiefaia/secrets-infisical",
-      "considered_for": "tenant Infisical provisioning",
-      "decision": "rejected",
-      "reason": "Wraps secrets-data CRUD, not workspace creation. lib/tenants/infisical.ts keeps the hand-rolled admin client."
+      "candidate": "@caia/atlas-prompt-router scaffolding",
+      "considered_for": "atlas-prompt-router PR #582's SSE conventions",
+      "decision": "considered — no SSE conventions found, but the package's prompt-handler shape was preserved",
+      "reason": "The original brief attributed `handleProjectSse` to PR #582 / atlas-prompt-router. Verification on the worktree showed `handleProjectSse` lives in `@caia/state-machine` (PR #530-era), and atlas-prompt-router exposes `createAtlasPromptApiHandler` — used by the unchanged `/api/wizard/atlas/[projectId]/prompt` route. We kept that route untouched and matched its file-layout and JSDoc style for the new SSE route so the wizard's API-route module-shape stays consistent."
+    },
+    {
+      "candidate": "@chiefaia/events-taxonomy-internal",
+      "considered_for": "event type registration",
+      "decision": "selected",
+      "reason": "Three new entries land in `registry.yaml` + the `EventType` union + the `EVENT_SEVERITY` map, plus three `AtlasXxxPayload` interfaces. Pattern mirrors the WIZARD-B5 wizard.step.* entries shipped a few days earlier."
+    },
+    {
+      "candidate": "@caia/atlas-ui (AtlasSseEvent / useAtlasSse / createHttpClient)",
+      "considered_for": "wire types + client + hook",
+      "decision": "selected",
+      "reason": "All three are reused as-is. The AtlasSseEvent discriminated union is *extended* with three new members (additive — existing variants stay intact for fixtures). No public-API churn."
     },
     {
       "candidate": "@caia/ui",
-      "considered_for": "sign-in page primitives",
-      "decision": "selected",
-      "reason": "Used for Card / Button on both apps' /sign-in pages."
-    },
-    {
-      "candidate": "jose",
-      "considered_for": "JWT verification",
+      "considered_for": "UI primitives",
       "decision": "selected (already in use)",
-      "reason": "lib/auth/jwks-cache.ts uses createRemoteJWKSet + jwtVerify. Unchanged here."
+      "reason": "The wizard atlas page already wraps `AtlasWizardClient` in `Card`/`CardContent` from `@caia/ui`. The new `atlas-sse-status` badge is a plain observability hook, not a UI primitive, so the reuse-first CI gate is satisfied without touching the Card wrapping."
     },
     {
-      "candidate": "node:crypto.timingSafeEqual",
-      "considered_for": "EDGE_SHARED_SECRET comparison",
-      "decision": "selected",
-      "reason": "Constant-time compare in lib/auth/edge-bypass.ts; length mismatch handled before the call to avoid leaking expected length."
-    },
-    {
-      "candidate": "pg",
-      "considered_for": "tenant store",
-      "decision": "selected (already in use)",
-      "reason": "lib/tenants/store.ts uses the pg driver directly. @chiefaia/persistence-postgres does not exist."
-    },
-    {
-      "candidate": "@chiefaia/event-bus-nats",
-      "considered_for": "tenant.provisioned publish",
-      "decision": "selected (already in use)",
-      "reason": "lib/tenants/wire.ts already routes tenant.provisioned via HybridEventBus. Unchanged here."
+      "candidate": "@chiefaia/event-bus-nats (HybridEventBus)",
+      "considered_for": "multi-replica fan-out",
+      "decision": "deferred",
+      "reason": "The current wizard runs single-replica and the in-process bus is sufficient. Switching the route's subscription to HybridEventBus is a drop-in swap (same `subscribe(type, handler)` shape) — tracked as a follow-up in PLAN.md §7."
     }
   ],
-  "cited_adrs": ["ADR-065"]
+  "cited_adrs": ["ADR-065"],
+  "tolerated_pre_existing_fails": [
+    {
+      "diag": "TS2352",
+      "context": "Pre-existing on develop since the PR #625 / WIZARD_AUTH_MODE era; the operator standing instruction is to tolerate via True-Zero admin-merge."
+    },
+    {
+      "diag": "lighthouse-ci",
+      "context": "Same precedent. Lighthouse fails on the wizard's privacy / cf-bypass flows are not caused by this PR."
+    }
+  ]
 }
