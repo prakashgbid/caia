@@ -1,0 +1,34 @@
+# grafana.chiefaia.com — Grafana UI behind Cloudflare Access.
+#
+# Attaches to the existing istio-system/stolution-gateway. The
+# gateway's HTTP server already accepts *.chiefaia.com hosts
+# (see infra/istio/chiefaia/00-gateway-stolution.yaml), so this
+# VirtualService is the only routing change needed in-cluster.
+#
+# Traffic path:
+#   client → Cloudflare edge → cloudflared tunnel → host:31346
+#          → istio-ingressgateway → this VirtualService
+#          → grafana.chiefaia.svc.cluster.local:80 → pod :3000
+#
+# Cloudflare Access enforcement happens at the edge before the
+# request reaches cloudflared. The operator's home IP
+# (69.118.44.175/32) is a precedence-1 bypass policy.
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: grafana-vs
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  hosts:
+    - grafana.chiefaia.com
+  gateways:
+    - istio-system/stolution-gateway
+  http:
+    - route:
+        - destination:
+            host: grafana.chiefaia.svc.cluster.local
+            port:
+              number: 80

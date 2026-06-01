@@ -1,0 +1,28 @@
+# Grafana SQLite + plugin storage — 5Gi PVC.
+#
+# Grafana's default sqlite3 DB lives at /var/lib/grafana/grafana.db.
+# Dashboards are provisioned from ConfigMap (read-only) but Grafana
+# still writes session, alert state, and user preferences to SQLite.
+#
+# 5Gi is comfortable headroom: a clean Grafana install with the
+# Tempo data source and 3 dashboards occupies < 50 MiB. Plugins,
+# annotations, and alert history grow slowly.
+#
+# StorageClass left unset — picks up the cluster default (K3s ships
+# `local-path` as default). On stolution K3s this lands on the
+# single node's local disk, which matches the Recreate strategy on
+# the Deployment.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  namespace: chiefaia
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: caia-observability
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

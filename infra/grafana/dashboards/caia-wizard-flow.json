@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Phase C2 — service-wide trace health for the chiefaia spine: P95 latency, error rate, top slow spans. Sourced from Tempo.",
+  "description": "Phase C2 — chiefaia-wizard step-by-step trace flow. Filters spans whose name starts with `wizard.`, breaks down count + avg duration by step name. Sourced from Tempo.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -22,29 +22,57 @@
   "panels": [
     {
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "description": "P95 span duration in the last 1h, grouped by resource.service.name. Backed by TraceQL metrics over Tempo's local blocks.",
+      "description": "Rate of wizard step spans grouped by span name. Each wizard step emits a span like `wizard.step.collect`, `wizard.step.review`, etc.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "p95 duration",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
+            "axisLabel": "spans/s",
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "stacking": { "group": "A", "mode": "normal" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "right", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlMetrics",
+          "query": "{ resource.service.name = \"chiefaia-wizard\" && name =~ \"wizard\\\\..+\" } | rate() by (name)",
+          "refId": "A"
+        }
+      ],
+      "title": "Trace count per wizard step",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "description": "Average span duration per wizard step over the selected window.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "avg duration",
             "drawStyle": "line",
             "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
             "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "stacking": { "group": "A", "mode": "none" }
           },
           "mappings": [],
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
@@ -52,71 +80,26 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
-      "id": 1,
-      "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        {
-          "datasource": { "type": "tempo", "uid": "tempo" },
-          "queryType": "traceqlMetrics",
-          "query": "{ resource.service.name=~\"chiefaia-.+\" } | quantile_over_time(duration, .95) by (resource.service.name)",
-          "refId": "A"
-        }
-      ],
-      "title": "P95 latency per service",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "tempo", "uid": "tempo" },
-      "description": "Rate of spans with status_code = error, per resource.service.name, in the last 1h.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "axisLabel": "error rate (spans/s)",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 0.1 }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 9 },
       "id": 2,
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
           "datasource": { "type": "tempo", "uid": "tempo" },
           "queryType": "traceqlMetrics",
-          "query": "{ resource.service.name=~\"chiefaia-.+\" && status = error } | rate() by (resource.service.name)",
+          "query": "{ resource.service.name = \"chiefaia-wizard\" && name =~ \"wizard\\\\..+\" } | avg_over_time(duration) by (name)",
           "refId": "A"
         }
       ],
-      "title": "Error rate per service",
+      "title": "Avg duration per wizard step",
       "type": "timeseries"
     },
     {
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "description": "Top 10 slowest spans in the last 1h across chiefaia-dashboard, chiefaia-wizard, chiefaia-site.",
+      "description": "Recent wizard step spans (last 15m) — useful for spot-checking that traces are flowing.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -127,48 +110,41 @@
         "overrides": [
           {
             "matcher": { "id": "byName", "options": "Duration" },
-            "properties": [
-              { "id": "unit", "value": "ns" },
-              { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Trace ID" },
-            "properties": [{ "id": "custom.width", "value": 280 }]
+            "properties": [{ "id": "unit", "value": "ns" }]
           }
         ]
       },
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 18 },
       "id": 3,
       "options": {
         "cellHeight": "sm",
         "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Duration" }]
+        "sortBy": [{ "desc": true, "displayName": "Start time" }]
       },
       "targets": [
         {
           "datasource": { "type": "tempo", "uid": "tempo" },
           "queryType": "traceql",
-          "query": "{ resource.service.name=~\"chiefaia-.+\" } | by(resource.service.name) | select(duration)",
-          "limit": 10,
-          "tableType": "traces",
+          "query": "{ resource.service.name = \"chiefaia-wizard\" && name =~ \"wizard\\\\..+\" }",
+          "limit": 25,
+          "tableType": "spans",
           "refId": "A"
         }
       ],
-      "title": "Top 10 slowest spans (1h)",
+      "title": "Recent wizard step spans",
       "type": "table"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": ["caia", "tempo", "observability"],
+  "tags": ["caia", "tempo", "wizard"],
   "templating": { "list": [] },
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "",
-  "title": "CAIA Traces",
-  "uid": "caia-traces",
+  "title": "CAIA Wizard Flow",
+  "uid": "caia-wizard-flow",
   "version": 1,
   "weekStart": ""
 }
