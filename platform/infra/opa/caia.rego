@@ -1,20 +1,21 @@
 # CAIA policy bundle — publish gates for microfactories (Kernel-3, STOL-1034)
-#
-# Every factory MUST call `data.caia.publish.allow` before emitting an artifact.
-# Deny reasons are surfaced in the artifact envelope for observability.
+# v0 rego syntax (compatible with older OPA); we can migrate to v1 once we pin
+# a newer image tag.
 
 package caia.publish
 
+import future.keywords.if
+import future.keywords.contains
+import future.keywords.in
+
 default allow := false
 
-# Allow when: budget respected, kill-switch off, evidence attached
 allow if {
     input.budget.spent_usd <= input.budget.cap_usd
     not input.kill_switch.engaged
     count(input.evidence) > 0
 }
 
-# Human-readable deny reasons
 deny_reasons contains msg if {
     input.budget.spent_usd > input.budget.cap_usd
     msg := sprintf("cost cap exceeded: %.2f > %.2f USD",

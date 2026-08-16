@@ -75,6 +75,8 @@ services:
   caia-opa:
     image: openpolicyagent/opa:latest-rootless
     container_name: caia-opa
+    environment:
+      - OPA_DOCKER_IMAGE_TAG=
     restart: unless-stopped
     command:
       - "run"
@@ -88,10 +90,13 @@ services:
       - "8181:8181"
     networks: [caia-network, stolution-network]
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8181/health"]
-      interval: 15s
+      # OPA rootless image is distroless — no wget/curl. Use OPA's built-in
+      # `opa eval` against a trivial in-memory expression as liveness proof.
+      test: ["CMD", "/opa", "eval", "1"]
+      interval: 30s
       timeout: 5s
       retries: 6
+      start_period: 10s
 
   # ─────────────────────────────────────────────────────────────────────────
   # Kernel-4  MinIO buckets init (reuses stolution-minio)
