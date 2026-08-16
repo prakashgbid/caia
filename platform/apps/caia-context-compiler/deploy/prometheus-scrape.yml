@@ -1,0 +1,9 @@
+# Drop-in scrape config for factory-otel Prometheus (STOL-865)
+- job_name: caia-context-compiler
+  scrape_interval: 15s
+  metrics_path: /metrics
+  static_configs:
+    - targets: ["caia-context-compiler:8080"]
+      labels:
+        caia_kernel: "7"
+        service: caia-context-compiler

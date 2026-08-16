@@ -1,0 +1,23 @@
+# File-SD targets for the existing stolution-observability Prometheus.
+# Drops into /etc/prometheus/file_sd/ — Prom picks up without restart.
+- targets:
+    - caia-temporal:9090
+  labels:
+    job: caia-temporal
+    kernel: kernel-1
+- targets:
+    - caia-opa:8181
+  labels:
+    job: caia-opa
+    kernel: kernel-3
+    metrics_path: /metrics
+- targets:
+    - caia-context-compiler:8090
+  labels:
+    job: caia-context-compiler
+    kernel: kernel-7
+- targets:
+    - caia-temporal-ui:8080
+  labels:
+    job: caia-temporal-ui
+    kernel: kernel-1

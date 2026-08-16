@@ -1,0 +1,16 @@
+{
+  "factory_id": "SF-42",
+  "workflow_id": "wf-2026-08-16-search-carousel",
+  "compiled_at": "2026-08-16T05:35:49Z",
+  "context_hash": "b26ca1a299437a1d1baac6502ee7eef9617a32b23a6a06e47ca4fc9310dd6169",
+  "sections": {
+    "vision_spec":  {"items":[{"id":"vs_abc","vision":"Neighborhood economy super-platform"}], "provenance":[{"artifact_id":"vs_abc","source":"evidence-store","sha256":"a…"}], "resolver_ms":3},
+    "product_scope":{"items":[{"id":"ps_def","in_scope":["public pages"],"out_of_scope":["checkout","wallets"]}], "provenance":[{"artifact_id":"ps_def","source":"evidence-store","sha256":"a…"}], "resolver_ms":3},
+    "nfrs":         {"items":[{"id":"nfr_p99","name":"p99_latency","budget_ms":500}], "provenance":[{"artifact_id":"nfr_p99","source":"nfr-catalog","sha256":"a…"}], "resolver_ms":3},
+    "patterns":     {"items":[{"id":"pat_evt","name":"outbox-inbox"}], "provenance":[{"artifact_id":"pat_evt","source":"pattern-library","sha256":"a…"}], "resolver_ms":3},
+    "code_snippets":{"items":[{"id":"code_carousel","path":"apps/web/src/carousel.tsx","score":0.87}], "provenance":[{"artifact_id":"code_carousel","source":"pgvector","sha256":"a…"}], "resolver_ms":3}
+  },
+  "total_size_bytes": 448,
+  "total_duration_ms": 12,
+  "cache_hit": false
+}

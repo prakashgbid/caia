@@ -1,0 +1,29 @@
+# Adds caia-context-compiler to the caia-platform stack.
+# Reuses redis service already on stolution box.
+services:
+  caia-context-compiler:
+    image: ghcr.io/thivaan/caia-context-compiler:0.1.0
+    container_name: caia-context-compiler
+    restart: unless-stopped
+    environment:
+      EVIDENCE_STORE_URL: http://evidence-store:8080
+      JIRA_PROXY_URL: http://jira-proxy:8080
+      PGVECTOR_URL: http://pgvector-code-search:8080
+      PATTERN_LIBRARY_URL: http://pattern-library:8080
+      NFR_CATALOG_URL: http://nfr-catalog:8080
+      DOMAIN_EVENTS_URL: http://event-store:8080
+      REDIS_URL: redis://redis:6379/7
+      CACHE_TTL_S: "60"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://factory-otel:4318
+    ports:
+      - "127.0.0.1:8207:8080"
+    labels:
+      caia.kernel: "7"
+      caia.component: "context-compiler"
+      prometheus.scrape: "true"
+      prometheus.port: "8080"
+      prometheus.path: "/metrics"
+    networks: [caia]
+networks:
+  caia:
+    external: true

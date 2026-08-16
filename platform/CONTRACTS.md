@@ -274,3 +274,14 @@ compile_context(run_id, factory_id, purpose: str) -> CompiledContext
 5. OPA decision logs showing `allow=true` for `execute` and `llm_call`;
 6. one `caia.run` trace in Tempo/Grafana with mandatory attrs;
 7. audit lines in Loki (`job=caia-audit`).
+
+---
+
+## 12. Amendments (coordinator-ratified, 2026-08-16)
+
+| ID | Amendment |
+|----|-----------|
+| KID-013 | **Repo layout amended to merged reality:** `infra/` (compose, deploy script, opa policies, prometheus, kafka, temporal config), `apps/` (e.g. caia-context-compiler), `packages/` (caia-events, caia-factory-sdk), `factories/` (sf-* implementations). ARCHITECTURE.md §4 superseded accordingly. |
+| KID-014 | **Temporal persistence = dedicated `caia-temporal-pg` container (postgres:15-alpine)**, not the shared PG instance. Accepted: isolates Temporal write load from product PG; $0 delta. §2 amended. |
+| KID-015 | **OPA canonical decision endpoint (shipped): `POST /v1/data/caia/publish`** with input `{factory_id, budget:{spent_usd,cap_usd}, kill_switch:{engaged,reason}, evidence:[]}` → `{allow, deny_reasons[]}`. §4's action-based schema is the v2 target, not Wave-1 blocking. Rego lives in `infra/opa/caia.rego` (future.keywords imports REQUIRED — OPA image predates v1 syntax default). |
+| KID-016 | **HARD RULE — workspace hygiene:** `~/caia-platform` on s903 is a git clone of `prakashgbid/caia-platform`. NEVER delete/recreate it. Pull before writing, commit+push after. Parallel agents use branches or `git worktree`, never a fresh directory. (This rule exists because the repo was clobbered once already at 01:31 on 2026-08-16.) |
