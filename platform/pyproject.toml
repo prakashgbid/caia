@@ -1,0 +1,60 @@
+# CAIA Python workspace root — uv-managed.
+# Individual Python packages live under python/ and each has its own pyproject.toml.
+# This root file declares the workspace + shared dev tooling only.
+
+[project]
+name = "caia-platform"
+version = "0.0.0"
+description = "CAIA — AI-native Software Factory (Python workspace root)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11,<3.14"
+authors = [{ name = "CAIA Contributors" }]
+
+[tool.uv.workspace]
+members = ["python/*"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.6.9",
+    "mypy>=1.11.2",
+    "pytest>=8.3.3",
+    "pytest-cov>=5.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pre-commit>=3.8.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["node_modules", ".venv", "dist", "build"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",   # pycodestyle + pyflakes
+    "I",             # isort
+    "N",             # pep8-naming
+    "UP",            # pyupgrade
+    "B",             # bugbear
+    "SIM",           # simplify
+    "RUF",           # ruff-specific
+]
+ignore = ["E501"]  # line-length handled by formatter
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers --cov-report=term-missing"
+asyncio_mode = "auto"
+testpaths = ["python", "tests"]

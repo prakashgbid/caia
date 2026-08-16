@@ -1,0 +1,10 @@
+# CAIA — code ownership
+# Format: <path> <owner1> <owner2>
+# All routes fall through to the operator until per-SF teams exist.
+
+*                                @prakashgbid
+
+/docs/EA/                        @prakashgbid
+/infra/                          @prakashgbid
+/.github/                        @prakashgbid
+/packages/contracts/             @prakashgbid

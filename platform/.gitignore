@@ -1,0 +1,117 @@
+# ============================================================
+# CAIA .gitignore — Node + Python + Turbo + IDE + OS + secrets
+# ============================================================
+
+# --- Node / pnpm / Turbo ---
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.turbo/
+dist/
+build/
+.next/
+.nuxt/
+.output/
+.svelte-kit/
+coverage/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+.parcel-cache/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.eggs/
+*.egg-info/
+*.egg
+dist-py/
+build-py/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+.pyre/
+uv.lock
+
+# --- IDE / editors ---
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# --- Env / secrets — NEVER commit ---
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+.secrets/
+secrets/
+credentials.json
+service-account*.json
+*.token
+.vault-token
+
+# --- Docker / infra local state ---
+docker-compose.override.yml
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraformrc
+terraform.rc
+crash.log
+crash.*.log
+
+# --- Logs / temp ---
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+
+# --- Build/CI artifacts we don't ship ---
+.cache/
+.tmp/
+report.html
+report.xml
+junit.xml

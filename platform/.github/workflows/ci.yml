@@ -1,0 +1,116 @@
+name: CI
+
+# Self-hosted only per [[ci-cost-elimination-direction]] — never pay for GH Actions.
+# Runner label: `self-hosted` + `stolution` on the s903 box.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ------------------------------------------------------------------
+  # 1) Change detection — skip heavy jobs if only docs changed
+  # ------------------------------------------------------------------
+  changes:
+    runs-on: [self-hosted, stolution]
+    outputs:
+      ts: ${{ steps.filter.outputs.ts }}
+      py: ${{ steps.filter.outputs.py }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ts:
+              - 'apps/**'
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'turbo.json'
+              - 'tsconfig*.json'
+            py:
+              - 'python/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            infra:
+              - 'infra/**'
+              - '.github/workflows/**'
+
+  # ------------------------------------------------------------------
+  # 2) TypeScript — lint, typecheck, test, build
+  # ------------------------------------------------------------------
+  ts:
+    needs: changes
+    if: needs.changes.outputs.ts == 'true'
+    runs-on: [self-hosted, stolution]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run lint typecheck test build
+
+  # ------------------------------------------------------------------
+  # 3) Python — ruff, mypy, pytest
+  # ------------------------------------------------------------------
+  py:
+    needs: changes
+    if: needs.changes.outputs.py == 'true'
+    runs-on: [self-hosted, stolution]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Sync workspace
+        run: ~/.local/bin/uv sync --all-extras
+      - name: Lint (ruff)
+        run: ~/.local/bin/uv run ruff check .
+      - name: Format check (ruff)
+        run: ~/.local/bin/uv run ruff format --check .
+      - name: Typecheck (mypy)
+        run: ~/.local/bin/uv run mypy python/
+      - name: Test (pytest)
+        run: ~/.local/bin/uv run pytest
+
+  # ------------------------------------------------------------------
+  # 4) Infra lint — validate Compose, k8s, Terraform
+  # ------------------------------------------------------------------
+  infra:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: [self-hosted, stolution]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Docker Compose files
+        run: find infra/docker -name 'docker-compose*.yml' -exec docker compose -f {} config -q \;
+
+  # ------------------------------------------------------------------
+  # 5) Free-LLM PR review (per [[ci-cost-elimination-direction]])
+  # ------------------------------------------------------------------
+  llm-review:
+    if: github.event_name == 'pull_request'
+    runs-on: [self-hosted, stolution]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Placeholder — wired by STOL-873 (free OpenRouter models)
+        run: echo "TODO: invoke deepseek-r1-free / qwen-coder-free via OpenRouter"

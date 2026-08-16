@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caia.dev/schemas/factory-task-envelope-0.0.1.json",
+  "title": "FactoryTaskEnvelope",
+  "description": "Envelope that wraps every task dispatched to a CAIA microfactory.",
+  "type": "object",
+  "required": ["taskId", "sfId", "kernelVersion", "correlationId", "emittedAt", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique task id, assigned by the orchestrator."
+    },
+    "sfId": {
+      "type": "string",
+      "pattern": "^SF-[0-9]{1,3}$",
+      "description": "Target microfactory id — e.g. SF-42."
+    },
+    "kernelVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Root trace/correlation id spanning an entire product-build lineage."
+    },
+    "emittedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "description": "Microfactory-specific payload. Validated against per-SF schema."
+    }
+  }
+}

@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# CAIA pre-commit hook — runs lint-staged (Prettier + ruff on changed files).
+# Full lint/typecheck/test run happens in CI on the self-hosted runner.
+
+npx lint-staged

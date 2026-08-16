@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Validate the commit message against .commitlintrc.js
+npx --no-install commitlint --edit "$1"

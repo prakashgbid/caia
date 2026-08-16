@@ -1,0 +1,51 @@
+# CAIA local control plane — minimal dev stack.
+# Postgres (ledger) + Redis (event bus) + MinIO (artifact store) + Grafana Tempo (traces).
+# Prod uses the shared stolution cluster; this file is for local iteration only.
+
+services:
+  caia-postgres:
+    image: postgres:16-alpine
+    container_name: caia-postgres
+    environment:
+      POSTGRES_USER: caia
+      POSTGRES_PASSWORD: caia_dev_only
+      POSTGRES_DB: caia_ledger
+    ports:
+      - "5442:5432"  # 5442 to avoid clashing with stolution's PG on 5432
+    volumes:
+      - caia-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caia"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  caia-redis:
+    image: redis:7-alpine
+    container_name: caia-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6389:6379"  # 6389 to avoid clashing with stolution's Redis on 6379
+    volumes:
+      - caia-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+
+  caia-minio:
+    image: minio/minio:latest
+    container_name: caia-minio
+    command: server /data --console-address ":9101"
+    environment:
+      MINIO_ROOT_USER: caia
+      MINIO_ROOT_PASSWORD: caia_dev_only_password
+    ports:
+      - "9100:9000"
+      - "9101:9101"
+    volumes:
+      - caia-minio-data:/data
+
+volumes:
+  caia-pg-data:
+  caia-redis-data:
+  caia-minio-data:

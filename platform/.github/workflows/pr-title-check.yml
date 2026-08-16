@@ -1,0 +1,29 @@
+name: PR Title Check
+
+# Enforce [SF-XX] / [KERNEL-X] / [INFRA] / [DOCS] scope tags in every PR title.
+# Complements .commitlintrc.js which enforces commit-message discipline.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  title:
+    runs-on: [self-hosted, stolution]
+    steps:
+      - name: Validate PR title format
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            // Accepted prefixes: [SF-000..SF-140], [KERNEL-0..9], [INFRA], [DOCS], [CHORE], [FIX], [REVERT]
+            const re = /^\[(SF-\d{1,3}|KERNEL-\d+|INFRA|DOCS|CHORE|FIX|REVERT)\]\s+.{6,}/;
+            if (!re.test(title)) {
+              core.setFailed(
+                `PR title must start with a scope tag and have >=6 chars of description.\n` +
+                `Accepted: [SF-XX], [KERNEL-X], [INFRA], [DOCS], [CHORE], [FIX], [REVERT]\n` +
+                `Got: "${title}"`
+              );
+            } else {
+              core.info(`PR title OK: ${title}`);
+            }

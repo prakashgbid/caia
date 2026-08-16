@@ -1,0 +1,23 @@
+{
+  "name": "@caia/factory-sdk",
+  "version": "0.0.1",
+  "description": "TypeScript SDK for building CAIA microfactories: task envelope handling, OTel wiring, contract validation.",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "echo 'lint: TODO'",
+    "test": "echo 'test: TODO'",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@caia/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
