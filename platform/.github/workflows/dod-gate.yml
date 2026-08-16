@@ -1,0 +1,90 @@
+name: DoD Gate
+
+# Code-enforced Definition of Done (STOL-1065). Blocks PR merge when the
+# caia-dod-gate service cannot confirm required test evidence for the ticket
+# referenced in the PR title/branch. Runs on the self-hosted stolution runner
+# per [[ci-cost-elimination-direction]] — never pay for GH Actions.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+
+concurrency:
+  group: dod-gate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dod-gate:
+    name: dod-gate
+    runs-on: [self-hosted, stolution]
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
+    steps:
+      - name: Extract ticket key from PR
+        id: ticket
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -eu
+          for src in "$PR_TITLE" "$PR_BRANCH" "$PR_BODY"; do
+            key=$(printf '%s\n' "$src" | grep -oE 'STOL-[0-9]+' | head -1 || true)
+            [ -n "$key" ] && { echo "key=$key" >> "$GITHUB_OUTPUT"; break; }
+          done
+          if [ -z "${key:-}" ]; then
+            echo "::error::PR has no STOL-#### key in title/branch/body — DoD violation"
+            exit 1
+          fi
+
+      - name: Fetch changed paths
+        id: files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          paths=$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '[.[].filename]' || echo '[]')
+          echo "paths=$paths" >> "$GITHUB_OUTPUT"
+
+      - name: POST to caia-dod-gate
+        id: gate
+        env:
+          TICKET_KEY: ${{ steps.ticket.outputs.key }}
+          CHANGED_PATHS: ${{ steps.files.outputs.paths }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -eu
+          # Runner is on the stolution box; caia-dod-gate binds :9108 locally.
+          body=$(jq -n \
+            --arg key "$TICKET_KEY" \
+            --argjson paths "${CHANGED_PATHS:-[]}" \
+            --arg title "$PR_TITLE" \
+            '{
+              action: "opened",
+              pull_request: {
+                title: $title,
+                head: {ref: "'"${GITHUB_HEAD_REF:-}"'"},
+                _changed_files: $paths
+              },
+              repository: {full_name: "'"${GITHUB_REPOSITORY:-}"'"}
+            }')
+          resp=$(curl -sw '\nHTTP:%{http_code}' -X POST \
+            http://127.0.0.1:9108/webhook/github-pr \
+            -H 'content-type: application/json' \
+            -d "$body")
+          code=$(printf '%s\n' "$resp" | tail -n1 | cut -d: -f2)
+          json=$(printf '%s\n' "$resp" | sed '$d')
+          echo "$json" | jq .
+          decision=$(echo "$json" | jq -r '.decision // "UNKNOWN"')
+          allow=$(echo "$json" | jq -r '.allow // false')
+          echo "decision=$decision" >> "$GITHUB_OUTPUT"
+          echo "allow=$allow" >> "$GITHUB_OUTPUT"
+          if [ "$allow" != "true" ]; then
+            echo "::error::DoD Gate REJECTED: $(echo "$json" | jq -r '.reasons | join("; ")')"
+            exit 1
+          fi
