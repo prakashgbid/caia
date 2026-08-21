@@ -10,7 +10,7 @@ import { ProposalGeneratorError } from './errors.js';
 
 export interface LlmCallOptions {
   systemPrompt?: string;
-  modelHint?: 'opus' | 'sonnet' | 'haiku' | (string & {});
+  modelHint?: 'opus' | 'sonnet' | 'haiku' | (string & NonNullable<unknown>);
   maxBudgetMs?: number;
 }
 
