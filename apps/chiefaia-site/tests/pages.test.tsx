@@ -5,8 +5,16 @@
  *   - NOT contain any fabricated marketing tokens (testimonial / quote / X% / N+ users)
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+
+// HomePage now contains the mock-auth-gated CTA (STOL-5003), which uses
+// next/navigation's useRouter — provide a minimal mock for jsdom renders.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  usePathname: () => '/',
+}));
+
 import HomePage from '../app/page';
 import PricingPage from '../app/pricing/page';
 import DocsIndexPage from '../app/docs/page';

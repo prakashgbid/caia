@@ -1,20 +1,29 @@
 /**
- * Smoke tests for the projects surfaces added in
- * [feat/new-project-cta-and-your-projects]:
- *   - /projects ("Your Projects" empty state)
- *   - /projects/new ("New Project" brief-intake placeholder)
- *   - homepage hero "New Project" CTA
- *   - SiteShell header "Your Projects" link
+ * Smoke tests for the projects surfaces, updated for the STOL-5003
+ * onboarding flow:
+ *   - /projects and /projects/new are legacy routes that now run the
+ *     mock-auth check and forward to /dashboard(/new-project) or /sign-in
+ *   - homepage hero "New Project" CTA is mock-auth gated (target /dashboard)
+ *   - SiteShell header "Your Projects" is mock-auth gated (target /dashboard)
  * Follows the conventions of tests/pages.test.tsx, including the
  * no-fabrication guard.
  */
 
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+
+const routerMock = { push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() };
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => routerMock,
+  usePathname: () => '/projects',
+}));
+
 import ProjectsPage from '../app/projects/page';
 import NewProjectPage from '../app/projects/new/page';
 import HomePage from '../app/page';
 import { SiteShell } from '../components/site-shell';
+import { setMockAuth } from '../lib/mock-auth';
 
 const NO_FABRICATION_PATTERNS = [
   /\btestimonial\b/i,
@@ -29,22 +38,32 @@ function expectNoFabrication(html: string) {
   }
 }
 
-describe('ProjectsPage (/projects)', () => {
-  it('renders the "Your Projects" h1', () => {
+beforeEach(() => {
+  routerMock.push.mockReset();
+  routerMock.replace.mockReset();
+});
+
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+});
+
+describe('ProjectsPage (/projects, legacy redirect)', () => {
+  it('forwards signed-out visitors to /sign-in with returnTo=/dashboard', async () => {
     render(<ProjectsPage />);
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Your Projects' })
-    ).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(routerMock.replace).toHaveBeenCalledWith(
+        '/sign-in?returnTo=%2Fdashboard'
+      )
+    );
   });
 
-  it('links to the new-project flow and to sign-in', () => {
+  it('forwards mock-signed-in visitors to /dashboard', async () => {
+    setMockAuth(true);
     render(<ProjectsPage />);
-    expect(
-      screen.getByRole('link', { name: 'Create your first project' })
-    ).toHaveAttribute('href', '/projects/new');
-    expect(
-      screen.getByRole('link', { name: 'Sign in to continue' })
-    ).toHaveAttribute('href', '/sign-in');
+    await vi.waitFor(() =>
+      expect(routerMock.replace).toHaveBeenCalledWith('/dashboard')
+    );
   });
 
   it('contains no fabricated project data or metrics', () => {
@@ -53,45 +72,49 @@ describe('ProjectsPage (/projects)', () => {
   });
 });
 
-describe('NewProjectPage (/projects/new)', () => {
-  it('renders the "New Project" h1', () => {
+describe('NewProjectPage (/projects/new, legacy redirect)', () => {
+  it('forwards signed-out visitors to /sign-in with returnTo', async () => {
     render(<NewProjectPage />);
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'New Project' })
-    ).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(routerMock.replace).toHaveBeenCalledWith(
+        '/sign-in?returnTo=%2Fdashboard%2Fnew-project'
+      )
+    );
   });
 
-  it('routes to sign-in as the primary action', () => {
+  it('forwards mock-signed-in visitors to /dashboard/new-project', async () => {
+    setMockAuth(true);
     render(<NewProjectPage />);
-    expect(
-      screen.getByRole('link', { name: 'Sign in to continue' })
-    ).toHaveAttribute('href', '/sign-in');
-  });
-
-  it('contains no fabricated metrics / testimonials', () => {
-    const { container } = render(<NewProjectPage />);
-    expectNoFabrication(container.innerHTML);
+    await vi.waitFor(() =>
+      expect(routerMock.replace).toHaveBeenCalledWith('/dashboard/new-project')
+    );
   });
 });
 
 describe('HomePage hero CTA', () => {
-  it('renders a "New Project" CTA linking to /projects/new', () => {
+  it('renders a mock-auth-gated "New Project" CTA targeting /dashboard', () => {
     render(<HomePage />);
-    expect(
-      screen.getByRole('link', { name: 'New Project' })
-    ).toHaveAttribute('href', '/projects/new');
+    expect(screen.getByRole('link', { name: 'New Project' })).toHaveAttribute(
+      'href',
+      '/dashboard'
+    );
+  });
+
+  it('contains no fabricated metrics / testimonials', () => {
+    const { container } = render(<HomePage />);
+    expectNoFabrication(container.innerHTML);
   });
 });
 
 describe('SiteShell header', () => {
-  it('renders a "Your Projects" link to /projects before Sign in', () => {
+  it('renders a mock-auth-gated "Your Projects" link before Sign in', () => {
     render(
       <SiteShell>
         <p>child</p>
       </SiteShell>
     );
     const yourProjects = screen.getByRole('link', { name: 'Your Projects' });
-    expect(yourProjects).toHaveAttribute('href', '/projects');
+    expect(yourProjects).toHaveAttribute('href', '/dashboard');
     const signIn = screen.getAllByRole('link', { name: 'Sign in' })[0];
     expect(
       yourProjects.compareDocumentPosition(signIn) &
