@@ -64,6 +64,11 @@ export const sitemapRoutes = [
   { path: '/changelog', changeFrequency: 'weekly' as const, priority: 0.6 },
   { path: '/contact', changeFrequency: 'yearly' as const, priority: 0.4 },
   { path: '/sign-in', changeFrequency: 'yearly' as const, priority: 0.3 },
+  // Projects surfaces — [feat/new-project-cta-and-your-projects]. Static
+  // placeholders on the marketing origin; project data itself lives behind
+  // Cloudflare Access on the dashboard origin.
+  { path: '/projects', changeFrequency: 'monthly' as const, priority: 0.6 },
+  { path: '/projects/new', changeFrequency: 'monthly' as const, priority: 0.5 },
   // Legal pages — added in [chiefaia-site-legal-pages-on-602]. Each surfaces
   // a "draft — pending counsel review" banner per the hard rules in the
   // task spec; the `lastUpdated` date comes from the MDX frontmatter, not

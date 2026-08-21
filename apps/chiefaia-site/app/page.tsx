@@ -84,8 +84,14 @@ export default function HomePage() {
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <Link
-            href="/sign-in"
+            href="/projects/new"
             className={cn(buttonVariants({ size: 'lg' }))}
+          >
+            New Project
+          </Link>
+          <Link
+            href="/sign-in"
+            className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}
           >
             Get started
           </Link>

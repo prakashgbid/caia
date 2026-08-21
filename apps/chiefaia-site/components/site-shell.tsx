@@ -52,6 +52,12 @@ function SiteHeader() {
         </nav>
         <div className="flex items-center gap-3">
           <Link
+            href="/projects"
+            className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+          >
+            Your Projects
+          </Link>
+          <Link
             href="/sign-in"
             className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
           >
