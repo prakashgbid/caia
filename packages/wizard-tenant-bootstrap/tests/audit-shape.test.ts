@@ -15,14 +15,14 @@ const PER_TENANT_PACKAGES = [
   { pkg: '@caia/interviewer', file: '0001_interviewer.sql' },
   { pkg: '@caia/info-architect', file: '0001_info_architect.sql' },
   { pkg: '@caia/business-proposal-generator', file: '0001_business_proposals.sql' },
-  { pkg: '@caia-app/dashboard', file: '0010_wizard_state.sql' },
+  { pkg: '@caia-app/wizard', file: '0010_wizard_state.sql' },
 ] as const;
 
 const GLOBAL_PACKAGES = [
   { pkg: '@caia/state-machine', file: '0001_state_machine.sql' },
   { pkg: '@caia/onboarding', file: '0001_caia_meta_init.sql' },
   { pkg: '@caia/design-ingest', file: '0001_ux_uploads.sql' },
-  { pkg: '@caia-app/dashboard', file: '0011_tenants_global.sql' },
+  { pkg: '@caia-app/wizard', file: '0011_tenants_global.sql' },
 ] as const;
 
 function migrationPath(packageName: string, filename: string): string {

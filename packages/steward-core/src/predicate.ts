@@ -164,6 +164,7 @@ class Evaluator {
 
   private parseEquality(): unknown {
     let lhs = this.parseUnary();
+    // eslint-disable-next-line no-constant-condition -- loop exits via internal break/return
     while (true) {
       const t = this.peek();
       if (!t || t.kind !== 'op') break;

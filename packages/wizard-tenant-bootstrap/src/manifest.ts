@@ -11,7 +11,7 @@
  *   - `@caia/state-machine/migrations/000{1,2,3}_*.sql`     — global, `caia_meta` schema
  *   - `@caia/onboarding/migrations/0001_caia_meta_init.sql` — global, `caia_meta` schema
  *   - `@caia/design-ingest/migrations/0001_ux_uploads.sql`  — global, row-level `tenant_id` scoping (deliberate; see AUDIT.md Blocker 2)
- *   - `apps/dashboard/migrations/0011_tenants_global.sql`   — global `tenants` lookup table
+ *   - `apps/wizard/migrations/0011_tenants_global.sql`   — global `tenants` lookup table
  *
  * Resolution strategy: walk up from this file's `import.meta.url` to find
  * the monorepo root (the directory containing `pnpm-workspace.yaml`), then
@@ -105,9 +105,9 @@ export function getDefaultManifest(): ReadonlyArray<MigrationEntry> {
       ),
     },
     {
-      packageName: '@caia-app/dashboard',
+      packageName: '@caia-app/wizard',
       filename: '0010_wizard_state.sql',
-      sqlPath: join(packageDir('@caia-app/dashboard'), 'migrations', '0010_wizard_state.sql'),
+      sqlPath: join(packageDir('@caia-app/wizard'), 'migrations', '0010_wizard_state.sql'),
     },
   ];
 }
