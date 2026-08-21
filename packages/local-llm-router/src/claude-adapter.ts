@@ -680,7 +680,6 @@ export class ClaudeAdapter {
     const messages: HeadroomMessage[] = [{ role: 'user', content: stage1Text }];
 
     const stage2StartMs = Date.now();
-    // eslint-disable-next-line no-useless-assignment
     let sidecarOut: HeadroomSidecarResponse | null = null;
     try {
       sidecarOut = await this.invokeSidecar({

@@ -14,7 +14,7 @@ describe('DEFAULT_MANIFEST', () => {
       '@caia/interviewer',
       '@caia/info-architect',
       '@caia/business-proposal-generator',
-      '@caia-app/dashboard',
+      '@caia-app/wizard',
     ]);
   });
 
@@ -43,7 +43,7 @@ describe('DEFAULT_MANIFEST', () => {
 
   it('explicitly excludes the GLOBAL dashboard tenants_global migration', () => {
     const dashboardFiles = DEFAULT_MANIFEST.filter(
-      (e) => e.packageName === '@caia-app/dashboard',
+      (e) => e.packageName === '@caia-app/wizard',
     ).map((e) => e.filename);
     expect(dashboardFiles).toEqual(['0010_wizard_state.sql']);
     expect(dashboardFiles).not.toContain('0011_tenants_global.sql');

@@ -161,6 +161,7 @@ export function withStateFlock<T>(
     tag,
   };
   const deadline = Date.now() + maxWaitMs;
+  // eslint-disable-next-line no-constant-condition -- bounded by the deadline check below
   while (true) {
     if (tryAcquire(path, holder)) break;
     const incumbent = readHolder(path);
