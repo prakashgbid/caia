@@ -63,7 +63,10 @@ jobs:
         run: pnpm lint
 
       - name: Test
-        run: pnpm test
+        # Full-monorepo vitest at turbo default concurrency OOM-kills the
+        # 4-core/16GB hosted runner mid-suite (wizard vitest died with no
+        # summary, exit 1). Bound parallel test tasks to keep peak RSS safe.
+        run: pnpm test -- --concurrency=3
 
       - name: Check changeset present (PR only)
         if: github.event_name == 'pull_request'
