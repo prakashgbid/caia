@@ -13,6 +13,7 @@
 
 import Link from 'next/link';
 import { buttonVariants, cn } from '@caia/ui';
+import { AuthGatedLink } from './auth-gated-link';
 import { primaryNav, siteConfig, dashboardUrl } from '../lib/site-config';
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
@@ -51,12 +52,12 @@ function SiteHeader() {
             ))}
         </nav>
         <div className="flex items-center gap-3">
-          <Link
-            href="/projects"
+          <AuthGatedLink
+            target="/dashboard"
             className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
           >
             Your Projects
-          </Link>
+          </AuthGatedLink>
           <Link
             href="/sign-in"
             className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}

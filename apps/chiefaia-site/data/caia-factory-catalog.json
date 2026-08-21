@@ -1,0 +1,2761 @@
+{
+  "source": "STOL-1034 CAIA master blueprint + phase Epics STOL-1037..STOL-1049 (mock UI catalog \u2014 no backend)",
+  "stages": [
+    {
+      "id": "control-plane",
+      "code": "CP",
+      "name": "Control Plane \u2014 CAIA Kernel",
+      "epic": "Epic 1 + Epic 12",
+      "items": [
+        {
+          "id": "CP-01",
+          "name": "Durable Workflow",
+          "kind": "cp",
+          "scope": "Durable Workflow (Temporal OSS self-hosted \u2014 Kernel Wave 1). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Durable Workflow core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-01 input / output schemas",
+            "Implement the Durable Workflow service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-02",
+          "name": "Agent Reasoning",
+          "kind": "cp",
+          "scope": "Agent Reasoning (LangGraph / Claude Agent SDK adapter \u2014 Wave 2). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Agent Reasoning core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-02 input / output schemas",
+            "Implement the Agent Reasoning service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-03",
+          "name": "Event Backbone",
+          "kind": "cp",
+          "scope": "Event Backbone (Redpanda (Kafka-compatible) \u2014 Wave 1). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Event Backbone core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-03 input / output schemas",
+            "Implement the Event Backbone service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-04",
+          "name": "Policy Engine",
+          "kind": "cp",
+          "scope": "Policy Engine (OPA + Kyverno hybrid \u2014 Wave 1). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Policy Engine core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-04 input / output schemas",
+            "Implement the Policy Engine service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-05",
+          "name": "Artifact Store",
+          "kind": "cp",
+          "scope": "Artifact Store (MinIO + Postgres provenance \u2014 Wave 1). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Artifact Store core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-05 input / output schemas",
+            "Implement the Artifact Store service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-06",
+          "name": "Operational DB",
+          "kind": "cp",
+          "scope": "Operational DB (PostgreSQL 16 \u2014 Wave 0 (reuse)). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Operational DB core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-06 input / output schemas",
+            "Implement the Operational DB service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-07",
+          "name": "Project Knowledge Graph",
+          "kind": "cp",
+          "scope": "Project Knowledge Graph (Neo4j Community / Apache AGE \u2014 Wave 2). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Project Knowledge Graph core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-07 input / output schemas",
+            "Implement the Project Knowledge Graph service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-08",
+          "name": "Retrieval / RAG",
+          "kind": "cp",
+          "scope": "Retrieval / RAG (pgvector + sentence-transformers \u2014 Wave 2). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Retrieval / RAG core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-08 input / output schemas",
+            "Implement the Retrieval / RAG service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-09",
+          "name": "Model Gateway",
+          "kind": "cp",
+          "scope": "Model Gateway (LiteLLM + OpenRouter free tier \u2014 Wave 1). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Model Gateway core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-09 input / output schemas",
+            "Implement the Model Gateway service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-10",
+          "name": "Tool Gateway",
+          "kind": "cp",
+          "scope": "Tool Gateway (MCP-server aggregator (thin) \u2014 Wave 2). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Tool Gateway core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-10 input / output schemas",
+            "Implement the Tool Gateway service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-11",
+          "name": "Quality Gate Engine",
+          "kind": "cp",
+          "scope": "Quality Gate Engine (pytest-based typed Gate SDK \u2014 Wave 1). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Quality Gate Engine core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-11 input / output schemas",
+            "Implement the Quality Gate Engine service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-12",
+          "name": "Identity / Authz",
+          "kind": "cp",
+          "scope": "Identity / Authz (CF Access + Vault + Firebase Auth \u2014 Wave 0 (reuse)). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Identity / Authz core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-12 input / output schemas",
+            "Implement the Identity / Authz service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-13",
+          "name": "Cost / Token Governor",
+          "kind": "cp",
+          "scope": "Cost / Token Governor (LiteLLM budgets + custom middleware \u2014 Wave 2). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Cost / Token Governor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-13 input / output schemas",
+            "Implement the Cost / Token Governor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-14",
+          "name": "Observability",
+          "kind": "cp",
+          "scope": "Observability (OTEL + Loki + Tempo + Grafana + Prometheus \u2014 Wave 0 (reuse)). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Observability core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-14 input / output schemas",
+            "Implement the Observability service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "CP-15",
+          "name": "Audit / Provenance",
+          "kind": "cp",
+          "scope": "Audit / Provenance (Loki + Postgres + Cosign signatures \u2014 Wave 1). Part of the CAIA kernel control plane. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Audit / Provenance core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define CP-15 input / output schemas",
+            "Implement the Audit / Provenance service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-a",
+      "code": "A",
+      "name": "Vision Capture & Intake",
+      "epic": "Epic 3",
+      "items": [
+        {
+          "id": "SF-00",
+          "name": "Vision Intake",
+          "kind": "sf",
+          "scope": "Vision Intake (prompt to canonical vision doc). Part of Macro Stage A \u2014 Vision Capture & Intake. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Vision Intake core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-00 input / output schemas",
+            "Implement the Vision Intake service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-01",
+          "name": "Intent Classifier",
+          "kind": "sf",
+          "scope": "Intent Classifier (Initiative / Epic / Story / Task level). Part of Macro Stage A \u2014 Vision Capture & Intake. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Intent Classifier core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-01 input / output schemas",
+            "Implement the Intent Classifier service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-02",
+          "name": "Dedup Check",
+          "kind": "sf",
+          "scope": "Dedup Check (against the project knowledge graph). Part of Macro Stage A \u2014 Vision Capture & Intake. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Dedup Check core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-02 input / output schemas",
+            "Implement the Dedup Check service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-03",
+          "name": "Persona Extraction",
+          "kind": "sf",
+          "scope": "Persona Extraction. Part of Macro Stage A \u2014 Vision Capture & Intake. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Persona Extraction core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-03 input / output schemas",
+            "Implement the Persona Extraction service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-04",
+          "name": "Vision Normalizer",
+          "kind": "sf",
+          "scope": "Vision Normalizer. Part of Macro Stage A \u2014 Vision Capture & Intake. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Vision Normalizer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-04 input / output schemas",
+            "Implement the Vision Normalizer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-05",
+          "name": "SWOT Snapshot",
+          "kind": "sf",
+          "scope": "SWOT Snapshot. Part of Macro Stage A \u2014 Vision Capture & Intake. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "SWOT Snapshot core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-05 input / output schemas",
+            "Implement the SWOT Snapshot service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-06",
+          "name": "Feasibility Scorer",
+          "kind": "sf",
+          "scope": "Feasibility Scorer. Part of Macro Stage A \u2014 Vision Capture & Intake. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Feasibility Scorer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-06 input / output schemas",
+            "Implement the Feasibility Scorer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-07",
+          "name": "Vision Ratification Gate",
+          "kind": "sf",
+          "scope": "Vision Ratification Gate (auto-approves at confidence >= 0.85). Part of Macro Stage A \u2014 Vision Capture & Intake. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Vision Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-07 input / output schemas",
+            "Implement the Vision Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-b",
+      "code": "B",
+      "name": "Business Intelligence",
+      "epic": "Epic 4",
+      "items": [
+        {
+          "id": "SF-08",
+          "name": "Market Sizer",
+          "kind": "sf",
+          "scope": "Market Sizer (TAM / SAM / SOM). Part of Macro Stage B \u2014 Business Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Market Sizer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-08 input / output schemas",
+            "Implement the Market Sizer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-09",
+          "name": "Competitor Scanner",
+          "kind": "sf",
+          "scope": "Competitor Scanner. Part of Macro Stage B \u2014 Business Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Competitor Scanner core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-09 input / output schemas",
+            "Implement the Competitor Scanner service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-10",
+          "name": "Positioning Statement Generator",
+          "kind": "sf",
+          "scope": "Positioning Statement Generator. Part of Macro Stage B \u2014 Business Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Positioning Statement Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-10 input / output schemas",
+            "Implement the Positioning Statement Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-11",
+          "name": "Business Model Canvas",
+          "kind": "sf",
+          "scope": "Business Model Canvas. Part of Macro Stage B \u2014 Business Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Business Model Canvas core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-11 input / output schemas",
+            "Implement the Business Model Canvas service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-12",
+          "name": "Pricing Model Suggestor",
+          "kind": "sf",
+          "scope": "Pricing Model Suggestor. Part of Macro Stage B \u2014 Business Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Pricing Model Suggestor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-12 input / output schemas",
+            "Implement the Pricing Model Suggestor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-13",
+          "name": "GTM Channel Recommender",
+          "kind": "sf",
+          "scope": "GTM Channel Recommender. Part of Macro Stage B \u2014 Business Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "GTM Channel Recommender core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-13 input / output schemas",
+            "Implement the GTM Channel Recommender service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-14",
+          "name": "Customer Segment Ranker",
+          "kind": "sf",
+          "scope": "Customer Segment Ranker. Part of Macro Stage B \u2014 Business Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Customer Segment Ranker core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-14 input / output schemas",
+            "Implement the Customer Segment Ranker service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-15",
+          "name": "Risk Register",
+          "kind": "sf",
+          "scope": "Risk Register (regulatory / operational / market). Part of Macro Stage B \u2014 Business Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Risk Register core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-15 input / output schemas",
+            "Implement the Risk Register service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-16",
+          "name": "BI Ratification Gate",
+          "kind": "sf",
+          "scope": "BI Ratification Gate. Part of Macro Stage B \u2014 Business Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "BI Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-16 input / output schemas",
+            "Implement the BI Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-c",
+      "code": "C",
+      "name": "Product Engineering",
+      "epic": "Epic 5",
+      "items": [
+        {
+          "id": "SF-17",
+          "name": "JTBD Extractor",
+          "kind": "sf",
+          "scope": "JTBD Extractor. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "JTBD Extractor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-17 input / output schemas",
+            "Implement the JTBD Extractor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-18",
+          "name": "Capability Decomposer",
+          "kind": "sf",
+          "scope": "Capability Decomposer. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Capability Decomposer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-18 input / output schemas",
+            "Implement the Capability Decomposer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-19",
+          "name": "User Journey Mapper",
+          "kind": "sf",
+          "scope": "User Journey Mapper. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "User Journey Mapper core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-19 input / output schemas",
+            "Implement the User Journey Mapper service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-20",
+          "name": "Feature Enumerator",
+          "kind": "sf",
+          "scope": "Feature Enumerator. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Feature Enumerator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-20 input / output schemas",
+            "Implement the Feature Enumerator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-21",
+          "name": "MoSCoW Prioritizer",
+          "kind": "sf",
+          "scope": "MoSCoW Prioritizer. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "MoSCoW Prioritizer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-21 input / output schemas",
+            "Implement the MoSCoW Prioritizer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-22",
+          "name": "PRD Draft Generator",
+          "kind": "sf",
+          "scope": "PRD Draft Generator. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "PRD Draft Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-22 input / output schemas",
+            "Implement the PRD Draft Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-23",
+          "name": "Non-Functional Sketch",
+          "kind": "sf",
+          "scope": "Non-Functional Sketch (draft NFRs, refined in Stage D). Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Non-Functional Sketch core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-23 input / output schemas",
+            "Implement the Non-Functional Sketch service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-24",
+          "name": "Success Metrics Definer",
+          "kind": "sf",
+          "scope": "Success Metrics Definer. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Success Metrics Definer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-24 input / output schemas",
+            "Implement the Success Metrics Definer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-25",
+          "name": "Acceptance-Criteria Skeleton",
+          "kind": "sf",
+          "scope": "Acceptance-Criteria Skeleton. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Acceptance-Criteria Skeleton core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-25 input / output schemas",
+            "Implement the Acceptance-Criteria Skeleton service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-26",
+          "name": "Dependency Sketch",
+          "kind": "sf",
+          "scope": "Dependency Sketch (upstream / downstream systems). Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Dependency Sketch core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-26 input / output schemas",
+            "Implement the Dependency Sketch service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-27",
+          "name": "Discovery Question Generator",
+          "kind": "sf",
+          "scope": "Discovery Question Generator (loops back to SF-00 if gaps). Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Discovery Question Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-27 input / output schemas",
+            "Implement the Discovery Question Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-28",
+          "name": "Feature Flag Plan",
+          "kind": "sf",
+          "scope": "Feature Flag Plan. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Feature Flag Plan core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-28 input / output schemas",
+            "Implement the Feature Flag Plan service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-29",
+          "name": "Analytics Plan",
+          "kind": "sf",
+          "scope": "Analytics Plan. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Analytics Plan core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-29 input / output schemas",
+            "Implement the Analytics Plan service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-30",
+          "name": "Rollout Strategy Draft",
+          "kind": "sf",
+          "scope": "Rollout Strategy Draft. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Rollout Strategy Draft core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-30 input / output schemas",
+            "Implement the Rollout Strategy Draft service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-31",
+          "name": "Product Ratification Gate",
+          "kind": "sf",
+          "scope": "Product Ratification Gate. Part of Macro Stage C \u2014 Product Engineering. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Product Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-31 input / output schemas",
+            "Implement the Product Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-d1",
+      "code": "D-1",
+      "name": "Domain Modelling",
+      "epic": "Epic 6",
+      "items": [
+        {
+          "id": "SF-32",
+          "name": "Architecture Fitness Function Selector",
+          "kind": "sf",
+          "scope": "Architecture Fitness Function Selector (consumes the EARAT NFR catalog). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Architecture Fitness Function Selector core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-32 input / output schemas",
+            "Implement the Architecture Fitness Function Selector service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-33",
+          "name": "Bounded Context Extractor",
+          "kind": "sf",
+          "scope": "Bounded Context Extractor. Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Bounded Context Extractor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-33 input / output schemas",
+            "Implement the Bounded Context Extractor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-34",
+          "name": "Context Map Generator",
+          "kind": "sf",
+          "scope": "Context Map Generator. Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Context Map Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-34 input / output schemas",
+            "Implement the Context Map Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-35",
+          "name": "Aggregate Root Identifier",
+          "kind": "sf",
+          "scope": "Aggregate Root Identifier. Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Aggregate Root Identifier core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-35 input / output schemas",
+            "Implement the Aggregate Root Identifier service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-36",
+          "name": "Entity + Value Object Enumerator",
+          "kind": "sf",
+          "scope": "Entity + Value Object Enumerator. Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Entity + Value Object Enumerator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-36 input / output schemas",
+            "Implement the Entity + Value Object Enumerator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-37",
+          "name": "Invariant Extractor",
+          "kind": "sf",
+          "scope": "Invariant Extractor. Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Invariant Extractor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-37 input / output schemas",
+            "Implement the Invariant Extractor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-38",
+          "name": "Domain Event Catalog",
+          "kind": "sf",
+          "scope": "Domain Event Catalog. Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Event Catalog core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-38 input / output schemas",
+            "Implement the Domain Event Catalog service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-39",
+          "name": "Command Catalog",
+          "kind": "sf",
+          "scope": "Command Catalog. Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Command Catalog core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-39 input / output schemas",
+            "Implement the Command Catalog service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-40",
+          "name": "Projection Catalog",
+          "kind": "sf",
+          "scope": "Projection Catalog (CQRS read-models). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Projection Catalog core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-40 input / output schemas",
+            "Implement the Projection Catalog service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-41",
+          "name": "Anti-Corruption Layer Recommender",
+          "kind": "sf",
+          "scope": "Anti-Corruption Layer Recommender. Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Anti-Corruption Layer Recommender core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-41 input / output schemas",
+            "Implement the Anti-Corruption Layer Recommender service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-42",
+          "name": "Domain Enrichment \u2014 SEO",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 SEO (fan-out part 1). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 SEO core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-42 input / output schemas",
+            "Implement the Domain Enrichment \u2014 SEO service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-43",
+          "name": "Domain Enrichment \u2014 Accessibility",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Accessibility (fan-out part 1). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Accessibility core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-43 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Accessibility service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-44",
+          "name": "Domain Enrichment \u2014 Event-Driven Architecture",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Event-Driven Architecture (fan-out part 1). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Event-Driven Architecture core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-44 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Event-Driven Architecture service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-45",
+          "name": "Domain Enrichment \u2014 Microservices",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Microservices (fan-out part 1). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Microservices core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-45 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Microservices service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-46",
+          "name": "Domain Enrichment \u2014 Observability",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Observability (fan-out part 1). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Observability core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-46 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Observability service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-47",
+          "name": "Domain Enrichment \u2014 Web Security",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Web Security (fan-out part 1). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Web Security core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-47 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Web Security service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-48",
+          "name": "Domain Enrichment \u2014 Enterprise Security",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Enterprise Security (fan-out part 1). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Enterprise Security core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-48 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Enterprise Security service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-49",
+          "name": "Domain Enrichment \u2014 Analytics",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Analytics (fan-out part 1). Part of Macro Stage D-1 \u2014 Domain Modelling. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Analytics core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-49 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Analytics service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-d2",
+      "code": "D-2",
+      "name": "Architecture & NFRs",
+      "epic": "Epic 7",
+      "items": [
+        {
+          "id": "SF-50",
+          "name": "Domain Enrichment \u2014 Database",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Database (fan-out part 2). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Database core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-50 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Database service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-51",
+          "name": "Domain Enrichment \u2014 API Gateway",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 API Gateway (fan-out part 2). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 API Gateway core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-51 input / output schemas",
+            "Implement the Domain Enrichment \u2014 API Gateway service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-52",
+          "name": "Domain Enrichment \u2014 Caching",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Caching (fan-out part 2). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Caching core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-52 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Caching service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-53",
+          "name": "Domain Enrichment \u2014 Martech",
+          "kind": "sf",
+          "scope": "Domain Enrichment \u2014 Martech (fan-out part 2). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Domain Enrichment \u2014 Martech core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-53 input / output schemas",
+            "Implement the Domain Enrichment \u2014 Martech service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-54",
+          "name": "API Contract Generator",
+          "kind": "sf",
+          "scope": "API Contract Generator (OpenAPI / GraphQL SDL / gRPC proto). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "API Contract Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-54 input / output schemas",
+            "Implement the API Contract Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-55",
+          "name": "Data Schema Generator",
+          "kind": "sf",
+          "scope": "Data Schema Generator (Postgres DDL + ClickHouse + Redis keys + pgvector). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Data Schema Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-55 input / output schemas",
+            "Implement the Data Schema Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-56",
+          "name": "Integration Pattern Selector",
+          "kind": "sf",
+          "scope": "Integration Pattern Selector (request-reply / event / saga / choreography). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Integration Pattern Selector core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-56 input / output schemas",
+            "Implement the Integration Pattern Selector service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-57",
+          "name": "Multi-tenancy Model Selector",
+          "kind": "sf",
+          "scope": "Multi-tenancy Model Selector. Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Multi-tenancy Model Selector core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-57 input / output schemas",
+            "Implement the Multi-tenancy Model Selector service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-58",
+          "name": "Deployment Topology Planner",
+          "kind": "sf",
+          "scope": "Deployment Topology Planner. Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Deployment Topology Planner core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-58 input / output schemas",
+            "Implement the Deployment Topology Planner service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-59",
+          "name": "Availability & Scaling Plan",
+          "kind": "sf",
+          "scope": "Availability & Scaling Plan. Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Availability & Scaling Plan core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-59 input / output schemas",
+            "Implement the Availability & Scaling Plan service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-60",
+          "name": "Cost Model Estimator",
+          "kind": "sf",
+          "scope": "Cost Model Estimator. Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Cost Model Estimator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-60 input / output schemas",
+            "Implement the Cost Model Estimator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-61",
+          "name": "Security Threat Model",
+          "kind": "sf",
+          "scope": "Security Threat Model (STRIDE). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Security Threat Model core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-61 input / output schemas",
+            "Implement the Security Threat Model service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-62",
+          "name": "Data Classification & Privacy Plan",
+          "kind": "sf",
+          "scope": "Data Classification & Privacy Plan. Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Data Classification & Privacy Plan core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-62 input / output schemas",
+            "Implement the Data Classification & Privacy Plan service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-63",
+          "name": "Compliance Mapper",
+          "kind": "sf",
+          "scope": "Compliance Mapper (GDPR / CCPA / SOC2). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Compliance Mapper core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-63 input / output schemas",
+            "Implement the Compliance Mapper service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-64",
+          "name": "Architecture Ratification Gate",
+          "kind": "sf",
+          "scope": "Architecture Ratification Gate (final go / no-go before decomposition). Part of Macro Stage D-2 \u2014 Architecture & NFRs. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Architecture Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-64 input / output schemas",
+            "Implement the Architecture Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-e",
+      "code": "E",
+      "name": "UX / UI + Design System",
+      "epic": "Epic 8",
+      "items": [
+        {
+          "id": "SF-65",
+          "name": "Bounded-Context to UX Region Mapper",
+          "kind": "sf",
+          "scope": "Bounded-Context to UX Region Mapper. Part of Macro Stage E \u2014 UX / UI + Design System. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Bounded-Context to UX Region Mapper core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-65 input / output schemas",
+            "Implement the Bounded-Context to UX Region Mapper service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-66",
+          "name": "User Flow Generator",
+          "kind": "sf",
+          "scope": "User Flow Generator (state-machine per journey). Part of Macro Stage E \u2014 UX / UI + Design System. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "User Flow Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-66 input / output schemas",
+            "Implement the User Flow Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-67",
+          "name": "Wireframe Generator",
+          "kind": "sf",
+          "scope": "Wireframe Generator (low-fi + Figma push). Part of Macro Stage E \u2014 UX / UI + Design System. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Wireframe Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-67 input / output schemas",
+            "Implement the Wireframe Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-68",
+          "name": "Design-Token Reconciler",
+          "kind": "sf",
+          "scope": "Design-Token Reconciler. Part of Macro Stage E \u2014 UX / UI + Design System. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Design-Token Reconciler core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-68 input / output schemas",
+            "Implement the Design-Token Reconciler service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-69",
+          "name": "Component Spec Generator",
+          "kind": "sf",
+          "scope": "Component Spec Generator (props, states, variants, a11y contract). Part of Macro Stage E \u2014 UX / UI + Design System. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Component Spec Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-69 input / output schemas",
+            "Implement the Component Spec Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-70",
+          "name": "UX Ratification Gate",
+          "kind": "sf",
+          "scope": "UX Ratification Gate (a11y + design-system compliance). Part of Macro Stage E \u2014 UX / UI + Design System. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "UX Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-70 input / output schemas",
+            "Implement the UX Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-f",
+      "code": "F",
+      "name": "Work Decomposition",
+      "epic": "Epic 9",
+      "items": [
+        {
+          "id": "SF-71",
+          "name": "Component Specification",
+          "kind": "sf",
+          "scope": "Component Specification (per-service implementation spec). Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Component Specification core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-71 input / output schemas",
+            "Implement the Component Specification service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-72",
+          "name": "Story Draft Generator",
+          "kind": "sf",
+          "scope": "Story Draft Generator. Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Story Draft Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-72 input / output schemas",
+            "Implement the Story Draft Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-73",
+          "name": "Acceptance Criteria Materializer",
+          "kind": "sf",
+          "scope": "Acceptance Criteria Materializer (Gherkin + typed AC schema). Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Acceptance Criteria Materializer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-73 input / output schemas",
+            "Implement the Acceptance Criteria Materializer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-74",
+          "name": "NFR Attachment Materializer",
+          "kind": "sf",
+          "scope": "NFR Attachment Materializer. Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "NFR Attachment Materializer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-74 input / output schemas",
+            "Implement the NFR Attachment Materializer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-75",
+          "name": "Dependency Graph Builder",
+          "kind": "sf",
+          "scope": "Dependency Graph Builder (cross-story dependencies). Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Dependency Graph Builder core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-75 input / output schemas",
+            "Implement the Dependency Graph Builder service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-76",
+          "name": "Ordering / Wave Planner",
+          "kind": "sf",
+          "scope": "Ordering / Wave Planner. Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Ordering / Wave Planner core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-76 input / output schemas",
+            "Implement the Ordering / Wave Planner service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-77",
+          "name": "Effort Estimator",
+          "kind": "sf",
+          "scope": "Effort Estimator (elapsed time + tokens + dollars). Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Effort Estimator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-77 input / output schemas",
+            "Implement the Effort Estimator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-78",
+          "name": "Owner Assigner",
+          "kind": "sf",
+          "scope": "Owner Assigner (which agent pool). Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Owner Assigner core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-78 input / output schemas",
+            "Implement the Owner Assigner service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-79",
+          "name": "Story Enrichment Merger",
+          "kind": "sf",
+          "scope": "Story Enrichment Merger. Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Story Enrichment Merger core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-79 input / output schemas",
+            "Implement the Story Enrichment Merger service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-80",
+          "name": "Reviewer-Agent Gate",
+          "kind": "sf",
+          "scope": "Reviewer-Agent Gate. Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Reviewer-Agent Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-80 input / output schemas",
+            "Implement the Reviewer-Agent Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-81",
+          "name": "Backlog Materializer",
+          "kind": "sf",
+          "scope": "Backlog Materializer. Part of Macro Stage F \u2014 Work Decomposition. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Backlog Materializer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-81 input / output schemas",
+            "Implement the Backlog Materializer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-g1",
+      "code": "G-1",
+      "name": "Test Design",
+      "epic": "Epic 10",
+      "items": [
+        {
+          "id": "SF-82",
+          "name": "Test-Plan Generator",
+          "kind": "sf",
+          "scope": "Test-Plan Generator (derives from AC + NFRs). Part of Macro Stage G-1 \u2014 Test Design. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Test-Plan Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-82 input / output schemas",
+            "Implement the Test-Plan Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-83",
+          "name": "Unit-Test Skeleton Generator",
+          "kind": "sf",
+          "scope": "Unit-Test Skeleton Generator. Part of Macro Stage G-1 \u2014 Test Design. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Unit-Test Skeleton Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-83 input / output schemas",
+            "Implement the Unit-Test Skeleton Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-84",
+          "name": "Contract-Test Generator",
+          "kind": "sf",
+          "scope": "Contract-Test Generator. Part of Macro Stage G-1 \u2014 Test Design. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Contract-Test Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-84 input / output schemas",
+            "Implement the Contract-Test Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-85",
+          "name": "Integration-Test Generator",
+          "kind": "sf",
+          "scope": "Integration-Test Generator. Part of Macro Stage G-1 \u2014 Test Design. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Integration-Test Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-85 input / output schemas",
+            "Implement the Integration-Test Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-86",
+          "name": "Load / Perf Scenario Generator",
+          "kind": "sf",
+          "scope": "Load / Perf Scenario Generator. Part of Macro Stage G-1 \u2014 Test Design. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Load / Perf Scenario Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-86 input / output schemas",
+            "Implement the Load / Perf Scenario Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-87",
+          "name": "Chaos Scenario Generator",
+          "kind": "sf",
+          "scope": "Chaos Scenario Generator. Part of Macro Stage G-1 \u2014 Test Design. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Chaos Scenario Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-87 input / output schemas",
+            "Implement the Chaos Scenario Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-88",
+          "name": "Security Test Generator",
+          "kind": "sf",
+          "scope": "Security Test Generator. Part of Macro Stage G-1 \u2014 Test Design. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Security Test Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-88 input / output schemas",
+            "Implement the Security Test Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-89",
+          "name": "A11y / SEO / CWV Test Generator",
+          "kind": "sf",
+          "scope": "A11y / SEO / CWV Test Generator. Part of Macro Stage G-1 \u2014 Test Design. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "A11y / SEO / CWV Test Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-89 input / output schemas",
+            "Implement the A11y / SEO / CWV Test Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-g2",
+      "code": "G-2",
+      "name": "Code Implementation",
+      "epic": "Epic 11",
+      "items": [
+        {
+          "id": "SF-90",
+          "name": "Scaffolder",
+          "kind": "sf",
+          "scope": "Scaffolder (package / module skeleton per component spec). Part of Macro Stage G-2 \u2014 Code Implementation. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Scaffolder core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-90 input / output schemas",
+            "Implement the Scaffolder service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-91",
+          "name": "Code Implementation",
+          "kind": "sf",
+          "scope": "Code Implementation (dev-agent worker pool). Part of Macro Stage G-2 \u2014 Code Implementation. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Code Implementation core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-91 input / output schemas",
+            "Implement the Code Implementation service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-92",
+          "name": "Test Runner",
+          "kind": "sf",
+          "scope": "Test Runner (executes SF-83..SF-89 test suites). Part of Macro Stage G-2 \u2014 Code Implementation. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Test Runner core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-92 input / output schemas",
+            "Implement the Test Runner service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-93",
+          "name": "Contract Verifier",
+          "kind": "sf",
+          "scope": "Contract Verifier (API matches the SF-54 contract). Part of Macro Stage G-2 \u2014 Code Implementation. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Contract Verifier core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-93 input / output schemas",
+            "Implement the Contract Verifier service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-94",
+          "name": "Lint / Type / Format",
+          "kind": "sf",
+          "scope": "Lint / Type / Format. Part of Macro Stage G-2 \u2014 Code Implementation. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Lint / Type / Format core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-94 input / output schemas",
+            "Implement the Lint / Type / Format service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-95",
+          "name": "Doc Generator",
+          "kind": "sf",
+          "scope": "Doc Generator. Part of Macro Stage G-2 \u2014 Code Implementation. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Doc Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-95 input / output schemas",
+            "Implement the Doc Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-96",
+          "name": "Migration Generator",
+          "kind": "sf",
+          "scope": "Migration Generator. Part of Macro Stage G-2 \u2014 Code Implementation. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Migration Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-96 input / output schemas",
+            "Implement the Migration Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-97",
+          "name": "Impl Ratification Gate",
+          "kind": "sf",
+          "scope": "Impl Ratification Gate. Part of Macro Stage G-2 \u2014 Code Implementation. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Impl Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-97 input / output schemas",
+            "Implement the Impl Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-h",
+      "code": "H",
+      "name": "Integration, QA, Security & Reliability",
+      "epic": "Epic 13",
+      "items": [
+        {
+          "id": "SF-98",
+          "name": "Security Scan",
+          "kind": "sf",
+          "scope": "Security Scan (Trivy + Falco + dep-scan + OWASP-ZAP). Part of Macro Stage H \u2014 Integration, QA, Security & Reliability. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Security Scan core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-98 input / output schemas",
+            "Implement the Security Scan service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-99",
+          "name": "Load / Performance Test Execution",
+          "kind": "sf",
+          "scope": "Load / Performance Test Execution. Part of Macro Stage H \u2014 Integration, QA, Security & Reliability. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Load / Performance Test Execution core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-99 input / output schemas",
+            "Implement the Load / Performance Test Execution service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-100",
+          "name": "Chaos Test Execution",
+          "kind": "sf",
+          "scope": "Chaos Test Execution. Part of Macro Stage H \u2014 Integration, QA, Security & Reliability. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Chaos Test Execution core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-100 input / output schemas",
+            "Implement the Chaos Test Execution service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-101",
+          "name": "A11y / SEO / CWV Live Verify",
+          "kind": "sf",
+          "scope": "A11y / SEO / CWV Live Verify. Part of Macro Stage H \u2014 Integration, QA, Security & Reliability. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "A11y / SEO / CWV Live Verify core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-101 input / output schemas",
+            "Implement the A11y / SEO / CWV Live Verify service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-102",
+          "name": "Cross-Service Integration Test",
+          "kind": "sf",
+          "scope": "Cross-Service Integration Test. Part of Macro Stage H \u2014 Integration, QA, Security & Reliability. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Cross-Service Integration Test core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-102 input / output schemas",
+            "Implement the Cross-Service Integration Test service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-103",
+          "name": "QA Ratification Gate",
+          "kind": "sf",
+          "scope": "QA Ratification Gate (all-green required for release.ready). Part of Macro Stage H \u2014 Integration, QA, Security & Reliability. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "QA Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-103 input / output schemas",
+            "Implement the QA Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-i",
+      "code": "I",
+      "name": "Release + Production Intelligence",
+      "epic": "Epic 14",
+      "items": [
+        {
+          "id": "SF-104",
+          "name": "Release Planner",
+          "kind": "sf",
+          "scope": "Release Planner (canary vs blue-green vs feature-flag). Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Release Planner core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-104 input / output schemas",
+            "Implement the Release Planner service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-105",
+          "name": "Migration Applier",
+          "kind": "sf",
+          "scope": "Migration Applier. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Migration Applier core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-105 input / output schemas",
+            "Implement the Migration Applier service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-106",
+          "name": "Deploy Executor",
+          "kind": "sf",
+          "scope": "Deploy Executor. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Deploy Executor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-106 input / output schemas",
+            "Implement the Deploy Executor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-107",
+          "name": "Smoke-Test Runner",
+          "kind": "sf",
+          "scope": "Smoke-Test Runner (post-deploy). Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Smoke-Test Runner core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-107 input / output schemas",
+            "Implement the Smoke-Test Runner service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-108",
+          "name": "Rollback Executor",
+          "kind": "sf",
+          "scope": "Rollback Executor. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Rollback Executor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-108 input / output schemas",
+            "Implement the Rollback Executor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-109",
+          "name": "Feature-Flag Rollout Controller",
+          "kind": "sf",
+          "scope": "Feature-Flag Rollout Controller. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Feature-Flag Rollout Controller core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-109 input / output schemas",
+            "Implement the Feature-Flag Rollout Controller service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-110",
+          "name": "Release Notes Generator",
+          "kind": "sf",
+          "scope": "Release Notes Generator. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Release Notes Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-110 input / output schemas",
+            "Implement the Release Notes Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-111",
+          "name": "SLO Definer",
+          "kind": "sf",
+          "scope": "SLO Definer. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "SLO Definer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-111 input / output schemas",
+            "Implement the SLO Definer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-112",
+          "name": "SLO Monitor",
+          "kind": "sf",
+          "scope": "SLO Monitor. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "SLO Monitor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-112 input / output schemas",
+            "Implement the SLO Monitor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-113",
+          "name": "Error Budget Tracker",
+          "kind": "sf",
+          "scope": "Error Budget Tracker. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Error Budget Tracker core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-113 input / output schemas",
+            "Implement the Error Budget Tracker service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-114",
+          "name": "Incident Detector",
+          "kind": "sf",
+          "scope": "Incident Detector. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Incident Detector core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-114 input / output schemas",
+            "Implement the Incident Detector service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-115",
+          "name": "Incident Triage Agent",
+          "kind": "sf",
+          "scope": "Incident Triage Agent. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Incident Triage Agent core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-115 input / output schemas",
+            "Implement the Incident Triage Agent service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-116",
+          "name": "Runbook Executor",
+          "kind": "sf",
+          "scope": "Runbook Executor (auto-remediation for known incidents). Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Runbook Executor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-116 input / output schemas",
+            "Implement the Runbook Executor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-117",
+          "name": "Cost Telemetry",
+          "kind": "sf",
+          "scope": "Cost Telemetry (LLM + infra spend per feature). Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Cost Telemetry core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-117 input / output schemas",
+            "Implement the Cost Telemetry service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-118",
+          "name": "User Analytics Emitter",
+          "kind": "sf",
+          "scope": "User Analytics Emitter. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "User Analytics Emitter core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-118 input / output schemas",
+            "Implement the User Analytics Emitter service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-119",
+          "name": "A/B Test Manager",
+          "kind": "sf",
+          "scope": "A/B Test Manager. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "A/B Test Manager core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-119 input / output schemas",
+            "Implement the A/B Test Manager service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-120",
+          "name": "Adoption Metric Tracker",
+          "kind": "sf",
+          "scope": "Adoption Metric Tracker. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Adoption Metric Tracker core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-120 input / output schemas",
+            "Implement the Adoption Metric Tracker service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-121",
+          "name": "Regression Detector",
+          "kind": "sf",
+          "scope": "Regression Detector (performance / conversion). Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Regression Detector core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-121 input / output schemas",
+            "Implement the Regression Detector service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-122",
+          "name": "Log Anomaly Detector",
+          "kind": "sf",
+          "scope": "Log Anomaly Detector. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Log Anomaly Detector core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-122 input / output schemas",
+            "Implement the Log Anomaly Detector service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-123",
+          "name": "Trace Sampling Optimiser",
+          "kind": "sf",
+          "scope": "Trace Sampling Optimiser. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Trace Sampling Optimiser core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-123 input / output schemas",
+            "Implement the Trace Sampling Optimiser service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-124",
+          "name": "Capacity Forecaster",
+          "kind": "sf",
+          "scope": "Capacity Forecaster. Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Capacity Forecaster core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-124 input / output schemas",
+            "Implement the Capacity Forecaster service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-125",
+          "name": "Prod-Intel Ratification Gate",
+          "kind": "sf",
+          "scope": "Prod-Intel Ratification Gate (weekly digest). Part of Macro Stage I \u2014 Release + Production Intelligence. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Prod-Intel Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-125 input / output schemas",
+            "Implement the Prod-Intel Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-j",
+      "code": "J",
+      "name": "Product Learning + CAIA Self-Learning",
+      "epic": "Epic 15",
+      "items": [
+        {
+          "id": "SF-126",
+          "name": "User Feedback Aggregator",
+          "kind": "sf",
+          "scope": "User Feedback Aggregator. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "User Feedback Aggregator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-126 input / output schemas",
+            "Implement the User Feedback Aggregator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-127",
+          "name": "Feature Adoption Analyzer",
+          "kind": "sf",
+          "scope": "Feature Adoption Analyzer. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Feature Adoption Analyzer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-127 input / output schemas",
+            "Implement the Feature Adoption Analyzer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-128",
+          "name": "Churn / Retention Analyzer",
+          "kind": "sf",
+          "scope": "Churn / Retention Analyzer. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Churn / Retention Analyzer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-128 input / output schemas",
+            "Implement the Churn / Retention Analyzer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-129",
+          "name": "NPS / CSAT Ingestor",
+          "kind": "sf",
+          "scope": "NPS / CSAT Ingestor. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "NPS / CSAT Ingestor core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-129 input / output schemas",
+            "Implement the NPS / CSAT Ingestor service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-130",
+          "name": "Hypothesis Generator",
+          "kind": "sf",
+          "scope": "Hypothesis Generator (loops back to SF-00). Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Hypothesis Generator core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-130 input / output schemas",
+            "Implement the Hypothesis Generator service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-131",
+          "name": "A/B Result Analyzer",
+          "kind": "sf",
+          "scope": "A/B Result Analyzer. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "A/B Result Analyzer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-131 input / output schemas",
+            "Implement the A/B Result Analyzer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-132",
+          "name": "Backlog Reprioritizer",
+          "kind": "sf",
+          "scope": "Backlog Reprioritizer. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Backlog Reprioritizer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-132 input / output schemas",
+            "Implement the Backlog Reprioritizer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-133",
+          "name": "Product-Learning Ratification Gate",
+          "kind": "sf",
+          "scope": "Product-Learning Ratification Gate. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Product-Learning Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-133 input / output schemas",
+            "Implement the Product-Learning Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-134",
+          "name": "Factory Performance Analyzer",
+          "kind": "sf",
+          "scope": "Factory Performance Analyzer. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Factory Performance Analyzer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-134 input / output schemas",
+            "Implement the Factory Performance Analyzer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-135",
+          "name": "Prompt-Regression Detector",
+          "kind": "sf",
+          "scope": "Prompt-Regression Detector. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Prompt-Regression Detector core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-135 input / output schemas",
+            "Implement the Prompt-Regression Detector service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-136",
+          "name": "Model-Router Optimiser",
+          "kind": "sf",
+          "scope": "Model-Router Optimiser. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Model-Router Optimiser core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-136 input / output schemas",
+            "Implement the Model-Router Optimiser service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-137",
+          "name": "Cost Optimizer",
+          "kind": "sf",
+          "scope": "Cost Optimizer. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Cost Optimizer core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-137 input / output schemas",
+            "Implement the Cost Optimizer service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-138",
+          "name": "Gate-Threshold Auto-Tuner",
+          "kind": "sf",
+          "scope": "Gate-Threshold Auto-Tuner. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Gate-Threshold Auto-Tuner core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-138 input / output schemas",
+            "Implement the Gate-Threshold Auto-Tuner service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-139",
+          "name": "Blueprint Evolver",
+          "kind": "sf",
+          "scope": "Blueprint Evolver. Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "Blueprint Evolver core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-139 input / output schemas",
+            "Implement the Blueprint Evolver service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        },
+        {
+          "id": "SF-140",
+          "name": "CAIA Meta-Ratification Gate",
+          "kind": "sf",
+          "scope": "CAIA Meta-Ratification Gate (weekly self-improvement PR). Part of Macro Stage J \u2014 Product Learning + CAIA Self-Learning. Mock detail \u2014 canonical scope lives in the CAIA master blueprint (STOL-1034).",
+          "features": [
+            "Validated input contract (typed schema in, typed schema out)",
+            "CAIA Meta-Ratification Gate core module with deterministic validation around bounded AI work",
+            "Versioned output artifact + typed event emitted to the backbone"
+          ],
+          "workItems": [
+            "Define SF-140 input / output schemas",
+            "Implement the CAIA Meta-Ratification Gate service",
+            "Wire typed events to the event backbone",
+            "Add gate tests + observability hooks"
+          ]
+        }
+      ]
+    }
+  ]
+}

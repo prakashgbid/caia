@@ -20,6 +20,7 @@ import {
   cn,
 } from '@caia/ui';
 import { siteConfig, dashboardUrl } from '../lib/site-config';
+import { AuthGatedLink } from '../components/auth-gated-link';
 
 const pipelineSteps = [
   {
@@ -83,12 +84,12 @@ export default function HomePage() {
           {siteConfig.description}
         </p>
         <div className="flex flex-wrap items-center gap-4">
-          <Link
-            href="/projects/new"
+          <AuthGatedLink
+            target="/dashboard"
             className={cn(buttonVariants({ size: 'lg' }))}
           >
             New Project
-          </Link>
+          </AuthGatedLink>
           <Link
             href="/sign-in"
             className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}
