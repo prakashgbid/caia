@@ -51,7 +51,9 @@ beforeEach(clearIndexCache);
 
 describe("tokenize", () => {
   it("lowercases + splits on non-alphanumerics", () => {
-    expect(tokenize("Build a Button.Component!!")).toEqual(["build", "button", "component"]);
+    // "build" is an imperative stop-word (see STOP_WORDS in tokenize.ts) —
+    // brief verbs like build/make/create carry no search signal.
+    expect(tokenize("Build a Button.Component!!")).toEqual(["button", "component"]);
   });
   it("drops stop-words", () => {
     expect(tokenize("the and or but for")).toEqual([]);

@@ -21,7 +21,15 @@ const STOP_WORDS: ReadonlySet<string> = new Set([
 function lightStem(t: string): string {
   if (t.length <= 3) return t;
   if (t.endsWith("ies")) return t.slice(0, -3) + "y";
-  if (t.endsWith("ing") && t.length > 5) return t.slice(0, -3);
+  if (t.endsWith("ing") && t.length > 5) {
+    const stem = t.slice(0, -3);
+    // Porter-style double-consonant reduction: logging -> log, but
+    // rolling -> roll (l/s/z keep the doubled letter).
+    if (/([b-df-hj-np-tv-z])\1$/.test(stem) && !/[lsz]$/.test(stem)) {
+      return stem.slice(0, -1);
+    }
+    return stem;
+  }
   if (t.endsWith("es") && (t.endsWith("ses") || t.endsWith("xes") || t.endsWith("zes"))) return t.slice(0, -2);
   if (t.endsWith("s") && !t.endsWith("ss") && !t.endsWith("us") && !t.endsWith("is")) return t.slice(0, -1);
   return t;
