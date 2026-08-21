@@ -42,21 +42,21 @@ const validHeaders = headers({
 
 describe('readAuthMode', () => {
   it('defaults to "cloudflare" when WIZARD_AUTH_MODE is unset', () => {
-    expect(readAuthMode({} as NodeJS.ProcessEnv)).toBe('cloudflare');
+    expect(readAuthMode({} as unknown as NodeJS.ProcessEnv)).toBe('cloudflare');
   });
 
   it('parses "cloudflare", "cf-edge-only", "disabled" verbatim', () => {
-    expect(readAuthMode({ WIZARD_AUTH_MODE: 'cloudflare' } as NodeJS.ProcessEnv)).toBe('cloudflare');
-    expect(readAuthMode({ WIZARD_AUTH_MODE: 'cf-edge-only' } as NodeJS.ProcessEnv)).toBe('cf-edge-only');
-    expect(readAuthMode({ WIZARD_AUTH_MODE: 'disabled' } as NodeJS.ProcessEnv)).toBe('disabled');
+    expect(readAuthMode({ WIZARD_AUTH_MODE: 'cloudflare' } as unknown as NodeJS.ProcessEnv)).toBe('cloudflare');
+    expect(readAuthMode({ WIZARD_AUTH_MODE: 'cf-edge-only' } as unknown as NodeJS.ProcessEnv)).toBe('cf-edge-only');
+    expect(readAuthMode({ WIZARD_AUTH_MODE: 'disabled' } as unknown as NodeJS.ProcessEnv)).toBe('disabled');
   });
 
   it('is case-insensitive and trims whitespace', () => {
-    expect(readAuthMode({ WIZARD_AUTH_MODE: '  CF-EDGE-ONLY ' } as NodeJS.ProcessEnv)).toBe('cf-edge-only');
+    expect(readAuthMode({ WIZARD_AUTH_MODE: '  CF-EDGE-ONLY ' } as unknown as NodeJS.ProcessEnv)).toBe('cf-edge-only');
   });
 
   it('falls back to "cloudflare" on unknown values (fail-closed)', () => {
-    expect(readAuthMode({ WIZARD_AUTH_MODE: 'wide-open' } as NodeJS.ProcessEnv)).toBe('cloudflare');
+    expect(readAuthMode({ WIZARD_AUTH_MODE: 'wide-open' } as unknown as NodeJS.ProcessEnv)).toBe('cloudflare');
   });
 });
 
