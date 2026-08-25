@@ -1,0 +1,21 @@
+# Local dev: docker compose -f apps/vision-intake-api/docker-compose.yml up -d
+services:
+  vision-intake-api:
+    build: .
+    image: vision-intake-api:latest
+    container_name: vision-intake-api
+    ports:
+      - "127.0.0.1:9170:9170"
+    environment:
+      LOG_LEVEL: INFO
+      VAULT_ADDR: http://stolution-vault:8200
+      VAULT_ROLE_ID: ${VINTAKE_VAULT_ROLE_ID:-}
+      VAULT_SECRET_ID: ${VINTAKE_VAULT_SECRET_ID:-}
+      DATABASE_URL: postgresql+asyncpg://vintake:vintake@stolution-pgbouncer:5432/vision_intake
+      KAFKA_BOOTSTRAP: stolution-kafka:9092
+    networks: [stolution-network]
+    restart: unless-stopped
+networks:
+  stolution-network:
+    external: true
+    name: infrastructure_stolution-network

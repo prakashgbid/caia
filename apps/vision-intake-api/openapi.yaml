@@ -1,0 +1,287 @@
+openapi: 3.0.3
+info:
+  title: CAIA Vision Intake API
+  version: 0.1.0
+  description: |
+    REST gateway for the CAIA Vision Intake pipeline — Stage 1 of the CAIA factory.
+    Founders arrive with a raw idea; by the end of Vision Intake they have a full
+    7-epic startup dossier ready for Jira breakdown.
+    Spec: https://thivaan.atlassian.net/wiki/spaces/CAIA/pages/7208963
+    Data model: https://thivaan.atlassian.net/wiki/spaces/CAIA/pages/7372811
+
+servers:
+  - url: https://caia.stolution.com/api/v1/vision-intake
+    description: Production
+  - url: http://localhost:9170/api/v1/vision-intake
+    description: Local dev
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Session:
+      type: object
+      required: [session_id, tenant_id, state, created_at]
+      properties:
+        session_id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid}
+        founder_user_id: {type: string, format: uuid}
+        idea_title: {type: string, nullable: true}
+        state:
+          type: string
+          enum: [DRAFT, CAPTURED, REFINING, CONVERGED, GENERATING, REVIEW, COMPLETE, ESCALATED, ABANDONED]
+        loop_count: {type: integer}
+        revision_count: {type: integer}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time, nullable: true}
+    IntakeAnswer:
+      type: object
+      required: [step_key, answer_json]
+      properties:
+        step_key: {type: string}
+        answer_json: {type: object, additionalProperties: true}
+    Upload:
+      type: object
+      properties:
+        upload_id: {type: string, format: uuid}
+        filename: {type: string}
+        content_type: {type: string}
+        size_bytes: {type: integer}
+        sha256: {type: string}
+    BriefDraft:
+      type: object
+      properties:
+        draft_id: {type: string, format: uuid}
+        loop_iteration: {type: integer}
+        brief_json: {type: object}
+        converged: {type: boolean}
+    ClarifyingQuestion:
+      type: object
+      properties:
+        question_id: {type: string, format: uuid}
+        question_text: {type: string}
+        founder_answer_text: {type: string, nullable: true}
+    DossierEpic:
+      type: object
+      properties:
+        epic_id: {type: string, format: uuid}
+        epic_slug:
+          type: string
+          enum: [market, product_vision, business_model, financials, investor_materials, moat, team_and_traction]
+        state:
+          type: string
+          enum: [PENDING, GENERATING, READY, IN_REVIEW, CHANGES_REQUESTED, SIGNED_OFF, ESCALATED]
+        confluence_page_id: {type: string, nullable: true}
+        jira_epic_key: {type: string, nullable: true}
+    DossierReview:
+      type: object
+      properties:
+        review_id: {type: string, format: uuid}
+        section_ref: {type: string, nullable: true}
+        actor_kind: {type: string, enum: [founder, llm, orchestrator]}
+        comment_text: {type: string}
+        action_taken: {type: string, nullable: true, enum: [REVISED, SIGNED_OFF, ESCALATED]}
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string}
+        message: {type: string}
+        detail: {type: object, additionalProperties: true, nullable: true}
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      security: []
+      responses:
+        "200":
+          description: OK
+  /ready:
+    get:
+      summary: Readiness probe (DB + Kafka + Vault reachable)
+      security: []
+      responses:
+        "200": {description: Ready}
+        "503": {description: Not ready}
+
+  /sessions:
+    post:
+      summary: Create a new intake session
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Session"}
+    get:
+      summary: List sessions for current tenant
+      parameters:
+        - {name: state, in: query, schema: {type: string}}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/Session"}
+
+  /sessions/{session_id}:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      summary: Get a session
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Session"}
+    patch:
+      summary: Update session (title, abandon, etc.)
+      responses:
+        "200": {description: OK}
+
+  /sessions/{session_id}/answers:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      summary: Upsert an intake answer (wizard autosave)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/IntakeAnswer"}
+      responses:
+        "204": {description: Saved}
+    get:
+      summary: List all answers for this session
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/IntakeAnswer"}
+
+  /sessions/{session_id}/uploads:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      summary: Upload a supporting document (deck, resume, etc.)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Upload"}
+    get:
+      summary: List uploads
+      responses:
+        "200":
+          description: OK
+
+  /sessions/{session_id}/refine:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      summary: Trigger LLM refinement loop (stage 1b)
+      responses:
+        "202":
+          description: Refinement started
+    get:
+      summary: Get latest brief draft + open clarifying questions
+      responses:
+        "200":
+          description: OK
+
+  /sessions/{session_id}/questions/{question_id}:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: question_id, in: path, required: true, schema: {type: string, format: uuid}}
+    patch:
+      summary: Answer a clarifying question
+      responses:
+        "200": {description: OK}
+
+  /sessions/{session_id}/generate:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      summary: Trigger 7-epic dossier generation (stage 1c)
+      responses:
+        "202":
+          description: Generation started
+
+  /sessions/{session_id}/dossier:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      summary: Get all 7 dossier epics for this session
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/DossierEpic"}
+
+  /sessions/{session_id}/dossier/{epic_slug}:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: epic_slug, in: path, required: true, schema: {type: string}}
+    get:
+      summary: Get a specific dossier epic (with content)
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Request a revision on this epic (stage 1d)
+      responses:
+        "202": {description: Revision queued}
+
+  /sessions/{session_id}/dossier/{epic_slug}/reviews:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: epic_slug, in: path, required: true, schema: {type: string}}
+    post:
+      summary: Add a review comment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/DossierReview"}
+      responses:
+        "201": {description: Added}
+    get:
+      summary: List all review comments for this epic
+      responses:
+        "200":
+          description: OK
+
+  /sessions/{session_id}/dossier/{epic_slug}/signoff:
+    parameters:
+      - {name: session_id, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: epic_slug, in: path, required: true, schema: {type: string}}
+    post:
+      summary: Founder signs off on epic (7/7 = session COMPLETE)
+      responses:
+        "200":
+          description: Signed off
