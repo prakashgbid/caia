@@ -1,5 +1,5 @@
 /**
- * Wizard Step 7 — Atlas (Architecture).
+ * Wizard Step 4 — Information Architecture.
  * Demo-mode preview per CAIA-402/405/406. Original at .backend-real.tsx.bak.
  */
 
@@ -11,11 +11,11 @@ export default async function ArchitecturePage(): Promise<React.JSX.Element> {
   return (
     <DemoStepPreview
       step="architecture"
-      stepNumber={7}
-      title="Atlas (Architecture)"
-      description={"Final CAIA architecture ratification: tech stack, deployment model, observability, security, and factory dispatch plan."}
-      features={["Full tech stack and rationale (chosen from ratified ADRs)", "Deployment model (per-app dedicated infrastructure)", "Observability, SLOs, on-call plan", "Handoff to the CAIA factory for build execution"]}
-      nextStep="Done"
+      stepNumber={4}
+      title="Information Architecture"
+      description={"The Atlas agent maps entities, pages, and flows for your product. Output feeds directly into the Proposal step."}
+      features={["Entity map (User, Session, Order, etc.)", "Page inventory and hierarchy", "Cross-page user flows", "Data model draft ready for the Proposal step"]}
+      nextStep="Proposal"
     />
   );
 }
