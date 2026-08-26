@@ -108,13 +108,17 @@ describe('middleware — mode=cloudflare (default, strict JWT)', () => {
   });
 });
 
-describe('middleware — mode=disabled (local dev no-op)', () => {
-  it('returns next() with x-auth-mode=disabled regardless of JWT presence', async () => {
-    setEnv({ WIZARD_AUTH_MODE: 'disabled' });
+describe('middleware — mode=disabled (public demo mode)', () => {
+  it('returns next() with x-auth-mode=disabled + demo tenant headers regardless of JWT presence', async () => {
+    // CAIA-404 fix: disabled mode now assigns a hardcoded demo tenant so
+    // downstream pages can render for anonymous visitors during the public
+    // demo phase. Real tenant lookup (findByEmail) is still skipped.
+    setEnv({ WIZARD_AUTH_MODE: 'disabled', DEMO_TENANT_ID: 'demo-tenant-x', DEMO_TENANT_EMAIL: 'demo@chiefaia.com' });
     const res = await middleware(makeRequest());
     expect(res.status).toBe(200);
     expect(res.headers.get('x-auth-mode')).toBe('disabled');
-    expect(res.headers.get('x-tenant-id')).toBeNull();
+    expect(res.headers.get('x-tenant-id')).toBe('demo-tenant-x');
+    expect(res.headers.get('x-tenant-email')).toBe('demo@chiefaia.com');
     expect(verifyMock).not.toHaveBeenCalled();
     expect(findByEmailMock).not.toHaveBeenCalled();
   });
