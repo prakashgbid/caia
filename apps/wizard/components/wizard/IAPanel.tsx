@@ -1,19 +1,17 @@
 'use client';
 
 /**
- * <IAPanel> — Stage 4 Information Architecture surface. Calls
- * POST /api/wizard/ia/demo, renders the markdown IA pack. Same shape
- * as ProposalPanel; the two are near-siblings that both consume a
- * grand idea + interview transcript.
+ * <IAPanel> — Stage 4 Information Architecture generator. Tailwind styled.
+ * Auto-advances to /wizard/proposal after successful generation (user
+ * clicks the primary button which routes forward).
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, Copy, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 
-interface Turn {
-  role: 'user' | 'assistant';
-  content: string;
-}
+interface Turn { role: 'user' | 'assistant'; content: string; }
 
 const DEMO_IDEA_FALLBACK =
   'A neighborhood-economy super-platform (Stolution) that connects small businesses, freelancers, and neighbors through StolBiz/StolShop/StolWork/StolServ marketplaces. Public directory pages funded by ads, no cart/checkout in MVP.';
@@ -25,11 +23,10 @@ const DEMO_TRANSCRIPT_FALLBACK: Turn[] = [
   { role: 'user', content: 'QR sticker in storefront window with UTM. Target 30% see 100+ page views month one.' },
 ];
 
-export interface IAPanelProps {
-  initialIdea?: string;
-}
+export interface IAPanelProps { initialIdea?: string; }
 
 export function IAPanel({ initialIdea }: IAPanelProps): React.JSX.Element {
+  const router = useRouter();
   const [idea, setIdea] = useState<string>(initialIdea ?? '');
   const [transcriptText, setTranscriptText] = useState<string>(JSON.stringify(DEMO_TRANSCRIPT_FALLBACK, null, 2));
   const [ia, setIa] = useState<string>('');
@@ -89,70 +86,105 @@ export function IAPanel({ initialIdea }: IAPanelProps): React.JSX.Element {
       await navigator.clipboard.writeText(ia);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* noop */
-    }
+    } catch { /* noop */ }
   }, [ia]);
 
+  const goNext = useCallback(() => {
+    router.push('/wizard/proposal?idea=' + encodeURIComponent(idea));
+  }, [router, idea]);
+
   return (
-    <Card data-testid="ia-panel">
-      <CardHeader>
-        <CardTitle>Step 4 — Information Architecture</CardTitle>
-        <CardDescription>
-          Turn your grand idea + interview into an entity map, page inventory, and user flows a
-          designer + engineer can build against. Feeds the Proposal (Step 5) and Design (Step 6) steps.
+    <Card className="border-border/60 bg-card/50 backdrop-blur-sm shadow-2xl shadow-primary/5">
+      <CardHeader className="space-y-3">
+        <div className="inline-flex items-center gap-2 w-fit px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+          <Sparkles className="w-3 h-3" />
+          Step 4 · Information Architecture
+        </div>
+        <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight">
+          The <span className="text-brand-gradient">map</span> of your app.
+        </CardTitle>
+        <CardDescription className="text-base leading-relaxed">
+          Entities, pages, user flows, and MVP cuts — drawn from your idea + interview. Feeds the Proposal (Step 5) and Design (Step 6).
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Grand idea (from Step 2)</label>
-          <textarea value={idea} onChange={(e) => setIdea(e.target.value)} data-testid="ia-idea" rows={3} style={{ width: '100%' }} />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Interview transcript (JSON array — optional)</label>
-          <textarea
-            value={transcriptText}
-            onChange={(e) => setTranscriptText(e.target.value)}
-            data-testid="ia-transcript"
-            rows={6}
-            style={{ width: '100%', fontFamily: 'ui-monospace, monospace', fontSize: 12 }}
-          />
-          <small style={{ display: 'block', marginTop: 4, color: '#94a3b8', fontSize: 12 }}>
-            Pre-filled with a Stolution sample for the demo. Replace with your Step 3 transcript.
-          </small>
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-          <Button type="button" onClick={generate} disabled={busy || idea.trim().length < 10} data-testid="ia-generate">
-            {busy ? 'Mapping the product…' : ia ? 'Regenerate' : 'Generate IA pack →'}
-          </Button>
-          {meta && <span style={{ fontSize: 12, color: '#94a3b8' }}>{meta.model} · {meta.latencyMs}ms · ${meta.costUsd?.toFixed(4)} · {meta.turns} turns</span>}
-        </div>
-        {error && <div data-testid="ia-error" style={{ padding: 12, background: '#7f1d1d', color: '#fee2e2', borderRadius: 6, marginBottom: 12, fontSize: 13 }}>{error}</div>}
-        {ia && (
+        <div className="space-y-4">
           <div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-              <Badge variant="default">IA pack</Badge>
-              <Button type="button" variant="outline" onClick={copy} data-testid="ia-copy">{copied ? 'Copied!' : 'Copy markdown'}</Button>
-            </div>
-            <div
-              data-testid="ia-output"
-              style={{
-                padding: 20,
-                background: '#0f172a',
-                borderRadius: 8,
-                color: '#e2e8f0',
-                fontSize: 14,
-                lineHeight: 1.6,
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'ui-monospace, monospace',
-                maxHeight: 720,
-                overflowY: 'auto',
-              }}
-            >
-              {ia}
-            </div>
+            <label className="block text-sm font-medium mb-2">Grand idea (from Step 2)</label>
+            <textarea
+              value={idea}
+              onChange={(e) => setIdea(e.target.value)}
+              data-testid="ia-idea"
+              rows={3}
+              className="w-full p-3 text-sm rounded-lg border border-border bg-background/50 focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+            />
           </div>
-        )}
+          <div>
+            <label className="block text-sm font-medium mb-2">Interview transcript (JSON — optional)</label>
+            <textarea
+              value={transcriptText}
+              onChange={(e) => setTranscriptText(e.target.value)}
+              data-testid="ia-transcript"
+              rows={6}
+              className="w-full p-3 text-xs font-mono rounded-lg border border-border bg-background/50 focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Pre-filled with a Stolution sample. Replace with your Step 3 transcript for a personalized IA.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Button
+              type="button"
+              onClick={generate}
+              disabled={busy || idea.trim().length < 10}
+              data-testid="ia-generate"
+              className="h-11 px-6 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold disabled:opacity-50"
+            >
+              {busy ? (<><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Mapping the product…</>) : ia ? 'Regenerate' : (<>Generate IA pack<ArrowRight className="w-4 h-4 ml-1.5" /></>)}
+            </Button>
+            {meta && (
+              <span className="text-xs text-muted-foreground tabular-nums ml-auto">
+                {meta.model} · {meta.latencyMs}ms · ${meta.costUsd?.toFixed(5)}
+              </span>
+            )}
+          </div>
+
+          {error && (
+            <div data-testid="ia-error" className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2.5 text-sm">
+              {error}
+            </div>
+          )}
+
+          {ia && (
+            <div className="animate-fade-in-up space-y-4 pt-2">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-primary/15 text-primary border-primary/30">IA pack</Badge>
+                <Button type="button" variant="outline" size="sm" onClick={copy} data-testid="ia-copy">
+                  {copied ? <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
+                  {copied ? 'Copied!' : 'Copy markdown'}
+                </Button>
+              </div>
+              <div
+                data-testid="ia-output"
+                className="prose prose-invert max-w-none p-6 rounded-xl bg-muted/30 border border-border/60 whitespace-pre-wrap text-sm leading-relaxed font-mono text-xs sm:text-sm max-h-[720px] overflow-y-auto scrollbar-thin"
+              >
+                {ia}
+              </div>
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  onClick={goNext}
+                  data-testid="ia-continue"
+                  className="h-11 px-6 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold"
+                >
+                  Looks good — draft the Proposal
+                  <ArrowRight className="w-4 h-4 ml-1.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

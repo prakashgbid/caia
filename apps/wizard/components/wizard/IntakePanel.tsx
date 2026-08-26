@@ -1,17 +1,13 @@
 'use client';
 
 /**
- * <IntakePanel> — the new template-driven idea intake surface.
- *
- * Replaces the chat-style Interview with a deterministic flow:
- *   Step A: big textarea (with example placeholder + "Show examples" toggle)
- *   Step B: analyzer runs → shows exactly N gap questions with MC + 5th "type my own"
- *   Step C: finalize → shows Stage-A summary card the founder confirms
- *
- * All state in memory only (session persistence deferred until after MVP).
+ * <IntakePanel> — Stage 3 template-driven intake. Tailwind styled.
+ * Flow: brief → analyzing → gap-fill (with progress) → finalizing → summary.
  */
 
 import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, CheckCircle2, Loader2, Lightbulb, PencilLine, RotateCcw, Sparkles } from 'lucide-react';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 
 type Phase = 'brief' | 'analyzing' | 'gap-fill' | 'finalizing' | 'summary' | 'error';
@@ -50,11 +46,12 @@ const EXAMPLES = [
   },
   {
     label: 'Small-shop directory',
-    text: 'A directory app for small businesses on my street. Each shop gets a page they can update in 30 seconds — hours, today\'s specials, a photo. Neighbors browse by walking distance. First market is my Brooklyn neighborhood. Later we add reviews and simple ordering.',
+    text: "A directory app for small businesses on my street. Each shop gets a page they can update in 30 seconds — hours, today's specials, a photo. Neighbors browse by walking distance. First market is my Brooklyn neighborhood. Later we add reviews and simple ordering.",
   },
 ];
 
 export function IntakePanel(): React.JSX.Element {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>('brief');
   const [ideaText, setIdeaText] = useState('');
   const [showExamples, setShowExamples] = useState(false);
@@ -65,6 +62,30 @@ export function IntakePanel(): React.JSX.Element {
   const [customTexts, setCustomTexts] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<{ productName: string; summaryCard: string; model: string; latencyMs: number; costUsd: number } | null>(null);
+
+  const finalize = useCallback(async (a: AnalyzerResult, answers: Record<string, string | string[]>) => {
+    setPhase('finalizing');
+    try {
+      const res = await fetch('/api/wizard/intake/finalize', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ideaText, filledSlots: a.filledSlots, gapAnswers: answers }),
+      });
+      const body = (await res.json()) as { ok: boolean; productName?: string; summaryCard?: string; model?: string; latencyMs?: number; costUsd?: number; error?: string; detail?: string };
+      if (!res.ok || !body.ok || !body.summaryCard) throw new Error(body.detail || body.error || `HTTP ${res.status}`);
+      setSummary({
+        productName: body.productName ?? 'Your app',
+        summaryCard: body.summaryCard,
+        model: body.model ?? '',
+        latencyMs: body.latencyMs ?? 0,
+        costUsd: body.costUsd ?? 0,
+      });
+      setPhase('summary');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setPhase('error');
+    }
+  }, [ideaText]);
 
   const submitBrief = useCallback(async () => {
     if (ideaText.trim().length < 15) {
@@ -101,25 +122,17 @@ export function IntakePanel(): React.JSX.Element {
       setGapAnswers({});
       setGapIdx(0);
       if (result.gaps.length === 0) {
-        // Nothing to ask — go straight to finalize
         await finalize(result, {});
       } else {
-        // Fire parallel option-gen requests to populate each gap's MC options.
-        // Analyzer returns fast with empty options[]; this fills them in
-        // ~5-8s parallel. Enter phase gap-fill immediately so the first
-        // question is visible while remaining options load in background.
         setPhase('gap-fill');
+        // Fire parallel option-gen requests to populate MC options
         const enriched = await Promise.all(
           result.gaps.map(async (g) => {
             try {
               const r = await fetch('/api/wizard/intake/options', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                  slotName: g.slotName,
-                  ideaText,
-                  productWorkingName: result.productWorkingName,
-                }),
+                body: JSON.stringify({ slotName: g.slotName, ideaText, productWorkingName: result.productWorkingName }),
               });
               const b = (await r.json()) as { ok: boolean; options?: string[] };
               return { ...g, options: b.ok && b.options ? b.options : g.options };
@@ -134,34 +147,7 @@ export function IntakePanel(): React.JSX.Element {
       setError(e instanceof Error ? e.message : String(e));
       setPhase('error');
     }
-  }, [ideaText]);
-
-  const finalize = useCallback(async (a: AnalyzerResult, answers: Record<string, string | string[]>) => {
-    setPhase('finalizing');
-    try {
-      const res = await fetch('/api/wizard/intake/finalize', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ideaText, filledSlots: a.filledSlots, gapAnswers: answers }),
-      });
-      const body = (await res.json()) as {
-        ok: boolean; productName?: string; summaryCard?: string; model?: string; latencyMs?: number; costUsd?: number;
-        error?: string; detail?: string;
-      };
-      if (!res.ok || !body.ok || !body.summaryCard) throw new Error(body.detail || body.error || `HTTP ${res.status}`);
-      setSummary({
-        productName: body.productName ?? 'Your app',
-        summaryCard: body.summaryCard,
-        model: body.model ?? '',
-        latencyMs: body.latencyMs ?? 0,
-        costUsd: body.costUsd ?? 0,
-      });
-      setPhase('summary');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setPhase('error');
-    }
-  }, [ideaText]);
+  }, [ideaText, finalize]);
 
   const currentGap = useMemo<GapSlot | null>(() => {
     if (!analyzer || gapIdx >= analyzer.gaps.length) return null;
@@ -186,19 +172,14 @@ export function IntakePanel(): React.JSX.Element {
 
   const nextGap = useCallback(async () => {
     if (!analyzer || !currentGap) return;
-    // Ensure this slot has an answer
     const a = gapAnswers[currentGap.slotName];
     if ((typeof a === 'string' && a.trim().length === 0) || a === undefined) {
       setError('Pick an option or type your own answer before continuing.');
       return;
     }
     setError(null);
-    if (gapIdx + 1 < analyzer.gaps.length) {
-      setGapIdx(gapIdx + 1);
-    } else {
-      // All gaps answered — go finalize
-      await finalize(analyzer, gapAnswers);
-    }
+    if (gapIdx + 1 < analyzer.gaps.length) setGapIdx(gapIdx + 1);
+    else await finalize(analyzer, gapAnswers);
   }, [analyzer, currentGap, gapAnswers, gapIdx, finalize]);
 
   const skipGap = useCallback(async () => {
@@ -208,13 +189,9 @@ export function IntakePanel(): React.JSX.Element {
       return;
     }
     setError(null);
-    // Record an explicit skip
     setGapAnswers((prev) => ({ ...prev, [currentGap.slotName]: '' }));
-    if (gapIdx + 1 < analyzer.gaps.length) {
-      setGapIdx(gapIdx + 1);
-    } else {
-      await finalize(analyzer, gapAnswers);
-    }
+    if (gapIdx + 1 < analyzer.gaps.length) setGapIdx(gapIdx + 1);
+    else await finalize(analyzer, gapAnswers);
   }, [analyzer, currentGap, gapIdx, gapAnswers, finalize]);
 
   const startOver = useCallback(() => {
@@ -227,13 +204,19 @@ export function IntakePanel(): React.JSX.Element {
   }, []);
 
   return (
-    <Card data-testid="intake-panel">
-      <CardHeader>
-        <CardTitle>Tell us about your idea</CardTitle>
-        <CardDescription>
+    <Card className="border-border/60 bg-card/50 backdrop-blur-sm shadow-2xl shadow-primary/5">
+      <CardHeader className="space-y-3">
+        <div className="inline-flex items-center gap-2 w-fit px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+          <Sparkles className="w-3 h-3" />
+          Step 3 · Interview
+        </div>
+        <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Tell us about <span className="text-brand-gradient">your idea</span>.
+        </CardTitle>
+        <CardDescription className="text-base leading-relaxed">
           Just describe what you want to build in your own words — a couple sentences is plenty.
-          We'll ask a few short follow-up questions to fill in what we need, then show you
-          what CAIA plans to build for you. Should take 5-10 minutes total.
+          We&apos;ll fill in what we can, ask a few short follow-up questions for the rest, then show
+          you what CAIA plans to build.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -250,9 +233,12 @@ export function IntakePanel(): React.JSX.Element {
         )}
 
         {phase === 'analyzing' && (
-          <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>
-            <p style={{ fontSize: 15, marginBottom: 8 }}>Reading your idea…</p>
-            <p style={{ fontSize: 13 }}>~15 seconds. We're figuring out what we already know and what we need to ask you.</p>
+          <div className="py-12 text-center animate-fade-in-up">
+            <Loader2 className="w-8 h-8 text-primary mx-auto animate-spin mb-4" />
+            <p className="text-base font-medium text-foreground">Reading your idea…</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              About 15 seconds. We&apos;re figuring out what we already know and what to ask you.
+            </p>
           </div>
         )}
 
@@ -274,49 +260,43 @@ export function IntakePanel(): React.JSX.Element {
         )}
 
         {phase === 'finalizing' && (
-          <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>
-            <p style={{ fontSize: 15, marginBottom: 8 }}>Putting it all together…</p>
-            <p style={{ fontSize: 13 }}>~15 seconds. We're drafting a summary of what we heard for you to confirm.</p>
+          <div className="py-12 text-center animate-fade-in-up">
+            <Loader2 className="w-8 h-8 text-primary mx-auto animate-spin mb-4" />
+            <p className="text-base font-medium text-foreground">Putting it all together…</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              About 15 seconds. Drafting a summary of what we heard for you to confirm.
+            </p>
           </div>
         )}
 
         {phase === 'summary' && summary && (
-          <div>
-            <div style={{ marginBottom: 12, padding: 10, background: '#065f46', color: '#d1fae5', borderRadius: 6, fontSize: 13 }}>
-              ✓ Here's what we heard. Give it a read — if it captures your idea, we're ready to keep going.
+          <div className="animate-fade-in-up space-y-4">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>Here&apos;s what we heard. If it captures your idea, we&apos;re ready to keep going.</span>
             </div>
             <div
               data-testid="intake-summary"
-              style={{
-                padding: 24,
-                background: '#0f172a',
-                borderRadius: 8,
-                color: '#e2e8f0',
-                fontSize: 14,
-                lineHeight: 1.6,
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'ui-serif, Georgia, serif',
-                marginBottom: 16,
-              }}
+              className="prose prose-invert max-w-none p-6 rounded-xl bg-muted/30 border border-border/60 whitespace-pre-wrap text-sm leading-relaxed"
+              style={{ fontFamily: 'var(--font-sans)' }}
             >
               {summary.summaryCard}
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <Button
                 type="button"
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.location.href = '/wizard/architecture?idea=' + encodeURIComponent(ideaText);
-                  }
-                }}
+                onClick={() => router.push('/wizard/architecture?idea=' + encodeURIComponent(ideaText))}
                 data-testid="intake-continue"
+                className="h-11 px-6 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold"
               >
-                Looks good — keep going →
+                Looks good — keep going
+                <ArrowRight className="w-4 h-4 ml-1.5" />
               </Button>
-              <Button type="button" variant="outline" onClick={startOver} data-testid="intake-restart">
+              <Button type="button" variant="outline" onClick={startOver} data-testid="intake-restart" className="h-11">
+                <RotateCcw className="w-4 h-4 mr-1.5" />
                 Start over
               </Button>
-              <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 8 }}>
+              <span className="text-xs text-muted-foreground ml-auto tabular-nums">
                 {summary.model} · {summary.latencyMs}ms · ${summary.costUsd.toFixed(5)}
               </span>
             </div>
@@ -324,11 +304,14 @@ export function IntakePanel(): React.JSX.Element {
         )}
 
         {phase === 'error' && (
-          <div>
-            <div style={{ padding: 12, background: '#7f1d1d', color: '#fee2e2', borderRadius: 6, marginBottom: 12, fontSize: 13 }}>
+          <div className="space-y-4">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 text-sm">
               {error ?? 'Something went wrong.'}
             </div>
-            <Button type="button" onClick={startOver} data-testid="intake-restart-from-error">Start over</Button>
+            <Button type="button" onClick={startOver} data-testid="intake-restart-from-error">
+              <RotateCcw className="w-4 h-4 mr-1.5" />
+              Start over
+            </Button>
           </div>
         )}
       </CardContent>
@@ -347,75 +330,75 @@ function BriefPhase(props: {
 }): React.JSX.Element {
   const wordCount = props.ideaText.trim().split(/\s+/).filter(Boolean).length;
   return (
-    <div>
-      <label htmlFor="intake-idea" style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
-        In your own words — what do you want to build?
-      </label>
-      <textarea
-        id="intake-idea"
-        data-testid="intake-idea"
-        value={props.ideaText}
-        onChange={(e) => props.setIdeaText(e.target.value)}
-        rows={8}
-        placeholder={props.examples[0]!.text}
-        style={{
-          width: '100%',
-          padding: 12,
-          fontSize: 14,
-          lineHeight: 1.5,
-          border: '1px solid #334155',
-          borderRadius: 6,
-          background: '#0b1220',
-          color: '#e2e8f0',
-          fontFamily: 'inherit',
-        }}
-      />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>{wordCount} words · aim for 30-100</span>
-        <button
-          type="button"
-          onClick={() => props.setShowExamples(!props.showExamples)}
-          data-testid="intake-toggle-examples"
-          style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
-        >
-          {props.showExamples ? 'Hide examples' : 'Show 3 examples from different domains'}
-        </button>
+    <div className="space-y-4 animate-fade-in-up">
+      <div>
+        <label htmlFor="intake-idea" className="block text-sm font-medium mb-2">
+          In your own words — what do you want to build?
+        </label>
+        <textarea
+          id="intake-idea"
+          data-testid="intake-idea"
+          value={props.ideaText}
+          onChange={(e) => props.setIdeaText(e.target.value)}
+          rows={8}
+          placeholder={props.examples[0]!.text}
+          className="w-full p-4 text-sm leading-relaxed rounded-lg border border-border bg-background/50 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all resize-y"
+        />
+        <div className="mt-2 flex justify-between items-center text-xs">
+          <span className="text-muted-foreground tabular-nums">{wordCount} words · aim for 30–100</span>
+          <button
+            type="button"
+            onClick={() => props.setShowExamples(!props.showExamples)}
+            data-testid="intake-toggle-examples"
+            className="inline-flex items-center gap-1 text-primary hover:text-primary/80 font-medium transition-colors"
+          >
+            <Lightbulb className="w-3 h-3" />
+            {props.showExamples ? 'Hide examples' : 'Show 3 examples from different domains'}
+          </button>
+        </div>
       </div>
 
       {props.showExamples && (
-        <div style={{ marginTop: 12, padding: 12, background: '#0b1220', borderRadius: 6, border: '1px solid #1e293b' }}>
+        <div className="rounded-lg border border-border/60 bg-muted/20 p-4 space-y-4 animate-fade-in-up">
           {props.examples.map((ex, i) => (
-            <div key={i} style={{ marginBottom: i === props.examples.length - 1 ? 0 : 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <strong style={{ color: '#cbd5e1', fontSize: 13 }}>{ex.label}</strong>
+            <div key={i} className={i === props.examples.length - 1 ? '' : 'pb-4 border-b border-border/40'}>
+              <div className="flex justify-between items-center mb-1.5">
+                <strong className="text-xs font-semibold text-foreground uppercase tracking-wider">{ex.label}</strong>
                 <button
                   type="button"
                   onClick={() => props.setIdeaText(ex.text)}
                   data-testid={`intake-use-example-${i}`}
-                  style={{ background: 'none', border: '1px solid #475569', color: '#94a3b8', fontSize: 11, padding: '2px 8px', borderRadius: 4, cursor: 'pointer' }}
+                  className="text-xs px-2.5 py-1 rounded border border-border hover:border-primary/50 hover:text-primary transition-colors"
                 >
                   Use this
                 </button>
               </div>
-              <p style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.5, margin: 0 }}>{ex.text}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{ex.text}</p>
             </div>
           ))}
         </div>
       )}
 
       {props.error && (
-        <div style={{ marginTop: 12, padding: 10, background: '#7f1d1d', color: '#fee2e2', borderRadius: 6, fontSize: 13 }}>
+        <div className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2.5 text-sm">
           {props.error}
         </div>
       )}
 
-      <div style={{ marginTop: 16 }}>
-        <Button type="button" onClick={props.onSubmit} disabled={props.ideaText.trim().length < 15} data-testid="intake-submit">
-          Analyze my idea →
+      <div className="pt-2 flex items-center gap-3 flex-wrap">
+        <Button
+          type="button"
+          onClick={props.onSubmit}
+          disabled={props.ideaText.trim().length < 15}
+          data-testid="intake-submit"
+          className="h-11 px-6 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold"
+        >
+          Analyze my idea
+          <ArrowRight className="w-4 h-4 ml-1.5" />
         </Button>
-        <p style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>
-          Takes about 15 seconds. Then we'll show you exactly how many quick follow-up questions we need to answer before we can build.
-        </p>
+        <span className="text-xs text-muted-foreground">
+          ~15 seconds. Then we&apos;ll show you the exact follow-ups (usually 3–5).
+        </span>
       </div>
     </div>
   );
@@ -439,61 +422,85 @@ function GapPhase(props: {
   const currentNum = props.gapIdx + 1;
   const selectedValue = typeof props.answer === 'string' ? props.answer : undefined;
   const options = props.gap.enumOptions ?? props.gap.options;
+  const progressPct = ((currentNum - 1) / totalGaps) * 100;
+  const optionsLoading = options.length === 0;
 
   return (
-    <div>
-      <div style={{ marginBottom: 16, padding: 10, background: '#0b1220', borderRadius: 6, fontSize: 13, color: '#cbd5e1' }}>
-        <strong>Question {currentNum} of {totalGaps}</strong>
-        {props.gap.required ? <span style={{ color: '#fca5a5', marginLeft: 8 }}>required</span> : <span style={{ color: '#94a3b8', marginLeft: 8 }}>optional</span>}
-        {' · '}Working name: <strong>{props.analyzer.productWorkingName}</strong>
+    <div className="space-y-6 animate-fade-in-up" key={props.gap.slotName}>
+      {/* Progress header */}
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">Question {currentNum} of {totalGaps}</span>
+            <Badge variant={props.gap.required ? 'destructive' : 'secondary'} className="text-[10px] uppercase tracking-wider">
+              {props.gap.required ? 'required' : 'optional'}
+            </Badge>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            Working name: <strong className="text-foreground">{props.analyzer.productWorkingName}</strong>
+          </span>
+        </div>
+        <div className="h-1 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-brand-gradient transition-all duration-500"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
       </div>
 
-      <p style={{ fontSize: 15, color: '#e2e8f0', marginBottom: 12, lineHeight: 1.5 }}>{props.gap.question}</p>
+      {/* Question */}
+      <p className="text-lg text-foreground leading-relaxed">{props.gap.question}</p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {options.map((opt, i) => {
-          const isSelected = !props.customInputMode && selectedValue === opt;
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => props.onSelectOption(opt)}
-              data-testid={`intake-option-${i}`}
-              style={{
-                textAlign: 'left',
-                padding: '10px 14px',
-                fontSize: 14,
-                border: isSelected ? '2px solid #10b981' : '1px solid #334155',
-                background: isSelected ? '#064e3b' : '#0b1220',
-                color: '#e2e8f0',
-                borderRadius: 6,
-                cursor: 'pointer',
-                lineHeight: 1.4,
-              }}
-            >
-              {opt}
-            </button>
-          );
-        })}
-        <div>
+      {/* Options */}
+      {optionsLoading ? (
+        <div className="space-y-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-14 rounded-lg bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {options.map((opt, i) => {
+            const isSelected = !props.customInputMode && selectedValue === opt;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => props.onSelectOption(opt)}
+                data-testid={`intake-option-${i}`}
+                className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
+                  isSelected
+                    ? 'border-primary/60 bg-primary/10 text-foreground ring-1 ring-primary/40'
+                    : 'border-border hover:border-primary/40 hover:bg-muted/40 text-foreground/90'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5 ${
+                      isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {isSelected ? <CheckCircle2 className="w-4 h-4" /> : String.fromCharCode(65 + i)}
+                  </span>
+                  <span className="text-sm leading-relaxed">{opt}</span>
+                </div>
+              </button>
+            );
+          })}
           <button
             type="button"
             onClick={props.onEnableCustom}
             data-testid="intake-option-custom"
-            style={{
-              textAlign: 'left',
-              padding: '10px 14px',
-              fontSize: 14,
-              border: props.customInputMode ? '2px solid #10b981' : '1px dashed #64748b',
-              background: props.customInputMode ? '#064e3b' : 'transparent',
-              color: '#94a3b8',
-              borderRadius: 6,
-              cursor: 'pointer',
-              width: '100%',
-              lineHeight: 1.4,
-            }}
+            className={`w-full text-left px-4 py-3 rounded-lg border-2 border-dashed transition-all ${
+              props.customInputMode
+                ? 'border-primary/50 bg-primary/5 text-foreground'
+                : 'border-border/60 hover:border-primary/40 text-muted-foreground hover:text-foreground'
+            }`}
           >
-            ✎ Enter my own answer
+            <div className="flex items-center gap-3">
+              <PencilLine className="w-4 h-4" />
+              <span className="text-sm">Enter my own answer</span>
+            </div>
           </button>
           {props.customInputMode && (
             <textarea
@@ -502,34 +509,32 @@ function GapPhase(props: {
               onChange={(e) => props.onCustomText(e.target.value)}
               rows={3}
               placeholder="Type your answer here…"
-              style={{
-                width: '100%',
-                marginTop: 8,
-                padding: 10,
-                fontSize: 14,
-                border: '1px solid #334155',
-                borderRadius: 6,
-                background: '#0b1220',
-                color: '#e2e8f0',
-                fontFamily: 'inherit',
-              }}
+              className="w-full mt-2 p-3 text-sm leading-relaxed rounded-lg border border-border bg-background/50 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+              autoFocus
             />
           )}
         </div>
-      </div>
+      )}
 
       {props.error && (
-        <div style={{ marginTop: 12, padding: 10, background: '#7f1d1d', color: '#fee2e2', borderRadius: 6, fontSize: 13 }}>
+        <div className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2.5 text-sm">
           {props.error}
         </div>
       )}
 
-      <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
-        <Button type="button" onClick={props.onNext} data-testid="intake-next">
-          {currentNum === totalGaps ? 'Finish & show me the summary →' : 'Next question →'}
+      <div className="pt-2 flex items-center gap-3 flex-wrap">
+        <Button
+          type="button"
+          onClick={props.onNext}
+          data-testid="intake-next"
+          disabled={optionsLoading}
+          className="h-11 px-6 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold"
+        >
+          {currentNum === totalGaps ? 'Finish & show summary' : 'Next question'}
+          <ArrowRight className="w-4 h-4 ml-1.5" />
         </Button>
         {!props.gap.required && (
-          <Button type="button" variant="outline" onClick={props.onSkip} data-testid="intake-skip">
+          <Button type="button" variant="outline" onClick={props.onSkip} data-testid="intake-skip" className="h-11">
             Skip this one
           </Button>
         )}

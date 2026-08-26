@@ -1,67 +1,65 @@
+'use client';
+
 /**
  * Wizard Step 7 — Atlas.
  *
- * Public demo entry (no projectId in the path). The real, backend-wired
- * Atlas UI lives under `atlas/[projectId]/page.tsx` and requires the
- * Postgres + NATS + atlas-prompt-router wire. For the public demo tour
- * the /wizard/atlas landing renders a DemoStepPreview matching the
- * Interview/IA/Proposal/Design cards (CAIA-408, 2026-08-26).
+ * The final tour step. Currently a warm DEMO PREVIEW with a big
+ * "Finish tour → Factory Live" CTA that routes to chiefaia.com/factory.
  */
 
-'use client';
+import { ArrowRight, CheckCircle2, Rocket, Sparkles } from 'lucide-react';
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 
-import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
-
-export const dynamic = 'force-dynamic';
-
-export default function AtlasDemoPage(): React.JSX.Element {
-  const router = useRouter();
+export default function AtlasPage(): React.JSX.Element {
   return (
-    <Card data-testid="wizard-step-atlas-demo-preview">
-      <CardHeader>
-        <CardTitle>Step 7 — Atlas</CardTitle>
-        <CardDescription>
-          The ticket tree and the design-id mapping. CAIA turns the Grand Idea, IA, and Design
-          into an implementation-ready backlog with per-ticket prompts.
+    <Card className="border-border/60 bg-card/50 backdrop-blur-sm shadow-2xl shadow-primary/5">
+      <CardHeader className="space-y-3">
+        <div className="inline-flex items-center gap-2 w-fit px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+          <Sparkles className="w-3 h-3" />
+          Step 7 · Atlas
+        </div>
+        <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight">
+          The <span className="text-brand-gradient">last piece</span> — your ticket tree.
+        </CardTitle>
+        <CardDescription className="text-base leading-relaxed">
+          CAIA turns the Grand Idea, IA, and Design into an implementation-ready backlog with per-ticket prompts. Everything traces back to a design decision.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div style={{ marginTop: 12, marginBottom: 20 }}>
-          <div
-            style={{
-              display: 'inline-block',
-              padding: '4px 10px',
-              borderRadius: 12,
-              background: '#1e40af',
-              color: '#dbeafe',
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            DEMO PREVIEW
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Badge className="bg-primary/15 text-primary border-primary/30">DEMO PREVIEW</Badge>
+            <span className="text-xs text-muted-foreground">In production this stage produces:</span>
           </div>
-          <p style={{ marginTop: 12, color: '#94a3b8', fontSize: 14 }}>
-            This step is running in demo mode. In production, this stage produces:
-          </p>
-          <ul style={{ marginTop: 10, paddingLeft: 20, color: '#cbd5e1', fontSize: 14, lineHeight: 1.6 }}>
-            <li>Ticket tree — Epic → Story → Task hierarchy in Jira/Linear</li>
-            <li>Design-id → ticket mapping so every ticket links back to a wireframe</li>
-            <li>Cursor/Copilot-ready implementation prompts per ticket</li>
-            <li>Full traceability: Grand Idea → IA → Proposal → Design → Atlas ticket</li>
+          <ul className="space-y-2.5">
+            {[
+              'Ticket tree — Epic → Story → Task hierarchy in Jira or Linear',
+              'Design-id → ticket mapping so every ticket links back to a wireframe',
+              'Cursor / Copilot-ready implementation prompts per ticket',
+              'Full traceability: Grand Idea → IA → Proposal → Design → Atlas ticket',
+            ].map((f, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/85 leading-relaxed">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>{f}</span>
+              </li>
+            ))}
           </ul>
-          <p style={{ marginTop: 20, color: '#94a3b8', fontSize: 14 }}>
-            You&apos;ve walked the whole 7-step tour. Click <strong>Finish tour</strong> to land on the live factory dashboard.
+        </div>
+
+        <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <Button
+            type="button"
+            onClick={() => { window.location.href = 'https://chiefaia.com/factory'; }}
+            data-testid="atlas-finish-tour"
+            className="h-11 px-6 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold"
+          >
+            <Rocket className="w-4 h-4 mr-1.5" />
+            Finish tour → Factory Live
+            <ArrowRight className="w-4 h-4 ml-1.5" />
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            You&apos;ve walked the whole 7-step tour. Factory Live shows what CAIA is producing right now.
           </p>
-          <div style={{ marginTop: 16 }}>
-            <Button
-              onClick={() => { window.location.href = 'https://chiefaia.com/factory'; }}
-              data-testid="atlas-finish-tour"
-              type="button"
-            >
-              Finish tour → Factory Live
-            </Button>
-          </div>
         </div>
       </CardContent>
     </Card>
