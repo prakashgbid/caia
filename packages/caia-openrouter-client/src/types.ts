@@ -57,6 +57,23 @@ export interface ORCallOptions {
    * when model is an explicit model id.
    */
   taskType?: 'reasoning' | 'code_gen' | 'code_review' | 'summarize' | 'json_extract' | 'long_context' | 'fast_chat' | 'safety_check';
+  /**
+   * Session-model stickiness. When set, this model is tried first (before
+   * any other selection logic) so a multi-turn conversation stays with the
+   * same model that answered turn 1, keeping tone/style consistent. Only
+   * falls through the ladder if the sticky model is currently down.
+   *
+   * The caller reads `result.model` from turn 1 and passes it back as
+   * `stickyModel` on turn 2+. Simple, stateless, works across restarts.
+   */
+  stickyModel?: string;
+  /**
+   * If true, includes a paid guarantee model as the last fallback slot
+   * (never a free model). Reliability > cost. Defaults to true.
+   * Set false for interior orchestrator calls where a 502 is fine to
+   * bubble up and the caller retries later.
+   */
+  paidFallback?: boolean;
 }
 
 export interface ORCallSuccess {

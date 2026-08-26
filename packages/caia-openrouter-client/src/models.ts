@@ -70,6 +70,24 @@ export async function refreshFreeTierLadder(
   }
 }
 
+/**
+ * PAID GUARANTEE — the always-available fallback model.
+ *
+ * OpenRouter's `models` fallback array is capped at 3 entries, so we
+ * spend the third slot on a paid model that never hits the shared
+ * free-tier bucket. Cost is trivial (~\$0.00006 per interview turn on
+ * mistral-nemo) but reliability is 100%.
+ *
+ * This is the "never-let-the-user-see-a-502" guarantee.
+ */
+export const PAID_GUARANTEE_MODEL = 'mistralai/mistral-nemo';
+
+/**
+ * Alternative paid guarantee for tasks that need long context (>128k).
+ * ~\$0.03/M prompt, \$0.13/M completion, 1M ctx window.
+ */
+export const PAID_LONG_CONTEXT_MODEL = 'qwen/qwen3.7-flash';
+
 export function getFreeTierLadder(): readonly string[] {
   return cachedFreeLadder ?? DEFAULT_FREE_TIER_LADDER;
 }

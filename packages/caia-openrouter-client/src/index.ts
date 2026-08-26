@@ -46,6 +46,8 @@ export {
   DEFAULT_FREE_TIER_LADDER,
   FREE_TIER_TASK_MAP,
   PAID_TIER_TASK_MAP,
+  PAID_GUARANTEE_MODEL,
+  PAID_LONG_CONTEXT_MODEL,
   getFreeTierLadder,
   refreshFreeTierLadder,
 } from './models.js';

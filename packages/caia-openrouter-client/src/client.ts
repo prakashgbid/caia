@@ -19,6 +19,8 @@ import {
   DEFAULT_FREE_TIER_LADDER,
   FREE_TIER_TASK_MAP,
   PAID_TIER_TASK_MAP,
+  PAID_GUARANTEE_MODEL,
+  PAID_LONG_CONTEXT_MODEL,
   getFreeTierLadder,
 } from './models.js';
 import { extractJson } from './json-extract.js';
@@ -56,37 +58,60 @@ interface OpenRouterResponse {
 }
 
 /**
- * Pick the ordered list of models to try, given the request.
+ * Pick the ordered list of models to send to OpenRouter's native `models`
+ * fallback array. Capped at 3 by OpenRouter (tested 2026-08-26 — returns
+ * 400 "models array must have 3 items or fewer" beyond that).
+ *
+ * Composition strategy:
+ *   1. Sticky model (if caller provided one from a prior turn) OR the
+ *      caller's `model` selection (pinned id / 'free' first-of-ladder /
+ *      'auto' task-tier choice)
+ *   2. A free-tier alternative (different upstream provider so a single
+ *      provider's shared-pool 429 doesn't fail both slots 1 and 2)
+ *   3. Paid guarantee model — mistral-nemo by default, or a long-context
+ *      variant if taskType='long_context'. Costs ~\$0.00006/turn but
+ *      makes the call effectively never fail from provider throttling.
+ *
+ * The paid guarantee slot can be disabled via opts.paidFallback=false.
  */
 function planModelLadder(opts: ORCallOptions): string[] {
   const selection = opts.model ?? 'free';
+  const ladder = getFreeTierLadder();
+  const sticky = opts.stickyModel && opts.stickyModel.trim() !== '' ? opts.stickyModel.trim() : null;
 
-  // Explicit model id — try it first, then fall back through the free
-  // ladder (excluding the pinned model to avoid double-try) so an
-  // upstream provider hiccup on the pinned model doesn't kill the call.
-  // Callers who truly want a single-shot no-fallback behavior can pass
-  // model:'auto' with an explicit taskType, or catch retryable errors
-  // and retry themselves.
-  if (typeof selection === 'string' && selection !== 'free' && selection !== 'auto') {
-    const ladder = getFreeTierLadder();
-    return [selection, ...ladder.filter((m) => m !== selection)].slice(0, 4);
+  // Slot 1: sticky wins; else user's selection resolves to a concrete model
+  let slot1: string;
+  if (sticky) {
+    slot1 = sticky;
+  } else if (typeof selection === 'string' && selection !== 'free' && selection !== 'auto') {
+    slot1 = selection;
+  } else if (selection === 'free') {
+    slot1 =
+      opts.taskType && FREE_TIER_TASK_MAP[opts.taskType]
+        ? FREE_TIER_TASK_MAP[opts.taskType]!
+        : ladder[0] ?? 'minimax/minimax-m3:free';
+  } else {
+    // 'auto' — paid tier
+    slot1 =
+      opts.taskType && PAID_TIER_TASK_MAP[opts.taskType]
+        ? PAID_TIER_TASK_MAP[opts.taskType]!
+        : PAID_TIER_TASK_MAP.reasoning!;
   }
 
-  if (selection === 'free') {
-    const ladder = getFreeTierLadder();
-    if (opts.taskType && FREE_TIER_TASK_MAP[opts.taskType]) {
-      const preferred = FREE_TIER_TASK_MAP[opts.taskType]!;
-      const rest = ladder.filter((m) => m !== preferred);
-      return [preferred, ...rest].slice(0, 5);
-    }
-    return [...ladder].slice(0, 5);
-  }
+  // Slot 2: a different free-tier model from a different upstream provider
+  const slot2 = ladder.find((m) => m !== slot1) ?? null;
 
-  // 'auto' — paid tier
-  if (opts.taskType && PAID_TIER_TASK_MAP[opts.taskType]) {
-    return [PAID_TIER_TASK_MAP[opts.taskType]!];
-  }
-  return [PAID_TIER_TASK_MAP.reasoning!];
+  // Slot 3: paid guarantee (unless disabled)
+  const wantPaid = opts.paidFallback !== false;
+  const slot3 = wantPaid
+    ? (opts.taskType === 'long_context' ? PAID_LONG_CONTEXT_MODEL : PAID_GUARANTEE_MODEL)
+    : null;
+
+  const models: string[] = [slot1];
+  if (slot2 && slot2 !== slot1) models.push(slot2);
+  if (slot3 && slot3 !== slot1 && slot3 !== slot2) models.push(slot3);
+  // OpenRouter caps the `models` array at 3.
+  return models.slice(0, 3);
 }
 
 const RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
@@ -99,7 +124,7 @@ async function callOnce(
   cfg: Required<ClientConfig>,
   apiKey: string,
   model: string,
-  opts: ORCallOptions,
+  opts: ORCallOptions & { __modelsArray?: string[] },
   perAttemptTimeoutMs: number,
 ): Promise<{ status: number; body: OpenRouterResponse; latencyMs: number }> {
   const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
@@ -111,6 +136,12 @@ async function callOnce(
     messages,
     max_tokens: opts.maxTokens ?? 1024,
   };
+  // OpenRouter native fallback — if the caller supplied a models list,
+  // pass it so OpenRouter tries them all in one round-trip (cap 3).
+  const modelsList = (opts as { __modelsArray?: string[] }).__modelsArray;
+  if (modelsList && Array.isArray(modelsList) && modelsList.length > 1) {
+    payload.models = modelsList.slice(0, 3);
+  }
   if (opts.responseFormat === 'json') {
     payload.response_format = { type: 'json_object' };
   }
@@ -185,75 +216,61 @@ export async function callOpenRouter(
   let lastRetryable = true;
   let attempts = 0;
 
-  for (const model of models) {
-    attempts += 1;
-    attempted.push(model);
-    if (Date.now() - overallStart > overallTimeout) {
-      return {
-        ok: false,
-        error: `overall timeout ${overallTimeout}ms exceeded before trying ${model}`,
-        retryable: true,
-        modelsAttempted: attempted,
+  // Single call to OpenRouter with the `models` array. OpenRouter tries
+  // them in order server-side and returns whichever succeeds — one round
+  // trip, no client-side loop. If ALL 3 fail (extremely rare — would
+  // require the paid guarantee to be down too), we return the aggregate
+  // error.
+  attempts += 1;
+  attempted.push(...models);
+  const primaryModel = models[0] ?? 'minimax/minimax-m3:free';
+  // Stash the fallback list so callOnce can add it to the payload.
+  const optsWithModels = Object.assign({}, opts, { __modelsArray: models });
+  try {
+    const { status, body } = await callOnce(cfg, apiKey, primaryModel, optsWithModels, overallTimeout);
+    if (status >= 200 && status < 300 && body.choices && body.choices[0]?.message?.content) {
+      const text = body.choices[0].message.content;
+      const usage = body.usage ?? {};
+      const result: ORCallResult = {
+        ok: true,
+        model: body.model ?? primaryModel,
+        text,
+        costUsd: usage.cost ?? 0,
         latencyMs: Date.now() - overallStart,
+        responseId: body.id ?? '',
+        usage: {
+          promptTokens: usage.prompt_tokens ?? 0,
+          completionTokens: usage.completion_tokens ?? 0,
+          totalTokens: usage.total_tokens ?? 0,
+        },
         attempts,
       };
-    }
-    try {
-      const { status, body } = await callOnce(cfg, apiKey, model, opts, perAttemptTimeout);
-      if (status >= 200 && status < 300 && body.choices && body.choices[0]?.message?.content) {
-        const text = body.choices[0].message.content;
-        const usage = body.usage ?? {};
-        const result: ORCallResult = {
-          ok: true,
-          model: body.model ?? model,
-          text,
-          costUsd: usage.cost ?? 0,
-          latencyMs: Date.now() - overallStart,
-          responseId: body.id ?? '',
-          usage: {
-            promptTokens: usage.prompt_tokens ?? 0,
-            completionTokens: usage.completion_tokens ?? 0,
-            totalTokens: usage.total_tokens ?? 0,
-          },
-          attempts,
-        };
-        if (opts.responseFormat === 'json') {
-          const parsed = extractJson(text);
-          if (parsed.ok) {
-            (result as { json?: unknown }).json = parsed.value;
-          } else {
-            return {
-              ok: false,
-              error: `json parse failed on model=${model}: ${parsed.reason}`,
-              retryable: false,
-              modelsAttempted: attempted,
-              latencyMs: Date.now() - overallStart,
-              attempts,
-            };
-          }
+      if (opts.responseFormat === 'json') {
+        const parsed = extractJson(text);
+        if (parsed.ok) {
+          (result as { json?: unknown }).json = parsed.value;
+        } else {
+          return {
+            ok: false,
+            error: `json parse failed on model=${result.model}: ${parsed.reason}`,
+            retryable: false,
+            modelsAttempted: attempted,
+            latencyMs: Date.now() - overallStart,
+            attempts,
+          };
         }
-        return result;
       }
-      // Non-2xx or malformed — including OpenRouter's pattern of returning
-      // HTTP 200 with an { error: { code: 429, message: "Upstream..." } }
-      // body when the upstream free-tier provider throttles or is down.
-      lastError = body.error?.message ?? `HTTP ${status} without choices`;
-      const inner = body.error?.code;
-      lastRetryable =
-        RETRYABLE_STATUSES.has(status) ||
-        (typeof inner === 'number' && RETRYABLE_STATUSES.has(inner)) ||
-        (typeof lastError === 'string' && /overload|rate.?limit|temporarily|timeout|upstream/i.test(lastError));
-      // Only stop the ladder for true auth failures (401/403 outer or inner).
-      // "Model unavailable for direct use", "invalid parameter", etc. mean
-      // THIS model is out, but the next one on the ladder might work.
-      const isAuthFatal =
-        status === 401 || status === 403 ||
-        (typeof inner === 'number' && (inner === 401 || inner === 403));
-      if (isAuthFatal) break;
-    } catch (e) {
-      lastError = e instanceof Error ? e.message : String(e);
-      lastRetryable = true;
+      return result;
     }
+    lastError = body.error?.message ?? `HTTP ${status} without choices (models tried: ${models.join(', ')})`;
+    const inner = body.error?.code;
+    lastRetryable =
+      RETRYABLE_STATUSES.has(status) ||
+      (typeof inner === 'number' && RETRYABLE_STATUSES.has(inner)) ||
+      (typeof lastError === 'string' && /overload|rate.?limit|temporarily|timeout|upstream/i.test(lastError));
+  } catch (e) {
+    lastError = e instanceof Error ? e.message : String(e);
+    lastRetryable = true;
   }
 
   return {

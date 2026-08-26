@@ -77,13 +77,13 @@ describe('callOpenRouter (mocked fetch)', () => {
     }
   });
 
-  it('retries on 429 and eventually succeeds via ladder', async () => {
-    let calls = 0;
-    globalThis.fetch = vi.fn(async () => {
-      calls += 1;
-      if (calls === 1) {
-        return new Response(JSON.stringify({ error: { message: 'rate limit', code: 429 } }), { status: 429 });
+  it('sends OpenRouter native models fallback array (single call, up to 3 models)', async () => {
+    let sentPayload: Record<string, unknown> | null = null;
+    globalThis.fetch = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      if (init?.body && typeof init.body === 'string') {
+        sentPayload = JSON.parse(init.body) as Record<string, unknown>;
       }
+      // OpenRouter picked the second one (as if slot 1 was down)
       return new Response(
         JSON.stringify({
           id: 'gen-2',
@@ -94,11 +94,79 @@ describe('callOpenRouter (mocked fetch)', () => {
         { status: 200 },
       );
     }) as unknown as typeof fetch;
-    const r = await callOpenRouter({ purpose: 'test.retry', userPrompt: 'hi', model: 'free' });
+    const r = await callOpenRouter({ purpose: 'test.orfallback', userPrompt: 'hi', model: 'free' });
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.attempts).toBe(2);
-      expect(calls).toBe(2);
+      // With OR native fallback we make exactly ONE outbound call.
+      expect(r.attempts).toBe(1);
+      // The models array should have been in the payload with up to 3 entries.
+      expect(sentPayload).not.toBeNull();
+      expect(Array.isArray(sentPayload!.models)).toBe(true);
+      const arr = sentPayload!.models as string[];
+      expect(arr.length).toBeGreaterThanOrEqual(2);
+      expect(arr.length).toBeLessThanOrEqual(3);
+      // Last slot should be the paid guarantee (mistral-nemo) since paidFallback defaults to true
+      expect(arr[arr.length - 1]).toBe('mistralai/mistral-nemo');
+    }
+  });
+
+  it('honors stickyModel to keep multi-turn conversations on the same model', async () => {
+    let sentPayload: Record<string, unknown> | null = null;
+    globalThis.fetch = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      if (init?.body && typeof init.body === 'string') {
+        sentPayload = JSON.parse(init.body) as Record<string, unknown>;
+      }
+      return new Response(
+        JSON.stringify({
+          id: 'gen-s',
+          model: 'z-ai/glm-5.2:free',
+          choices: [{ message: { content: 'ok' } }],
+          usage: { total_tokens: 2 },
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+    const r = await callOpenRouter({
+      purpose: 'test.sticky',
+      userPrompt: 'turn 2',
+      model: 'free',
+      stickyModel: 'z-ai/glm-5.2:free',
+    });
+    expect(r.ok).toBe(true);
+    expect(sentPayload).not.toBeNull();
+    // Sticky model must be slot 1 in the payload
+    expect(sentPayload!.model).toBe('z-ai/glm-5.2:free');
+    const arr = sentPayload!.models as string[];
+    expect(arr[0]).toBe('z-ai/glm-5.2:free');
+  });
+
+  it('disables paid fallback when paidFallback=false', async () => {
+    let sentPayload: Record<string, unknown> | null = null;
+    globalThis.fetch = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      if (init?.body && typeof init.body === 'string') {
+        sentPayload = JSON.parse(init.body) as Record<string, unknown>;
+      }
+      return new Response(
+        JSON.stringify({
+          id: 'gen-nopaid',
+          model: DEFAULT_FREE_TIER_LADDER[0],
+          choices: [{ message: { content: 'ok' } }],
+          usage: { total_tokens: 2 },
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+    const r = await callOpenRouter({
+      purpose: 'test.nopaid',
+      userPrompt: 'hi',
+      model: 'free',
+      paidFallback: false,
+    });
+    expect(r.ok).toBe(true);
+    const arr = sentPayload!.models as string[] | undefined;
+    // Should NOT contain the paid guarantee
+    if (arr) {
+      expect(arr.includes('mistralai/mistral-nemo')).toBe(false);
     }
   });
 
