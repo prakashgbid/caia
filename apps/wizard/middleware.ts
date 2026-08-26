@@ -157,6 +157,8 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
           ok: true,
           demo: true,
           state: pathname.endsWith('/state') ? { state: 'idea-captured', projectId: 'demo-project', updated_at: new Date().toISOString() } : undefined,
+          // CAIA-407: grand-idea capture UI reads body.revisionNumber; without it, the toast shows "revision undefined".
+          revisionNumber: pathname.includes('grand-idea') || pathname.includes('/idea') ? 1 : undefined,
           message: 'demo mode — no backend persistence',
         },
         { status: 200 }
