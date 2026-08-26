@@ -35,6 +35,9 @@ export function InterviewChat({ initialIdea }: InterviewChatProps): React.JSX.El
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<false | 'complete'>(false);
+  // Sticky model — set from turn 1's response, passed back on every
+  // subsequent turn so tone/style stays consistent through the conversation.
+  const [stickyModel, setStickyModel] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // Pull ?idea= from URL on mount if not passed as prop
@@ -68,6 +71,8 @@ export function InterviewChat({ initialIdea }: InterviewChatProps): React.JSX.El
       if (!res.ok || !body.ok || !body.reply) {
         throw new Error(body.detail || body.error || `HTTP ${res.status}`);
       }
+      // Lock in the model that answered turn 1 so subsequent turns get the same voice.
+      if (body.model) setStickyModel(body.model);
       setMessages([{ role: 'assistant', content: body.reply, meta: { model: body.model, latencyMs: body.latencyMs, turn: body.turn } }]);
       if (body.done === 'complete') setDone('complete');
     } catch (e) {
@@ -90,10 +95,16 @@ export function InterviewChat({ initialIdea }: InterviewChatProps): React.JSX.El
       const res = await fetch('/api/wizard/interview/demo', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ grandIdea: idea, messages: next.map((m) => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({
+          grandIdea: idea,
+          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          stickyModel: stickyModel ?? undefined,
+        }),
       });
       const body = (await res.json()) as { ok: boolean; reply?: string; model?: string; latencyMs?: number; turn?: number; done?: false | 'complete'; error?: string; detail?: string };
       if (!res.ok || !body.ok || !body.reply) throw new Error(body.detail || body.error || `HTTP ${res.status}`);
+      // Refresh sticky only if it wasn't already set (safety); once set it stays put.
+      if (!stickyModel && body.model) setStickyModel(body.model);
       setMessages([...next, { role: 'assistant', content: body.reply, meta: { model: body.model, latencyMs: body.latencyMs, turn: body.turn } }]);
       if (body.done === 'complete') setDone('complete');
     } catch (e) {
@@ -101,7 +112,7 @@ export function InterviewChat({ initialIdea }: InterviewChatProps): React.JSX.El
     } finally {
       setBusy(false);
     }
-  }, [input, messages, idea, busy, done]);
+  }, [input, messages, idea, busy, done, stickyModel]);
 
   return (
     <Card data-testid="interview-chat">
