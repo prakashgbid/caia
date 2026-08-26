@@ -43,6 +43,7 @@ export const primaryNav = [
   { href: '/docs', label: 'Docs' },
   { href: '/blog', label: 'Blog' },
   { href: '/changelog', label: 'Changelog' },
+  { href: '/factory', label: 'Factory Live' },
   { href: '/contact', label: 'Contact' },
 ] as const;
 
