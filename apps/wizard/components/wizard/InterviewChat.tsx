@@ -38,6 +38,9 @@ export function InterviewChat({ initialIdea }: InterviewChatProps): React.JSX.El
   // Sticky model — set from turn 1's response, passed back on every
   // subsequent turn so tone/style stays consistent through the conversation.
   const [stickyModel, setStickyModel] = useState<string | null>(null);
+  // Progress hint returned by the server so the user knows roughly how
+  // many turns remain and when the coach is wrapping up.
+  const [progress, setProgress] = useState<{ turn: number; maxTurns: number; wrapUpSoon: boolean } | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // Pull ?idea= from URL on mount if not passed as prop
@@ -66,7 +69,7 @@ export function InterviewChat({ initialIdea }: InterviewChatProps): React.JSX.El
         body: JSON.stringify({ grandIdea: idea, messages: [] }),
       });
       const body = (await res.json()) as {
-        ok: boolean; reply?: string; model?: string; latencyMs?: number; turn?: number; done?: false | 'complete'; error?: string; detail?: string;
+        ok: boolean; reply?: string; model?: string; latencyMs?: number; turn?: number; maxTurns?: number; wrapUpSoon?: boolean; done?: false | 'complete'; error?: string; detail?: string;
       };
       if (!res.ok || !body.ok || !body.reply) {
         throw new Error(body.detail || body.error || `HTTP ${res.status}`);
@@ -74,6 +77,9 @@ export function InterviewChat({ initialIdea }: InterviewChatProps): React.JSX.El
       // Lock in the model that answered turn 1 so subsequent turns get the same voice.
       if (body.model) setStickyModel(body.model);
       setMessages([{ role: 'assistant', content: body.reply, meta: { model: body.model, latencyMs: body.latencyMs, turn: body.turn } }]);
+      if (typeof body.turn === 'number' && typeof body.maxTurns === 'number') {
+        setProgress({ turn: body.turn, maxTurns: body.maxTurns, wrapUpSoon: !!body.wrapUpSoon });
+      }
       if (body.done === 'complete') setDone('complete');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -101,11 +107,14 @@ export function InterviewChat({ initialIdea }: InterviewChatProps): React.JSX.El
           stickyModel: stickyModel ?? undefined,
         }),
       });
-      const body = (await res.json()) as { ok: boolean; reply?: string; model?: string; latencyMs?: number; turn?: number; done?: false | 'complete'; error?: string; detail?: string };
+      const body = (await res.json()) as { ok: boolean; reply?: string; model?: string; latencyMs?: number; turn?: number; maxTurns?: number; wrapUpSoon?: boolean; done?: false | 'complete'; error?: string; detail?: string };
       if (!res.ok || !body.ok || !body.reply) throw new Error(body.detail || body.error || `HTTP ${res.status}`);
       // Refresh sticky only if it wasn't already set (safety); once set it stays put.
       if (!stickyModel && body.model) setStickyModel(body.model);
       setMessages([...next, { role: 'assistant', content: body.reply, meta: { model: body.model, latencyMs: body.latencyMs, turn: body.turn } }]);
+      if (typeof body.turn === 'number' && typeof body.maxTurns === 'number') {
+        setProgress({ turn: body.turn, maxTurns: body.maxTurns, wrapUpSoon: !!body.wrapUpSoon });
+      }
       if (body.done === 'complete') setDone('complete');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -152,6 +161,27 @@ export function InterviewChat({ initialIdea }: InterviewChatProps): React.JSX.El
           </div>
         )}
 
+        {messages.length > 0 && progress && (
+          <div
+            data-testid="interview-progress"
+            style={{ marginBottom: 12, padding: 10, background: '#0b1220', borderRadius: 6, fontSize: 13, color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          >
+            <span>
+              <strong>Turn {progress.turn}</strong> of about {progress.maxTurns}
+              {progress.wrapUpSoon && ' · almost done, coach will wrap up soon'}
+            </span>
+            {!done && !busy && (
+              <button
+                type="button"
+                data-testid="interview-im-ready"
+                onClick={() => setDone('complete')}
+                style={{ background: '#065f46', color: '#d1fae5', border: 'none', padding: '4px 10px', borderRadius: 4, fontSize: 12, cursor: 'pointer' }}
+              >
+                I'm ready — take me to the next step
+              </button>
+            )}
+          </div>
+        )}
         {messages.length > 0 && (
           <div
             ref={scrollRef}

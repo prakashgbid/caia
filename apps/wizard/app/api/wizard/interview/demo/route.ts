@@ -38,7 +38,8 @@ import { callOpenRouter } from '@caia/openrouter-client';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MAX_TURNS = 20;
+const MAX_TURNS = 8;              // hard cap — force-end at this many
+const SOFT_WRAP_UP_TURN = 5;      // start winding down after this many
 
 const INTERVIEWER_SYSTEM = `You are the CAIA Product Coach. Your job is to have a warm, curious, encouraging conversation with someone about an app or product they want to build. CAIA will build it for them — so you only need to understand the vision well enough that we can start.
 
@@ -78,7 +79,19 @@ This is normal and welcome. Do NOT ask the same question again in a slightly dif
 - Never say the words: investor, VC, funding, revenue, monetize, market, TAM, competition, business plan, fundable.
 
 ## When to end (say [[READY-TO-SYNTHESIZE]])
-End as soon as you can picture the app well enough to draft a mockup. That usually takes 5-10 warm turns, not 20 grilling ones. If the person says they want to stop and see what you have, end immediately. Never keep them talking past their patience.
+This conversation should be SHORT. Aim for 5-8 total turns from you (not 15, not 20). Founders come here to build, not to talk.
+
+- Turns 1-3: opening questions about the vision + spark + core users
+- Turns 4-5: dig into the ONE most important feature and one nice-to-have
+- Turn 6+: WRAP UP. Reflect back what you heard, then end with the [[READY-TO-SYNTHESIZE]] marker on its own line.
+- If the founder ever says "I'm ready", "I don't know anything else", "let's move on", "show me what you have", or anything similar — END IMMEDIATELY on that turn with [[READY-TO-SYNTHESIZE]].
+- If the founder gives thin answers (I don't know) 2 turns in a row — WRAP UP on the next turn with what you have. Do not keep fishing.
+
+The [[READY-TO-SYNTHESIZE]] marker must appear on its own line at the end of your final message. Format:
+    <your warm final reflection here>
+    [[READY-TO-SYNTHESIZE]]
+
+Being wrong about ending early is much better than being wrong about ending late. If in doubt, wrap up.
 
 ## CRITICAL output format
 Your reply must contain ONLY the question or reflection itself. No preamble, no "thinking process", no numbered analysis steps, no "Based on what you said". The first character of your reply is the first character of the message. The last character is the punctuation. Nothing else. If you want to reflect back and then ask, do it in one flowing sentence, not two paragraphs.`;
@@ -120,9 +133,22 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
   const messages = body.messages;
 
-  if (messages.length >= MAX_TURNS * 2) {
+  // Force-complete once we hit the hard cap. messages.length counts BOTH
+  // user + assistant messages, so 2*MAX_TURNS entries = MAX_TURNS assistant
+  // turns already emitted.
+  const assistantTurnsSoFar = messages.filter((m) => m.role === 'assistant').length;
+  if (assistantTurnsSoFar >= MAX_TURNS) {
     return NextResponse.json(
-      { ok: true, reply: '[[READY-TO-SYNTHESIZE]]', turn: messages.length / 2, model: 'system', costUsd: 0, latencyMs: 0, done: 'complete' },
+      {
+        ok: true,
+        reply: "Thanks — I have plenty to work with. Let's head to the next step and see what CAIA builds for you.\n\n[[READY-TO-SYNTHESIZE]]",
+        turn: assistantTurnsSoFar + 1,
+        model: 'system',
+        costUsd: 0,
+        latencyMs: 0,
+        done: 'complete',
+        maxTurns: MAX_TURNS,
+      },
       { status: 200 },
     );
   }
@@ -192,11 +218,15 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
   reply = reply.trim();
 
+  const currentTurn = assistantTurnsSoFar + 1;
   return NextResponse.json(
     {
       ok: true,
       reply,
-      turn: Math.floor(messages.length / 2) + 1,
+      turn: currentTurn,
+      maxTurns: MAX_TURNS,
+      // Hint to the UI: after this turn we're in the wrap-up zone.
+      wrapUpSoon: currentTurn >= SOFT_WRAP_UP_TURN,
       model: r.model,
       costUsd: r.costUsd,
       latencyMs: r.latencyMs,
