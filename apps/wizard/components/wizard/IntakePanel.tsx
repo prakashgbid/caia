@@ -10,6 +10,47 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, CheckCircle2, Loader2, Lightbulb, PencilLine, RotateCcw, Sparkles } from 'lucide-react';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 
+/**
+ * Fetch JSON with automatic retry on transient 502 (Cloudflare tunnel
+ * timeouts return an HTML error page — parsing that as JSON gives the
+ * unhelpful "Unexpected token '<'" error the user was seeing). Retries
+ * with backoff and returns a friendly error message when all attempts
+ * exhaust.
+ */
+async function safeFetchJson<T>(url: string, init: RequestInit, retries = 2): Promise<T> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        // Non-JSON response (usually CF 502 HTML) — retry if we can
+        if (res.status >= 500 && attempt < retries) {
+          await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+          continue;
+        }
+        throw new Error(
+          res.status >= 500
+            ? "Our AI provider is a bit slow right now. Please click the button again — usually the second try goes through."
+            : `Server returned HTML instead of JSON (HTTP ${res.status}).`,
+        );
+      }
+      const body = (await res.json()) as T & { ok?: boolean; error?: string; detail?: string; message?: string };
+      if (!res.ok) {
+        throw new Error(
+          body.detail || body.message || body.error || `HTTP ${res.status}`,
+        );
+      }
+      return body;
+    } catch (e) {
+      lastErr = e;
+      if (attempt >= retries) break;
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
 type Phase = 'brief' | 'analyzing' | 'gap-fill' | 'finalizing' | 'summary' | 'error';
 
 interface GapSlot {
@@ -66,13 +107,15 @@ export function IntakePanel(): React.JSX.Element {
   const finalize = useCallback(async (a: AnalyzerResult, answers: Record<string, string | string[]>) => {
     setPhase('finalizing');
     try {
-      const res = await fetch('/api/wizard/intake/finalize', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ideaText, filledSlots: a.filledSlots, gapAnswers: answers }),
-      });
-      const body = (await res.json()) as { ok: boolean; productName?: string; summaryCard?: string; model?: string; latencyMs?: number; costUsd?: number; error?: string; detail?: string };
-      if (!res.ok || !body.ok || !body.summaryCard) throw new Error(body.detail || body.error || `HTTP ${res.status}`);
+      const body = await safeFetchJson<{ ok: boolean; productName?: string; summaryCard?: string; model?: string; latencyMs?: number; costUsd?: number; error?: string; detail?: string }>(
+        '/api/wizard/intake/finalize',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ideaText, filledSlots: a.filledSlots, gapAnswers: answers }),
+        },
+      );
+      if (!body.ok || !body.summaryCard) throw new Error(body.detail || body.error || 'summary generation returned empty');
       setSummary({
         productName: body.productName ?? 'Your app',
         summaryCard: body.summaryCard,
@@ -95,17 +138,16 @@ export function IntakePanel(): React.JSX.Element {
     setError(null);
     setPhase('analyzing');
     try {
-      const res = await fetch('/api/wizard/intake/analyze', {
+      const body = await safeFetchJson<{
+        ok: boolean; filledSlots?: AnalyzerResult['filledSlots']; gaps?: GapSlot[]; gapCount?: number;
+        requiredGapCount?: number; totalSlots?: number; productWorkingName?: string; industryDetected?: string;
+        model?: string; costUsd?: number; latencyMs?: number; error?: string; detail?: string; message?: string;
+      }>('/api/wizard/intake/analyze', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ ideaText }),
       });
-      const body = (await res.json()) as {
-        ok: boolean; filledSlots?: AnalyzerResult['filledSlots']; gaps?: GapSlot[]; gapCount?: number;
-        requiredGapCount?: number; totalSlots?: number; productWorkingName?: string; industryDetected?: string;
-        model?: string; costUsd?: number; latencyMs?: number; error?: string; detail?: string; message?: string;
-      };
-      if (!res.ok || !body.ok || !body.gaps) throw new Error(body.detail || body.message || body.error || `HTTP ${res.status}`);
+      if (!body.ok || !body.gaps) throw new Error(body.detail || body.message || body.error || 'analyzer returned no gaps');
       const result: AnalyzerResult = {
         filledSlots: body.filledSlots ?? {},
         gaps: body.gaps,

@@ -185,9 +185,9 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} ChiefAIA · Building software with AI, together.</p>
           <div className="flex items-center gap-4">
-            <Link href="/legal/terms" className="hover:text-foreground transition-colors">Terms</Link>
-            <Link href="/legal/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link href="https://chiefaia.com/docs" className="hover:text-foreground transition-colors">Docs</Link>
+            <a href="https://chiefaia.com/legal/terms" className="hover:text-foreground transition-colors">Terms</a>
+            <a href="https://chiefaia.com/legal/privacy" className="hover:text-foreground transition-colors">Privacy</a>
+            <a href="https://chiefaia.com/docs" className="hover:text-foreground transition-colors">Docs</a>
             <a href="https://chiefaia.com/factory" className="hover:text-foreground transition-colors">Status</a>
           </div>
         </div>

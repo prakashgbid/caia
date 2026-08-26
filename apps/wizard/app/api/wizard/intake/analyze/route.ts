@@ -23,7 +23,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { callOpenRouter, PAID_GUARANTEE_MODEL } from '@caia/openrouter-client';
+import { callOpenRouter } from '@caia/openrouter-client';
 import { IDEA_TEMPLATE, CONFIDENCE_THRESHOLD, type IdeaSlot } from '../../../../../lib/intake/template.js';
 
 export const runtime = 'nodejs';
@@ -99,13 +99,18 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   // Step 1: run analyzer LLM
   const analyzerPrompt = `Founder's idea text:\n\n"${ideaText}"\n\nAnalyze it against the 10-slot template and output the JSON.`;
+  // Use openai/gpt-4o-mini specifically — it returns structured JSON much
+  // faster than mistral-nemo (typical 2-4s vs 15-25s for same output). This
+  // stays under Cloudflare's tunnel timeout. Cost is ~\\$0.0005 per call,
+  // still negligible. paidFallback:false because we've already pinned a paid
+  // model and the free-tier ladder is slow for JSON.
   const analyzerCall = await callOpenRouter({
     purpose: 'intake.analyze.extract',
     userPrompt: analyzerPrompt,
     systemPrompt: ANALYZER_SYSTEM,
-    model: PAID_GUARANTEE_MODEL,
+    model: 'openai/gpt-4o-mini',
     maxTokens: 500,
-    timeoutMs: 25_000,
+    timeoutMs: 20_000,
     responseFormat: 'json',
     paidFallback: true,
   });

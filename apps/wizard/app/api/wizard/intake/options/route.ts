@@ -16,7 +16,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { callOpenRouter, PAID_GUARANTEE_MODEL } from '@caia/openrouter-client';
+import { callOpenRouter } from '@caia/openrouter-client';
 import { getSlot } from '../../../../../lib/intake/template.js';
 
 export const runtime = 'nodejs';
@@ -77,7 +77,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     purpose: 'intake.options.generate',
     userPrompt,
     systemPrompt: OPTIONS_SYSTEM,
-    model: PAID_GUARANTEE_MODEL,
+    model: 'openai/gpt-4o-mini',
     maxTokens: 300,
     timeoutMs: 15_000,
     responseFormat: 'json',
