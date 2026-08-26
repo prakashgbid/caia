@@ -156,7 +156,8 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       // is the escape hatch from the demo-shim for genuinely interactive
       // demo endpoints (per [[deferred-physical-tenant]]).
       !pathname.startsWith('/api/wizard/interview/demo') &&
-      !pathname.startsWith('/api/wizard/proposal/demo')
+      !pathname.startsWith('/api/wizard/proposal/demo') &&
+      !pathname.startsWith('/api/wizard/ia/demo')
     ) {
       return NextResponse.json(
         {
