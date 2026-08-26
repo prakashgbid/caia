@@ -157,7 +157,10 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       // demo endpoints (per [[deferred-physical-tenant]]).
       !pathname.startsWith('/api/wizard/interview/demo') &&
       !pathname.startsWith('/api/wizard/proposal/demo') &&
-      !pathname.startsWith('/api/wizard/ia/demo')
+      !pathname.startsWith('/api/wizard/ia/demo') &&
+      !pathname.startsWith('/api/wizard/intake/analyze') &&
+      !pathname.startsWith('/api/wizard/intake/finalize') &&
+      !pathname.startsWith('/api/wizard/intake/options')
     ) {
       return NextResponse.json(
         {
