@@ -73,13 +73,14 @@ describe('AuthGatedLink', () => {
 });
 
 describe('DashboardPage', () => {
-  it('redirects signed-out visitors to /sign-in', async () => {
+  it('renders publicly for signed-out visitors (CAIA-403 — public demo)', async () => {
     render(<DashboardPage />);
-    await vi.waitFor(() =>
-      expect(routerMock.replace).toHaveBeenCalledWith(
-        '/sign-in?returnTo=%2Fdashboard'
-      )
-    );
+    // Was: expected redirect to /sign-in. Now: /dashboard is a public mock,
+    // sign-in only required for mutating actions. Redirect must NOT fire.
+    expect(
+      await screen.findByTestId('dashboard-new-project')
+    ).toBeInTheDocument();
+    expect(routerMock.replace).not.toHaveBeenCalled();
   });
 
   it('shows the New Project CTA and 3-5 sample project cards when signed in', async () => {
