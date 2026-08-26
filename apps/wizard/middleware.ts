@@ -118,6 +118,30 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     res.headers.set('x-auth-mode', 'disabled');
     res.headers.set('x-tenant-id', process.env.DEMO_TENANT_ID ?? '00000000-0000-0000-0000-000000000001');
     res.headers.set('x-tenant-email', process.env.DEMO_TENANT_EMAIL ?? 'demo@chiefaia.com');
+    // Demo-mode API shim (CAIA-405): real /api/wizard/** routes require
+    // Postgres + NATS + Infisical which aren't wired for the public demo.
+    // Short-circuit mutating wizard API calls to canned success so the UI
+    // walks through all 7 steps for the founder demo.
+    const pathname = req.nextUrl.pathname;
+    // Broaden shim to catch any /api/ mutating call (grand-idea, interview,
+    // proposal, atlas, design, etc.) — the wizard client posts to several
+    // route conventions that aren't all under /api/wizard/.
+    if (
+      (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') &&
+      pathname.startsWith('/api/') &&
+      !pathname.startsWith('/api/health') &&
+      !pathname.startsWith('/api/readyz')
+    ) {
+      return NextResponse.json(
+        {
+          ok: true,
+          demo: true,
+          state: pathname.endsWith('/state') ? { state: 'idea-captured', projectId: 'demo-project', updated_at: new Date().toISOString() } : undefined,
+          message: 'demo mode — no backend persistence',
+        },
+        { status: 200 }
+      );
+    }
     return res;
   }
 
