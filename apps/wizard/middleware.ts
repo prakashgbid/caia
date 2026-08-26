@@ -109,6 +109,26 @@ async function resolveTenantOrError(email: string): Promise<string | NextRespons
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const mode = readAuthMode();
 
+  // Wizard kill switch (CAIA-244 / [S3-15]).
+  // Env var WIZARD_ENABLED=false renders a 503 maintenance response
+  // instead of the wizard. Whitelist /api/healthz + /api/readyz so K8s
+  // probes stay healthy while the wizard is intentionally down.
+  const path = req.nextUrl.pathname;
+  const killed = process.env.WIZARD_ENABLED === 'false';
+  const probePath = path.startsWith('/api/health') || path.startsWith('/api/readyz');
+  if (killed && !probePath) {
+    return new NextResponse(
+      JSON.stringify({
+        error: 'wizard-temporarily-down',
+        message: 'The CAIA Wizard is temporarily paused for maintenance. Follow status at https://chiefaia.com/factory',
+      }),
+      {
+        status: 503,
+        headers: { 'content-type': 'application/json', 'retry-after': '300' },
+      },
+    );
+  }
+
   // ─── `disabled` — public demo mode (CAIA-404, 2026-08-25) ──────
   // Was originally local-dev-only no-op. Extended to assign a hardcoded
   // demo tenant so downstream pages have tenant context and can render
