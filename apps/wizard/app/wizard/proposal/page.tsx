@@ -1,13 +1,21 @@
 /**
- * Next.js page wrapper for Step 5 — Proposal. The actual UI lives in
- * `components/wizard/ProposalPanel.tsx` so the tests can mount it with
- * prop injections (fetchImpl) without fighting Next.js's required
- * `PageProps` shape.
+ * Wizard Step 5 — Proposal.
+ * Demo-mode preview per CAIA-402/405/406. Original at .backend-real.tsx.bak.
  */
-import { ProposalPanel } from '../../../components/wizard/ProposalPanel';
+
+import { DemoStepPreview } from '../../../components/wizard/DemoStepPreview';
 
 export const dynamic = 'force-dynamic';
 
-export default function ProposalPage(): React.JSX.Element {
-  return <ProposalPanel />;
+export default async function ProposalPage(): Promise<React.JSX.Element> {
+  return (
+    <DemoStepPreview
+      step="proposal"
+      stepNumber={5}
+      title="Proposal"
+      description={"CAIA drafts a business proposal from the interview and IA. Includes scope, budget, timeline, moat, and success metrics."}
+      features={["Executive summary and problem statement", "Scope (in/out) and phased milestones", "Rough budget, team, timeline", "Success metrics, risks, mitigations"]}
+      nextStep="Design"
+    />
+  );
 }

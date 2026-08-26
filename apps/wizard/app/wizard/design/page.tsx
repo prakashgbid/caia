@@ -1,13 +1,21 @@
 /**
- * Next.js page wrapper for Step 6 — Design. The actual UI lives in
- * `components/wizard/DesignPanel.tsx` so the tests can mount the panel
- * with prop injections (fetchImpl / clipboardWriter / etc) without
- * fighting Next.js's required `PageProps` shape.
+ * Wizard Step 6 — Design.
+ * Demo-mode preview per CAIA-402/405/406. Original at .backend-real.tsx.bak.
  */
-import { DesignPanel } from '../../../components/wizard/DesignPanel';
+
+import { DemoStepPreview } from '../../../components/wizard/DemoStepPreview';
 
 export const dynamic = 'force-dynamic';
 
-export default function DesignPage(): React.JSX.Element {
-  return <DesignPanel />;
+export default async function DesignPage(): Promise<React.JSX.Element> {
+  return (
+    <DemoStepPreview
+      step="design"
+      stepNumber={6}
+      title="Design"
+      description={"CAIA generates initial design ingestion: wireframes, component library selection, style guide."}
+      features={["Wireframe drafts for every page in the IA", "Component library selection (@caia/ui or custom)", "Style guide (palette, typography, spacing)", "Reference designs pulled from your competitor list"]}
+      nextStep="Atlas"
+    />
+  );
 }
