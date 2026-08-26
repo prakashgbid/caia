@@ -8,13 +8,18 @@
  */
 
 export const DEFAULT_FREE_TIER_LADDER: readonly string[] = [
-  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  // Order = empirical preference (chat-friendly, low-latency, reliable).
+  // minimax-m3 verified 2026-08-26 as the cleanest chat responder.
+  // Nvidia Nemotron models are strong at reasoning but emit visible
+  // chain-of-thought even with strict system prompts — kept lower on the
+  // ladder for reasoning-heavy tasks that tolerate the preamble.
   'minimax/minimax-m3:free',
   'thinkingmachines/inkling:free',
   'thinkingmachines/inkling-small:free',
-  'nvidia/nemotron-3.5-lightning:free',
   'z-ai/glm-5.2:free',
   'cohere/north-mini-code:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'nvidia/nemotron-3.5-lightning:free',
   'poolside/laguna-s-2.1:free',
   'poolside/laguna-xs-2.1:free',
   'dots-studio/dots-3-note-preview:free',

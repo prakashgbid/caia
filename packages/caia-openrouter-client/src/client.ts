@@ -228,9 +228,15 @@ export async function callOpenRouter(
         }
         return result;
       }
-      // Non-2xx or malformed
+      // Non-2xx or malformed — including OpenRouter's pattern of returning
+      // HTTP 200 with an { error: { code: 429, message: "Upstream..." } }
+      // body when the upstream free-tier provider throttles or is down.
       lastError = body.error?.message ?? `HTTP ${status} without choices`;
-      lastRetryable = RETRYABLE_STATUSES.has(status);
+      const inner = body.error?.code;
+      lastRetryable =
+        RETRYABLE_STATUSES.has(status) ||
+        (typeof inner === 'number' && RETRYABLE_STATUSES.has(inner)) ||
+        (typeof lastError === 'string' && /overload|rate.?limit|temporarily|timeout|upstream/i.test(lastError));
       if (!lastRetryable) break;
     } catch (e) {
       lastError = e instanceof Error ? e.message : String(e);

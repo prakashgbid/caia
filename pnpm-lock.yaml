@@ -665,6 +665,9 @@ importers:
       '@caia/onboarding':
         specifier: workspace:*
         version: link:../../packages/onboarding
+      '@caia/openrouter-client':
+        specifier: workspace:*
+        version: link:../../packages/caia-openrouter-client
       '@caia/state-machine':
         specifier: workspace:*
         version: link:../../packages/state-machine

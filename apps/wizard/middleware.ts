@@ -150,7 +150,12 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') &&
       pathname.startsWith('/api/') &&
       !pathname.startsWith('/api/health') &&
-      !pathname.startsWith('/api/readyz')
+      !pathname.startsWith('/api/readyz') &&
+      // Real handlers we WANT to execute even in demo mode — they call
+      // OpenRouter directly and return live AI output. Adding a route here
+      // is the escape hatch from the demo-shim for genuinely interactive
+      // demo endpoints (per [[deferred-physical-tenant]]).
+      !pathname.startsWith('/api/wizard/interview/demo')
     ) {
       return NextResponse.json(
         {
