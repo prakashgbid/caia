@@ -55,11 +55,11 @@ export default function AtlasDemoPage(): React.JSX.Element {
           </p>
           <div style={{ marginTop: 16 }}>
             <Button
-              onClick={() => router.push('/dashboard/factory')}
+              onClick={() => { window.location.href = 'https://chiefaia.com/factory'; }}
               data-testid="atlas-finish-tour"
               type="button"
             >
-              Finish tour → Factory dashboard
+              Finish tour → Factory Live
             </Button>
           </div>
         </div>
