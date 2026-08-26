@@ -109,10 +109,15 @@ async function resolveTenantOrError(email: string): Promise<string | NextRespons
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const mode = readAuthMode();
 
-  // ─── `disabled` — middleware no-op (local dev) ──────────────────
+  // ─── `disabled` — public demo mode (CAIA-404, 2026-08-25) ──────
+  // Was originally local-dev-only no-op. Extended to assign a hardcoded
+  // demo tenant so downstream pages have tenant context and can render
+  // for anonymous visitors during the ship-don't-plan phase.
   if (mode === 'disabled') {
     const res = NextResponse.next();
     res.headers.set('x-auth-mode', 'disabled');
+    res.headers.set('x-tenant-id', process.env.DEMO_TENANT_ID ?? '00000000-0000-0000-0000-000000000001');
+    res.headers.set('x-tenant-email', process.env.DEMO_TENANT_EMAIL ?? 'demo@chiefaia.com');
     return res;
   }
 
