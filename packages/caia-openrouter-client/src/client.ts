@@ -61,9 +61,15 @@ interface OpenRouterResponse {
 function planModelLadder(opts: ORCallOptions): string[] {
   const selection = opts.model ?? 'free';
 
-  // Explicit model id
+  // Explicit model id — try it first, then fall back through the free
+  // ladder (excluding the pinned model to avoid double-try) so an
+  // upstream provider hiccup on the pinned model doesn't kill the call.
+  // Callers who truly want a single-shot no-fallback behavior can pass
+  // model:'auto' with an explicit taskType, or catch retryable errors
+  // and retry themselves.
   if (typeof selection === 'string' && selection !== 'free' && selection !== 'auto') {
-    return [selection];
+    const ladder = getFreeTierLadder();
+    return [selection, ...ladder.filter((m) => m !== selection)].slice(0, 4);
   }
 
   if (selection === 'free') {
@@ -237,7 +243,13 @@ export async function callOpenRouter(
         RETRYABLE_STATUSES.has(status) ||
         (typeof inner === 'number' && RETRYABLE_STATUSES.has(inner)) ||
         (typeof lastError === 'string' && /overload|rate.?limit|temporarily|timeout|upstream/i.test(lastError));
-      if (!lastRetryable) break;
+      // Only stop the ladder for true auth failures (401/403 outer or inner).
+      // "Model unavailable for direct use", "invalid parameter", etc. mean
+      // THIS model is out, but the next one on the ladder might work.
+      const isAuthFatal =
+        status === 401 || status === 403 ||
+        (typeof inner === 'number' && (inner === 401 || inner === 403));
+      if (isAuthFatal) break;
     } catch (e) {
       lastError = e instanceof Error ? e.message : String(e);
       lastRetryable = true;

@@ -1,284 +1,198 @@
 'use client';
+
 /**
- * Wizard Step 5 — Proposal.
+ * <ProposalPanel> — client-side surface for the /wizard/proposal step.
+ * Lets the founder generate a 1-page investor memo from a grand idea +
+ * (optionally) an interview transcript. Talks to POST /api/wizard/proposal/demo.
  *
- * Client component. The "Generate" CTA calls
- * `POST /api/wizard/proposal/generate` (the route handler imports
- * `runStep5` from `@caia/business-proposal-generator` server-side).
- * Once the response lands, the three Markdown renderers (executive
- * summary, technical scope / full proposal, GTM / one-pager) are
- * rendered as `@caia/ui` Accordion items.
+ * Pre-fills the grand idea from ?idea= (or a fallback) and offers a
+ * textarea to paste-in an interview transcript in the simple JSON shape
+ * from the interview step (matches Array<{role, content}>).
  *
- * "Approve & continue" PATCHes the wizard state from the current
- * state to `proposal-generated` (the canonical FSM target). The brief
- * mentioned `proposal-in-progress → proposal-generated`, but the
- * canonical FSM doesn't have a literal `proposal-in-progress` state —
- * the API route's `canTransition` check handles the actual edge
- * (`information-architecture-complete → proposal-generated` or
- * `interview-complete → proposal-generated` depending on the project's
- * current state).
- *
- * Reuse-first compliance:
- *   - UI: `@caia/ui` primitives only (Card, Button, Accordion,
- *     AccordionItem, AccordionTrigger, AccordionContent, Badge).
- *   - The route handler uses
- *     `@caia/business-proposal-generator.runStep5`.
- *   - FSM dispatch uses the existing
- *     `/api/wizard/[projectId]/state` route from PR #601 (which
- *     wraps `@caia/state-machine`).
+ * On generate: shows the returned markdown proposal + metadata (model,
+ * cost, latency), plus a Copy button and a Regenerate button.
  */
 
-import { useCallback, useState } from 'react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@caia/ui';
+import { useCallback, useEffect, useState } from 'react';
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 
-interface ProposalResponse {
-  ok: boolean;
-  proposal: {
-    execSummaryMd: string;
-    fullProposalMd: string;
-    onePagerMd: string;
-    revisionNumber: number;
-  };
-  designAppPrompt: {
-    target: string;
-    promptText: string;
-    reviewerScore: number | null;
-    reviewerBadge: 'ship' | 'caution' | null;
-  };
-  cacheHit: boolean;
-  source: 'memory' | 'live';
+interface Turn {
+  role: 'user' | 'assistant';
+  content: string;
 }
+
+const DEMO_IDEA_FALLBACK =
+  'A neighborhood-economy super-platform (Stolution) that connects small businesses, freelancers, and neighbors through StolBiz/StolShop/StolWork/StolServ marketplaces. Public directory pages funded by ads, no cart/checkout in MVP.';
+
+const DEMO_TRANSCRIPT_FALLBACK: Turn[] = [
+  { role: 'assistant', content: 'How many paying businesses or active freelancers did you personally onboard in the last 30 days, and how did you find them?' },
+  { role: 'user', content: 'Zero so far — the platform is pre-launch. Plan is to start with StolBiz (small business directory) and onboard 25 businesses manually via foot-canvas in my Brooklyn neighborhood in the next 30 days.' },
+  { role: 'assistant', content: "How will those 25 businesses actually find and visit their public StolBiz page — is it organic Google traffic, flyers, a QR code in a storefront window, or something else — and how will you know which channel worked?" },
+  { role: 'user', content: 'Each business gets a printed QR sticker for their storefront window that links to their StolBiz page. Attribution via UTM params. Target 30% of the 25 to see 100+ page views in the first month.' },
+];
 
 export interface ProposalPanelProps {
-  /** Override the global fetch (tests). */
-  fetchImpl?: typeof fetch;
+  initialIdea?: string;
 }
 
-export function ProposalPanel(props: ProposalPanelProps = {}): React.JSX.Element {
-  const fetchFn = props.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
+export function ProposalPanel({ initialIdea }: ProposalPanelProps): React.JSX.Element {
+  const [idea, setIdea] = useState<string>(initialIdea ?? '');
+  const [transcriptText, setTranscriptText] = useState<string>(JSON.stringify(DEMO_TRANSCRIPT_FALLBACK, null, 2));
+  const [proposal, setProposal] = useState<string>('');
+  const [meta, setMeta] = useState<{ model?: string; latencyMs?: number; costUsd?: number; turns?: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const [projectId, setProjectId] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [proposal, setProposal] = useState<ProposalResponse | null>(null);
-  const [generateError, setGenerateError] = useState<string | null>(null);
-  const [approving, setApproving] = useState(false);
-  const [approveMessage, setApproveMessage] = useState<string | null>(null);
-  const [approveError, setApproveError] = useState<string | null>(null);
-
-  const handleGenerate = useCallback(async () => {
-    const effectiveProjectId = projectId || 'p-stub';
-    setGenerating(true);
-    setGenerateError(null);
-    setProposal(null);
-    try {
-      const res = await fetchFn('/api/wizard/proposal/generate', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tenantProjectId: effectiveProjectId }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as ProposalResponse;
-      setProposal(data);
-    } catch (err) {
-      setGenerateError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setGenerating(false);
+  useEffect(() => {
+    if (!initialIdea && typeof window !== 'undefined') {
+      const u = new URL(window.location.href);
+      const q = u.searchParams.get('idea');
+      if (q && q.trim().length >= 10) setIdea(q.trim());
+      else if (!idea) setIdea(DEMO_IDEA_FALLBACK);
     }
-  }, [fetchFn, projectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialIdea]);
 
-  const handleApprove = useCallback(async () => {
-    const effectiveProjectId = projectId || 'p-stub';
-    setApproving(true);
-    setApproveError(null);
-    setApproveMessage(null);
-    try {
-      const res = await fetchFn(`/api/wizard/${effectiveProjectId}/state`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          targetState: 'proposal-generated',
-          reason: 'wizard-step-5-approved',
-        }),
-      });
-      if (res.status === 409) {
-        setApproveMessage('Already at proposal-generated — design step is reachable.');
+  const generate = useCallback(async () => {
+    if (busy || idea.trim().length < 10) return;
+    setBusy(true);
+    setError(null);
+    setProposal('');
+    setMeta(null);
+    let parsedTranscript: Turn[] = [];
+    if (transcriptText.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(transcriptText);
+        if (!Array.isArray(parsed)) throw new Error('transcript must be a JSON array');
+        parsedTranscript = parsed as Turn[];
+      } catch (e) {
+        setError(`Transcript JSON is invalid: ${e instanceof Error ? e.message : String(e)}`);
+        setBusy(false);
         return;
       }
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      setApproveMessage('Proposal approved — advancing to design step.');
-    } catch (err) {
-      setApproveError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setApproving(false);
     }
-  }, [fetchFn, projectId]);
+    try {
+      const res = await fetch('/api/wizard/proposal/demo', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ grandIdea: idea, transcript: parsedTranscript }),
+      });
+      const body = (await res.json()) as {
+        ok: boolean; proposal?: string; model?: string; latencyMs?: number; costUsd?: number;
+        transcriptTurns?: number; error?: string; detail?: string; message?: string;
+      };
+      if (!res.ok || !body.ok || !body.proposal) throw new Error(body.detail || body.message || body.error || `HTTP ${res.status}`);
+      setProposal(body.proposal);
+      setMeta({
+        model: body.model,
+        latencyMs: body.latencyMs,
+        costUsd: body.costUsd,
+        turns: body.transcriptTurns,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, idea, transcriptText]);
+
+  const copyToClipboard = useCallback(async () => {
+    if (!proposal) return;
+    try {
+      await navigator.clipboard.writeText(proposal);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* noop */
+    }
+  }, [proposal]);
 
   return (
-    <Card data-testid="wizard-step-proposal">
+    <Card data-testid="proposal-panel">
       <CardHeader>
         <CardTitle>Step 5 — Proposal</CardTitle>
         <CardDescription>
-          Generate the business proposal + design-app prompt from your interview
-          + Information-Architecture artifacts. Approve to advance to the design
-          step.
+          Generate a 1-page investor memo from your grand idea plus (optionally) your interview transcript.
+          Runs on OpenRouter free-tier models — no cost to you, ~5-10s to synthesize.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-          <label htmlFor="proposal-project-id" style={{ fontSize: 13, fontWeight: 600 }}>
-            Project ID
-          </label>
-          <input
-            id="proposal-project-id"
-            data-testid="proposal-project-id"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            placeholder="p-stub"
-            style={{
-              flex: 1,
-              padding: '6px 8px',
-              borderRadius: 6,
-              border: '1px solid #cbd5e1',
-              fontSize: 13,
-              background: 'transparent',
-              color: 'inherit',
-            }}
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Grand idea (from Step 2)</label>
+          <textarea
+            value={idea}
+            onChange={(e) => setIdea(e.target.value)}
+            data-testid="proposal-idea"
+            rows={3}
+            style={{ width: '100%' }}
           />
-          <Button
-            variant="default"
-            onClick={handleGenerate}
-            disabled={generating}
-            data-testid="generate-proposal"
-            type="button"
-          >
-            {generating ? 'Generating…' : 'Generate'}
-          </Button>
         </div>
-        {generateError && (
-          <div data-testid="generate-error" style={{ color: '#b91c1c', fontSize: 13, marginBottom: 12 }}>
-            {generateError}
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+            Interview transcript (JSON array — optional but recommended)
+          </label>
+          <textarea
+            value={transcriptText}
+            onChange={(e) => setTranscriptText(e.target.value)}
+            data-testid="proposal-transcript"
+            rows={6}
+            style={{ width: '100%', fontFamily: 'ui-monospace, monospace', fontSize: 12 }}
+            placeholder='[{"role":"assistant","content":"..."},{"role":"user","content":"..."}]'
+          />
+          <small style={{ display: 'block', marginTop: 4, color: '#94a3b8', fontSize: 12 }}>
+            Pre-filled with a sample Stolution transcript for the demo. Replace with your own from Step 3.
+          </small>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+          <Button
+            type="button"
+            onClick={generate}
+            disabled={busy || idea.trim().length < 10}
+            data-testid="proposal-generate"
+          >
+            {busy ? 'Drafting your memo…' : proposal ? 'Regenerate' : 'Generate proposal →'}
+          </Button>
+          {meta && (
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>
+              {meta.model} · {meta.latencyMs}ms · ${meta.costUsd?.toFixed(4)} · {meta.turns} transcript turns
+            </span>
+          )}
+        </div>
+
+        {error && (
+          <div
+            data-testid="proposal-error"
+            style={{ padding: 12, background: '#7f1d1d', color: '#fee2e2', borderRadius: 6, marginBottom: 12, fontSize: 13 }}
+          >
+            {error}
           </div>
         )}
 
         {proposal && (
-          <div data-testid="proposal-output">
-            <div
-              style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}
-            >
-              <Badge data-testid="proposal-source">{proposal.source}</Badge>
-              {proposal.cacheHit && (
-                <Badge variant="secondary" data-testid="proposal-cache-hit">
-                  cache hit
-                </Badge>
-              )}
-              <Badge
-                variant={proposal.designAppPrompt.reviewerBadge === 'ship' ? 'default' : 'destructive'}
-                data-testid="proposal-reviewer-badge"
-              >
-                reviewer:{' '}
-                {proposal.designAppPrompt.reviewerBadge ?? 'n/a'}
-                {proposal.designAppPrompt.reviewerScore !== null
-                  ? ` (${proposal.designAppPrompt.reviewerScore})`
-                  : ''}
-              </Badge>
-            </div>
-
-            <Accordion type="single" defaultValue="exec">
-              <AccordionItem value="exec">
-                <AccordionTrigger data-testid="renderer-exec">
-                  Executive Summary
-                </AccordionTrigger>
-                <AccordionContent>
-                  <pre
-                    data-testid="renderer-exec-content"
-                    style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
-                  >
-                    {proposal.proposal.execSummaryMd}
-                  </pre>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="full">
-                <AccordionTrigger data-testid="renderer-full">
-                  Technical Scope (Full Proposal)
-                </AccordionTrigger>
-                <AccordionContent>
-                  <pre
-                    data-testid="renderer-full-content"
-                    style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
-                  >
-                    {proposal.proposal.fullProposalMd}
-                  </pre>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="onepager">
-                <AccordionTrigger data-testid="renderer-onepager">
-                  GTM Plan (One-Pager)
-                </AccordionTrigger>
-                <AccordionContent>
-                  <pre
-                    data-testid="renderer-onepager-content"
-                    style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
-                  >
-                    {proposal.proposal.onePagerMd}
-                  </pre>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="design-app-prompt">
-                <AccordionTrigger data-testid="renderer-design-prompt">
-                  Design-App Prompt
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div style={{ marginBottom: 6, fontSize: 12, opacity: 0.7 }}>
-                    Target: {proposal.designAppPrompt.target}
-                  </div>
-                  <pre
-                    data-testid="renderer-design-prompt-content"
-                    style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
-                  >
-                    {proposal.designAppPrompt.promptText}
-                  </pre>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center' }}>
-              <Button
-                variant="default"
-                onClick={handleApprove}
-                disabled={approving}
-                data-testid="approve-proposal"
-                type="button"
-              >
-                {approving ? 'Approving…' : 'Approve & continue'}
+          <div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+              <Badge variant="default">1-page memo</Badge>
+              <Button type="button" variant="outline" onClick={copyToClipboard} data-testid="proposal-copy">
+                {copied ? 'Copied!' : 'Copy markdown'}
               </Button>
-              {approveError && (
-                <span data-testid="approve-error" style={{ color: '#b91c1c', fontSize: 13 }}>
-                  {approveError}
-                </span>
-              )}
-              {approveMessage && (
-                <span data-testid="approve-message" style={{ color: '#065f46', fontSize: 13 }}>
-                  {approveMessage}
-                </span>
-              )}
+            </div>
+            <div
+              data-testid="proposal-output"
+              style={{
+                padding: 20,
+                background: '#0f172a',
+                borderRadius: 8,
+                color: '#e2e8f0',
+                fontSize: 14,
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+                fontFamily: 'ui-serif, Georgia, serif',
+                maxHeight: 720,
+                overflowY: 'auto',
+              }}
+            >
+              {proposal}
             </div>
           </div>
         )}

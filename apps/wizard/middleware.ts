@@ -155,7 +155,8 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       // OpenRouter directly and return live AI output. Adding a route here
       // is the escape hatch from the demo-shim for genuinely interactive
       // demo endpoints (per [[deferred-physical-tenant]]).
-      !pathname.startsWith('/api/wizard/interview/demo')
+      !pathname.startsWith('/api/wizard/interview/demo') &&
+      !pathname.startsWith('/api/wizard/proposal/demo')
     ) {
       return NextResponse.json(
         {
