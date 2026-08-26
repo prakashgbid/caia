@@ -2,7 +2,7 @@
   "name": "@caia-app/chiefaia-site",
   "private": true,
   "version": "0.1.0",
-  "description": "ChiefAIA marketing site — Next.js 15 + App Router. Operator-confirmed copy only, no fabricated metrics / testimonials / authorship. See ADR-067 (A1 gap-analysis) and apps/chiefaia-site/README.md.",
+  "description": "ChiefAIA marketing site \u2014 Next.js 15 + App Router. Operator-confirmed copy only, no fabricated metrics / testimonials / authorship. See ADR-067 (A1 gap-analysis) and apps/chiefaia-site/README.md.",
   "scripts": {
     "build": "pnpm --filter @caia/ui --filter @chiefaia/tracing build && next build",
     "dev": "next dev -p 7878",
@@ -20,6 +20,7 @@
     "@mdx-js/loader": "^3.0.1",
     "@mdx-js/react": "^3.0.1",
     "@next/mdx": "^15.5.15",
+    "lucide-react": "^0.454.0",
     "next": "15.5.18",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

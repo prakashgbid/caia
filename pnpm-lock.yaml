@@ -84,6 +84,9 @@ importers:
       '@next/mdx':
         specifier: ^15.5.15
         version: 15.5.18(@mdx-js/loader@3.1.1)(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.5))
+      lucide-react:
+        specifier: ^0.454.0
+        version: 0.454.0(react@19.2.5)
       next:
         specifier: 15.5.18
         version: 15.5.18(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
