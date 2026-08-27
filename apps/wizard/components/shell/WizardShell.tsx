@@ -25,6 +25,8 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, Circle, LogOut, MoonStar, Sparkles, Sun } from 'lucide-react';
 import { WIZARD_STEPS } from '../../lib/wizard/steps';
 import { TokenBadge } from '../session/TokenBadge';
+import { DocsFolder } from '../session/DocsFolder';
+import { LoginPill } from '../session/LoginPill';
 
 interface WizardShellProps {
   children: React.ReactNode;
@@ -89,7 +91,9 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
           </div>
 
           <div className="flex items-center gap-2">
+            <DocsFolder />
             <TokenBadge />
+            <LoginPill />
             <button
               type="button"
               onClick={toggleTheme}
