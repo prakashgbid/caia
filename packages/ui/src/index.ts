@@ -23,3 +23,4 @@ export * from "./components/ui/sheet.js";
 export * from "./components/ui/scroll-area.js";
 export * from "./components/ui/tabs.js";
 export * from "./components/ui/form.js";
+export * from "./components/ui/voice-input.js";
