@@ -9,6 +9,7 @@
  */
 
 import Link from 'next/link';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import {
   Badge,
   Card,
@@ -70,41 +71,47 @@ const pipelineSteps = [
 export default function HomePage() {
   return (
     <div className="space-y-24">
-      <section aria-labelledby="hero-heading" className="space-y-8 pt-8">
-        <Badge variant="outline" className="px-3 py-1">
+      <section aria-labelledby="hero-heading" className="relative space-y-8 pt-16 pb-8">
+        {/* Ambient brand glow — non-interactive, decorative */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 -top-24 -z-10 mx-auto h-96 max-w-4xl bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-3xl rounded-full opacity-60"
+        />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
+          <Sparkles className="w-3.5 h-3.5" />
           Subscription · Claude Max underlying
-        </Badge>
+        </div>
         <h1
           id="hero-heading"
-          className="text-balance text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl md:text-6xl"
+          className="text-balance text-4xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl"
         >
-          {siteConfig.tagline}.
+          The Chief AI Agent that{' '}
+          <span className="text-brand-gradient">builds, ships, and operates</span>{' '}
+          software.
         </h1>
-        <p className="max-w-2xl text-balance text-lg text-muted-foreground">
+        <p className="max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed sm:text-xl">
           {siteConfig.description}
         </p>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 pt-2">
           <AuthGatedLink
             target="/dashboard"
-            className={cn(buttonVariants({ size: 'lg' }))}
+            className={cn(
+              buttonVariants({ size: 'lg' }),
+              'bg-brand-gradient hover:opacity-90 text-white glow-brand h-12 px-6 text-base font-semibold',
+            )}
           >
-            New Project
+            Start a project
+            <ArrowRight className="w-4 h-4 ml-2" />
           </AuthGatedLink>
           <Link
-            href="/sign-in"
-            className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}
-          >
-            Get started
-          </Link>
-          <Link
             href="/docs"
-            className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}
+            className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'h-12 px-6 text-base')}
           >
             Read the docs
           </Link>
           <a
             href={dashboardUrl}
-            className={cn(buttonVariants({ variant: 'ghost', size: 'lg' }))}
+            className={cn(buttonVariants({ variant: 'ghost', size: 'lg' }), 'h-12 px-6 text-base')}
             rel="noopener noreferrer"
           >
             Open dashboard

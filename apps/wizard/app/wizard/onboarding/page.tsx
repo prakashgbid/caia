@@ -1,78 +1,34 @@
 /**
- * Wizard Step 1 — Onboarding.
+ * Wizard Step 1 — Onboarding (LIGHTWEIGHT).
  *
- * Server component that imports the canonical 19-category catalogue from
- * `@caia/onboarding/categories` (15 mandatory + 4 optional) and mounts a
- * `'use client'` stepper UI on top. The stepper walks each category in
- * order, captures provider choice + credentials, and POSTs the result to
- * the onboarding-submit API route (Wave 2). Once every mandatory
- * category is `passed` or `deferred`, the stepper dispatches the
- * `onboarding → idea-captured` FSM transition via the existing
- * PATCH `/api/wizard/[projectId]/state` route from PR #601.
+ * REVISED 2026-08-26 per [[deferred-physical-tenant]] + [[byok-first-ai]]:
+ * the pre-payment funnel must stay FAST. The old 19-category upfront
+ * credential collection was a wall built for the old assumption that
+ * we'd provision a whole tenant on signup. Under the new model, nothing
+ * gets provisioned until payment, so we ask only what we need to route
+ * AI calls now (optional BYOK key) and identify the founder.
  *
- * Reuse-first: every visible UI primitive (Card, CardHeader, CardTitle,
- * CardDescription, CardContent, Button, Badge, Input, Progress) is
- * sourced from `@caia/ui`. Domain logic comes from `@caia/onboarding`.
+ * The full 19-category catalogue lives on at page.tsx.heavy19cat.bak
+ * and its component (OnboardingStepForm) is preserved for a future
+ * post-payment "Complete your setup" or /settings/credentials surface
+ * that lands once the founder has crossed the paywall.
  *
- * The page intentionally does NOT instantiate the real `OnboardingEngine`
- * inline — the engine needs a Pg store + Infisical secrets adapter +
- * audit log, all of which are wired by the Wave 2 onboarding-submit
- * route. The V1 wizard surface focuses on the customer-facing step UI
- * and persists the chosen provider+credentials via that route.
+ * Form fields:
+ *   - Display name (required, 2-80 chars)
+ *   - Email (required, valid format)
+ *   - OpenRouter API key (optional — enables BYOK; sk-or-v1-... format)
+ *
+ * On submit → POST /api/wizard/onboarding/lightweight → navigate to
+ * /wizard/grand-idea?tenantSlug=<slug>.
+ *
+ * In WIZARD_AUTH_MODE=disabled (public demo) the shim will canned-success
+ * the POST and the redirect happens either way — no session persistence.
  */
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
-import { ALL_CATEGORIES, MANDATORY_CATEGORY_IDS } from '@caia/onboarding';
-import { OnboardingStepForm } from '../../../components/wizard/OnboardingStepForm';
+import { LightweightOnboardingForm } from '../../../components/wizard/LightweightOnboardingForm';
 
 export const dynamic = 'force-dynamic';
 
-interface PageProps {
-  searchParams: Promise<{ projectId?: string }>;
-}
-
-export default async function OnboardingPage({ searchParams }: PageProps): Promise<React.JSX.Element> {
-  const sp = await Promise.resolve(searchParams);
-  const projectId = sp.projectId ?? 'p-pending';
-
-  // Server-side: snapshot the canonical category catalog. The 19 items
-  // come from `@caia/onboarding`'s static catalog — no DB round-trip.
-  const categories = ALL_CATEGORIES.map((c) => ({
-    id: c.id,
-    label: c.label,
-    ordinal: c.ordinal,
-    required: c.required,
-    description: c.description,
-    providers: c.providers.map((p) => ({
-      id: p.id,
-      label: p.label,
-      archetype: p.archetype,
-      noCredentials: p.noCredentials,
-      credentialDescriptors: p.credentialDescriptors.map((d) => ({
-        keyId: d.keyId,
-        archetype: d.archetype,
-        scopesRequired: d.scopesRequired,
-        storeSecret: d.storeSecret,
-      })),
-    })),
-  }));
-
-  const mandatoryCount = MANDATORY_CATEGORY_IDS.length;
-  const optionalCount = categories.length - mandatoryCount;
-
-  return (
-    <Card data-testid="wizard-step-onboarding">
-      <CardHeader>
-        <CardTitle>Step 1 — Onboarding</CardTitle>
-        <CardDescription>
-          Tell us who you are. {mandatoryCount} required and {optionalCount} optional
-          categories. Each step validates the credentials you provide; nothing is
-          stored until validation passes.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <OnboardingStepForm projectId={projectId} categories={categories} />
-      </CardContent>
-    </Card>
-  );
+export default async function OnboardingPage(): Promise<React.JSX.Element> {
+  return <LightweightOnboardingForm />;
 }

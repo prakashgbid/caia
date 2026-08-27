@@ -14,6 +14,7 @@ export { cn } from "./lib/utils.js";
 export * from "./components/ui/button.js";
 export * from "./components/ui/card.js";
 export * from "./components/ui/input.js";
+export * from "./components/ui/textarea.js";
 export * from "./components/ui/badge.js";
 export * from "./components/ui/progress.js";
 export * from "./components/ui/accordion.js";

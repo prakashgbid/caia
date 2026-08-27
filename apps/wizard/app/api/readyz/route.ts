@@ -44,7 +44,13 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   });
 }
 
-async function checkPostgres(): Promise<{ ok: true } | { ok: false; error: string }> {
+async function checkPostgres(): Promise<{ ok: true; skipped?: boolean } | { ok: false; error: string }> {
+  // CAIA-409: demo mode (WIZARD_AUTH_MODE=disabled) does not use Postgres —
+  // tenant context comes from DEMO_TENANT_ID env, not the DB. Skip the probe
+  // so /api/readyz doesn't 503 with a bogus SASL error and mislead ops.
+  if ((process.env.WIZARD_AUTH_MODE ?? 'cloudflare') === 'disabled') {
+    return { ok: true, skipped: true };
+  }
   try {
     const pool = getPool();
     await withTimeout(pool.query('SELECT 1'), CHECK_TIMEOUT_MS, 'postgres');

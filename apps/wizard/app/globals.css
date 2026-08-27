@@ -1,11 +1,27 @@
-html,
-body {
-  margin: 0;
-  padding: 0;
+/*
+ * Wizard app root stylesheet — imports @caia/ui canonical Tailwind base
+ * + brand design tokens (indigo/violet primary, cyan accent, Inter font,
+ * dark-mode default). Per ADR-065 all UI primitives + tokens live in
+ * @caia/ui; local rules here are wizard-app-only tweaks.
+ */
+
+@import "@caia/ui/styles.css";
+
+html {
+  scroll-behavior: smooth;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* Global font: Inter served from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Anchor default (no double-underline on hover) */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Selection colour matches brand */
+::selection {
+  background-color: hsl(var(--primary) / 0.35);
+  color: hsl(var(--foreground));
 }

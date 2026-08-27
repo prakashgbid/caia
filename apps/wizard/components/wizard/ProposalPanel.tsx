@@ -1,287 +1,188 @@
 'use client';
+
 /**
- * Wizard Step 5 — Proposal.
- *
- * Client component. The "Generate" CTA calls
- * `POST /api/wizard/proposal/generate` (the route handler imports
- * `runStep5` from `@caia/business-proposal-generator` server-side).
- * Once the response lands, the three Markdown renderers (executive
- * summary, technical scope / full proposal, GTM / one-pager) are
- * rendered as `@caia/ui` Accordion items.
- *
- * "Approve & continue" PATCHes the wizard state from the current
- * state to `proposal-generated` (the canonical FSM target). The brief
- * mentioned `proposal-in-progress → proposal-generated`, but the
- * canonical FSM doesn't have a literal `proposal-in-progress` state —
- * the API route's `canTransition` check handles the actual edge
- * (`information-architecture-complete → proposal-generated` or
- * `interview-complete → proposal-generated` depending on the project's
- * current state).
- *
- * Reuse-first compliance:
- *   - UI: `@caia/ui` primitives only (Card, Button, Accordion,
- *     AccordionItem, AccordionTrigger, AccordionContent, Badge).
- *   - The route handler uses
- *     `@caia/business-proposal-generator.runStep5`.
- *   - FSM dispatch uses the existing
- *     `/api/wizard/[projectId]/state` route from PR #601 (which
- *     wraps `@caia/state-machine`).
+ * <ProposalPanel> — Stage 5 build brief generator. Tailwind styled.
+ * Auto-advances (via primary button) to /wizard/design after generation.
  */
 
-import { useCallback, useState } from 'react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@caia/ui';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, Copy, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 
-interface ProposalResponse {
-  ok: boolean;
-  proposal: {
-    execSummaryMd: string;
-    fullProposalMd: string;
-    onePagerMd: string;
-    revisionNumber: number;
-  };
-  designAppPrompt: {
-    target: string;
-    promptText: string;
-    reviewerScore: number | null;
-    reviewerBadge: 'ship' | 'caution' | null;
-  };
-  cacheHit: boolean;
-  source: 'memory' | 'live';
-}
+interface Turn { role: 'user' | 'assistant'; content: string; }
 
-export interface ProposalPanelProps {
-  /** Override the global fetch (tests). */
-  fetchImpl?: typeof fetch;
-}
+const DEMO_IDEA_FALLBACK =
+  'A neighborhood-economy super-platform (Stolution) that connects small businesses, freelancers, and neighbors through StolBiz/StolShop/StolWork/StolServ marketplaces. Public directory pages funded by ads, no cart/checkout in MVP.';
 
-export function ProposalPanel(props: ProposalPanelProps = {}): React.JSX.Element {
-  const fetchFn = props.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
+const DEMO_TRANSCRIPT_FALLBACK: Turn[] = [
+  { role: 'assistant', content: 'How many paying businesses did you onboard in the last 30 days?' },
+  { role: 'user', content: 'Zero — pre-launch. Plan: 25 via Brooklyn foot-canvas next 30 days.' },
+  { role: 'assistant', content: 'How will businesses drive traffic to their StolBiz page?' },
+  { role: 'user', content: 'QR sticker in storefront window with UTM. Target 30% see 100+ page views month one.' },
+];
 
-  const [projectId, setProjectId] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [proposal, setProposal] = useState<ProposalResponse | null>(null);
-  const [generateError, setGenerateError] = useState<string | null>(null);
-  const [approving, setApproving] = useState(false);
-  const [approveMessage, setApproveMessage] = useState<string | null>(null);
-  const [approveError, setApproveError] = useState<string | null>(null);
+export interface ProposalPanelProps { initialIdea?: string; }
 
-  const handleGenerate = useCallback(async () => {
-    const effectiveProjectId = projectId || 'p-stub';
-    setGenerating(true);
-    setGenerateError(null);
-    setProposal(null);
-    try {
-      const res = await fetchFn('/api/wizard/proposal/generate', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tenantProjectId: effectiveProjectId }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as ProposalResponse;
-      setProposal(data);
-    } catch (err) {
-      setGenerateError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setGenerating(false);
+export function ProposalPanel({ initialIdea }: ProposalPanelProps): React.JSX.Element {
+  const router = useRouter();
+  const [idea, setIdea] = useState<string>(initialIdea ?? '');
+  const [transcriptText, setTranscriptText] = useState<string>(JSON.stringify(DEMO_TRANSCRIPT_FALLBACK, null, 2));
+  const [proposal, setProposal] = useState<string>('');
+  const [meta, setMeta] = useState<{ model?: string; latencyMs?: number; costUsd?: number; turns?: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!initialIdea && typeof window !== 'undefined') {
+      const u = new URL(window.location.href);
+      const q = u.searchParams.get('idea');
+      if (q && q.trim().length >= 10) setIdea(q.trim());
+      else if (!idea) setIdea(DEMO_IDEA_FALLBACK);
     }
-  }, [fetchFn, projectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialIdea]);
 
-  const handleApprove = useCallback(async () => {
-    const effectiveProjectId = projectId || 'p-stub';
-    setApproving(true);
-    setApproveError(null);
-    setApproveMessage(null);
-    try {
-      const res = await fetchFn(`/api/wizard/${effectiveProjectId}/state`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          targetState: 'proposal-generated',
-          reason: 'wizard-step-5-approved',
-        }),
-      });
-      if (res.status === 409) {
-        setApproveMessage('Already at proposal-generated — design step is reachable.');
+  const generate = useCallback(async () => {
+    if (busy || idea.trim().length < 10) return;
+    setBusy(true);
+    setError(null);
+    setProposal('');
+    setMeta(null);
+    let parsed: Turn[] = [];
+    if (transcriptText.trim().length > 0) {
+      try {
+        const p = JSON.parse(transcriptText);
+        if (!Array.isArray(p)) throw new Error('transcript must be a JSON array');
+        parsed = p as Turn[];
+      } catch (e) {
+        setError(`Transcript JSON is invalid: ${e instanceof Error ? e.message : String(e)}`);
+        setBusy(false);
         return;
       }
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      setApproveMessage('Proposal approved — advancing to design step.');
-    } catch (err) {
-      setApproveError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setApproving(false);
     }
-  }, [fetchFn, projectId]);
+    try {
+      const res = await fetch('/api/wizard/proposal/demo', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ grandIdea: idea, transcript: parsed }),
+      });
+      const body = (await res.json()) as { ok: boolean; proposal?: string; model?: string; latencyMs?: number; costUsd?: number; transcriptTurns?: number; error?: string; detail?: string; message?: string };
+      if (!res.ok || !body.ok || !body.proposal) throw new Error(body.detail || body.message || body.error || `HTTP ${res.status}`);
+      setProposal(body.proposal);
+      setMeta({ model: body.model, latencyMs: body.latencyMs, costUsd: body.costUsd, turns: body.transcriptTurns });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, idea, transcriptText]);
+
+  const copy = useCallback(async () => {
+    if (!proposal) return;
+    try {
+      await navigator.clipboard.writeText(proposal);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* noop */ }
+  }, [proposal]);
+
+  const goNext = useCallback(() => {
+    router.push('/wizard/landing?idea=' + encodeURIComponent(idea));
+  }, [router, idea]);
 
   return (
-    <Card data-testid="wizard-step-proposal">
-      <CardHeader>
-        <CardTitle>Step 5 — Proposal</CardTitle>
-        <CardDescription>
-          Generate the business proposal + design-app prompt from your interview
-          + Information-Architecture artifacts. Approve to advance to the design
-          step.
+    <Card className="border-border/60 bg-card/50 backdrop-blur-sm shadow-2xl shadow-primary/5">
+      <CardHeader className="space-y-3">
+        <div className="inline-flex items-center gap-2 w-fit px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+          <Sparkles className="w-3 h-3" />
+          Step 5 · Proposal
+        </div>
+        <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Your <span className="text-brand-gradient">build brief</span>.
+        </CardTitle>
+        <CardDescription className="text-base leading-relaxed">
+          A one-page plainspoken plan: what CAIA will build, how it&apos;ll feel, what ships first, and
+          what we&apos;ll need from you along the way.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-          <label htmlFor="proposal-project-id" style={{ fontSize: 13, fontWeight: 600 }}>
-            Project ID
-          </label>
-          <input
-            id="proposal-project-id"
-            data-testid="proposal-project-id"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            placeholder="p-stub"
-            style={{
-              flex: 1,
-              padding: '6px 8px',
-              borderRadius: 6,
-              border: '1px solid #cbd5e1',
-              fontSize: 13,
-              background: 'transparent',
-              color: 'inherit',
-            }}
-          />
-          <Button
-            variant="default"
-            onClick={handleGenerate}
-            disabled={generating}
-            data-testid="generate-proposal"
-            type="button"
-          >
-            {generating ? 'Generating…' : 'Generate'}
-          </Button>
-        </div>
-        {generateError && (
-          <div data-testid="generate-error" style={{ color: '#b91c1c', fontSize: 13, marginBottom: 12 }}>
-            {generateError}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Grand idea (from Step 2)</label>
+            <textarea
+              value={idea}
+              onChange={(e) => setIdea(e.target.value)}
+              data-testid="proposal-idea"
+              rows={3}
+              className="w-full p-3 text-sm rounded-lg border border-border bg-background/50 focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+            />
           </div>
-        )}
+          <div>
+            <label className="block text-sm font-medium mb-2">Interview transcript (JSON — optional)</label>
+            <textarea
+              value={transcriptText}
+              onChange={(e) => setTranscriptText(e.target.value)}
+              data-testid="proposal-transcript"
+              rows={6}
+              className="w-full p-3 text-xs font-mono rounded-lg border border-border bg-background/50 focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+            />
+          </div>
 
-        {proposal && (
-          <div data-testid="proposal-output">
-            <div
-              style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Button
+              type="button"
+              onClick={generate}
+              disabled={busy || idea.trim().length < 10}
+              data-testid="proposal-generate"
+              className="h-11 px-6 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold disabled:opacity-50"
             >
-              <Badge data-testid="proposal-source">{proposal.source}</Badge>
-              {proposal.cacheHit && (
-                <Badge variant="secondary" data-testid="proposal-cache-hit">
-                  cache hit
-                </Badge>
-              )}
-              <Badge
-                variant={proposal.designAppPrompt.reviewerBadge === 'ship' ? 'default' : 'destructive'}
-                data-testid="proposal-reviewer-badge"
-              >
-                reviewer:{' '}
-                {proposal.designAppPrompt.reviewerBadge ?? 'n/a'}
-                {proposal.designAppPrompt.reviewerScore !== null
-                  ? ` (${proposal.designAppPrompt.reviewerScore})`
-                  : ''}
-              </Badge>
-            </div>
-
-            <Accordion type="single" defaultValue="exec">
-              <AccordionItem value="exec">
-                <AccordionTrigger data-testid="renderer-exec">
-                  Executive Summary
-                </AccordionTrigger>
-                <AccordionContent>
-                  <pre
-                    data-testid="renderer-exec-content"
-                    style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
-                  >
-                    {proposal.proposal.execSummaryMd}
-                  </pre>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="full">
-                <AccordionTrigger data-testid="renderer-full">
-                  Technical Scope (Full Proposal)
-                </AccordionTrigger>
-                <AccordionContent>
-                  <pre
-                    data-testid="renderer-full-content"
-                    style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
-                  >
-                    {proposal.proposal.fullProposalMd}
-                  </pre>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="onepager">
-                <AccordionTrigger data-testid="renderer-onepager">
-                  GTM Plan (One-Pager)
-                </AccordionTrigger>
-                <AccordionContent>
-                  <pre
-                    data-testid="renderer-onepager-content"
-                    style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
-                  >
-                    {proposal.proposal.onePagerMd}
-                  </pre>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="design-app-prompt">
-                <AccordionTrigger data-testid="renderer-design-prompt">
-                  Design-App Prompt
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div style={{ marginBottom: 6, fontSize: 12, opacity: 0.7 }}>
-                    Target: {proposal.designAppPrompt.target}
-                  </div>
-                  <pre
-                    data-testid="renderer-design-prompt-content"
-                    style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
-                  >
-                    {proposal.designAppPrompt.promptText}
-                  </pre>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center' }}>
-              <Button
-                variant="default"
-                onClick={handleApprove}
-                disabled={approving}
-                data-testid="approve-proposal"
-                type="button"
-              >
-                {approving ? 'Approving…' : 'Approve & continue'}
-              </Button>
-              {approveError && (
-                <span data-testid="approve-error" style={{ color: '#b91c1c', fontSize: 13 }}>
-                  {approveError}
-                </span>
-              )}
-              {approveMessage && (
-                <span data-testid="approve-message" style={{ color: '#065f46', fontSize: 13 }}>
-                  {approveMessage}
-                </span>
-              )}
-            </div>
+              {busy ? (<><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Drafting your brief…</>) : proposal ? 'Regenerate' : (<>Generate proposal<ArrowRight className="w-4 h-4 ml-1.5" /></>)}
+            </Button>
+            {meta && (
+              <span className="text-xs text-muted-foreground tabular-nums ml-auto">
+                {meta.model} · {meta.latencyMs}ms · ${meta.costUsd?.toFixed(5)}
+              </span>
+            )}
           </div>
-        )}
+
+          {error && (
+            <div data-testid="proposal-error" className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2.5 text-sm">
+              {error}
+            </div>
+          )}
+
+          {proposal && (
+            <div className="animate-fade-in-up space-y-4 pt-2">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-primary/15 text-primary border-primary/30">1-page build brief</Badge>
+                <Button type="button" variant="outline" size="sm" onClick={copy} data-testid="proposal-copy">
+                  {copied ? <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
+                  {copied ? 'Copied!' : 'Copy markdown'}
+                </Button>
+              </div>
+              <div
+                data-testid="proposal-output"
+                className="prose prose-invert max-w-none p-6 rounded-xl bg-muted/30 border border-border/60 whitespace-pre-wrap leading-relaxed max-h-[720px] overflow-y-auto scrollbar-thin"
+                style={{ fontFamily: 'ui-serif, Georgia, serif', fontSize: 15 }}
+              >
+                {proposal}
+              </div>
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  onClick={goNext}
+                  data-testid="proposal-continue"
+                  className="h-11 px-6 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold"
+                >
+                  Ready — head to Design
+                  <ArrowRight className="w-4 h-4 ml-1.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

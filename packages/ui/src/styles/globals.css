@@ -1,4 +1,14 @@
 /* @caia/ui — canonical Tailwind base styles + shadcn design tokens.
+ *
+ * Brand: CAIA / ChiefAIA
+ * Primary: Indigo 600 → Violet 500 (AI/tech gradient-friendly)
+ * Accent: Cyan 400
+ * Neutrals: Zinc
+ * Status: Emerald / Amber / Red
+ *
+ * Dark mode is the primary aesthetic (AI product feel);
+ * light mode retained as an option.
+ *
  * Consumers import once at the app root:
  *   import "@caia/ui/styles.css";
  */
@@ -9,61 +19,86 @@
 
 @layer base {
   :root {
+    /* Neutrals — Zinc scale */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
+    --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 240 10% 3.9%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Brand — Indigo 600 as primary */
+    --primary: 239 84% 67%;                   /* indigo-500 #6366F1 */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 239 76% 60%;
+    --primary-gradient-from: 239 84% 67%;     /* indigo-500 */
+    --primary-gradient-to: 262 83% 66%;       /* violet-500 #A855F7 */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Accent — Cyan */
+    --accent: 189 94% 43%;                    /* cyan-500 #06B6D4 */
+    --accent-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
+    /* Status */
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142 71% 45%;                   /* emerald-500 */
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;                    /* amber-500 */
+    --warning-foreground: 0 0% 12%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Secondary — subtle zinc */
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
 
-    --radius: 0.5rem;
+    --ring: 239 84% 67%;
 
-    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-      "Helvetica Neue", Arial, sans-serif;
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --radius: 0.75rem;
+
+    --font-sans: "Inter", "InterVariable", ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+      Consolas, monospace;
+    --font-display: "Inter", "InterVariable", ui-sans-serif, system-ui, sans-serif;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* Neutrals — deep near-black with soft warm tint */
+    --background: 240 10% 3.9%;               /* zinc-950-ish */
+    --foreground: 0 0% 98%;
+    --card: 240 10% 6.5%;                     /* one step above bg for depth */
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 6.5%;
+    --popover-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;                  /* zinc-800 */
+    --muted-foreground: 240 5% 64.9%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 18%;
+
+    /* Brand stays vivid in dark mode */
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 239 90% 74%;
+    --primary-gradient-from: 239 84% 67%;
+    --primary-gradient-to: 262 83% 66%;
+
+    --accent: 189 94% 55%;
+    --accent-foreground: 240 10% 3.9%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142 71% 50%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 240 10% 3.9%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --ring: 239 90% 74%;
   }
 }
 
@@ -71,8 +106,63 @@
   * {
     @apply border-border;
   }
+  html {
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+  }
   body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* Focus ring for accessibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* Gradient utilities the wizard + landing use for hero and CTAs */
+  .bg-brand-gradient {
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--primary-gradient-from)) 0%,
+      hsl(var(--primary-gradient-to)) 100%
+    );
+  }
+  .text-brand-gradient {
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--primary-gradient-from)) 0%,
+      hsl(var(--primary-gradient-to)) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .ring-brand-gradient {
+    box-shadow: 0 0 0 1px hsl(var(--primary-gradient-from) / 0.4),
+                0 8px 32px -8px hsl(var(--primary-gradient-to) / 0.5);
+  }
+  .glow-brand {
+    box-shadow: 0 0 40px -12px hsl(var(--primary) / 0.5);
+  }
+}
+
+/* Scrollbar polish (WebKit) */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.4);
+    border-radius: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.6);
   }
 }

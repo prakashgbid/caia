@@ -1,39 +1,22 @@
 /**
- * DashboardGate — client-side mock-auth gate for /dashboard surfaces.
+ * DashboardGate — public demo pass-through (STOL-5003 revisited 2026-08-25 CAIA-403).
  *
- * Signed out (mock) -> replace to /sign-in?returnTo=<current path>.
- * Signed in (mock)  -> render children (+ the dev-only MockAuthToggle).
+ * Previously blocked anonymous visitors with a "Checking your session…"
+ * spinner and a cross-origin redirect to dashboard.chiefaia.com/sign-in
+ * (Cloudflare Access). That closed the demo path to any founder who is not
+ * on the CF Access team — the exact opposite of the ship-don't-plan goal.
  *
- * This is UI-only gating per STOL-5003 — the real dashboard stays behind
- * Cloudflare Access on the dashboard origin.
+ * Now: /dashboard is a public mock so a visitor can SEE the workspace
+ * shape immediately. Sign-in is only required when a mutating action is
+ * taken (create/save project) — enforced at those buttons via
+ * AuthGatedLink or the real backend behind dashboard.chiefaia.com.
  */
 
 'use client';
 
-import { useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useMockAuth } from '../lib/mock-auth';
 import { MockAuthToggle } from './mock-auth-toggle';
 
 export function DashboardGate({ children }: { children: React.ReactNode }) {
-  const { loggedIn, ready } = useMockAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    if (ready && !loggedIn) {
-      router.replace(`/sign-in?returnTo=${encodeURIComponent(pathname)}`);
-    }
-  }, [ready, loggedIn, router, pathname]);
-
-  if (!ready || !loggedIn) {
-    return (
-      <p className="py-24 text-center text-sm text-muted-foreground">
-        Checking your session…
-      </p>
-    );
-  }
-
   return (
     <>
       <MockAuthToggle />

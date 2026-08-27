@@ -1,13 +1,22 @@
 /**
- * Next.js page wrapper for Step 5 — Proposal. The actual UI lives in
- * `components/wizard/ProposalPanel.tsx` so the tests can mount it with
- * prop injections (fetchImpl) without fighting Next.js's required
- * `PageProps` shape.
+ * Wizard Step 5 — Proposal.
+ *
+ * Public demo path uses the ProposalPanel client component which calls
+ * POST /api/wizard/proposal/demo (OpenRouter free-tier backed).
+ * The backend-real, multi-turn, pillar-tracked generator lives under
+ * /wizard/proposal/[projectId] and /api/wizard/proposal/generate.
  */
+
 import { ProposalPanel } from '../../../components/wizard/ProposalPanel';
 
 export const dynamic = 'force-dynamic';
 
-export default function ProposalPage(): React.JSX.Element {
-  return <ProposalPanel />;
+interface PageProps {
+  searchParams: Promise<{ idea?: string }>;
+}
+
+export default async function ProposalPage({ searchParams }: PageProps): Promise<React.JSX.Element> {
+  const sp = await Promise.resolve(searchParams);
+  const initialIdea = typeof sp.idea === 'string' ? sp.idea : undefined;
+  return <ProposalPanel initialIdea={initialIdea} />;
 }
