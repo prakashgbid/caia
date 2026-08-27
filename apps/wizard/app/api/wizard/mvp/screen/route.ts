@@ -12,6 +12,8 @@
 
 import { NextResponse } from 'next/server';
 import { callOpenRouter } from '@caia/openrouter-client';
+import { readAuthedUser } from '../../../../../lib/backend/session';
+import { query } from '../../../../../lib/db/pool';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -78,6 +80,11 @@ Write the React component now. Include realistic mock data and interactive local
 
 Output the JSON with "code" now.`;
 
+  const me = await readAuthedUser();
+  const SCREEN_COST = 15;
+  if (me && me.tokensBalance < SCREEN_COST) {
+    return NextResponse.json({ ok: false, error: 'insufficient_tokens', balance: me.tokensBalance, cost: SCREEN_COST }, { status: 402 });
+  }
   const r = await callOpenRouter({
     purpose: 'mvp.screen.generate',
     userPrompt,
@@ -94,11 +101,18 @@ Output the JSON with "code" now.`;
     return NextResponse.json({ ok: false, error: 'no_code_returned' }, { status: 502 });
   }
 
+  let newBalance: number | undefined;
+  if (me) {
+    await query('UPDATE wizard_users SET tokens_balance = tokens_balance - $2, updated_at = NOW() WHERE id = $1', [me.id, SCREEN_COST]);
+    await query("INSERT INTO wizard_token_events (user_id, delta, reason) VALUES ($1, $2, $3)", [me.id, -SCREEN_COST, 'spend:screen:' + screenName]);
+    newBalance = me.tokensBalance - SCREEN_COST;
+  }
   return NextResponse.json({
     ok: true,
     code: parsed.code,
     model: r.model,
     costUsd: r.costUsd,
     latencyMs: Date.now() - started,
+    tokensBalance: newBalance,
   });
 }

@@ -9,17 +9,24 @@
  * On successful capture: auto-advances to /wizard/interview per continuity.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CheckCircle2, Lightbulb, Sparkles } from 'lucide-react';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, VoiceInput } from '@caia/ui';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
+import { useSpec, advanceStage } from '../../lib/spec/store';
+import { validateFreeText } from '../../lib/validate/text';
+import { LiveVoiceInput } from './common/LiveVoiceInput';
 
 const MIN_CHARS = 20;
 const MIN_WORDS = 5;
 
 export function GrandIdeaForm(): React.JSX.Element {
   const router = useRouter();
-  const [text, setText] = useState('');
+  const [spec, mutate] = useSpec();
+  const [text, setTextLocal] = useState(spec.grandIdea || '');
+  const setText = (v: string) => { setTextLocal(v); mutate((s) => { s.grandIdea = v; }); };
+  useEffect(() => { if (spec.grandIdea && spec.grandIdea !== text) setTextLocal(spec.grandIdea); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [spec.grandIdea]);
+  useEffect(() => { advanceStage('grand-idea'); }, []);
   const [busy, setBusy] = useState(false);
   const [captured, setCaptured] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +37,9 @@ export function GrandIdeaForm(): React.JSX.Element {
 
   const submit = useCallback(async () => {
     if (!canSubmit) return;
+    // Hard validation — gibberish, all-caps, all-digits, injection all rejected.
+    const v = validateFreeText(text, { minLen: 20, requireSentence: true });
+    if (!v.ok) { setError(v.reason || 'That idea needs a bit more.'); return; }
     setBusy(true);
     setError(null);
     try {
@@ -86,7 +96,7 @@ export function GrandIdeaForm(): React.JSX.Element {
                 <Lightbulb className="w-3 h-3" />
                 Aim for ~{MIN_WORDS}+ words, one clear thought
               </span>
-              <VoiceInput value={text} onValueChange={setText} fieldLabel="your idea" />
+              <LiveVoiceInput value={text} onValueChange={setText} fieldLabel="your idea" />
             </div>
           </div>
 

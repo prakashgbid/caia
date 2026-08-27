@@ -20,9 +20,11 @@ import { validateEmail } from '../../lib/validate/text';
 export function LoginPanel(): React.JSX.Element {
   const router = useRouter();
   const search = useSearchParams();
-  const nextPath = search?.get('next') || '/wizard/build';
+  const nextPath = search?.get('next') || '/wizard/design';
   const [emailMode, setEmailMode] = useState(false);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,27 +33,39 @@ export function LoginPanel(): React.JSX.Element {
   const finalize = useCallback(async (displayName: string, emailAddr: string, provider: 'google' | 'apple' | 'email') => {
     setBusy(true);
     try {
-      // 1) Ask the backend to create/find the user + issue a session cookie
-      const res = await fetch('/api/wizard/auth/login', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ provider, email: emailAddr, displayName }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; tokensBalance?: number };
-      if (!res.ok || !j.ok) { setError(j.error || 'Login failed. Please try again.'); setBusy(false); return; }
-      // 2) Local session bookkeeping (token pill / user chip)
-      grantLoginReward(displayName, emailAddr);
-      // 3) Push the current anonymous project up to the server so it is not lost
+      let res: Response;
+      if (provider === 'email' && password) {
+        // Real email+password path — signup or login depending on toggle
+        const endpoint = authMode === 'signup' ? '/api/wizard/auth/signup' : '/api/wizard/auth/password-login';
+        const body = authMode === 'signup' ? { email: emailAddr, displayName, password } : { email: emailAddr, password };
+        res = await fetch(endpoint, {
+          method: 'POST', credentials: 'include',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } else {
+        // Google/Apple/no-password path — still uses the mock auth endpoint (deferred real OAuth)
+        res = await fetch('/api/wizard/auth/login', {
+          method: 'POST', credentials: 'include',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ provider, email: emailAddr, displayName }),
+        });
+      }
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; reason?: string; tokensBalance?: number; displayName?: string };
+      if (!res.ok || !j.ok) {
+        setError(j.reason || j.error || 'Login failed. Please try again.');
+        setBusy(false);
+        return;
+      }
+      grantLoginReward(j.displayName || displayName, emailAddr);
       updateProject((p) => { if (!p.name) p.name = 'My first CAIA project'; });
       await syncToBackend();
-      // 4) Continue to the intended destination
       router.push(nextPath);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
     }
-  }, [router, nextPath]);
+  }, [router, nextPath, password, authMode]);
 
   const google = useCallback(() => finalize('Alex Founder', 'alex@example.com', 'google'), [finalize]);
   const apple = useCallback(() => finalize('Alex Founder', 'alex@icloud.com', 'apple'), [finalize]);
@@ -118,14 +132,24 @@ export function LoginPanel(): React.JSX.Element {
             </>
           ) : (
             <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Your name</label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Founder" className="h-11" />
+              <div className="flex gap-2">
+                <Button type="button" variant={authMode === 'signup' ? 'default' : 'outline'} onClick={() => setAuthMode('signup')} size="sm" className="flex-1">Create account</Button>
+                <Button type="button" variant={authMode === 'login' ? 'default' : 'outline'} onClick={() => setAuthMode('login')} size="sm" className="flex-1">I have an account</Button>
               </div>
+              {authMode === 'signup' && (
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Your name</label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Founder" className="h-11" />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1.5">Email</label>
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="alex@example.com" className="h-11" />
-                <InputExplainer hint="Used to save your project. We never spam." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Password</label>
+                <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="At least 8 characters" className="h-11" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} />
+                <InputExplainer hint={authMode === 'signup' ? 'Use letters plus numbers or a symbol. Min 8 chars.' : 'The password you set when you created your account.'} />
               </div>
               {error && <div className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 text-sm">{error}</div>}
               <div className="flex gap-2 pt-1">
@@ -136,7 +160,7 @@ export function LoginPanel(): React.JSX.Element {
                   className="flex-1 h-11 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold"
                 >
                   {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ArrowRight className="w-4 h-4 mr-2" />}
-                  Create account & continue
+                  {authMode === 'signup' ? 'Create account & continue' : 'Log in & continue'}
                 </Button>
                 <Button type="button" variant="ghost" onClick={() => setEmailMode(false)} className="h-11">
                   Back

@@ -14,12 +14,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sandpack } from '@codesandbox/sandpack-react';
 import { ArrowRight, CheckCircle2, Layers, Loader2, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Textarea, VoiceInput } from '@caia/ui';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Textarea } from '@caia/ui';
 import { spendTokens, readSession } from '../../lib/session/tokens';
 import { updateProject } from '../../lib/session/project';
 import { ViewportSelector, VIEWPORTS, type Viewport } from './common/ViewportSelector';
 import { MvpTreePanel } from './MvpTreePanel';
 import { StageExplainer } from './common/StageExplainer';
+import { useSpec, advanceStage } from '../../lib/spec/store';
+import Link from 'next/link';
 import { DesignPicker } from './DesignPicker';
 import { InputExplainer } from './common/InputExplainer';
 import { ProcessLoader } from './common/ProcessLoader';
@@ -69,8 +71,9 @@ export default function ScreenComponent() {
 
 export function BuildPanel(props: { initialIdea?: string; initialProposal?: string }): React.JSX.Element {
   const router = useRouter();
-  const [ideaText, setIdeaText] = useState(props.initialIdea || '');
-  const [proposal, setProposal] = useState(props.initialProposal || '');
+  const [spec, mutateSpec] = useSpec();
+  const [ideaText, setIdeaText] = useState(props.initialIdea || spec.grandIdea || '');
+  const [proposal, setProposal] = useState(props.initialProposal || spec.proposal || '');
   const [scaffold, setScaffold] = useState<Scaffold | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [scaffoldBusy, setScaffoldBusy] = useState(false);
@@ -201,6 +204,7 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
 
   const goNext = useCallback(() => router.push('/wizard/subscribe'), [router]);
 
+  useEffect(() => { advanceStage('build'); }, []);
   useEffect(() => {
     // If a session came in unauthenticated, kick to /wizard/login (belt-and-suspenders).
     const s = readSession();
@@ -243,21 +247,24 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
             <CardDescription>Scaffold, pick five screens, and CAIA renders each in the live preview.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-medium text-muted-foreground">Idea</label>
-                <VoiceInput value={ideaText} onValueChange={setIdeaText} fieldLabel="idea" />
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground">Context locked in</span>
+                <span className="text-[10px] text-muted-foreground">from earlier stages</span>
               </div>
-              <Textarea value={ideaText} onChange={(e) => setIdeaText(e.target.value)} rows={3} className="text-sm" placeholder="Describe your product idea in a sentence or two…" />
-              <InputExplainer hint="Plain English is best. What is the product, who is it for, why now?" example="A neighborhood recipe-sharing app where neighbors post recipes and can chat." />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-medium text-muted-foreground">Proposal</label>
-                <VoiceInput value={proposal} onValueChange={setProposal} fieldLabel="proposal" />
+              <div className="text-muted-foreground line-clamp-2">
+                <span className="font-medium text-foreground">Idea:</span> {ideaText || <em className="italic">(not set — go to Grand Idea)</em>}
               </div>
-              <Textarea value={proposal} onChange={(e) => setProposal(e.target.value)} rows={4} className="text-sm" placeholder="Optional. What features should the MVP include?" />
-              <InputExplainer hint="Skip if you'd like — CAIA can propose one for you." example="MVP: post a recipe with photo, browse feed, request ingredient from neighbor, in-app chat." />
+              {proposal && (
+                <div className="text-muted-foreground line-clamp-3">
+                  <span className="font-medium text-foreground">Proposal:</span> {proposal}
+                </div>
+              )}
+              <div className="flex gap-3 pt-1">
+                <Link href="/wizard/grand-idea" className="text-primary hover:underline">Edit idea</Link>
+                <Link href="/wizard/proposal" className="text-primary hover:underline">Edit proposal</Link>
+                <Link href="/wizard/design" className="text-primary hover:underline ml-auto">Design: {spec.design?.designSystem || 'not set'} · {spec.design?.styleGuide || 'not set'}</Link>
+              </div>
             </div>
             {scaffoldBusy ? (
               <ProcessLoader
@@ -441,6 +448,7 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
 import { createRoot } from 'react-dom/client';
 import './tw-loader.js';
 import App from './App';
+import { LiveVoiceInput } from './common/LiveVoiceInput';
 const root = createRoot(document.getElementById('root'));
 root.render(<App />);
 `,
