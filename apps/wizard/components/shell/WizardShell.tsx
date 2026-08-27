@@ -27,6 +27,8 @@ import { WIZARD_STEPS } from '../../lib/wizard/steps';
 import { TokenBadge } from '../session/TokenBadge';
 import { DocsFolder } from '../session/DocsFolder';
 import { LoginPill } from '../session/LoginPill';
+import { NewProjectModal } from '../session/NewProjectModal';
+import { Plus } from 'lucide-react';
 
 interface WizardShellProps {
   children: React.ReactNode;
@@ -40,6 +42,7 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
   const progressPct = Math.round((activeIndex / WIZARD_STEPS.length) * 100);
   const activeStep = WIZARD_STEPS[activeIndex - 1];
 
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
   // Theme toggle (persists to localStorage; defaults to dark)
   const [isDark, setIsDark] = useState(true);
   useEffect(() => {
@@ -94,6 +97,9 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
             <Link href="/wizard/docs" className="hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 h-8 rounded-md hover:bg-muted transition-colors" title="Your startup documents">
               Docs
             </Link>
+            <button type="button" onClick={() => setNewProjectOpen(true)} className="hidden md:inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 px-2 h-8 rounded-md hover:bg-primary/5 transition-colors font-medium" title="Start a new project">
+              <Plus className="w-3.5 h-3.5" /> New project
+            </button>
             <Link href="/wizard/roadmap" className="hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 h-8 rounded-md hover:bg-muted transition-colors" title="The full CAIA factory roadmap">
               Roadmap
             </Link>
@@ -204,6 +210,7 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
           </div>
         </div>
       </footer>
+      <NewProjectModal open={newProjectOpen} onClose={() => setNewProjectOpen(false)} />
     </div>
   );
 }

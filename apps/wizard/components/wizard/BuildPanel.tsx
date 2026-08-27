@@ -20,6 +20,12 @@ import { updateProject } from '../../lib/session/project';
 import { ViewportSelector, VIEWPORTS, type Viewport } from './common/ViewportSelector';
 import { MvpTreePanel } from './MvpTreePanel';
 import { StageExplainer } from './common/StageExplainer';
+import { DesignPicker } from './DesignPicker';
+import { InputExplainer } from './common/InputExplainer';
+import { VoiceInput } from './common/VoiceInput';
+import { ProcessLoader } from './common/ProcessLoader';
+import { AiFailurePanel } from './common/AiFailurePanel';
+import { validateFreeText } from '../../lib/validate/text';
 import type { MvpInitiative } from '../../lib/session/project';
 
 interface ScreenSpec {
@@ -83,6 +89,8 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
   }, []);
 
   const runScaffold = useCallback(async () => {
+    const v = validateFreeText(ideaText, { minLen: 15, requireSentence: true });
+    if (!v.ok) { setScaffoldError(v.reason || 'Please rewrite your idea.'); return; }
     setScaffoldBusy(true);
     setScaffoldError(null);
     appendLog('Scaffolding MVP…');
@@ -212,6 +220,21 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
       <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
       {/* LEFT: Controls */}
       <div className="space-y-4 min-w-0">
+        {/* Design foundation — 3 stories the founder answers before scaffolding.
+            Persists to project.design so the code generator can honour it. */}
+        <details className="rounded-2xl border border-border/60 bg-card/40 open:bg-card/50 transition-colors">
+          <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold uppercase tracking-wider">Foundation</span>
+              <span className="text-sm font-semibold">Design system, style & theme</span>
+            </div>
+            <span className="text-xs text-muted-foreground">Set once · used everywhere</span>
+          </summary>
+          <div className="p-4 border-t border-border/50">
+            <DesignPicker />
+          </div>
+        </details>
+
         <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-2">
             <div className="inline-flex items-center gap-2 w-fit px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
@@ -222,19 +245,41 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <label className="block text-xs font-medium mb-1 text-muted-foreground">Idea</label>
-              <Textarea value={ideaText} onChange={(e) => setIdeaText(e.target.value)} rows={3} className="text-sm" />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-muted-foreground">Idea</label>
+                <VoiceInput onTranscript={(t) => setIdeaText((prev) => (prev ? prev + ' ' : '') + t)} />
+              </div>
+              <Textarea value={ideaText} onChange={(e) => setIdeaText(e.target.value)} rows={3} className="text-sm" placeholder="Describe your product idea in a sentence or two…" />
+              <InputExplainer hint="Plain English is best. What is the product, who is it for, why now?" example="A neighborhood recipe-sharing app where neighbors post recipes and can chat." />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1 text-muted-foreground">Proposal</label>
-              <Textarea value={proposal} onChange={(e) => setProposal(e.target.value)} rows={4} className="text-sm" />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-muted-foreground">Proposal</label>
+                <VoiceInput onTranscript={(t) => setProposal((prev) => (prev ? prev + ' ' : '') + t)} />
+              </div>
+              <Textarea value={proposal} onChange={(e) => setProposal(e.target.value)} rows={4} className="text-sm" placeholder="Optional. What features should the MVP include?" />
+              <InputExplainer hint="Skip if you'd like — CAIA can propose one for you." example="MVP: post a recipe with photo, browse feed, request ingredient from neighbor, in-app chat." />
             </div>
-            <Button onClick={runScaffold} disabled={scaffoldBusy || ideaText.trim().length < 10} className="w-full h-11 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold">
-              {scaffoldBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Layers className="w-4 h-4 mr-2" />}
-              {scaffold ? 'Re-scaffold' : 'Scaffold my MVP'}
-            </Button>
+            {scaffoldBusy ? (
+              <ProcessLoader
+                status="Scaffolding your MVP…"
+                substeps={[
+                  'Reading your idea…',
+                  'Naming your product…',
+                  'Sketching initiatives…',
+                  'Grouping into epics…',
+                  'Writing user stories…',
+                  'Proposing screens…',
+                ]}
+              />
+            ) : (
+              <Button onClick={runScaffold} disabled={ideaText.trim().length < 10} className="w-full h-11 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold">
+                <Layers className="w-4 h-4 mr-2" />
+                {scaffold ? 'Re-scaffold' : 'Scaffold my MVP'}
+              </Button>
+            )}
             {scaffoldError && (
-              <div className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 text-xs">{scaffoldError}</div>
+              <AiFailurePanel onRetry={runScaffold} message={scaffoldError.length < 120 ? scaffoldError : undefined} />
             )}
           </CardContent>
         </Card>

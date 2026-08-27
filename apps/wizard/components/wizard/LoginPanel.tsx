@@ -13,6 +13,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Chrome, Coins, Loader2, Mail, Sparkles } from 'lucide-react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@caia/ui';
 import { grantLoginReward, readSession, LOGIN_REWARD } from '../../lib/session/tokens';
+import { InputExplainer } from './common/InputExplainer';
+import { validateEmail } from '../../lib/validate/text';
 
 export function LoginPanel(): React.JSX.Element {
   const router = useRouter();
@@ -36,10 +38,9 @@ export function LoginPanel(): React.JSX.Element {
   const google = useCallback(() => finalize('Alex Founder', 'alex@example.com'), [finalize]);
   const apple = useCallback(() => finalize('Alex Founder', 'alex@icloud.com'), [finalize]);
   const emailSubmit = useCallback(() => {
-    if (name.trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError('Give me a valid name and email.');
-      return;
-    }
+    if (name.trim().length < 2) { setError('Please enter your name (at least 2 characters).'); return; }
+    const ev = validateEmail(email);
+    if (!ev.ok) { setError(ev.reason || 'That doesn\'t look like a valid email.'); return; }
     setError(null);
     finalize(name.trim(), email.trim());
   }, [finalize, name, email]);
@@ -106,6 +107,7 @@ export function LoginPanel(): React.JSX.Element {
               <div>
                 <label className="block text-sm font-medium mb-1.5">Email</label>
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="alex@example.com" className="h-11" />
+                <InputExplainer hint="Used to save your project. We never spam." />
               </div>
               {error && <div className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 text-sm">{error}</div>}
               <div className="flex gap-2 pt-1">

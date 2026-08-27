@@ -12,6 +12,12 @@ import { ArrowRight, Copy, CheckCircle2, ExternalLink, Loader2, RefreshCw, Spark
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 import { spendTokens, readSession } from '../../lib/session/tokens';
 import { addDoc, updateProject } from '../../lib/session/project';
+import { StageExplainer } from './common/StageExplainer';
+import { InputExplainer } from './common/InputExplainer';
+import { VoiceInput } from './common/VoiceInput';
+import { ProcessLoader } from './common/ProcessLoader';
+import { AiFailurePanel } from './common/AiFailurePanel';
+import { validateFreeText } from '../../lib/validate/text';
 
 
 export interface LandingPanelProps { initialIdea?: string; initialProposal?: string; }
@@ -58,7 +64,9 @@ export function LandingPanel({ initialIdea, initialProposal }: LandingPanelProps
   }, []);
 
   const generate = useCallback(async () => {
-    if (busy || idea.trim().length < 10) return;
+    if (busy) return;
+    const v = validateFreeText(idea, { minLen: 15, requireSentence: true });
+    if (!v.ok) { setError(v.reason || 'Please rewrite your idea.'); return; }
     setBusy(true);
     setError(null);
     setHtml('');
