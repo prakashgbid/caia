@@ -12,7 +12,7 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CheckCircle2, Lightbulb, Sparkles } from 'lucide-react';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, VoiceInput } from '@caia/ui';
 
 const MIN_CHARS = 20;
 const MIN_WORDS = 5;
@@ -80,12 +80,13 @@ export function GrandIdeaForm(): React.JSX.Element {
               placeholder="e.g., A daily walking-buddy app for retired folks in my neighborhood — most of them are afraid to walk alone but would love company..."
               className="w-full p-4 text-base leading-relaxed rounded-lg border border-border bg-background/50 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all resize-y disabled:opacity-70"
             />
-            <div className="mt-2 flex justify-between items-center text-xs text-muted-foreground">
+            <div className="mt-2 flex justify-between items-center gap-2 text-xs text-muted-foreground">
               <span className="tabular-nums">{wordCount} words · {trimmed.length} chars</span>
               <span className="inline-flex items-center gap-1">
                 <Lightbulb className="w-3 h-3" />
                 Aim for ~{MIN_WORDS}+ words, one clear thought
               </span>
+              <VoiceInput value={text} onValueChange={setText} fieldLabel="your idea" />
             </div>
           </div>
 

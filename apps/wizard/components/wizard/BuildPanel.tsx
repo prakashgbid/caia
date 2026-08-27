@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sandpack } from '@codesandbox/sandpack-react';
 import { ArrowRight, CheckCircle2, Layers, Loader2, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Textarea } from '@caia/ui';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Textarea, VoiceInput } from '@caia/ui';
 import { spendTokens, readSession } from '../../lib/session/tokens';
 import { updateProject } from '../../lib/session/project';
 import { ViewportSelector, VIEWPORTS, type Viewport } from './common/ViewportSelector';
@@ -22,7 +22,6 @@ import { MvpTreePanel } from './MvpTreePanel';
 import { StageExplainer } from './common/StageExplainer';
 import { DesignPicker } from './DesignPicker';
 import { InputExplainer } from './common/InputExplainer';
-import { VoiceInput } from './common/VoiceInput';
 import { ProcessLoader } from './common/ProcessLoader';
 import { AiFailurePanel } from './common/AiFailurePanel';
 import { validateFreeText } from '../../lib/validate/text';
@@ -247,7 +246,7 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-medium text-muted-foreground">Idea</label>
-                <VoiceInput onTranscript={(t) => setIdeaText((prev) => (prev ? prev + ' ' : '') + t)} />
+                <VoiceInput value={ideaText} onValueChange={setIdeaText} fieldLabel="idea" />
               </div>
               <Textarea value={ideaText} onChange={(e) => setIdeaText(e.target.value)} rows={3} className="text-sm" placeholder="Describe your product idea in a sentence or two…" />
               <InputExplainer hint="Plain English is best. What is the product, who is it for, why now?" example="A neighborhood recipe-sharing app where neighbors post recipes and can chat." />
@@ -255,7 +254,7 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-medium text-muted-foreground">Proposal</label>
-                <VoiceInput onTranscript={(t) => setProposal((prev) => (prev ? prev + ' ' : '') + t)} />
+                <VoiceInput value={proposal} onValueChange={setProposal} fieldLabel="proposal" />
               </div>
               <Textarea value={proposal} onChange={(e) => setProposal(e.target.value)} rows={4} className="text-sm" placeholder="Optional. What features should the MVP include?" />
               <InputExplainer hint="Skip if you'd like — CAIA can propose one for you." example="MVP: post a recipe with photo, browse feed, request ingredient from neighbor, in-app chat." />
