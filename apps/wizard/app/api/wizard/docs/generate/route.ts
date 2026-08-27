@@ -11,6 +11,8 @@
 import { NextResponse } from 'next/server';
 import { callOpenRouter } from '@caia/openrouter-client';
 import { findDoc } from '../../../../../lib/docs/catalog';
+import { readAuthedUser } from '../../../../../lib/backend/session';
+import { query } from '../../../../../lib/db/pool';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,6 +34,17 @@ export async function POST(req: Request): Promise<NextResponse> {
   const contextStr = JSON.stringify(context, null, 2).slice(0, 8000);
   const userPrompt = `PROJECT CONTEXT:\n${contextStr}\n\nProduce the document now, in markdown. No preamble, no fences — just the markdown content.`;
 
+  // Server-side token gate (only if authed). Anonymous users are allowed
+  // to try — they burn their client-side 50-token starter allowance which
+  // will run out and force them into the login gate.
+  const me = await readAuthedUser();
+  const DOC_COST = doc.slug === 'business-plan' ? 25 : 8;
+  if (me) {
+    if (me.tokensBalance < DOC_COST) {
+      return NextResponse.json({ ok: false, error: 'insufficient_tokens', balance: me.tokensBalance, cost: DOC_COST }, { status: 402 });
+    }
+  }
+
   // Long-form docs get the beefier model + more tokens
   const isLong = doc.slug === 'business-plan';
   const r = await callOpenRouter({
@@ -47,6 +60,13 @@ export async function POST(req: Request): Promise<NextResponse> {
   if (!r.ok || !r.text) {
     return NextResponse.json({ ok: false, error: 'llm_failed', detail: r.ok ? 'no_text' : r.error }, { status: 502 });
   }
+  // Deduct tokens for authed users.
+  let newBalance: number | undefined = undefined;
+  if (me) {
+    await query('UPDATE wizard_users SET tokens_balance = tokens_balance - $2, updated_at = NOW() WHERE id = $1', [me.id, DOC_COST]);
+    await query("INSERT INTO wizard_token_events (user_id, delta, reason) VALUES ($1, $2, $3)", [me.id, -DOC_COST, 'spend:doc:' + doc.slug]);
+    newBalance = me.tokensBalance - DOC_COST;
+  }
   return NextResponse.json({
     ok: true,
     docSlug: doc.slug,
@@ -56,5 +76,6 @@ export async function POST(req: Request): Promise<NextResponse> {
     model: r.model,
     costUsd: r.costUsd,
     latencyMs: Date.now() - started,
+    tokensBalance: newBalance,
   });
 }

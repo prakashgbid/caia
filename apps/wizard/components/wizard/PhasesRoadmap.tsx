@@ -5,9 +5,9 @@
  * Control-Plane components, grouped Done / In progress / To do.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Loader2, Circle } from 'lucide-react';
-import { SOFTWARE_FACTORIES, CONTROL_PLANE, groupByStatus, type SFStatus, type Sf } from '../../lib/factory/phases';
+import { SOFTWARE_FACTORIES as STATIC_SFS, CONTROL_PLANE as STATIC_CP, groupByStatus, type SFStatus, type Sf } from '../../lib/factory/phases';
 import { StageExplainer } from './common/StageExplainer';
 
 function Section({ title, items }: { title: string; items: Sf[] }): React.JSX.Element {
@@ -50,15 +50,33 @@ function Section({ title, items }: { title: string; items: Sf[] }): React.JSX.El
 }
 
 export function PhasesRoadmap(): React.JSX.Element {
+  const [sfs, setSfs] = useState<Sf[]>(STATIC_SFS);
+  const [cp, setCp] = useState<Sf[]>(STATIC_CP);
+  const [source, setSource] = useState<'snapshot' | 'live'>('snapshot');
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/caia/factories/status', { cache: 'no-store' });
+        if (!res.ok) return;
+        const j = await res.json() as { ok?: boolean; softwareFactories?: Sf[]; controlPlane?: Sf[]; source?: string };
+        if (j.ok && j.softwareFactories && j.controlPlane) {
+          setSfs(j.softwareFactories);
+          setCp(j.controlPlane);
+          if (j.source === 'live') setSource('live');
+        }
+      } catch { /* fall back to static */ }
+    })();
+  }, []);
   return (
     <div className="space-y-4">
+      <div className="text-[10px] text-muted-foreground text-right">Source: {source === 'live' ? 'Live from CAIA registry' : 'Snapshot'}</div>
       <StageExplainer
         title="The full CAIA factory"
         body="CAIA is a factory of 141 Software Factories (SF) plus 15 Control-Plane services. What you use in the wizard is a small slice — this is the whole map."
         why="Founders often ask 'is CAIA just a wizard?' — no. It's an industrialised software factory. As each factory ships, it moves from 'To do' to 'Done'. You benefit from every one that's live."
       />
-      <Section title="Software Factories (SF-00 → SF-140)" items={SOFTWARE_FACTORIES} />
-      <Section title="Control-Plane Components (CP-01 → CP-16)" items={CONTROL_PLANE} />
+      <Section title="Software Factories (SF-00 → SF-140)" items={sfs} />
+      <Section title="Control-Plane Components (CP-01 → CP-16)" items={cp} />
     </div>
   );
 }

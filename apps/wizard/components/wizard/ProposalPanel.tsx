@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Copy, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, VoiceInput } from '@caia/ui';
 
 interface Turn { role: 'user' | 'assistant'; content: string; }
 
@@ -110,7 +110,10 @@ export function ProposalPanel({ initialIdea }: ProposalPanelProps): React.JSX.El
       <CardContent>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Grand idea (from Step 2)</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium">Grand idea (from Step 2)</label>
+              <VoiceInput value={idea} onValueChange={setIdea} fieldLabel="grand idea" />
+            </div>
             <textarea
               value={idea}
               onChange={(e) => setIdea(e.target.value)}
