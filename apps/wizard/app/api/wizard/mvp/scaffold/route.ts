@@ -7,6 +7,8 @@
 
 import { NextResponse } from 'next/server';
 import { callOpenRouter } from '@caia/openrouter-client';
+import { readAuthedUser } from '../../../../../lib/backend/session';
+import { query } from '../../../../../lib/db/pool';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,6 +64,11 @@ export async function POST(req: Request): Promise<NextResponse> {
   if (ideaText.length < 10) return NextResponse.json({ ok: false, error: 'idea_required' }, { status: 400 });
 
   const userPrompt = `Idea:\n"${ideaText}"\n\nProposal:\n${proposal || '(none)'}\n\nProduce the scaffold JSON now.`;
+  const me = await readAuthedUser();
+  const SCAFFOLD_COST = 25;
+  if (me && me.tokensBalance < SCAFFOLD_COST) {
+    return NextResponse.json({ ok: false, error: 'insufficient_tokens', balance: me.tokensBalance, cost: SCAFFOLD_COST }, { status: 402 });
+  }
   const r = await callOpenRouter({
     purpose: 'mvp.scaffold.v2',
     userPrompt,
@@ -74,8 +81,14 @@ export async function POST(req: Request): Promise<NextResponse> {
   });
   if (!r.ok || !r.json) return NextResponse.json({ ok: false, error: 'llm_failed', detail: r.ok ? 'no_json' : r.error }, { status: 502 });
 
+  let newBalance: number | undefined;
+  if (me) {
+    await query('UPDATE wizard_users SET tokens_balance = tokens_balance - $2, updated_at = NOW() WHERE id = $1', [me.id, SCAFFOLD_COST]);
+    await query("INSERT INTO wizard_token_events (user_id, delta, reason) VALUES ($1, $2, 'spend:scaffold')", [me.id, -SCAFFOLD_COST]);
+    newBalance = me.tokensBalance - SCAFFOLD_COST;
+  }
   return NextResponse.json(
-    { ok: true, ...(r.json as object), model: r.model, costUsd: r.costUsd, latencyMs: Date.now() - started },
+    { ok: true, ...(r.json as object), model: r.model, costUsd: r.costUsd, latencyMs: Date.now() - started, tokensBalance: newBalance },
     { status: 200 },
   );
 }

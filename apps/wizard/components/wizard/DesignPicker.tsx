@@ -11,7 +11,6 @@ import { useEffect, useState } from 'react';
 import { Check, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Button } from '@caia/ui';
 import { readProject, updateProject, type DesignChoices } from '../../lib/session/project';
-import { StageExplainer } from './common/StageExplainer';
 
 const SYSTEMS: Array<{ key: DesignChoices['designSystem']; name: string; desc: string }> = [
   { key: 'shadcn', name: 'shadcn/ui', desc: 'Modern, clean, developer-favoured. Best for SaaS.' },
@@ -48,11 +47,7 @@ export function DesignPicker({ onSaved }: Props): React.JSX.Element {
 
   return (
     <div className="space-y-4">
-      <StageExplainer
-        title="Pick your design system, style, and theme"
-        body="These three choices shape how every screen CAIA builds will look. Change your mind later — nothing is locked in."
-        why="Design decisions early save re-work later. A cohesive look also makes your MVP feel like a real product to investors and early users."
-      />
+
 
       <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
         <CardHeader className="pb-3">

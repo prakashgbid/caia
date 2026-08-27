@@ -42,7 +42,7 @@ export type WizardSlug =
   | 'build'
   | 'subscribe'
   | 'design'
-  | 'atlas';
+  | 'atlas' | 'design';
 
 export const WIZARD_STEPS: ReadonlyArray<WizardStep> = [
   {
@@ -98,15 +98,22 @@ export const WIZARD_STEPS: ReadonlyArray<WizardStep> = [
     fsmStates: ['awaiting-external-design'],
   },
   {
-    slug: 'build',
+    slug: 'design',
     index: 8,
+    title: 'Design & Theme',
+    description: 'Pick your design system, style, and theme before we build.',
+    fsmStates: ['awaiting-external-design'],
+  },
+  {
+    slug: 'build',
+    index: 9,
     title: 'Build the MVP',
     description: 'Pick five screens; CAIA builds a live click-through.',
     fsmStates: ['awaiting-external-design'],
   },
   {
     slug: 'subscribe',
-    index: 9,
+    index: 10,
     title: 'Subscribe',
     description: 'Ship it \u2014 or download your project so far.',
     fsmStates: ['awaiting-external-design'],

@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Copy, CheckCircle2, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, VoiceInput } from '@caia/ui';
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 import { spendTokens, readSession } from '../../lib/session/tokens';
 import { addDoc, updateProject } from '../../lib/session/project';
 import { StageExplainer } from './common/StageExplainer';
@@ -17,6 +17,7 @@ import { InputExplainer } from './common/InputExplainer';
 import { ProcessLoader } from './common/ProcessLoader';
 import { AiFailurePanel } from './common/AiFailurePanel';
 import { validateFreeText } from '../../lib/validate/text';
+import { LiveVoiceInput } from './common/LiveVoiceInput';
 
 
 export interface LandingPanelProps { initialIdea?: string; initialProposal?: string; }
@@ -119,9 +120,9 @@ export function LandingPanel({ initialIdea, initialProposal }: LandingPanelProps
   const goNext = useCallback(() => {
     const s = readSession();
     if (s.tokens <= 0 && !s.loggedIn) {
-      router.push('/wizard/login?next=' + encodeURIComponent('/wizard/build'));
+      router.push('/wizard/login?next=' + encodeURIComponent('/wizard/design'));
     } else {
-      router.push('/wizard/build');
+      router.push('/wizard/design');
     }
   }, [router]);
 
