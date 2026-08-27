@@ -9,6 +9,9 @@ import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@caia/ui';
+import { StageExplainer } from './common/StageExplainer';
+import { InputExplainer } from './common/InputExplainer';
+import { validateEmail, validateProjectName } from '../../lib/validate/text';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const OPENROUTER_KEY_RE = /^sk-or-v1-[a-zA-Z0-9]{20,}$/;
@@ -29,6 +32,10 @@ export function LightweightOnboardingForm(): React.JSX.Element {
 
   const submit = useCallback(async () => {
     if (!canSubmit) return;
+    const vn = validateProjectName(name);
+    if (!vn.ok) { setError(vn.reason || 'Enter your name.'); return; }
+    const ve = validateEmail(email);
+    if (!ve.ok) { setError(ve.reason || 'Enter a valid email.'); return; }
     setBusy(true);
     setError(null);
     try {
@@ -50,6 +57,12 @@ export function LightweightOnboardingForm(): React.JSX.Element {
   }, [canSubmit, name, email, byokKey, router]);
 
   return (
+    <>
+      <StageExplainer
+        title="Let's build something together"
+        body="Three quick fields to get you set up. Nothing is provisioned yet — that only happens after you approve an MVP plan. Everything up to that point lives safely in CAIA's own workspace."
+        why="Founders often bounce off long forms. This is the minimum CAIA needs to route your AI calls and keep your work under your name."
+      />
     <Card className="border-border/60 bg-card/50 backdrop-blur-sm shadow-2xl shadow-primary/5">
       <CardHeader className="space-y-3">
         <div className="inline-flex items-center gap-2 w-fit px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
@@ -165,5 +178,6 @@ export function LightweightOnboardingForm(): React.JSX.Element {
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }
