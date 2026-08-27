@@ -1,12 +1,8 @@
 /**
  * POST /api/wizard/mvp/scaffold
  *
- * Given idea + proposal, returns:
- *   - initiatives: 2-4 high-level goals
- *   - epics: 4-8 mid-level buckets
- *   - screens: 8 proposed MVP screens the user picks 5 from
- *
- * Uses openai/gpt-4o-mini in JSON mode. Fast, cheap, reliable.
+ * Returns a full MVP hierarchy: initiatives → epics → stories → (implicit) tasks,
+ * plus the 8 proposed screens the founder picks 5 from (backward-compatible).
  */
 
 import { NextResponse } from 'next/server';
@@ -15,24 +11,45 @@ import { callOpenRouter } from '@caia/openrouter-client';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const SCAFFOLD_SYSTEM = `You are the CAIA MVP Scaffolder. Given a founder's app idea + proposal, produce:
-- initiatives: 2-4 high-level product goals (each: name, one-line purpose)
-- epics: 4-8 buckets of work under those initiatives (each: name, one-line purpose, initiativeName)
-- screens: EXACTLY 8 proposed screens for the MVP click-through, in a sensible user-journey order (each: name (2-4 words), routePath ("/foo"), purpose (one-line), estimatedComplexity ("simple" | "medium"), suggested: true|false — mark 5 as suggested that most impact the demo)
+const SCAFFOLD_SYSTEM = `You are the CAIA MVP Scaffolder. Given a founder's app idea + proposal, produce a hierarchy the founder can walk through.
 
-Output JSON only, no preamble/fences:
+Output JSON only, exactly this shape:
 {
   "productName": "string",
-  "initiatives": [{"name":"","purpose":""}],
-  "epics": [{"name":"","purpose":"","initiativeName":""}],
-  "screens": [{"name":"","routePath":"/","purpose":"","estimatedComplexity":"simple","suggested":true}]
+  "initiatives": [
+    {
+      "id": "init-1",
+      "title": "Recipe Sharing",
+      "purpose": "Enable users to post and browse recipes",
+      "epics": [
+        {
+          "id": "epic-1-1",
+          "title": "Post a Recipe",
+          "purpose": "Let users add their recipes with photo + steps",
+          "stories": [
+            { "id": "story-1-1-1", "title": "As a home cook I want to add a photo of my dish", "purpose": "Photos drive engagement", "status": "todo" }
+          ]
+        }
+      ]
+    }
+  ],
+  "screens": [
+    { "name": "Home Feed", "routePath": "/", "purpose": "...", "estimatedComplexity": "simple", "suggested": true }
+  ]
 }
 
 Rules:
-- Screens must include a home/feed/landing screen as #1 and a settings/profile screen as #8.
-- Middle 6 screens are core to the product.
-- Suggested=true for exactly 5 screens — pick the ones that make the app feel most alive.
-- No jargon: everyday user-goal names ("My Feed", "Post a Recipe", "Neighbor Profile") not tech names ("Feed Component", "Data Table").`;
+- 2-4 initiatives.
+- 4-8 epics total distributed across initiatives.
+- 3-6 stories per epic. Each story format: "As a <persona> I want <goal> so <benefit>" OR a plain user goal.
+- Stories status starts "todo".
+- ALWAYS include 3 special stories under a "Design" epic (auto-added, initiativeName "Foundation"):
+  - "Pick your design system (shadcn/MUI/Chakra/Ant/custom)"
+  - "Pick your style guide (minimal/warm/corporate/playful/editorial/brutalist)"
+  - "Pick your theme (light/dark/auto)"
+- ALWAYS include exactly 8 screens (backward compat with builder UI): #1 home/feed, #8 settings/profile, middle 6 core.
+- Screens: 5 marked suggested=true (the most demo-impactful).
+- Everyday user-goal names, not tech names. Plain English.`;
 
 interface ScaffoldReq { ideaText?: unknown; proposal?: unknown; }
 
@@ -46,12 +63,12 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   const userPrompt = `Idea:\n"${ideaText}"\n\nProposal:\n${proposal || '(none)'}\n\nProduce the scaffold JSON now.`;
   const r = await callOpenRouter({
-    purpose: 'mvp.scaffold',
+    purpose: 'mvp.scaffold.v2',
     userPrompt,
     systemPrompt: SCAFFOLD_SYSTEM,
     model: 'openai/gpt-4o-mini',
-    maxTokens: 1200,
-    timeoutMs: 20_000,
+    maxTokens: 2500,
+    timeoutMs: 30_000,
     responseFormat: 'json',
     paidFallback: true,
   });

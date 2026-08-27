@@ -16,6 +16,11 @@ import { Sandpack } from '@codesandbox/sandpack-react';
 import { ArrowRight, CheckCircle2, Layers, Loader2, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Textarea } from '@caia/ui';
 import { spendTokens, readSession } from '../../lib/session/tokens';
+import { updateProject } from '../../lib/session/project';
+import { ViewportSelector, VIEWPORTS, type Viewport } from './common/ViewportSelector';
+import { MvpTreePanel } from './MvpTreePanel';
+import { StageExplainer } from './common/StageExplainer';
+import type { MvpInitiative } from '../../lib/session/project';
 
 interface ScreenSpec {
   name: string;
@@ -27,8 +32,8 @@ interface ScreenSpec {
 
 interface Scaffold {
   productName: string;
-  initiatives: Array<{ name: string; purpose: string }>;
-  epics: Array<{ name: string; purpose: string; initiativeName: string }>;
+  initiatives: Array<{ id?: string; title?: string; name?: string; purpose: string; epics?: Array<{ id?: string; title?: string; name?: string; purpose?: string; stories?: Array<{ id?: string; title: string; purpose?: string; status?: 'todo' | 'in-progress' | 'done' }> }> }>;
+  epics?: Array<{ name: string; purpose: string; initiativeName: string }>;
   screens: ScreenSpec[];
 }
 
@@ -71,6 +76,7 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
   const [genError, setGenError] = useState<string | null>(null);
   const [activeScreen, setActiveScreen] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>(['Ready to build.']);
+  const [viewport, setViewport] = useState<Viewport>('desktop');
 
   const appendLog = useCallback((line: string) => {
     setLog((prev) => [...prev.slice(-40), `[${new Date().toLocaleTimeString()}] ${line}`]);
@@ -94,6 +100,26 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
       }
       const s = json as unknown as Scaffold;
       setScaffold(s);
+      // Persist to project store — survives interruption.
+      updateProject((pp) => {
+        pp.productName = s.productName;
+        pp.initiatives = (s.initiatives || []).map((it, i) => ({
+          id: it.id || `init-${i+1}`,
+          title: it.title || it.name || `Initiative ${i+1}`,
+          purpose: it.purpose || '',
+          epics: (it.epics || []).map((ep, j) => ({
+            id: ep.id || `epic-${i+1}-${j+1}`,
+            title: ep.title || ep.name || `Epic ${j+1}`,
+            purpose: ep.purpose || '',
+            stories: (ep.stories || []).map((st, k) => ({
+              id: st.id || `story-${i+1}-${j+1}-${k+1}`,
+              title: st.title,
+              purpose: st.purpose || '',
+              status: (st.status as 'todo' | 'in-progress' | 'done') || 'todo',
+            })),
+          })),
+        }));
+      });
       const suggested = new Set(s.screens.filter((x) => x.suggested).slice(0, 5).map((x) => x.name));
       setPicked(suggested);
       appendLog(`Scaffolded ${s.screens.length} candidate screens. ${suggested.size} pre-selected.`);
@@ -177,7 +203,13 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
   }, [router]);
 
   return (
-    <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+    <div className="space-y-6">
+      <StageExplainer
+        title="Build a live click-through of your MVP"
+        body="CAIA breaks your product idea into initiatives, epics, and stories, then generates one screen at a time. You'll see them render live in the preview panel."
+        why="A click-through prototype is what investors, early users, and your future team need to feel your product before you write a line of production code."
+      />
+      <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
       {/* LEFT: Controls */}
       <div className="space-y-4 min-w-0">
         <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
@@ -261,6 +293,37 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
           </Card>
         )}
 
+        {scaffold && scaffold.initiatives && scaffold.initiatives.length > 0 && (
+          <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">MVP breakdown</CardTitle>
+              <CardDescription className="text-xs">
+                Initiative → Epic → Story hierarchy. Click a story to jump its build.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MvpTreePanel
+                initiatives={(scaffold.initiatives || []).map((it, i) => ({
+                  id: it.id || `init-${i+1}`,
+                  title: it.title || it.name || `Initiative ${i+1}`,
+                  purpose: it.purpose || '',
+                  epics: (it.epics || []).map((ep, j) => ({
+                    id: ep.id || `epic-${i+1}-${j+1}`,
+                    title: ep.title || ep.name || `Epic ${j+1}`,
+                    purpose: ep.purpose || '',
+                    stories: (ep.stories || []).map((st, k) => ({
+                      id: st.id || `story-${i+1}-${j+1}-${k+1}`,
+                      title: st.title,
+                      purpose: st.purpose || '',
+                      status: (st.status as 'todo' | 'in-progress' | 'done') || 'todo',
+                    })),
+                  })),
+                }))}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-border/60 bg-card/30 backdrop-blur-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Build log</CardTitle>
@@ -283,8 +346,8 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
 
       {/* RIGHT: Sandpack live preview */}
       <Card className="border-border/60 bg-card/50 backdrop-blur-sm min-h-[720px] flex flex-col">
-        <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 border-b border-border/50">
-          <div>
+        <CardHeader className="flex-col items-stretch space-y-3 pb-3 border-b border-border/50">
+          <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-base flex items-center gap-2">
               <div className="flex gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-400/70" />
@@ -293,9 +356,10 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
               </div>
               {activeScreen || 'Live app preview'}
             </CardTitle>
+            <ViewportSelector value={viewport} onChange={setViewport} />
           </div>
           {scaffold && Object.keys(generated).length > 0 && (
-            <div className="flex gap-1 flex-wrap justify-end max-w-[60%]">
+            <div className="flex gap-1 flex-wrap">
               {Object.keys(generated).map((name) => (
                 <button
                   key={name}
@@ -309,7 +373,11 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
           )}
         </CardHeader>
         <CardContent className="flex-1 p-0 min-h-0">
-          <div className="h-full min-h-[640px] rounded-b-lg overflow-hidden">
+          <div className="h-full min-h-[640px] rounded-b-lg overflow-hidden flex items-center justify-center bg-muted/20">
+            <div
+              className="transition-all duration-300 shadow-2xl rounded-lg overflow-hidden bg-white"
+              style={{ width: viewport === 'desktop' ? '100%' : `${VIEWPORTS[viewport].w}px`, maxWidth: '100%', height: viewport === 'desktop' ? '640px' : `${Math.min(VIEWPORTS[viewport].h, 720)}px` }}
+            >
             <Sandpack
               key={activeScreen || 'default'}
               template="react"
@@ -359,9 +427,11 @@ if (typeof document !== 'undefined' && !document.getElementById('__tw_cdn')) {
                 },
               }}
             />
+            </div>
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
