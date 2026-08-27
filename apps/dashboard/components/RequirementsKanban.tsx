@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
+import { VoiceInput } from '@caia/ui';
 
 type RequirementState =
   | 'captured' | 'refining' | 'specced' | 'ready'
@@ -278,11 +279,21 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         {error && <p style={{ color: '#fc8181', fontSize: '12px', marginBottom: '8px' }}>{error}</p>}
         <div style={styles.formRow}>
           <label style={styles.label}>Title *</label>
-          <input style={styles.input} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Short label..." />
+          <span style={{ position: 'relative', display: 'block' }}>
+            <input style={{ ...styles.input, paddingRight: 40 }} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Short label..." />
+            <span style={{ position: 'absolute', top: 4, right: 8 }}>
+              <VoiceInput value={form.title} onValueChange={v => setForm(f => ({ ...f, title: v }))} fieldLabel="title" />
+            </span>
+          </span>
         </div>
         <div style={styles.formRow}>
           <label style={styles.label}>Description *</label>
-          <textarea style={styles.textarea} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="What do you need?" />
+          <span style={{ position: 'relative', display: 'block' }}>
+            <textarea style={{ ...styles.textarea, paddingRight: 40 }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="What do you need?" />
+            <span style={{ position: 'absolute', top: 6, right: 8 }}>
+              <VoiceInput value={form.description} onValueChange={v => setForm(f => ({ ...f, description: v }))} fieldLabel="description" />
+            </span>
+          </span>
         </div>
         <div style={styles.formRow}>
           <label style={styles.label}>Target project path</label>

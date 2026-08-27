@@ -7,6 +7,10 @@
  * FormDescription, FormErrorMessage, Button). No third-party form lib
  * — validation is a small set of inline checks per the operator brief
  * (simple form pointing at a forms endpoint stub).
+ *
+ * Every field carries a VoiceInput mic for browser-native dictation.
+ * There are no password fields on this form; if one is ever added it must
+ * be wrapped with `sensitive` so no mic is rendered.
  */
 
 import * as React from 'react';
@@ -19,6 +23,8 @@ import {
   Label,
   Card,
   CardContent,
+  VoiceField,
+  VoiceInput,
 } from '@caia/ui';
 
 type Status =
@@ -96,16 +102,27 @@ export function ContactForm() {
         <form className="space-y-6" onSubmit={onSubmit} noValidate>
           <FormField>
             <Label htmlFor="contact-name">Name</Label>
-            <Input
-              id="contact-name"
-              name="name"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              aria-invalid={Boolean(errors.name)}
-              aria-describedby={errors.name ? 'contact-name-error' : undefined}
-              required
-            />
+            <VoiceField
+              voice={
+                <VoiceInput
+                  value={name}
+                  onValueChange={setName}
+                  fieldLabel="name"
+                />
+              }
+            >
+              <Input
+                id="contact-name"
+                name="name"
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={errors.name ? 'contact-name-error' : undefined}
+                required
+                className="pr-10"
+              />
+            </VoiceField>
             <FormErrorMessage id="contact-name-error">
               {errors.name}
             </FormErrorMessage>
@@ -113,17 +130,28 @@ export function ContactForm() {
 
           <FormField>
             <Label htmlFor="contact-email">Email</Label>
-            <Input
-              id="contact-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={Boolean(errors.email)}
-              aria-describedby={errors.email ? 'contact-email-error' : undefined}
-              required
-            />
+            <VoiceField
+              voice={
+                <VoiceInput
+                  value={email}
+                  onValueChange={setEmail}
+                  fieldLabel="email"
+                />
+              }
+            >
+              <Input
+                id="contact-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? 'contact-email-error' : undefined}
+                required
+                className="pr-10"
+              />
+            </VoiceField>
             <FormErrorMessage id="contact-email-error">
               {errors.email}
             </FormErrorMessage>
@@ -131,19 +159,29 @@ export function ContactForm() {
 
           <FormField>
             <Label htmlFor="contact-message">How can we help?</Label>
-            <textarea
-              id="contact-message"
-              name="message"
-              rows={5}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              aria-invalid={Boolean(errors.message)}
-              aria-describedby={
-                errors.message ? 'contact-message-error' : 'contact-message-help'
+            <VoiceField
+              voice={
+                <VoiceInput
+                  value={message}
+                  onValueChange={setMessage}
+                  fieldLabel="message"
+                />
               }
-              required
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
+            >
+              <textarea
+                id="contact-message"
+                name="message"
+                rows={5}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                aria-invalid={Boolean(errors.message)}
+                aria-describedby={
+                  errors.message ? 'contact-message-error' : 'contact-message-help'
+                }
+                required
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </VoiceField>
             <FormDescription id="contact-message-help">
               Briefly describe what you&apos;re building or what you&apos;d like to discuss.
             </FormDescription>

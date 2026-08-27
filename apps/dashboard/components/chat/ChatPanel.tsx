@@ -10,6 +10,7 @@
 
 import { useChat } from '@ai-sdk/react';
 import { type FormEvent, type JSX, useEffect, useRef } from 'react';
+import { VoiceInput } from '@caia/ui';
 
 const SUBAGENT_HINT = [
   'Try one of these to see routing:',
@@ -22,7 +23,7 @@ const SUBAGENT_HINT = [
 ].join('\n');
 
 export function ChatPanel(): JSX.Element {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, status } = useChat({
+  const { messages, input, setInput, handleInputChange, handleSubmit, isLoading, error, status } = useChat({
     api: '/api/chat',
     initialMessages: [
       {
@@ -156,6 +157,14 @@ export function ChatPanel(): JSX.Element {
             fontSize: 13,
             outline: 'none'
           }}
+        />
+        {/* Dictation for the chat prompt. `setInput` keeps useChat's
+            controlled state authoritative. */}
+        <VoiceInput
+          value={input}
+          onValueChange={setInput}
+          fieldLabel="chat message"
+          disabled={isLoading}
         />
         <button
           type="submit"

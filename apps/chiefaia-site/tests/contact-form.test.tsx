@@ -16,8 +16,8 @@ afterEach(() => {
 describe('ContactForm', () => {
   it('blocks submission with invalid email', async () => {
     render(<ContactForm />);
-    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Op' } });
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Op' } });
+    fireEvent.change(screen.getByLabelText('Email'), {
       target: { value: 'not-an-email' },
     });
     fireEvent.change(screen.getByLabelText(/how can we help/i), {
@@ -33,10 +33,10 @@ describe('ContactForm', () => {
       .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
     render(<ContactForm />);
-    fireEvent.change(screen.getByLabelText(/name/i), {
+    fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'Operator Person' },
     });
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText('Email'), {
       target: { value: 'op@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/how can we help/i), {

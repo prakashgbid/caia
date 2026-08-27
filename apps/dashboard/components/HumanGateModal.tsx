@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { VoiceInput } from '@caia/ui';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -286,6 +287,14 @@ export function HumanGateModal({
               <div style={{ fontSize: 13, color: '#a0aec0', marginBottom: 10 }}>
                 Describe what needs to change. The <strong style={{ color: '#e2e8f0' }}>{agentName}</strong> will receive this feedback and revise its output.
               </div>
+              <span style={{ position: 'relative', display: 'block' }}>
+              <span style={{ position: 'absolute', top: 8, right: 10, zIndex: 1 }}>
+                <VoiceInput
+                  value={feedback}
+                  onValueChange={setFeedback}
+                  fieldLabel="feedback"
+                />
+              </span>
               <textarea
                 value={feedback}
                 onChange={e => setFeedback(e.target.value)}
@@ -300,6 +309,7 @@ export function HumanGateModal({
                   color: '#e2e8f0',
                   fontSize: 13,
                   padding: '10px 12px',
+                  paddingRight: 44,
                   resize: 'vertical',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
                   lineHeight: 1.6,
@@ -309,6 +319,7 @@ export function HumanGateModal({
                 onFocus={e => { e.target.style.borderColor = '#63b3ed'; }}
                 onBlur={e => { e.target.style.borderColor = '#4a5568'; }}
               />
+              </span>
               <div style={{ fontSize: 11, color: '#4a5568', marginTop: 6, textAlign: 'right' }}>
                 {feedback.length} characters
               </div>

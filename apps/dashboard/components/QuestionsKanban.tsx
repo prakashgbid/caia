@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
+import { VoiceInput } from '@caia/ui';
 
 type QuestionState = 'open' | 'answered' | 'cancelled';
 type QuestionPriority = 'urgent' | 'normal' | 'nice-to-have';
@@ -237,13 +238,22 @@ function QuestionCard({ question, onAnswered }: { question: Question; onAnswered
 
           <div style={s.divider}>— or —</div>
 
-          <textarea
-            style={s.textarea}
-            rows={2}
-            placeholder={question.customAnswerPlaceholder ?? 'Other / custom answer...'}
-            value={customText}
-            onChange={(e) => setCustomText(e.target.value)}
-          />
+          <span style={{ position: 'relative', display: 'block' }}>
+            <textarea
+              style={{ ...s.textarea, paddingRight: 40 }}
+              rows={2}
+              placeholder={question.customAnswerPlaceholder ?? 'Other / custom answer...'}
+              value={customText}
+              onChange={(e) => setCustomText(e.target.value)}
+            />
+            <span style={{ position: 'absolute', top: 6, right: 8 }}>
+              <VoiceInput
+                value={customText}
+                onValueChange={setCustomText}
+                fieldLabel="custom answer"
+              />
+            </span>
+          </span>
 
           <button style={s.submitBtn} disabled={submitting} onClick={handleSubmit}>
             {justAnswered
