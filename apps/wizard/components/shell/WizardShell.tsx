@@ -91,6 +91,12 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link href="/wizard/docs" className="hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 h-8 rounded-md hover:bg-muted transition-colors" title="Your startup documents">
+              Docs
+            </Link>
+            <Link href="/wizard/roadmap" className="hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 h-8 rounded-md hover:bg-muted transition-colors" title="The full CAIA factory roadmap">
+              Roadmap
+            </Link>
             <DocsFolder />
             <TokenBadge />
             <LoginPill />
