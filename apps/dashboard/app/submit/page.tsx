@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { VoiceInput } from '@caia/ui';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -565,6 +566,7 @@ export default function SubmitPage() {
                   fontSize: 14,
                   lineHeight: 1.7,
                   padding: '14px 16px',
+                  paddingRight: 48,
                   resize: 'none',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
                   boxSizing: 'border-box',
@@ -573,6 +575,17 @@ export default function SubmitPage() {
                 onFocus={e => { e.target.style.borderColor = '#4299e1'; }}
                 onBlur={e => { e.target.style.borderColor = '#2d3748'; }}
               />
+              {/* Dictation — writes through handleTextChange so the
+                  auto-grow and debounced classifier both still fire. */}
+              {!submitted && (
+                <span style={{ position: 'absolute', top: 10, right: 12 }}>
+                  <VoiceInput
+                    value={text}
+                    onValueChange={handleTextChange}
+                    fieldLabel="requirement"
+                  />
+                </span>
+              )}
               {/* Character count */}
               <span
                 style={{
