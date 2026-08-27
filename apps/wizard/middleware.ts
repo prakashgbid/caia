@@ -109,6 +109,26 @@ async function resolveTenantOrError(email: string): Promise<string | NextRespons
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const mode = readAuthMode();
 
+  // Wizard kill switch (CAIA-244 / [S3-15]).
+  // Env var WIZARD_ENABLED=false renders a 503 maintenance response
+  // instead of the wizard. Whitelist /api/healthz + /api/readyz so K8s
+  // probes stay healthy while the wizard is intentionally down.
+  const path = req.nextUrl.pathname;
+  const killed = process.env.WIZARD_ENABLED === 'false';
+  const probePath = path.startsWith('/api/health') || path.startsWith('/api/readyz');
+  if (killed && !probePath) {
+    return new NextResponse(
+      JSON.stringify({
+        error: 'wizard-temporarily-down',
+        message: 'The CAIA Wizard is temporarily paused for maintenance. Follow status at https://chiefaia.com/factory',
+      }),
+      {
+        status: 503,
+        headers: { 'content-type': 'application/json', 'retry-after': '300' },
+      },
+    );
+  }
+
   // ─── `disabled` — public demo mode (CAIA-404, 2026-08-25) ──────
   // Was originally local-dev-only no-op. Extended to assign a hardcoded
   // demo tenant so downstream pages have tenant context and can render
@@ -130,13 +150,32 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') &&
       pathname.startsWith('/api/') &&
       !pathname.startsWith('/api/health') &&
-      !pathname.startsWith('/api/readyz')
+      !pathname.startsWith('/api/readyz') &&
+      // Real handlers we WANT to execute even in demo mode — they call
+      // OpenRouter directly and return live AI output. Adding a route here
+      // is the escape hatch from the demo-shim for genuinely interactive
+      // demo endpoints (per [[deferred-physical-tenant]]).
+      !pathname.startsWith('/api/wizard/interview/demo') &&
+      !pathname.startsWith('/api/wizard/proposal/demo') &&
+      !pathname.startsWith('/api/wizard/ia/demo') &&
+      !pathname.startsWith('/api/wizard/intake/analyze') &&
+      !pathname.startsWith('/api/wizard/intake/finalize') &&
+      !pathname.startsWith('/api/wizard/intake/options') &&
+      !pathname.startsWith('/api/wizard/landing/') &&
+      !pathname.startsWith('/api/wizard/mvp/') &&
+      !pathname.startsWith('/api/wizard/docs/') &&
+      !pathname.startsWith('/api/wizard/auth/') &&
+      !pathname.startsWith('/api/wizard/project/') &&
+      !pathname.startsWith('/api/wizard/project') &&
+      !pathname.startsWith('/api/wizard/tokens/')
     ) {
       return NextResponse.json(
         {
           ok: true,
           demo: true,
           state: pathname.endsWith('/state') ? { state: 'idea-captured', projectId: 'demo-project', updated_at: new Date().toISOString() } : undefined,
+          // CAIA-407: grand-idea capture UI reads body.revisionNumber; without it, the toast shows "revision undefined".
+          revisionNumber: pathname.includes('grand-idea') || pathname.includes('/idea') ? 1 : undefined,
           message: 'demo mode — no backend persistence',
         },
         { status: 200 }

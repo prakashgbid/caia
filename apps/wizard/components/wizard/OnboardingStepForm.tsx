@@ -118,7 +118,20 @@ export function OnboardingStepForm(props: OnboardingStepFormProps): React.JSX.El
   const onPickProvider = useCallback((id: string) => {
     setProviderDraft(id);
     setCredentialDraft({});
-  }, []);
+    // CAIA-406: clear any stale "pick a provider" failure on the active category
+    // when the user picks a provider — otherwise the red error text lingers
+    // from a previous failed Validate attempt and reads as if the click didn't
+    // register.
+    if (active) {
+      setStatuses((prev) => {
+        const cur = prev[active.id];
+        if (cur?.status === 'failed') {
+          return { ...prev, [active.id]: { status: 'pending' as StepStatus } };
+        }
+        return prev;
+      });
+    }
+  }, [active]);
 
   const onCredentialChange = useCallback((keyId: string, value: string) => {
     setCredentialDraft((d) => ({ ...d, [keyId]: value }));

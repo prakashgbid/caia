@@ -1,6 +1,6 @@
 /**
- * Wizard Step 6 — Design.
- * Demo-mode preview per CAIA-402/405/406. Original at .backend-real.tsx.bak.
+ * Wizard Step 6 — Design. Currently a DEMO PREVIEW; live click-through
+ * generator is the next major feature build.
  */
 
 import { DemoStepPreview } from '../../../components/wizard/DemoStepPreview';
@@ -13,9 +13,15 @@ export default async function DesignPage(): Promise<React.JSX.Element> {
       step="design"
       stepNumber={6}
       title="Design"
-      description={"CAIA generates initial design ingestion: wireframes, component library selection, style guide."}
-      features={["Wireframe drafts for every page in the IA", "Component library selection (@caia/ui or custom)", "Style guide (palette, typography, spacing)", "Reference designs pulled from your competitor list"]}
+      description="CAIA generates a click-through mockup from your Proposal + IA — component library selection, style guide, and mock-data flows you can walk through."
+      features={[
+        'Component library + design tokens picked to match your product tone',
+        'Wireframe drafts for every page in the IA',
+        'Mock-data flows you can click through end-to-end before we write any code',
+        'Reference designs from apps whose feel you liked',
+      ]}
       nextStep="Atlas"
+      nextStepSlug="atlas"
     />
   );
 }

@@ -1,0 +1,32 @@
+{
+  "name": "@caia/openrouter-client",
+  "version": "0.1.0",
+  "description": "Unified OpenRouter gateway for CAIA. Single choke point for every AI/LLM call in CAIA product + orchestrator. Per-tenant key resolution (BYOK-first), free-tier fallback ladder, JSON-mode, cost + latency audit. Enforces [[openrouter-only]].",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run tests/integration.test.ts",
+    "lint": "eslint src tests || true",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.0",
+    "typescript": "5.5.4",
+    "vitest": "1.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

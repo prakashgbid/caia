@@ -37,6 +37,10 @@ export type WizardSlug =
   | 'interview'
   | 'architecture'
   | 'proposal'
+  | 'landing'
+  | 'login'
+  | 'build'
+  | 'subscribe'
   | 'design'
   | 'atlas';
 
@@ -80,18 +84,32 @@ export const WIZARD_STEPS: ReadonlyArray<WizardStep> = [
     fsmStates: ['proposal-generated'],
   },
   {
-    slug: 'design',
+    slug: 'landing',
     index: 6,
-    title: 'Design',
-    description: 'Upload your external design or generate one from the prompt.',
-    fsmStates: ['awaiting-external-design', 'design-uploaded'],
+    title: 'Landing Page',
+    description: 'CAIA drafts your app\u2019s first-look landing page.',
+    fsmStates: ['proposal-generated'],
   },
   {
-    slug: 'atlas',
+    slug: 'login',
     index: 7,
-    title: 'Atlas',
-    description: 'The ticket tree and the design-id mapping.',
-    fsmStates: ['ticket-tree-generated', 'atlas-ready'],
+    title: 'Log in',
+    description: 'Sign in to unlock more tokens and continue building.',
+    fsmStates: ['awaiting-external-design'],
+  },
+  {
+    slug: 'build',
+    index: 8,
+    title: 'Build the MVP',
+    description: 'Pick five screens; CAIA builds a live click-through.',
+    fsmStates: ['awaiting-external-design'],
+  },
+  {
+    slug: 'subscribe',
+    index: 9,
+    title: 'Subscribe',
+    description: 'Ship it \u2014 or download your project so far.',
+    fsmStates: ['awaiting-external-design'],
   },
 ] as const;
 

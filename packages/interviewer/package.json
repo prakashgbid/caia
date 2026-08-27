@@ -1,7 +1,7 @@
 {
   "name": "@caia/interviewer",
   "version": "0.1.0",
-  "description": "CAIA Interviewer Agent — conversational state machine, question generator, business-plan accumulator, and Series-Seed VC critic that converges a founder's grand-idea into an investor-grade BusinessPlanV2 in 30-50 turns.",
+  "description": "CAIA Interviewer Agent \u2014 conversational state machine, question generator, business-plan accumulator, and Series-Seed VC critic that converges a founder's grand-idea into an investor-grade BusinessPlanV2 in 30-50 turns.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -35,7 +35,7 @@
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "@chiefaia/claude-spawner": "workspace:*",
+    "@caia/openrouter-client": "workspace:*",
     "pg": "^8.13.0",
     "zod": "^3.23.8"
   },

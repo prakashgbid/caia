@@ -1,92 +1,119 @@
-import { parseClaudeJsonEnvelope, spawnClaude } from '@chiefaia/claude-spawner';
+/**
+ * Interviewer LLM caller.
+ *
+ * BREAKING CHANGE (2026-08-26): Replaced the old `@chiefaia/claude-spawner`
+ * -backed DefaultLlmCaller with an OpenRouter-backed implementation per
+ * the [[openrouter-only]] hard rule. All CAIA AI calls now route through
+ * @caia/openrouter-client. The public LlmCaller/LlmCallOptions/LlmCallResult
+ * contract is unchanged so downstream code (question-generator, critic,
+ * business-plan accumulator) needs no edits.
+ *
+ * The `modelHint` field is now interpreted as:
+ *   - 'opus' | 'sonnet' | 'haiku'  → 'auto' (paid tier, task-aware routing)
+ *   - 'free' or unset              → 'free' (free-tier ladder)
+ *   - anything else (bare string)  → passed through as an explicit
+ *                                     OpenRouter model id
+ */
+
+import {
+  callOpenRouter,
+  extractJson as extractJsonFromClient,
+  type ORCallOptions,
+} from '@caia/openrouter-client';
 import { InterviewerError } from './errors.js';
 import type { LlmCallOptions, LlmCallResult, LlmCaller } from './types.js';
 
 export interface DefaultLlmCallerOptions {
+  /** Deprecated: kept in signature so callers still compile; ignored. */
   readonly binaryPath?: string;
-  readonly defaultModel?: string;
+  /** Default model selection when none specified in the call. */
+  readonly defaultModel?: 'free' | 'auto' | string;
+  /** Default per-call timeout in ms. Defaults to 90_000. */
   readonly defaultTimeoutMs?: number;
+  /** Deprecated: ignored (was used by claude-spawner constraints). */
   readonly cwdAllowList?: readonly string[];
+  /**
+   * Optional purpose label suffix, e.g. 'interview' → all calls get
+   * purpose='interview.<step>'. Defaults to 'interviewer'.
+   */
+  readonly purposePrefix?: string;
+  /** Optional tenant id for BYOK key resolution. */
+  readonly tenantId?: string | null;
 }
 
-const DEFAULT_MODEL = 'claude-opus-4-6';
+const DEFAULT_MODEL: 'free' | 'auto' | string = 'free';
 
+function resolveModelHint(hint: string | undefined): 'free' | 'auto' | string {
+  if (!hint || hint === '') return DEFAULT_MODEL;
+  if (hint === 'free' || hint === 'auto') return hint;
+  if (hint === 'opus' || hint === 'sonnet' || hint === 'haiku') return 'auto';
+  return hint;
+}
+
+/**
+ * OpenRouter-backed LlmCaller. Drop-in replacement for the old
+ * claude-spawner version.
+ */
 export class DefaultLlmCaller implements LlmCaller {
   public constructor(private readonly opts: DefaultLlmCallerOptions = {}) {}
 
   public async call(prompt: string, opts: LlmCallOptions = {}): Promise<LlmCallResult> {
-    const model = typeof opts.modelHint === 'string' ? resolveModelHint(opts.modelHint) : (this.opts.defaultModel ?? DEFAULT_MODEL);
+    const model = resolveModelHint(opts.modelHint) ?? this.opts.defaultModel ?? DEFAULT_MODEL;
     const timeoutMs = opts.maxBudgetMs ?? this.opts.defaultTimeoutMs ?? 90_000;
-    const wrapped = opts.systemPrompt ? `<system>${opts.systemPrompt}</system>\n\n${prompt}` : prompt;
-    const spawnOpts: Parameters<typeof spawnClaude>[0] = {
-      prompt: wrapped,
-      options: {
-        model, timeoutMs,
-        outputFormat: 'json' as const,
-        ...(this.opts.binaryPath !== undefined ? { binaryPath: this.opts.binaryPath } : {}),
-      },
-      constraints: {
-        rejectIfApiKeyPresent: true,
-        ...(this.opts.cwdAllowList !== undefined ? { cwdAllowList: this.opts.cwdAllowList } : {}),
-      },
+    const purpose = `${this.opts.purposePrefix ?? 'interviewer'}.call`;
+    const orOpts: ORCallOptions = {
+      purpose,
+      userPrompt: prompt,
+      model,
+      timeoutMs,
+      maxTokens: 4096,
     };
-    const result = await spawnClaude(spawnOpts);
-    if (!result.ok) {
-      return { ok: false, text: '', durationMs: result.durationMs, diagnostic: result.diagnostic ?? 'spawnClaude returned ok=false', modelUsed: model };
+    if (opts.systemPrompt) orOpts.systemPrompt = opts.systemPrompt;
+    if (this.opts.tenantId !== undefined) orOpts.tenantId = this.opts.tenantId;
+
+    const r = await callOpenRouter(orOpts);
+    if (r.ok === true) {
+      return {
+        ok: true,
+        text: r.text,
+        durationMs: r.latencyMs,
+        diagnostic: null,
+        modelUsed: r.model,
+      };
     }
-    const parsed = parseClaudeJsonEnvelope(result.stdout);
-    if (!parsed.ok) {
-      return { ok: false, text: '', durationMs: result.durationMs, diagnostic: (parsed as { ok: false; diagnostic: string }).diagnostic, modelUsed: model };
-    }
-    return { ok: true, text: parsed.text, durationMs: result.durationMs, diagnostic: null, modelUsed: model };
+    const tried = r.modelsAttempted.join(',');
+    const last = r.modelsAttempted[r.modelsAttempted.length - 1] ?? model;
+    return {
+      ok: false,
+      text: '',
+      durationMs: r.latencyMs,
+      diagnostic: `openrouter: ${r.error} (retryable=${r.retryable}, attempts=${r.attempts}, tried=${tried})`,
+      modelUsed: last,
+    };
   }
 }
 
-function resolveModelHint(hint: string): string {
-  switch (hint) {
-    case 'opus': return 'claude-opus-4-6';
-    case 'sonnet': return 'claude-sonnet-4-6';
-    case 'haiku': return 'claude-haiku-4-5-20251001';
-    default: return hint;
-  }
-}
-
-const FENCE_RE = /```(?:json)?\s*([\s\S]*?)```/i;
-
+/**
+ * Extract a JSON object from a possibly-prose-wrapped LLM response.
+ * Kept for backwards compatibility — thin wrapper over the client's
+ * extractJson, but raises InterviewerError on failure to match the
+ * downstream error-handling contract.
+ */
 export function extractJsonObject(text: string): unknown {
-  if (!text || text.trim().length === 0) throw new InterviewerError('llm_parse_error', 'empty LLM response');
-  const fenceMatch = FENCE_RE.exec(text);
-  if (fenceMatch && fenceMatch[1]) {
-    try { return JSON.parse(fenceMatch[1].trim()); } catch { /* fall through */ }
+  if (!text || text.trim().length === 0) {
+    throw new InterviewerError('llm_parse_error', 'empty LLM response');
   }
-  const firstBrace = text.indexOf('{');
-  if (firstBrace >= 0) {
-    let depth = 0; let inString = false; let escaped = false;
-    for (let i = firstBrace; i < text.length; i++) {
-      const c = text[i]!;
-      if (escaped) { escaped = false; continue; }
-      if (c === '\\') { escaped = true; continue; }
-      if (c === '"') { inString = !inString; continue; }
-      if (inString) continue;
-      if (c === '{') depth++;
-      else if (c === '}') {
-        depth--;
-        if (depth === 0) {
-          const chunk = text.slice(firstBrace, i + 1);
-          try { return JSON.parse(chunk); }
-          catch {
-            i = text.indexOf('{', i + 1);
-            if (i < 0) break;
-            depth = 0; inString = false;
-          }
-        }
-      }
-    }
-  }
-  try { return JSON.parse(text.trim()); }
-  catch (e) { throw new InterviewerError('llm_parse_error', `could not extract JSON: ${(e as Error).message}`, { preview: text.slice(0, 200) }); }
+  const r = extractJsonFromClient(text);
+  if (r.ok !== true) throw new InterviewerError('llm_parse_error', `no JSON in response: ${r.reason}`);
+  return r.value;
 }
 
+/**
+ * A scripted LLM caller for tests. Matches prompts against step patterns
+ * (string include or RegExp test) and returns the associated canned
+ * response. Preserves the pre-refactor contract used by the interviewer
+ * test suite (hits(), totalCalls(), log(), defaultResponse fallback).
+ */
 export interface ScriptedLlmStep {
   readonly match: string | RegExp;
   readonly response: string | object;
@@ -96,7 +123,10 @@ export interface ScriptedLlmStep {
 export class ScriptedLlmCaller implements LlmCaller {
   private readonly callLog: { prompt: string; response: string }[] = [];
   private readonly hitCounts = new Map<number, number>();
-  public constructor(private readonly steps: readonly ScriptedLlmStep[], private readonly defaultResponse?: string) {}
+  public constructor(
+    private readonly steps: readonly ScriptedLlmStep[],
+    private readonly defaultResponse?: string,
+  ) {}
 
   public async call(prompt: string, _opts?: LlmCallOptions): Promise<LlmCallResult> {
     void _opts;
