@@ -175,3 +175,72 @@ export function subscribeProject(cb: () => void): () => void {
 
 // Re-export session helpers so callers only need one import path.
 export { readSession, writeSession };
+
+/**
+ * Sync the currently active project to the backend. Requires a live session
+ * cookie. Returns the server id (may differ from local id if created fresh).
+ */
+export async function syncToBackend(): Promise<{ ok: boolean; id?: string; error?: string }> {
+  if (!isBrowser) return { ok: false, error: 'ssr' };
+  const p = readProject();
+  try {
+    // Try PUT first (id may already exist on server)
+    let res = await fetch(`/api/wizard/project/${encodeURIComponent(p.id)}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: p.name, stateJson: p }),
+    });
+    if (res.status === 404) {
+      // Doesn't exist on server yet — create it and adopt the returned id
+      res = await fetch('/api/wizard/project/create', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: p.name, stateJson: p }),
+      });
+      if (!res.ok) return { ok: false, error: `create_${res.status}` };
+      const j = (await res.json()) as { ok?: boolean; id?: string };
+      if (j.ok && j.id) {
+        // Move local key to the server id so subsequent PUTs land in the same row
+        const migrated: ProjectState = { ...p, id: j.id };
+        window.localStorage.removeItem(KEY_PREFIX + p.id);
+        writeProject(migrated);
+        setActiveProjectId(j.id);
+        return { ok: true, id: j.id };
+      }
+      return { ok: false, error: 'create_no_id' };
+    }
+    if (!res.ok) return { ok: false, error: `put_${res.status}` };
+    return { ok: true, id: p.id };
+  } catch (e) { return { ok: false, error: (e as Error).message }; }
+}
+
+/**
+ * Load a project from the backend by id and write it into localStorage.
+ */
+export async function loadFromBackend(id: string): Promise<ProjectState | null> {
+  if (!isBrowser) return null;
+  try {
+    const res = await fetch(`/api/wizard/project/${encodeURIComponent(id)}`, { credentials: 'include' });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { ok?: boolean; project?: { id: string; name: string | null; state_json: unknown } };
+    if (!j.ok || !j.project) return null;
+    const state = j.project.state_json as ProjectState;
+    // Coerce to a ProjectState shape (in case of drift)
+    const merged: ProjectState = {
+      ...state,
+      id: j.project.id,
+      docs: state?.docs || [],
+      design: state?.design || {},
+      initiatives: state?.initiatives || [],
+      builtScreens: state?.builtScreens || {},
+      createdAt: state?.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    };
+    writeProject(merged);
+    setActiveProjectId(j.project.id);
+    return merged;
+  } catch { return null; }
+}
+

@@ -14,6 +14,7 @@ import { ArrowRight, Chrome, Coins, Loader2, Mail, Sparkles } from 'lucide-react
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@caia/ui';
 import { grantLoginReward, readSession, LOGIN_REWARD } from '../../lib/session/tokens';
 import { InputExplainer } from './common/InputExplainer';
+import { syncToBackend, updateProject } from '../../lib/session/project';
 import { validateEmail } from '../../lib/validate/text';
 
 export function LoginPanel(): React.JSX.Element {
@@ -27,22 +28,39 @@ export function LoginPanel(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const current = typeof window !== 'undefined' ? readSession() : { tokens: 0, loggedIn: false };
 
-  const finalize = useCallback((displayName: string, emailAddr: string) => {
+  const finalize = useCallback(async (displayName: string, emailAddr: string, provider: 'google' | 'apple' | 'email') => {
     setBusy(true);
-    setTimeout(() => {
+    try {
+      // 1) Ask the backend to create/find the user + issue a session cookie
+      const res = await fetch('/api/wizard/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider, email: emailAddr, displayName }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; tokensBalance?: number };
+      if (!res.ok || !j.ok) { setError(j.error || 'Login failed. Please try again.'); setBusy(false); return; }
+      // 2) Local session bookkeeping (token pill / user chip)
       grantLoginReward(displayName, emailAddr);
+      // 3) Push the current anonymous project up to the server so it is not lost
+      updateProject((p) => { if (!p.name) p.name = 'My first CAIA project'; });
+      await syncToBackend();
+      // 4) Continue to the intended destination
       router.push(nextPath);
-    }, 700);
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
   }, [router, nextPath]);
 
-  const google = useCallback(() => finalize('Alex Founder', 'alex@example.com'), [finalize]);
-  const apple = useCallback(() => finalize('Alex Founder', 'alex@icloud.com'), [finalize]);
+  const google = useCallback(() => finalize('Alex Founder', 'alex@example.com', 'google'), [finalize]);
+  const apple = useCallback(() => finalize('Alex Founder', 'alex@icloud.com', 'apple'), [finalize]);
   const emailSubmit = useCallback(() => {
     if (name.trim().length < 2) { setError('Please enter your name (at least 2 characters).'); return; }
     const ev = validateEmail(email);
     if (!ev.ok) { setError(ev.reason || 'That doesn\'t look like a valid email.'); return; }
     setError(null);
-    finalize(name.trim(), email.trim());
+    void finalize(name.trim(), email.trim(), 'email');
   }, [finalize, name, email]);
 
   return (
