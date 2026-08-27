@@ -1,0 +1,367 @@
+'use client';
+
+/**
+ * <BuildPanel> — Stage 8. Split screen click-through builder.
+ *
+ * Left column  = controls: idea recap, scaffold, screen picker (pick 5 of 8),
+ *                per-screen generate buttons, progress log, next button
+ * Right column = Sandpack live preview of the currently-selected screen
+ *
+ * Uses @codesandbox/sandpack-react (MIT). No custom preview iframe.
+ */
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Sandpack } from '@codesandbox/sandpack-react';
+import { ArrowRight, CheckCircle2, Layers, Loader2, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Textarea } from '@caia/ui';
+import { spendTokens, readSession } from '../../lib/session/tokens';
+
+interface ScreenSpec {
+  name: string;
+  routePath: string;
+  purpose: string;
+  estimatedComplexity: 'simple' | 'medium';
+  suggested?: boolean;
+}
+
+interface Scaffold {
+  productName: string;
+  initiatives: Array<{ name: string; purpose: string }>;
+  epics: Array<{ name: string; purpose: string; initiativeName: string }>;
+  screens: ScreenSpec[];
+}
+
+interface GeneratedScreen {
+  name: string;
+  code: string;
+  ts: number;
+}
+
+const DEFAULT_APP_CODE = `import { Sparkles } from 'lucide-react';
+
+export default function ScreenComponent() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-6">
+      <div className="text-center max-w-md">
+        <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-6">
+          <Sparkles className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-3xl font-bold text-slate-900 mb-3">Your MVP will render here</h1>
+        <p className="text-slate-600 leading-relaxed">
+          Scaffold your MVP on the left, pick 5 screens, and CAIA will build them live in this preview one at a time.
+        </p>
+      </div>
+    </div>
+  );
+}
+`;
+
+export function BuildPanel(props: { initialIdea?: string; initialProposal?: string }): React.JSX.Element {
+  const router = useRouter();
+  const [ideaText, setIdeaText] = useState(props.initialIdea || '');
+  const [proposal, setProposal] = useState(props.initialProposal || '');
+  const [scaffold, setScaffold] = useState<Scaffold | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [scaffoldBusy, setScaffoldBusy] = useState(false);
+  const [scaffoldError, setScaffoldError] = useState<string | null>(null);
+
+  const [generated, setGenerated] = useState<Record<string, GeneratedScreen>>({});
+  const [genBusy, setGenBusy] = useState<string | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [activeScreen, setActiveScreen] = useState<string | null>(null);
+  const [log, setLog] = useState<string[]>(['Ready to build.']);
+
+  const appendLog = useCallback((line: string) => {
+    setLog((prev) => [...prev.slice(-40), `[${new Date().toLocaleTimeString()}] ${line}`]);
+  }, []);
+
+  const runScaffold = useCallback(async () => {
+    setScaffoldBusy(true);
+    setScaffoldError(null);
+    appendLog('Scaffolding MVP…');
+    try {
+      const res = await fetch('/api/wizard/mvp/scaffold', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ideaText, proposal }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string } & Partial<Scaffold>;
+      if (!res.ok || !json.ok) {
+        setScaffoldError(json.error || `HTTP ${res.status}`);
+        appendLog(`Scaffold failed: ${json.error || res.status}`);
+        return;
+      }
+      const s = json as unknown as Scaffold;
+      setScaffold(s);
+      const suggested = new Set(s.screens.filter((x) => x.suggested).slice(0, 5).map((x) => x.name));
+      setPicked(suggested);
+      appendLog(`Scaffolded ${s.screens.length} candidate screens. ${suggested.size} pre-selected.`);
+      spendTokens('build');
+    } catch (e) {
+      const msg = (e as Error).message;
+      setScaffoldError(msg);
+      appendLog(`Scaffold error: ${msg}`);
+    } finally {
+      setScaffoldBusy(false);
+    }
+  }, [ideaText, proposal, appendLog]);
+
+  const togglePick = useCallback((name: string) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else if (next.size < 5) next.add(name);
+      return next;
+    });
+  }, []);
+
+  const generateOne = useCallback(async (spec: ScreenSpec) => {
+    if (!scaffold) return;
+    setGenBusy(spec.name);
+    setGenError(null);
+    setActiveScreen(spec.name);
+    appendLog(`Generating "${spec.name}"…`);
+    try {
+      const res = await fetch('/api/wizard/mvp/screen', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ideaText,
+          productName: scaffold.productName,
+          screenName: spec.name,
+          screenPurpose: spec.purpose,
+          allScreens: scaffold.screens.filter((x) => picked.has(x.name)),
+        }),
+      });
+      const json = (await res.json()) as { ok?: boolean; code?: string; error?: string };
+      if (!res.ok || !json.ok || !json.code) {
+        setGenError(json.error || `HTTP ${res.status}`);
+        appendLog(`Failed "${spec.name}": ${json.error || res.status}`);
+        return;
+      }
+      setGenerated((prev) => ({ ...prev, [spec.name]: { name: spec.name, code: json.code || '', ts: Date.now() } }));
+      appendLog(`Rendered "${spec.name}" (${(json.code || '').length} chars).`);
+    } catch (e) {
+      setGenError((e as Error).message);
+      appendLog(`Error "${spec.name}": ${(e as Error).message}`);
+    } finally {
+      setGenBusy(null);
+    }
+  }, [ideaText, scaffold, picked, appendLog]);
+
+  const generateAllPicked = useCallback(async () => {
+    if (!scaffold) return;
+    const list = scaffold.screens.filter((s) => picked.has(s.name));
+    for (const s of list) {
+      if (generated[s.name]) continue; // skip already generated
+      // eslint-disable-next-line no-await-in-loop
+      await generateOne(s);
+    }
+    appendLog('All picked screens generated. Ready for the paywall / download.');
+  }, [scaffold, picked, generated, generateOne, appendLog]);
+
+  const activeCode = useMemo(() => {
+    if (activeScreen && generated[activeScreen]) return generated[activeScreen].code;
+    return DEFAULT_APP_CODE;
+  }, [activeScreen, generated]);
+
+  const goNext = useCallback(() => router.push('/wizard/subscribe'), [router]);
+
+  useEffect(() => {
+    // If a session came in unauthenticated, kick to /wizard/login (belt-and-suspenders).
+    const s = readSession();
+    if (!s.loggedIn && s.tokens <= 0) {
+      router.replace('/wizard/login?next=/wizard/build');
+    }
+  }, [router]);
+
+  return (
+    <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      {/* LEFT: Controls */}
+      <div className="space-y-4 min-w-0">
+        <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
+          <CardHeader className="space-y-2">
+            <div className="inline-flex items-center gap-2 w-fit px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+              <Sparkles className="w-3 h-3" /> Step 8 · Build the MVP
+            </div>
+            <CardTitle className="text-xl">Live click-through builder</CardTitle>
+            <CardDescription>Scaffold, pick five screens, and CAIA renders each in the live preview.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium mb-1 text-muted-foreground">Idea</label>
+              <Textarea value={ideaText} onChange={(e) => setIdeaText(e.target.value)} rows={3} className="text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-muted-foreground">Proposal</label>
+              <Textarea value={proposal} onChange={(e) => setProposal(e.target.value)} rows={4} className="text-sm" />
+            </div>
+            <Button onClick={runScaffold} disabled={scaffoldBusy || ideaText.trim().length < 10} className="w-full h-11 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold">
+              {scaffoldBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Layers className="w-4 h-4 mr-2" />}
+              {scaffold ? 'Re-scaffold' : 'Scaffold my MVP'}
+            </Button>
+            {scaffoldError && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 text-xs">{scaffoldError}</div>
+            )}
+          </CardContent>
+        </Card>
+
+        {scaffold && (
+          <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Pick 5 screens ({picked.size}/5)</CardTitle>
+              <CardDescription className="text-xs">CAIA suggested {scaffold.screens.filter((s) => s.suggested).length}. Adjust if you like.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {scaffold.screens.map((s) => {
+                const chosen = picked.has(s.name);
+                const gen = generated[s.name];
+                const busy = genBusy === s.name;
+                return (
+                  <div
+                    key={s.name}
+                    className={`rounded-lg border p-3 transition-all ${chosen ? 'border-primary/60 bg-primary/5' : 'border-border/50 hover:border-border'}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <button type="button" onClick={() => togglePick(s.name)} className="flex-1 text-left min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${chosen ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}>
+                            {chosen && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                          </div>
+                          <div className="font-medium text-sm truncate">{s.name}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono truncate">{s.routePath}</div>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2 pl-6">{s.purpose}</div>
+                      </button>
+                      {chosen && (
+                        <Button
+                          size="sm"
+                          variant={gen ? 'outline' : 'default'}
+                          onClick={() => generateOne(s)}
+                          disabled={busy}
+                          className="text-xs h-8 flex-shrink-0"
+                        >
+                          {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : gen ? <RefreshCw className="w-3 h-3" /> : <Wand2 className="w-3 h-3" />}
+                          <span className="ml-1">{gen ? 'Redo' : 'Build'}</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              <Button onClick={generateAllPicked} disabled={!!genBusy || picked.size === 0} className="w-full h-10 mt-2 bg-brand-gradient hover:opacity-90 text-white text-sm">
+                {genBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                Build all picked ({picked.size})
+              </Button>
+              {genError && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 text-xs">{genError}</div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="border-border/60 bg-card/30 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Build log</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-40 overflow-y-auto space-y-1 font-mono text-[11px] text-muted-foreground">
+              {log.map((l, i) => (
+                <div key={i} className="truncate">{l}</div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {Object.keys(generated).length > 0 && (
+          <Button onClick={goNext} className="w-full h-12 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold">
+            Continue to payment / download <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        )}
+      </div>
+
+      {/* RIGHT: Sandpack live preview */}
+      <Card className="border-border/60 bg-card/50 backdrop-blur-sm min-h-[720px] flex flex-col">
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 border-b border-border/50">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-400/70" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70" />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
+              </div>
+              {activeScreen || 'Live app preview'}
+            </CardTitle>
+          </div>
+          {scaffold && Object.keys(generated).length > 0 && (
+            <div className="flex gap-1 flex-wrap justify-end max-w-[60%]">
+              {Object.keys(generated).map((name) => (
+                <button
+                  key={name}
+                  onClick={() => setActiveScreen(name)}
+                  className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${activeScreen === name ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'}`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+        </CardHeader>
+        <CardContent className="flex-1 p-0 min-h-0">
+          <div className="h-full min-h-[640px] rounded-b-lg overflow-hidden">
+            <Sandpack
+              key={activeScreen || 'default'}
+              template="react"
+              theme="dark"
+              options={{
+                showNavigator: false,
+                showTabs: false,
+                showLineNumbers: false,
+                showInlineErrors: true,
+                editorHeight: 640,
+                editorWidthPercentage: 0,
+              }}
+              files={{
+                '/App.js': { code: activeCode, active: true },
+                '/index.js': {
+                  code: `import React from 'react';
+import { createRoot } from 'react-dom/client';
+import './tw-loader.js';
+import App from './App';
+const root = createRoot(document.getElementById('root'));
+root.render(<App />);
+`,
+                  hidden: true,
+                },
+                '/tw-loader.js': {
+                  code: `// Injects Tailwind CDN + Inter font once when this MVP preview boots.
+if (typeof document !== 'undefined' && !document.getElementById('__tw_cdn')) {
+  const s = document.createElement('script');
+  s.id = '__tw_cdn';
+  s.src = 'https://cdn.tailwindcss.com';
+  document.head.appendChild(s);
+  const f = document.createElement('link');
+  f.rel = 'stylesheet';
+  f.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap';
+  document.head.appendChild(f);
+  const st = document.createElement('style');
+  st.textContent = "body{font-family:Inter,system-ui,sans-serif;margin:0}";
+  document.head.appendChild(st);
+}
+`,
+                  hidden: true,
+                },
+              }}
+              customSetup={{
+                dependencies: {
+                  'lucide-react': '^0.383.0',
+                },
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

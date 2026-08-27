@@ -89,7 +89,7 @@ export function ProposalPanel({ initialIdea }: ProposalPanelProps): React.JSX.El
   }, [proposal]);
 
   const goNext = useCallback(() => {
-    router.push('/wizard/design?idea=' + encodeURIComponent(idea));
+    router.push('/wizard/landing?idea=' + encodeURIComponent(idea));
   }, [router, idea]);
 
   return (
