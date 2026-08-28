@@ -9,7 +9,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } fro
 import { addDoc, readProject, subscribeProject, type StartupDoc } from '../../lib/session/project';
 import { StageExplainer } from './common/StageExplainer';
 import { ProcessLoader } from './common/ProcessLoader';
-import { DOC_CATALOG } from '../../lib/docs/catalog';
+import { DOC_CATALOG, findDoc } from '../../lib/docs/catalog';
 
 export function DocsIndex(): React.JSX.Element {
   const [docs, setDocs] = useState<StartupDoc[]>([]);
@@ -24,17 +24,57 @@ export function DocsIndex(): React.JSX.Element {
 
   const generateOne = useCallback(async (slug: string) => {
     setBusySlug(slug);
+    const cat = findDoc(slug);
+    if (!cat) { setBusySlug(null); return; }
     try {
       const proj = readProject();
       // Route to dedicated multi-step endpoints for the heavy docs.
+      const binary: Record<string, { url: string; ext: string; type: string }> = {
+        'pitch-deck':      { url: '/api/wizard/docs/pitch-deck/pptx',       ext: 'pptx', type: 'pptx' },
+        'financial-model': { url: '/api/wizard/docs/financial-model/xlsx',  ext: 'xlsx', type: 'xlsx' },
+      };
       const dedicated: Record<string, string> = {
         'business-plan': '/api/wizard/docs/business-plan/generate',
         'market-research': '/api/wizard/docs/market-research/generate',
         'competitive-analysis': '/api/wizard/docs/competitive-analysis/generate',
       };
+      const idea = proj.idea || 'A modern SaaS product';
+      const productName = proj.productName || 'Your product';
+      const founderName = proj.name;
+      const design = proj.design || {};
+
+      // Binary generators (pptx / xlsx) return the file directly and skip the markdown DocViewer.
+      if (binary[slug]) {
+        const b = binary[slug];
+        const res = await fetch(b.url, {
+          method: 'POST', credentials: 'include',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ idea, productName, founderName, design }),
+        });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${productName.toLowerCase().replace(/\s+/g, '-')}-${slug}.${b.ext}`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        // Add a placeholder StartupDoc so the folder icon shows something.
+        addDoc({
+          id: 'doc_' + slug + '_' + Math.random().toString(36).slice(2, 9),
+          type: slug,
+          title: cat.title,
+          format: b.type as StartupDoc['format'],
+          content: `Binary ${b.ext.toUpperCase()} downloaded to your computer.`,
+          createdAt: Date.now(),
+          tokens: 0,
+        });
+        return;
+      }
+
       const endpoint = dedicated[slug] || '/api/wizard/docs/generate';
-      const dedicatedBody = { idea: proj.idea || 'A modern SaaS product', productName: proj.productName || 'Your product', founderName: proj.name };
-      const genericBody = { docSlug: slug, projectContext: { idea: proj.idea || 'A modern SaaS product', proposal: proj.proposal || '', productName: proj.productName || 'Your product', design: proj.design || {} } };
+      const dedicatedBody = { idea, productName, founderName };
+      const genericBody = { docSlug: slug, projectContext: { idea, proposal: proj.proposal || '', productName, design } };
       const res = await fetch(endpoint, {
         method: 'POST', credentials: 'include',
         headers: { 'content-type': 'application/json' },

@@ -168,6 +168,7 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
           screenName: spec.name,
           screenPurpose: spec.purpose,
           allScreens: scaffold.screens.filter((x) => picked.has(x.name)),
+          design: (typeof window !== 'undefined' ? JSON.parse(window.localStorage.getItem('caia.spec.' + (window.localStorage.getItem('caia.activeSpecId') || 'anon')) || '{}').design : undefined),
         }),
       });
       const json = (await res.json()) as { ok?: boolean; code?: string; error?: string };
@@ -441,22 +442,62 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
                 editorHeight: 640,
                 editorWidthPercentage: 0,
               }}
-              files={{
-                '/App.js': { code: activeCode, active: true },
-                '/index.js': {
+              files={(() => {
+                const files: Record<string, { code: string; hidden?: boolean; active?: boolean }> = {};
+                const genList = Object.entries(generated).map(([name, g], i) => ({ name, code: g.code, i }));
+                const activeName = activeScreen || (genList[0]?.name);
+
+                if (genList.length === 0) {
+                  files['/Screen0.js'] = { code: activeCode, hidden: true };
+                } else {
+                  for (const g of genList) {
+                    files[`/Screen${g.i}.js`] = { code: g.code, hidden: true };
+                  }
+                }
+
+                const routes = genList.length > 0
+                  ? genList.map((g) => {
+                      const path = (scaffold?.screens.find((s) => s.name === g.name)?.routePath) || '/' + g.name.toLowerCase().replace(/\s+/g, '-');
+                      const safePath = path.replace(/\[([^\]]+)\]/g, ':$1');
+                      return `        <Route path="${safePath}" element={<Screen${g.i} />} />`;
+                    }).join('\n')
+                  : `        <Route path="*" element={<Screen0 />} />`;
+                const rootPath = genList.length > 0
+                  ? (scaffold?.screens.find((s) => s.name === (activeName || ''))?.routePath || '/')
+                  : '/';
+
+                files['/App.js'] = {
+                  active: true,
+                  code: `import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+${genList.map((g) => `import Screen${g.i} from './Screen${g.i}';`).join('\n')}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+${routes}
+        <Route path="*" element={<Navigate to="${rootPath}" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+`,
+                };
+
+                files['/index.js'] = {
+                  hidden: true,
                   code: `import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './tw-loader.js';
 import App from './App';
-import { LiveVoiceInput } from './common/LiveVoiceInput';
 const root = createRoot(document.getElementById('root'));
 root.render(<App />);
 `,
+                };
+                files['/tw-loader.js'] = {
                   hidden: true,
-                },
-                '/tw-loader.js': {
-                  code: `// Injects Tailwind CDN + Inter font once when this MVP preview boots.
-if (typeof document !== 'undefined' && !document.getElementById('__tw_cdn')) {
+                  code: `if (typeof document !== 'undefined' && !document.getElementById('__tw_cdn')) {
   const s = document.createElement('script');
   s.id = '__tw_cdn';
   s.src = 'https://cdn.tailwindcss.com';
@@ -470,12 +511,13 @@ if (typeof document !== 'undefined' && !document.getElementById('__tw_cdn')) {
   document.head.appendChild(st);
 }
 `,
-                  hidden: true,
-                },
-              }}
+                };
+                return files;
+              })()}
               customSetup={{
                 dependencies: {
                   'lucide-react': '^0.383.0',
+                  'react-router-dom': '^6.26.0',
                 },
               }}
             />
