@@ -182,6 +182,15 @@ export const MODEL_LADDER: Record<string, ModelLadder> = {
     notes: 'Design system + style + theme recommendation with justification.',
   },
 
+  'architecture.generate': {
+    primary: 'anthropic/claude-sonnet-4.6',
+    fallbacks: ['openai/gpt-5.6-luna-pro', 'anthropic/claude-opus-5'],
+    maxTokens: 10_000,
+    timeoutMs: 60_000,
+    tier: 'strong',
+    needsWebSearch: false,
+    notes: 'Turn finite idea + interview summary into entities/routes/screens/permissions/dataflows.',
+  },
   // === CONVERSATIONAL + CLASSIFICATION ===
   'interview.turn': {
     primary: 'anthropic/claude-sonnet-4.6',

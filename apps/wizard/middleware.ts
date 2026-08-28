@@ -170,7 +170,8 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       !pathname.startsWith('/api/wizard/tokens/') &&
       !pathname.startsWith('/api/caia/') &&
       !pathname.startsWith('/api/wizard/design/') &&
-      !pathname.startsWith('/api/wizard/interview/')
+      !pathname.startsWith('/api/wizard/interview/') &&
+      !pathname.startsWith('/api/wizard/architecture/')
     ) {
       return NextResponse.json(
         {

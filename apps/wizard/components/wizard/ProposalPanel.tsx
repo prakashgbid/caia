@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Copy, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 import { LiveVoiceInput } from './common/LiveVoiceInput';
+import { useSpec, advanceStage } from '../../lib/spec/store';
 
 interface Turn { role: 'user' | 'assistant'; content: string; }
 
@@ -27,7 +28,8 @@ export interface ProposalPanelProps { initialIdea?: string; }
 
 export function ProposalPanel({ initialIdea }: ProposalPanelProps): React.JSX.Element {
   const router = useRouter();
-  const [idea, setIdea] = useState<string>(initialIdea ?? '');
+  const [spec, mutateSpecFn] = useSpec();
+  const [idea, setIdea] = useState<string>(initialIdea ?? spec.grandIdea ?? '');
   const [transcriptText, setTranscriptText] = useState<string>(JSON.stringify(DEMO_TRANSCRIPT_FALLBACK, null, 2));
   const [proposal, setProposal] = useState<string>('');
   const [meta, setMeta] = useState<{ model?: string; latencyMs?: number; costUsd?: number; turns?: number } | null>(null);
@@ -35,6 +37,11 @@ export function ProposalPanel({ initialIdea }: ProposalPanelProps): React.JSX.El
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => { advanceStage('proposal'); }, []);
+  useEffect(() => {
+    if (!idea && spec.grandIdea) setIdea(spec.grandIdea);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spec.grandIdea]);
   useEffect(() => {
     if (!initialIdea && typeof window !== 'undefined') {
       const u = new URL(window.location.href);

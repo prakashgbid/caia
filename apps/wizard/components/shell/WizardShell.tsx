@@ -117,8 +117,22 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
             </button>
             <button
               type="button"
+              onClick={async () => {
+                try {
+                  // Import project store lazily to avoid SSR
+                  const store = await import('../../lib/session/project');
+                  await store.syncToBackend();
+                  const activeId = typeof window !== 'undefined' ? (window.localStorage.getItem('caia.activeSpecId') || 'anon') : 'anon';
+                  const url = `${window.location.origin}/wizard/resume?p=${encodeURIComponent(activeId)}`;
+                  try { await navigator.clipboard.writeText(url); } catch { /* no clipboard */ }
+                  alert('Your work is saved. Resume link copied to clipboard:\n' + url);
+                  window.location.href = 'https://chiefaia.com';
+                } catch (e) {
+                  alert('Save failed: ' + (e as Error).message);
+                }
+              }}
               className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 h-8 rounded-md hover:bg-muted transition-colors"
-              title="Save & exit"
+              title="Save & exit — your work is saved + resume link copied to clipboard"
             >
               <LogOut className="w-3.5 h-3.5" />
               Save & exit
