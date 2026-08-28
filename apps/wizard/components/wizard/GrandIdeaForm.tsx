@@ -16,6 +16,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } fro
 import { useSpec, advanceStage } from '../../lib/spec/store';
 import { validateFreeText } from '../../lib/validate/text';
 import { LiveVoiceInput } from './common/LiveVoiceInput';
+import { DocsUnlocked } from './common/DocsUnlocked';
 
 const MIN_CHARS = 20;
 const MIN_WORDS = 5;
