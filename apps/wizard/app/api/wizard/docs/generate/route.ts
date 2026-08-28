@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { callOpenRouter } from '@caia/openrouter-client';
+import { callWithRouting } from '../../../../../lib/ai/call-with-routing';
 import { findDoc } from '../../../../../lib/docs/catalog';
 import { readAuthedUser } from '../../../../../lib/backend/session';
 import { query } from '../../../../../lib/db/pool';
@@ -45,17 +46,28 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
   }
 
-  // Long-form docs get the beefier model + more tokens
-  const isLong = doc.slug === 'business-plan';
-  const r = await callOpenRouter({
-    purpose: `docs.generate.${doc.slug}`,
+  // Route to the right model tier per doc type — see lib/ai/model-routing.ts
+  const purposeMap: Record<string, string> = {
+    'executive-summary':      'doc.exec-summary',
+    'business-plan':          'doc.business-plan.section',
+    'pitch-deck':             'doc.pitch-deck',
+    'financial-model':        'doc.financial-model',
+    'gtm-plan':               'doc.gtm-plan',
+    'competitive-analysis':   'doc.business-plan.section',
+    'icp-personas':           'doc.exec-summary',
+    'prd':                    'doc.gtm-plan',
+    'roadmap':                'doc.short',
+    'tech-architecture':      'doc.gtm-plan',
+    'brand-guidelines':       'doc.exec-summary',
+    'legal-structure':        'doc.short',
+    'kpi-dashboard':          'doc.short',
+    'one-pager':              'doc.exec-summary',
+  };
+  const purpose = purposeMap[doc.slug] || 'doc.short';
+  const r = await callWithRouting(purpose, {
     userPrompt,
     systemPrompt: doc.systemPrompt,
-    model: isLong ? 'mistralai/mistral-nemo' : 'openai/gpt-4o-mini',
-    maxTokens: isLong ? 8000 : 3500,
-    timeoutMs: isLong ? 60_000 : 35_000,
     responseFormat: 'text',
-    paidFallback: true,
   });
   if (!r.ok || !r.text) {
     return NextResponse.json({ ok: false, error: 'llm_failed', detail: r.ok ? 'no_text' : r.error }, { status: 502 });

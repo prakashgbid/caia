@@ -12,6 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { callOpenRouter } from '@caia/openrouter-client';
+import { callWithRouting } from '../../../../../lib/ai/call-with-routing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,15 +52,10 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   const userPrompt = `Founder's idea:\n"${ideaText}"\n\nProposal / build brief:\n${proposal || '(no proposal yet — infer from the idea and produce a great generic landing based on it.)'}\n\nGenerate the single-file HTML landing page now.`;
 
-  const r = await callOpenRouter({
-    purpose: 'landing.generate',
+  const r = await callWithRouting('landing.generate', {
     userPrompt,
     systemPrompt: LANDING_SYSTEM,
-    model: 'openai/gpt-4o-mini',
-    maxTokens: 3000,
-    timeoutMs: 30_000,
     responseFormat: 'text',
-    paidFallback: true,
   });
 
   if (!r.ok) {
