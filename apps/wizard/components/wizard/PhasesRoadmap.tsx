@@ -37,7 +37,7 @@ function Section({ title, items }: { title: string; items: Sf[] }): React.JSX.El
               {grouped[st].map((it) => (
                 <div key={it.id} className={`flex items-center gap-2 px-3 py-2 text-xs ${st === 'todo' ? 'opacity-70' : ''}`}>
                   <span className="flex-shrink-0">{icon(st)}</span>
-                  <span className="font-mono text-[10px] text-muted-foreground w-14 flex-shrink-0">{it.id}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground/50 w-14 flex-shrink-0 hidden" title={it.id}>{it.id}</span>
                   <span className="truncate">{it.title}</span>
                 </div>
               ))}
@@ -71,9 +71,9 @@ export function PhasesRoadmap(): React.JSX.Element {
     <div className="space-y-4">
       <div className="text-[10px] text-muted-foreground text-right">Source: {source === 'live' ? 'Live from CAIA registry' : 'Snapshot'}</div>
       <StageExplainer
-        title="The full CAIA factory"
-        body="CAIA is a factory of 141 Software Factories (SF) plus 15 Control-Plane services. What you use in the wizard is a small slice — this is the whole map."
-        why="Founders often ask 'is CAIA just a wizard?' — no. It's an industrialised software factory. As each factory ships, it moves from 'To do' to 'Done'. You benefit from every one that's live."
+        title="What CAIA can build for you"
+        body="The wizard you're using is a small slice of what CAIA can build. This is the full menu — each item is a real capability CAIA either delivers today (Done), is actively shipping (In progress), or has planned (To do). You get every capability that's Done as part of your subscription."
+        why="So you know what you're getting today, and what's coming next. Live capabilities are yours to use. Anything ‘To do’ isn't promised — it's a real roadmap, not marketing."
       />
       <Section title="Software Factories (SF-00 → SF-140)" items={sfs} />
       <Section title="Control-Plane Components (CP-01 → CP-16)" items={cp} />

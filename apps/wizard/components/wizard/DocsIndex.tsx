@@ -158,7 +158,9 @@ export function DocsIndex(): React.JSX.Element {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{cat.audience} · {cat.format.toUpperCase()}</span>
+                    <span className="text-muted-foreground">
+                      {cat.audience} · {cat.format.toUpperCase()}{cat.tokenCost ? ` · ~${cat.tokenCost} tokens` : ''}{cat.estimatedMinutes ? ` · ~${cat.estimatedMinutes} min` : ''}
+                    </span>
                     {existing ? (
                       <Link href={`/wizard/docs/${existing.id}`} className="text-primary font-medium hover:underline">Open →</Link>
                     ) : busySlug === cat.slug ? (

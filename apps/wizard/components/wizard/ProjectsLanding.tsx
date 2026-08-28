@@ -17,9 +17,9 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LoginPill } from '../session/LoginPill';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Clock, FileText, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowRight, Clock, Edit3, FileText, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { Button, Card, CardContent } from '@caia/ui';
-import { listSpecs, setActiveSpecId, readSpec, deleteSpec } from '../../lib/spec/store';
+import { listSpecs, setActiveSpecId, readSpec, deleteSpec, mutateSpec } from '../../lib/spec/store';
 import { NewProjectModal } from '../session/NewProjectModal';
 import { StageExplainer } from './common/StageExplainer';
 
@@ -46,6 +46,8 @@ export function ProjectsLanding(): React.JSX.Element {
   const [projects, setProjects] = useState<Combined[]>([]);
   const [loading, setLoading] = useState(true);
   const [newOpen, setNewOpen] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -166,12 +168,46 @@ export function ProjectsLanding(): React.JSX.Element {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold truncate">{p.name || 'Untitled project'}</div>
+                      {renamingId === p.id ? (
+                        <input
+                          type="text"
+                          value={renameDraft}
+                          onChange={(e) => setRenameDraft(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const nm = renameDraft.trim() || 'Untitled project';
+                              const prevActive = window.localStorage.getItem('caia.activeSpecId');
+                              setActiveSpecId(p.id);
+                              mutateSpec((sp) => { sp.name = nm; });
+                              if (prevActive) setActiveSpecId(prevActive);
+                              try { await fetch(`/api/wizard/project/${encodeURIComponent(p.id)}`, { method: 'PUT', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: nm }) }); } catch {}
+                              setRenamingId(null);
+                              void refresh();
+                            } else if (e.key === 'Escape') {
+                              setRenamingId(null);
+                            }
+                          }}
+                          autoFocus
+                          className="w-full text-sm font-semibold bg-background border border-primary/60 rounded px-1 py-0.5 focus:outline-none"
+                        />
+                      ) : (
+                        <div className="text-sm font-semibold truncate">{p.name || 'Untitled project'}</div>
+                      )}
                       <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         Updated {new Date(p.updatedAt).toLocaleDateString()} · {STAGE_LABEL[p.currentStage || 'onboarding']}
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setRenamingId(p.id); setRenameDraft(p.name || ''); }}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-all p-1"
+                      aria-label="Rename project"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={(e) => { void del(e, p); }}
