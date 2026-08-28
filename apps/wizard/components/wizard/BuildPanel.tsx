@@ -19,6 +19,7 @@ import { spendTokens, readSession } from '../../lib/session/tokens';
 import { updateProject } from '../../lib/session/project';
 import { ViewportSelector, VIEWPORTS, type Viewport } from './common/ViewportSelector';
 import { MvpTreePanel } from './MvpTreePanel';
+import { MvpBreakdownGrid, type EnrichedBreakdown } from './MvpBreakdownGrid';
 import { StageExplainer } from './common/StageExplainer';
 import { useSpec, advanceStage } from '../../lib/spec/store';
 import Link from 'next/link';
@@ -84,6 +85,8 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
   const [genError, setGenError] = useState<string | null>(null);
   const [activeScreen, setActiveScreen] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>(['Ready to build.']);
+  const [enriched, setEnriched] = useState<EnrichedBreakdown | null>(null);
+  const [enrichBusy, setEnrichBusy] = useState(false);
   const [viewport, setViewport] = useState<Viewport>('desktop');
 
   const appendLog = useCallback((line: string) => {
@@ -197,6 +200,28 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
     }
     appendLog('All picked screens generated. Ready for the paywall / download.');
   }, [scaffold, picked, generated, generateOne, appendLog]);
+
+  const fetchEnriched = useCallback(async () => {
+    if (!ideaText || ideaText.trim().length < 15) return;
+    setEnrichBusy(true);
+    try {
+      const res = await fetch('/api/wizard/mvp/breakdown-enriched', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          idea: ideaText,
+          productName: scaffold?.productName,
+          proposal,
+          design: spec.design,
+        }),
+      });
+      if (!res.ok) return;
+      const j = (await res.json()) as { ok?: boolean } & EnrichedBreakdown;
+      if (j.ok) setEnriched(j);
+    } finally {
+      setEnrichBusy(false);
+    }
+  }, [ideaText, scaffold?.productName, proposal, spec.design]);
 
   const activeCode = useMemo(() => {
     if (activeScreen && generated[activeScreen]) return generated[activeScreen].code;
@@ -354,7 +379,7 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <MvpTreePanel
+              {enriched ? <MvpBreakdownGrid breakdown={enriched} /> : <MvpTreePanel
                 initiatives={(scaffold.initiatives || []).map((it, i) => ({
                   id: it.id || `init-${i+1}`,
                   title: it.title || it.name || `Initiative ${i+1}`,
@@ -371,7 +396,13 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
                     })),
                   })),
                 }))}
-              />
+              />}
+              {!enriched && (
+                <Button onClick={fetchEnriched} disabled={enrichBusy} variant="outline" size="sm" className="w-full mt-3">
+                  {enrichBusy ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : null}
+                  {enrichBusy ? 'Deepening breakdown…' : 'Deepen: add acceptance criteria + effort + priorities'}
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
