@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { FileText, Sparkles, Wand2, Loader2 } from 'lucide-react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 import { addDoc, readProject, subscribeProject, type StartupDoc } from '../../lib/session/project';
+import { upsertDoc } from '../../lib/spec/store';
 import { StageExplainer } from './common/StageExplainer';
 import { ProcessLoader } from './common/ProcessLoader';
 import { DOC_CATALOG, findDoc } from '../../lib/docs/catalog';
@@ -60,14 +61,11 @@ export function DocsIndex(): React.JSX.Element {
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url);
         // Add a placeholder StartupDoc so the folder icon shows something.
-        addDoc({
-          id: 'doc_' + slug + '_' + Math.random().toString(36).slice(2, 9),
+        upsertDoc({
           type: slug,
           title: cat.title,
           format: b.type as StartupDoc['format'],
           content: `Binary ${b.ext.toUpperCase()} downloaded to your computer.`,
-          createdAt: Date.now(),
-          tokens: 0,
         });
         return;
       }
@@ -83,14 +81,11 @@ export function DocsIndex(): React.JSX.Element {
       if (!res.ok) return;
       const j = (await res.json()) as { ok?: boolean; content?: string; title?: string; format?: string };
       if (!j.ok || !j.content) return;
-      addDoc({
-        id: 'doc_' + slug + '_' + Math.random().toString(36).slice(2, 9),
+      upsertDoc({
         type: slug,
         title: j.title || slug,
         format: (j.format as StartupDoc['format']) || 'markdown',
         content: j.content,
-        createdAt: Date.now(),
-        tokens: 0,
       });
     } finally {
       setBusySlug(null);
@@ -105,7 +100,7 @@ export function DocsIndex(): React.JSX.Element {
         why="Investors read a founder's docs before they take the meeting. Having a full pack ready — pitch deck, executive summary, financials — removes the biggest early friction."
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {DOC_CATALOG.map((cat) => {
+        {DOC_CATALOG.filter((c) => c.core).map((cat) => {
           const existing = byType.get(cat.slug);
           return (
             <Card key={cat.slug} className={`border-border/60 bg-card/50 backdrop-blur-sm transition-all ${existing ? 'ring-1 ring-primary/30' : 'opacity-90'}`}>
@@ -139,9 +134,50 @@ export function DocsIndex(): React.JSX.Element {
           );
         })}
       </div>
+      <details className="rounded-2xl border border-border/60 bg-card/30">
+        <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between text-sm font-semibold">
+          <span>More templates <span className="text-muted-foreground font-normal ml-1">({DOC_CATALOG.filter((c) => !c.core).length} additional docs — snippets, playbooks, one-off templates)</span></span>
+          <span className="text-xs text-muted-foreground">click to expand</span>
+        </summary>
+        <div className="px-4 pb-4 pt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {DOC_CATALOG.filter((c) => !c.core).map((cat) => {
+            const existing = byType.get(cat.slug);
+            return (
+              <Card key={cat.slug} className={`border-border/60 bg-card/50 backdrop-blur-sm transition-all ${existing ? 'ring-1 ring-primary/30' : 'opacity-90'}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                        <span className="truncate">{cat.title}</span>
+                      </CardTitle>
+                      <CardDescription className="text-xs mt-1">{cat.shortDesc}</CardDescription>
+                    </div>
+                    {existing && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex-shrink-0">Ready</span>}
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">{cat.audience} · {cat.format.toUpperCase()}</span>
+                    {existing ? (
+                      <Link href={`/wizard/docs/${existing.id}`} className="text-primary font-medium hover:underline">Open →</Link>
+                    ) : busySlug === cat.slug ? (
+                      <span className="text-primary flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Generating…</span>
+                    ) : (
+                      <button type="button" onClick={() => generateOne(cat.slug)} className="text-primary font-medium hover:underline flex items-center gap-1">
+                        <Wand2 className="w-3 h-3" /> Generate
+                      </button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </details>
       <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1 pt-2">
         <Sparkles className="w-3 h-3" />
-        {docs.length} of {DOC_CATALOG.length} generated
+        {docs.length} of {DOC_CATALOG.length} generated ({docs.filter((d) => DOC_CATALOG.find((c) => c.slug === d.type)?.core).length} of {DOC_CATALOG.filter((c) => c.core).length} core)
       </div>
     </div>
   );
