@@ -26,18 +26,19 @@ export function DocsIndex(): React.JSX.Element {
     setBusySlug(slug);
     try {
       const proj = readProject();
-      const res = await fetch('/api/wizard/docs/generate', {
-        method: 'POST',
+      // Route to dedicated multi-step endpoints for the heavy docs.
+      const dedicated: Record<string, string> = {
+        'business-plan': '/api/wizard/docs/business-plan/generate',
+        'market-research': '/api/wizard/docs/market-research/generate',
+        'competitive-analysis': '/api/wizard/docs/competitive-analysis/generate',
+      };
+      const endpoint = dedicated[slug] || '/api/wizard/docs/generate';
+      const dedicatedBody = { idea: proj.idea || 'A modern SaaS product', productName: proj.productName || 'Your product', founderName: proj.name };
+      const genericBody = { docSlug: slug, projectContext: { idea: proj.idea || 'A modern SaaS product', proposal: proj.proposal || '', productName: proj.productName || 'Your product', design: proj.design || {} } };
+      const res = await fetch(endpoint, {
+        method: 'POST', credentials: 'include',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          docSlug: slug,
-          projectContext: {
-            idea: proj.idea || 'A modern SaaS product',
-            proposal: proj.proposal || '',
-            productName: proj.productName || 'Your product',
-            design: proj.design || {},
-          },
-        }),
+        body: JSON.stringify(dedicated[slug] ? dedicatedBody : genericBody),
       });
       if (!res.ok) return;
       const j = (await res.json()) as { ok?: boolean; content?: string; title?: string; format?: string };

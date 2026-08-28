@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { callOpenRouter } from '@caia/openrouter-client';
+import { callWithRouting } from '../../../../../lib/ai/call-with-routing';
 import { readAuthedUser } from '../../../../../lib/backend/session';
 import { query } from '../../../../../lib/db/pool';
 
@@ -69,15 +70,10 @@ export async function POST(req: Request): Promise<NextResponse> {
   if (me && me.tokensBalance < SCAFFOLD_COST) {
     return NextResponse.json({ ok: false, error: 'insufficient_tokens', balance: me.tokensBalance, cost: SCAFFOLD_COST }, { status: 402 });
   }
-  const r = await callOpenRouter({
-    purpose: 'mvp.scaffold.v2',
+  const r = await callWithRouting('mvp.scaffold.v2', {
     userPrompt,
     systemPrompt: SCAFFOLD_SYSTEM,
-    model: 'openai/gpt-4o-mini',
-    maxTokens: 2500,
-    timeoutMs: 30_000,
     responseFormat: 'json',
-    paidFallback: true,
   });
   if (!r.ok || !r.json) return NextResponse.json({ ok: false, error: 'llm_failed', detail: r.ok ? 'no_json' : r.error }, { status: 502 });
 

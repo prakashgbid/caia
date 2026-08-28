@@ -12,6 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { callOpenRouter } from '@caia/openrouter-client';
+import { callWithRouting } from '../../../../../lib/ai/call-with-routing';
 import { readAuthedUser } from '../../../../../lib/backend/session';
 import { query } from '../../../../../lib/db/pool';
 
@@ -85,15 +86,10 @@ Output the JSON with "code" now.`;
   if (me && me.tokensBalance < SCREEN_COST) {
     return NextResponse.json({ ok: false, error: 'insufficient_tokens', balance: me.tokensBalance, cost: SCREEN_COST }, { status: 402 });
   }
-  const r = await callOpenRouter({
-    purpose: 'mvp.screen.generate',
+  const r = await callWithRouting('mvp.screen.generate', {
     userPrompt,
     systemPrompt: SCREEN_SYSTEM,
-    model: 'openai/gpt-4o-mini',
-    maxTokens: 2500,
-    timeoutMs: 30_000,
     responseFormat: 'json',
-    paidFallback: true,
   });
   if (!r.ok || !r.json) return NextResponse.json({ ok: false, error: 'llm_failed', detail: r.ok ? 'no_json' : r.error }, { status: 502 });
   const parsed = r.json as { code?: string };
