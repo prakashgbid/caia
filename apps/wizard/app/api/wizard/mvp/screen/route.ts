@@ -1,60 +1,56 @@
 /**
  * POST /api/wizard/mvp/screen
  *
- * Generates ONE React screen for the MVP click-through:
- *   { idea, productName, screenName, screenPurpose, allScreens }
- *   → { ok: true, code: string, imports: string[], mockData?: object }
+ * Generates one deployable React screen for the MVP click-through.
+ * Emits code that:
+ *   - Uses react-router-dom for real navigation (Link, useNavigate, useParams)
+ *   - Uses React state + localStorage for persistence between screens
+ *   - Real form handlers (submit → localStorage + navigate)
+ *   - Honors spec.design (design system, style guide, theme, accentColor)
+ *   - Tailwind utilities only — no external CSS
+ *   - lucide-react for icons
  *
- * The code is a single default-export React functional component using
- * Tailwind classes and mock data hardcoded inline. It renders inside
- * Sandpack's react template.
+ * All this so that when the founder deploys their MVP click-through the
+ * screens actually navigate + persist state, not just render as static components.
  */
 
 import { NextResponse } from 'next/server';
-import { callOpenRouter } from '@caia/openrouter-client';
 import { callWithRouting } from '../../../../../lib/ai/call-with-routing';
 import { readAuthedUser } from '../../../../../lib/backend/session';
 import { query } from '../../../../../lib/db/pool';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 
-const SCREEN_SYSTEM = `You are the CAIA MVP Screen Generator. Produce a single self-contained React functional component for ONE screen of the MVP click-through prototype.
+const SCREEN_SYSTEM = `You are the CAIA MVP Screen Generator. Produce a single deployable React screen for the founder's click-through prototype.
 
-Constraints (STRICT):
-- Output MUST be a JSON object exactly of shape: { "code": "string" }
-- The "code" value is a full React module with a default export named ScreenComponent.
-- Use ONLY Tailwind utility classes for styling (no imports, no external CSS).
-- Use ONLY React + lucide-react icons (already installed in the sandbox — you may import from 'lucide-react').
-- No other imports. No fetch, no external APIs.
-- Include realistic MOCK DATA inline (arrays/objects at the top of the file).
-- Component must be complete and immediately runnable in a Sandpack React template.
-- Include tap/click handlers that set local state, so the screen feels interactive.
-- Header + main content + footer/bottom-nav structure.
-- Mobile-first responsive Tailwind classes.
+Output MUST be a JSON object exactly of shape: { "code": "string" }
 
-Example shape of the code value (illustrative — you'll write the actual content):
+The "code" value is a full React module with a default export named ScreenComponent.
 
-import { useState } from 'react';
-import { Heart, MessageCircle } from 'lucide-react';
+STRICT rules:
+- Uses ONLY these imports:
+    import React, { useState, useEffect } from 'react';
+    import { Link, useNavigate, useParams } from 'react-router-dom';
+    import { <IconName>, ... } from 'lucide-react';   // any lucide icons you need
+- Uses Tailwind utility classes ONLY for styling (no CSS-in-JS, no imports).
+- Honors the DESIGN CONTEXT provided (design system look-and-feel, style guide tone, theme, accent color) in the visual choices you make.
+- Persists any user-entered state to localStorage under key \`caia_mvp_<slug>\` where <slug> is the screen route.
+- Real form handlers: onSubmit → localStorage.setItem(...) → navigate('/next-route').
+- <Link to="/route"> for internal navigation (never <a href>).
+- Realistic mock data seeded in a top-level const, ~5-10 items minimum.
+- Interactive: at least one useState + one handler that mutates it.
+- Component structure: header (with nav Links to other screens in the app), main content (the screen's real function), footer or bottom-nav (for mobile-friendly nav).
+- Mobile-first responsive with Tailwind (sm: md: lg: breakpoints).
+- Accessibility: aria-labels on interactive elements, semantic HTML.
+- No TODO comments, no placeholder text — everything looks intentional.
 
-const POSTS = [{ id: 1, author: 'Alex', ... }, ...];
-
-export default function ScreenComponent() {
-  const [likes, setLikes] = useState({});
-  return (
-    <div className="min-h-screen bg-white">...</div>
-  );
-}
-
-Do NOT add code fences. Do NOT add explanation. Output ONLY the JSON object with a single "code" field.`;
+Output ONLY the JSON — no code fences around it, no preamble.`;
 
 interface ScreenReq {
-  ideaText?: unknown;
-  productName?: unknown;
-  screenName?: unknown;
-  screenPurpose?: unknown;
-  allScreens?: unknown;
+  ideaText?: unknown; productName?: unknown; screenName?: unknown;
+  screenPurpose?: unknown; allScreens?: unknown; design?: unknown;
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
@@ -66,30 +62,46 @@ export async function POST(req: Request): Promise<NextResponse> {
   const screenName = typeof body.screenName === 'string' ? body.screenName : '';
   const screenPurpose = typeof body.screenPurpose === 'string' ? body.screenPurpose : '';
   const allScreens = Array.isArray(body.allScreens) ? (body.allScreens as Array<{ name: string; routePath: string }>) : [];
+  const design = body.design && typeof body.design === 'object' ? body.design as Record<string, unknown> : {};
   if (screenName.length < 2) return NextResponse.json({ ok: false, error: 'screen_name_required' }, { status: 400 });
-
-  const otherScreens = allScreens.filter((s) => s.name !== screenName).map((s) => `${s.name} (${s.routePath})`).join(', ');
-  const userPrompt = `Product: ${productName}
-Founder idea: ${ideaText}
-
-Screen to build: **${screenName}**
-Purpose: ${screenPurpose}
-
-Other screens in the MVP (for nav context): ${otherScreens || '(none)'}
-
-Write the React component now. Include realistic mock data and interactive local state. Nav links can be plain <a href="/route"> — Sandpack will render them as text.
-
-Output the JSON with "code" now.`;
 
   const me = await readAuthedUser();
   const SCREEN_COST = 15;
   if (me && me.tokensBalance < SCREEN_COST) {
     return NextResponse.json({ ok: false, error: 'insufficient_tokens', balance: me.tokensBalance, cost: SCREEN_COST }, { status: 402 });
   }
+
+  const designHint = [
+    design.designSystem ? `Design system: ${design.designSystem} (mimic its look — spacing, corners, button styles)` : '',
+    design.styleGuide ? `Style guide tone: ${design.styleGuide}` : '',
+    design.theme ? `Theme: ${design.theme}` : '',
+    design.accentColor ? `Accent color: ${design.accentColor} (use for CTAs + highlights)` : '',
+    design.fontFamily ? `Font family: ${design.fontFamily}` : '',
+    design.radius ? `Corner radius: ${design.radius}` : '',
+  ].filter(Boolean).join('\n');
+
+  const otherScreens = allScreens.filter((s) => s.name !== screenName).map((s) => `${s.name} → ${s.routePath}`).join(', ');
+
+  const userPrompt = `Product: ${productName}
+Founder idea: ${ideaText}
+
+DESIGN CONTEXT:
+${designHint || '(no design choices set — use tasteful defaults)'}
+
+Screen to build: **${screenName}**
+Purpose: ${screenPurpose}
+
+Other screens in the MVP (link to these where appropriate):
+${otherScreens || '(none)'}
+
+Write the deployable React screen now. Emit the JSON with "code".`;
+
   const r = await callWithRouting('mvp.screen.generate', {
-    userPrompt,
     systemPrompt: SCREEN_SYSTEM,
+    userPrompt,
     responseFormat: 'json',
+    maxTokens: 8_000,
+    timeoutMs: 120_000,
   });
   if (!r.ok || !r.json) return NextResponse.json({ ok: false, error: 'llm_failed', detail: r.ok ? 'no_json' : r.error }, { status: 502 });
   const parsed = r.json as { code?: string };
@@ -104,11 +116,7 @@ Output the JSON with "code" now.`;
     newBalance = me.tokensBalance - SCREEN_COST;
   }
   return NextResponse.json({
-    ok: true,
-    code: parsed.code,
-    model: r.model,
-    costUsd: r.costUsd,
-    latencyMs: Date.now() - started,
-    tokensBalance: newBalance,
+    ok: true, code: parsed.code, model: r.model,
+    latencyMs: Date.now() - started, tokensBalance: newBalance,
   });
 }
