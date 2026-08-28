@@ -23,7 +23,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Circle, LogOut, MoonStar, Sparkles, Sun } from 'lucide-react';
-import { WIZARD_STEPS } from '../../lib/wizard/steps';
+import { WIZARD_STEPS, findStepBySlug } from '../../lib/wizard/steps';
+import { useSpec } from '../../lib/spec/store';
 import { TokenBadge } from '../session/TokenBadge';
 import { DocsFolder } from '../session/DocsFolder';
 import { LoginPill } from '../session/LoginPill';
@@ -41,6 +42,9 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
   const activeIndex = WIZARD_STEPS.find((s) => s.slug === activeSlug)?.index ?? 1;
   const progressPct = Math.round((activeIndex / WIZARD_STEPS.length) * 100);
   const activeStep = WIZARD_STEPS[activeIndex - 1];
+  const [spec] = useSpec();
+  const currentStageIdx = findStepBySlug(spec.currentStage || 'onboarding')?.index ?? 1;
+  const maxAllowedIndex = Math.max(activeIndex, currentStageIdx);
 
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   // Theme toggle (persists to localStorage; defaults to dark)
@@ -156,17 +160,21 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
             {WIZARD_STEPS.map((step) => {
               const isActive = step.index === activeIndex;
               const isDone = step.index < activeIndex;
-              const isPending = step.index > activeIndex;
+              const isLocked = step.index > maxAllowedIndex;
+              const LinkOrButton: React.ElementType = isLocked ? 'div' : Link;
+              const linkProps = isLocked ? { title: 'Complete the previous steps first' } : { href: `/wizard/${step.slug}` };
               return (
-                <Link
+                <LinkOrButton
                   key={step.slug}
-                  href={`/wizard/${step.slug}`}
+                  {...linkProps}
                   className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                     isActive
                       ? 'bg-primary/10 text-foreground ring-1 ring-primary/30'
                       : isDone
                         ? 'text-foreground/80 hover:bg-muted'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        : isLocked
+                          ? 'text-muted-foreground/50 cursor-not-allowed'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   <span className="shrink-0 w-5 h-5 flex items-center justify-center">
@@ -181,7 +189,8 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
                     )}
                   </span>
                   <span className={`truncate ${isActive ? 'font-semibold' : ''}`}>{step.title}</span>
-                </Link>
+                  {step.index > maxAllowedIndex && <Circle className="w-3 h-3 text-muted-foreground/40 ml-auto" strokeWidth={2} />}
+                </LinkOrButton>
               );
             })}
           </nav>

@@ -83,13 +83,30 @@ ${interviewSummary || '(none — use only the finite idea; add gaps to openQuest
 
 Produce the IA JSON now.`;
 
-  const r = await callWithRouting('architecture.generate', {
+  let r = await callWithRouting('architecture.generate', {
     systemPrompt: SYSTEM,
     userPrompt,
     responseFormat: 'json',
     maxTokens: 10_000,
     timeoutMs: 120_000,
   });
+  // JSON repair fallback — if the model produced malformed JSON (common with
+  // very long IA output), ask a cheaper model to repair the raw text.
+  if (!r.ok && r.error && r.error.includes('json parse failed')) {
+    // eslint-disable-next-line no-console
+    console.warn('[architecture] JSON parse failed, attempting repair');
+    const repairPrompt = `The following text was supposed to be strict JSON matching a specific schema, but it has syntax errors. Fix the JSON — do not change the content, only fix the syntax. Return ONLY the valid JSON, no preamble, no fences. The intended schema is: entities[], routes[], permissions[], userFlows[], screenMap[], openQuestions[]. If a required top-level key is missing, add it as an empty array.
+
+RAW OUTPUT:
+${r.error.slice(0, 30_000)}`;
+    r = await callWithRouting('doc.short', {
+      systemPrompt: 'You are a JSON syntax fixer. Return only valid JSON.',
+      userPrompt: repairPrompt,
+      responseFormat: 'json',
+      maxTokens: 12_000,
+      timeoutMs: 60_000,
+    });
+  }
   if (!r.ok || !r.json) return NextResponse.json({ ok: false, error: r.ok ? 'no_json' : r.error }, { status: 502 });
 
   let newBalance: number | undefined;

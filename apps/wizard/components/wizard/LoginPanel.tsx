@@ -152,6 +152,27 @@ export function LoginPanel(): React.JSX.Element {
                 <InputExplainer hint={authMode === 'signup' ? 'Use letters plus numbers or a symbol. Min 8 chars.' : 'The password you set when you created your account.'} />
               </div>
               {error && <div className="rounded-lg bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 text-sm">{error}</div>}
+              {authMode === 'login' && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-2.5 space-y-1.5 text-xs">
+                  <div className="font-semibold text-foreground">Try a test account:</div>
+                  {[
+                    { name: 'Demo Founder', email: 'demo@caia.dev', pw: 'CaiaDemo!42', tokens: 250 },
+                    { name: 'Beta Tester',  email: 'beta@caia.dev', pw: 'BetaTester42!', tokens: 500 },
+                    { name: 'VIP Founder',  email: 'vip@caia.dev',  pw: 'VipFounder42!', tokens: 2000 },
+                  ].map((u) => (
+                    <button
+                      key={u.email}
+                      type="button"
+                      onClick={() => { setEmail(u.email); setPassword(u.pw); }}
+                      className="w-full text-left flex items-center justify-between hover:bg-primary/10 rounded p-1 transition-colors"
+                    >
+                      <span><strong>{u.name}</strong> · <span className="text-muted-foreground">{u.email}</span></span>
+                      <span className="text-[10px] px-1 py-0.5 rounded bg-primary/15 text-primary">{u.tokens} tokens</span>
+                    </button>
+                  ))}
+                  <div className="text-[10px] text-muted-foreground">Click a row to prefill, then hit Log in &amp; continue.</div>
+                </div>
+              )}
               <div className="flex gap-2 pt-1">
                 <Button
                   type="button"

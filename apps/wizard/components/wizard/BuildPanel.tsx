@@ -138,6 +138,8 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
       setPicked(suggested);
       appendLog(`Scaffolded ${s.screens.length} candidate screens. ${suggested.size} pre-selected.`);
       spendTokens('build');
+      // Auto-fire the enriched breakdown so the founder sees the rich MVP hierarchy (acceptance criteria, effort, priorities) without a second click.
+      void fetchEnriched();
     } catch (e) {
       const msg = (e as Error).message;
       setScaffoldError(msg);
