@@ -16,6 +16,7 @@ import { StageExplainer } from './common/StageExplainer';
 import { ProcessLoader } from './common/ProcessLoader';
 import { AiFailurePanel } from './common/AiFailurePanel';
 import { useSpec, advanceStage } from '../../lib/spec/store';
+import { DocsUnlocked } from './common/DocsUnlocked';
 
 interface EntityField { name: string; type: string; required: boolean; description: string; enumValues: string[] | null; relationTo: string | null; }
 interface Entity { name: string; description: string; fields: EntityField[]; indexes?: string[]; }
@@ -89,6 +90,7 @@ export function ArchitecturePanel(): React.JSX.Element {
         body="Every screen you'll see later is built from this blueprint. CAIA turns your idea + interview into concrete data entities, URL routes, permissions, user flows, and a screen map — the same artefacts a senior engineer would sketch on day one."
         why="Skipping this step means every downstream call to the code generator is guessing at your data model. Doing it now catches ambiguity while it's cheap to fix, and every screen you build lines up with real database entities and routes."
       />
+      <DocsUnlocked stage="architecture" />
 
       {/* Context lock-in */}
       <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs space-y-1.5">

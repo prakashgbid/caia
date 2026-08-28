@@ -15,6 +15,7 @@ import { DesignPicker } from './DesignPicker';
 import { StageExplainer } from './common/StageExplainer';
 import { useSpec, advanceStage } from '../../lib/spec/store';
 import type { DesignChoices } from '../../lib/spec/schema';
+import { DocsUnlocked } from './common/DocsUnlocked';
 
 export function DesignStagePanel(): React.JSX.Element {
   const router = useRouter();
@@ -39,6 +40,7 @@ export function DesignStagePanel(): React.JSX.Element {
         body="These choices lock in the look of every screen CAIA will build for you. You can change any of them later, but scaffolding an MVP without a design baseline produces a Frankenstein — so we require this stage."
         why="A cohesive look makes your MVP feel like a real product to investors and early users. Design decisions upfront save re-work later."
       />
+      <DocsUnlocked stage="design" />
       <DesignPicker onSaved={onSaved} />
       {(saved || hasChoices) && (
         <Button onClick={cont} className="w-full h-12 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold">

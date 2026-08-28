@@ -21,6 +21,7 @@ import { ViewportSelector, VIEWPORTS, type Viewport } from './common/ViewportSel
 import { MvpTreePanel } from './MvpTreePanel';
 import { MvpBreakdownGrid, type EnrichedBreakdown } from './MvpBreakdownGrid';
 import { StageExplainer } from './common/StageExplainer';
+import { DocsUnlocked } from './common/DocsUnlocked';
 import { useSpec, advanceStage } from '../../lib/spec/store';
 import Link from 'next/link';
 import { DesignPicker } from './DesignPicker';
@@ -246,6 +247,7 @@ export function BuildPanel(props: { initialIdea?: string; initialProposal?: stri
         body="CAIA breaks your product idea into initiatives, epics, and stories, then generates one screen at a time. You'll see them render live in the preview panel."
         why="A click-through prototype is what investors, early users, and your future team need to feel your product before you write a line of production code."
       />
+      <DocsUnlocked stage="build" />
       <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
       {/* LEFT: Controls */}
       <div className="space-y-4 min-w-0">

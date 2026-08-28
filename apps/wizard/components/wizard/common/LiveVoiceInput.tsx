@@ -1,17 +1,17 @@
 'use client';
 
 /**
- * <LiveVoiceInput> — thin wrapper around @caia/ui's VoiceInput that pushes
- * INTERIM transcripts into the value in real-time (not just final).
+ * <LiveVoiceInput> — wrapper around @caia/ui VoiceInput that pushes INTERIM
+ * transcripts into the value in real-time (so words appear as they're spoken),
+ * then handles the final transcript without duplicating the interim text.
  *
- * The canonical VoiceInput calls onValueChange only when the speech engine
- * emits `isFinal`, which can take ~1-2 seconds of silence. That felt laggy.
- * This wrapper writes interim text on every event (~200ms updates) so the
- * user sees their words appear as they speak. When the final result lands,
- * it replaces the interim tail so we don't end up with duplicated text.
+ * The trick: we track the "session base" (what the value was when the user
+ * started speaking). Every interim update composes base + interim.
+ * Final transcript overwrites the interim with the same base + final.
+ * When listening stops, we reset the session base for the next session.
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { VoiceInput } from '@caia/ui';
 
 interface Props {
@@ -22,27 +22,41 @@ interface Props {
 }
 
 export function LiveVoiceInput({ value, onValueChange, fieldLabel, className }: Props): React.JSX.Element {
-  // Remember what the value was before this dictation session started, so we
-  // can replace interim tail cleanly on each partial update.
-  const sessionBaseRef = useRef<string>('');
+  const sessionBaseRef = useRef<string | null>(null);
+  const lastInterimRef = useRef<string>('');
+  const [_, setTick] = useState(0);
+
+  const captureBaseIfNeeded = useCallback(() => {
+    if (sessionBaseRef.current === null) {
+      sessionBaseRef.current = value ? value.trimEnd() + ' ' : '';
+      setTick((t) => t + 1);
+    }
+  }, [value]);
 
   const handleInterim = useCallback((interim: string) => {
     if (!interim) return;
-    // If this is the first interim of a session, capture the current value as base.
-    if (!sessionBaseRef.current || !value.startsWith(sessionBaseRef.current)) {
-      sessionBaseRef.current = value ? value.trimEnd() + ' ' : '';
-    }
-    const composed = sessionBaseRef.current + interim.trim();
-    onValueChange(composed);
-  }, [value, onValueChange]);
+    captureBaseIfNeeded();
+    const base = sessionBaseRef.current || '';
+    lastInterimRef.current = interim;
+    onValueChange(base + interim.trim());
+  }, [onValueChange, captureBaseIfNeeded]);
 
   const handleFinal = useCallback((v: string) => {
-    // VoiceInput has already produced a final concatenation via its own
-    // onValueChange path; we let it own the settled value. Reset the session
-    // base so the next partial starts fresh.
+    // VoiceInput's own final path already produced a composed value.
+    // We reset our session base so the next dictation session starts fresh.
+    // If v ends with our last interim, keep v (it's the "clean" final).
     onValueChange(v);
-    sessionBaseRef.current = '';
+    sessionBaseRef.current = null;
+    lastInterimRef.current = '';
   }, [onValueChange]);
+
+  // Reset session base if value changes externally (user typed manually)
+  useEffect(() => {
+    if (sessionBaseRef.current !== null && !value.startsWith(sessionBaseRef.current)) {
+      sessionBaseRef.current = null;
+      lastInterimRef.current = '';
+    }
+  }, [value]);
 
   return (
     <VoiceInput

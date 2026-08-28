@@ -23,6 +23,7 @@ import { StageExplainer } from './common/StageExplainer';
 import { ProcessLoader } from './common/ProcessLoader';
 import { useSpec, advanceStage } from '../../lib/spec/store';
 import type { InterviewTurn } from '../../lib/spec/schema';
+import { DocsUnlocked } from './common/DocsUnlocked';
 
 type Dimension = 'who' | 'problem' | 'moment' | 'currentAlt' | 'wedge' | 'outcome' | 'proof' | 'advantage';
 type Coverage = Record<Dimension, 0 | 1 | 2 | 3>;
@@ -50,6 +51,10 @@ export function IdeaRefinerChat(): React.JSX.Element {
   const [input, setInput] = useState('');
   const [busyKind, setBusyKind] = useState<'question' | 'synthesise' | null>(null);
   const [nextQ, setNextQ] = useState<NextQuestionResp | null>(null);
+  const [maxCoverage, setMaxCoverage] = useState<Coverage>({ who:0, problem:0, moment:0, currentAlt:0, wedge:0, outcome:0, proof:0, advantage:0 });
+  const [openQuestions, setOpenQuestions] = useState<string[]>([]);
+  const [openQAnswers, setOpenQAnswers] = useState<Record<number, string>>({});
+  const [synthDone, setSynthDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showWhy, setShowWhy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -77,6 +82,15 @@ export function IdeaRefinerChat(): React.JSX.Element {
       const j = (await res.json()) as { ok: boolean; error?: string } & NextQuestionResp;
       if (!j.ok) throw new Error(j.error || 'error');
       setNextQ(j);
+      if (j.coverage) {
+        setMaxCoverage((prev) => {
+          const next = { ...prev };
+          for (const k of Object.keys(j.coverage) as (keyof Coverage)[]) {
+            next[k] = Math.max(prev[k], j.coverage[k]) as 0 | 1 | 2 | 3;
+          }
+          return next;
+        });
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -107,6 +121,9 @@ export function IdeaRefinerChat(): React.JSX.Element {
       if (!res.ok) throw new Error('CAIA had trouble synthesising. Try again.');
       const j = (await res.json()) as { ok: boolean; error?: string; finiteIdea?: string; elevatorPitch?: string; who?: string; problem?: string; moment?: string; currentAlternative?: string; wedge?: string; outcome?: string; proof?: string[]; advantage?: string; coverage?: Coverage; openQuestions?: string[]; readinessScore?: number; readinessReasoning?: string };
       if (!j.ok) throw new Error(j.error || 'error');
+      const oq = j.openQuestions || [];
+      setOpenQuestions(oq);
+      setSynthDone(true);
       mutate((s) => {
         s.grandIdea = j.finiteIdea || s.grandIdea;
         if (!s.interview) s.interview = { turns: [] };
@@ -124,17 +141,20 @@ export function IdeaRefinerChat(): React.JSX.Element {
         ].filter(Boolean).join('\n\n');
         s.interview.completedAt = Date.now();
       });
-      router.push('/wizard/architecture');
+      if (oq.length === 0) router.push('/wizard/architecture');
+      setBusyKind(null);
     } catch (e) {
       setError((e as Error).message);
       setBusyKind(null);
     }
   }, [spec.grandIdea, turns, mutate, router]);
 
-  const coverage = nextQ?.coverage;
+  const coverage = maxCoverage;
   const coverageAvg = coverage
     ? Math.round(((Object.values(coverage) as number[]).reduce((s: number, v: number) => s + v, 0) / 8) * (100 / 3))
     : 0;
+  // Coverage always shows the running max — never regresses when a new question arrives.
+
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
@@ -143,6 +163,7 @@ export function IdeaRefinerChat(): React.JSX.Element {
         body="Startups fail when the idea is fuzzy. CAIA asks a few smart questions to help you narrow from a broad vision to a finite, defensible starting point. Answer in your own words — we won't push you toward any particular answer."
         why="A sharper idea makes every downstream stage (market research, business plan, MVP scope) actually useful. Without this step, we'd be generating investor-grade documents for a moving target."
       />
+      <DocsUnlocked stage="interview" />
 
       {/* Progress + coverage */}
       {(coverage || turns.length > 0) && (
@@ -175,7 +196,7 @@ export function IdeaRefinerChat(): React.JSX.Element {
       <div ref={scrollRef} className="rounded-2xl border border-border/60 bg-card/40 p-4 max-h-[420px] overflow-y-auto space-y-3">
         {turns.length === 0 && !nextQ && !busyKind && (
           <div className="text-center text-sm text-muted-foreground py-8">
-            CAIA is preparing your first question…
+            Your Startup Discovery Coach is preparing your first question…
           </div>
         )}
         {turns.map((t, i) => (
@@ -214,7 +235,7 @@ export function IdeaRefinerChat(): React.JSX.Element {
           <div className="flex justify-start">
             <div className="bg-muted/60 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-muted-foreground inline-flex items-center gap-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              CAIA is thinking…
+              Startup Discovery Coach is thinking…
             </div>
           </div>
         )}
@@ -257,6 +278,44 @@ export function IdeaRefinerChat(): React.JSX.Element {
                   </Button>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Open-questions gate — user must answer everything the model flagged as still fuzzy before moving to Architecture */}
+          {synthDone && openQuestions.length > 0 && (
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 space-y-3">
+              <div>
+                <div className="text-sm font-semibold">Almost there — a few gaps to close</div>
+                <p className="text-xs text-muted-foreground mt-1">Your Startup Discovery Coach flagged these dimensions as still fuzzy. Answering them now avoids spending elite-model tokens on Information Architecture with wrong assumptions.</p>
+              </div>
+              {openQuestions.map((q, i) => (
+                <div key={i} className="space-y-1">
+                  <label className="text-xs font-medium">{q}</label>
+                  <textarea
+                    value={openQAnswers[i] || ''}
+                    onChange={(e) => setOpenQAnswers((prev) => ({ ...prev, [i]: e.target.value }))}
+                    rows={2}
+                    className="w-full p-2 text-sm rounded-lg border border-border bg-background/50 focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+                  />
+                </div>
+              ))}
+              <Button
+                onClick={() => {
+                  const allAnswered = openQuestions.every((_, i) => (openQAnswers[i] || '').trim().length > 3);
+                  if (!allAnswered) return;
+                  mutate((s) => {
+                    if (!s.interview) s.interview = { turns: [] };
+                    const clarifications = openQuestions.map((q, i) => `**${q}** — ${openQAnswers[i].trim()}`).join('\n\n');
+                    s.interview.summary = (s.interview.summary || '') + '\n\n**Follow-up clarifications:**\n' + clarifications;
+                  });
+                  router.push('/wizard/architecture');
+                }}
+                disabled={!openQuestions.every((_, i) => (openQAnswers[i] || '').trim().length > 3)}
+                className="w-full h-11 bg-brand-gradient hover:opacity-90 text-white glow-brand text-sm font-semibold disabled:opacity-40"
+              >
+                <ArrowRight className="w-4 h-4 mr-2" />
+                All gaps closed — continue to Architecture
+              </Button>
             </div>
           )}
 
