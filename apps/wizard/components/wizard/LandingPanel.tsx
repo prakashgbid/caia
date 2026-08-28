@@ -12,6 +12,7 @@ import { ArrowRight, Copy, CheckCircle2, ExternalLink, Loader2, RefreshCw, Spark
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 import { spendTokens, readSession } from '../../lib/session/tokens';
 import { addDoc, updateProject } from '../../lib/session/project';
+import { useSpec, advanceStage } from '../../lib/spec/store';
 import { StageExplainer } from './common/StageExplainer';
 import { InputExplainer } from './common/InputExplainer';
 import { ProcessLoader } from './common/ProcessLoader';
@@ -54,6 +55,14 @@ export function LandingPanel({ initialIdea, initialProposal }: LandingPanelProps
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const [spec, mutateSpecFn] = useSpec();
+  useEffect(() => { advanceStage('landing'); }, []);
+  useEffect(() => {
+    // Rehydrate from spec if URL/prop didn't supply it
+    if (!idea && spec.grandIdea) setIdea(spec.grandIdea);
+    if (!proposal && spec.proposal) setProposal(spec.proposal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spec.grandIdea, spec.proposal]);
   useEffect(() => {
     if (!initialIdea && typeof window !== 'undefined') {
       const u = new URL(window.location.href);

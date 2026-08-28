@@ -7,23 +7,56 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Copy, Download, Printer, Presentation } from 'lucide-react';
+import { ArrowLeft, Copy, Download, Printer, Presentation, Pencil, Save, Eye, RotateCcw } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@caia/ui';
-import { readProject, subscribeProject, type StartupDoc } from '../../lib/session/project';
+import { readProject, subscribeProject, updateProject, type StartupDoc } from '../../lib/session/project';
 import { StageExplainer } from './common/StageExplainer';
 import { MarkdownRender } from './common/MarkdownRender';
 
 export function DocViewer({ id }: { id: string }): React.JSX.Element {
   const [doc, setDoc] = useState<StartupDoc | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [revisions, setRevisions] = useState<Array<{ ts: number; content: string }>>([]);
 
   useEffect(() => {
     const refresh = () => {
       const p = readProject();
-      setDoc(p.docs.find((d) => d.id === id) || null);
+      const d = p.docs.find((x) => x.id === id) || null;
+      setDoc(d);
+      if (d) {
+        setDraft((prev) => prev || d.content);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rev = ((d as any).revisions as Array<{ ts: number; content: string }>) || [];
+        setRevisions(rev);
+      }
     };
     refresh();
     return subscribeProject(refresh);
   }, [id]);
+
+  const save = () => {
+    if (!doc) return;
+    updateProject((p) => {
+      const target = p.docs.find((x) => x.id === doc.id);
+      if (!target) return;
+      // Push the current content as a revision before overwriting.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const t = target as any;
+      const revs = (t.revisions as Array<{ ts: number; content: string }>) || [];
+      revs.push({ ts: Date.now(), content: target.content });
+      t.revisions = revs.slice(-10); // keep last 10 revisions
+      target.content = draft;
+    });
+    setSavedAt(Date.now());
+    setEditMode(false);
+  };
+
+  const restore = (rev: { ts: number; content: string }) => {
+    setDraft(rev.content);
+    setEditMode(true);
+  };
 
   if (!doc) {
     return (
@@ -127,6 +160,8 @@ export function DocViewer({ id }: { id: string }): React.JSX.Element {
           <ArrowLeft className="w-4 h-4" /> All documents
         </Link>
         <div className="flex flex-wrap gap-2 justify-end">
+          {!editMode && <Button variant="outline" size="sm" onClick={() => setEditMode(true)}><Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit</Button>}
+          {editMode && <><Button variant="outline" size="sm" onClick={() => { setEditMode(false); setDraft(doc.content); }}><Eye className="w-3.5 h-3.5 mr-1.5" /> Cancel</Button><Button size="sm" onClick={save} className="bg-brand-gradient text-white hover:opacity-90"><Save className="w-3.5 h-3.5 mr-1.5" /> Save</Button></>}
           <Button variant="outline" size="sm" onClick={copy}><Copy className="w-3.5 h-3.5 mr-1.5" /> Copy</Button>
           <Button variant="outline" size="sm" onClick={download}><Download className="w-3.5 h-3.5 mr-1.5" /> Markdown</Button>
           <Button variant="outline" size="sm" onClick={printAsPdf}><Printer className="w-3.5 h-3.5 mr-1.5" /> PDF</Button>
@@ -142,7 +177,42 @@ export function DocViewer({ id }: { id: string }): React.JSX.Element {
           <CardTitle className="text-lg">{doc.title}</CardTitle>
         </CardHeader>
         <CardContent className="prose prose-invert prose-sm max-w-none">
-          <MarkdownRender source={doc.content} />
+          {editMode ? (
+            <div className="space-y-2">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                className="w-full min-h-[500px] p-4 text-sm font-mono rounded-lg border border-border bg-background/50 focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+                spellCheck
+              />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{draft.split(/\s+/).length} words · {draft.length} chars</span>
+                <span className="italic">Live preview below</span>
+              </div>
+              <div className="rounded-lg border border-border/40 p-4 bg-background/30">
+                <MarkdownRender source={draft} />
+              </div>
+            </div>
+          ) : (
+            <MarkdownRender source={doc.content} />
+          )}
+          {savedAt && !editMode && (
+            <div className="text-xs text-emerald-500 mt-3">Saved · {new Date(savedAt).toLocaleTimeString()}</div>
+          )}
+          {revisions.length > 0 && !editMode && (
+            <details className="mt-4 rounded-lg border border-border/40 bg-muted/20">
+              <summary className="cursor-pointer text-xs px-3 py-2 font-semibold text-muted-foreground">Revision history ({revisions.length})</summary>
+              <div className="divide-y divide-border/30">
+                {revisions.slice().reverse().map((r, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-2 text-xs">
+                    <span className="text-muted-foreground tabular-nums">{new Date(r.ts).toLocaleString()}</span>
+                    <span className="text-muted-foreground ml-auto">{r.content.length} chars</span>
+                    <Button variant="outline" size="sm" onClick={() => restore(r)}><RotateCcw className="w-3 h-3 mr-1" /> Restore</Button>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </CardContent>
       </Card>
     </div>
