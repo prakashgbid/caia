@@ -79,7 +79,15 @@ function makeNoopMapper(designVersionId: string): unknown {
 }
 
 export function AtlasWizardClient(props: AtlasWizardClientProps): React.JSX.Element {
-  const fetchFn = props.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
+  // Must be referentially stable. `useAtlasSse` re-runs its effect
+  // whenever `client` changes and unconditionally calls `setConnected`,
+  // so an inline fallback here re-rendered forever: new fetchFn →
+  // new httpClient → new client → effect → setState → re-render.
+  // That spun the CPU in the browser and hung the test suite.
+  const fetchFn = useMemo(
+    () => props.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args)),
+    [props.fetchImpl],
+  );
 
   const fixtures = useMemo<AtlasMockFixtures>(
     () =>
