@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { Chrome, Mail, Sparkles, User, X } from 'lucide-react';
 import { Button } from '@caia/ui';
 import { newProject } from '../../lib/session/project';
+import { createSpec } from '../../lib/spec/store';
 
 interface Props { open: boolean; onClose: () => void; }
 
@@ -21,13 +22,13 @@ export function NewProjectModal({ open, onClose }: Props): React.JSX.Element | n
   const [name, setName] = useState('');
 
   const startLoginLater = useCallback(() => {
-    const p = newProject(name.trim() || 'Untitled project');
+    const p = createSpec(name.trim() || 'Untitled project');
     onClose();
     router.push('/wizard/onboarding?project=' + encodeURIComponent(p.id));
   }, [name, router, onClose]);
 
   const startWithLogin = useCallback((provider: string) => {
-    const p = newProject(name.trim() || 'Untitled project');
+    const p = createSpec(name.trim() || 'Untitled project');
     onClose();
     router.push('/wizard/login?next=' + encodeURIComponent('/wizard/onboarding?project=' + p.id) + '&provider=' + provider);
   }, [name, router, onClose]);

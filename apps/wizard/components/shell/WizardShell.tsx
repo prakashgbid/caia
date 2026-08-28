@@ -94,9 +94,6 @@ export function WizardShell({ children }: WizardShellProps): React.JSX.Element {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/wizard/docs" className="hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 h-8 rounded-md hover:bg-muted transition-colors" title="Your startup documents">
-              Docs
-            </Link>
             <button type="button" onClick={() => setNewProjectOpen(true)} className="hidden md:inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 px-2 h-8 rounded-md hover:bg-primary/5 transition-colors font-medium" title="Start a new project">
               <Plus className="w-3.5 h-3.5" /> New project
             </button>

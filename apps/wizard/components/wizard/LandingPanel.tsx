@@ -12,6 +12,7 @@ import { ArrowRight, Copy, CheckCircle2, ExternalLink, Loader2, RefreshCw, Spark
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@caia/ui';
 import { spendTokens, readSession } from '../../lib/session/tokens';
 import { addDoc, updateProject } from '../../lib/session/project';
+import { upsertDoc } from '../../lib/spec/store';
 import { useSpec, advanceStage } from '../../lib/spec/store';
 import { StageExplainer } from './common/StageExplainer';
 import { InputExplainer } from './common/InputExplainer';
@@ -33,14 +34,11 @@ async function fireExecSummary(ctx: { idea: string; proposal: string }): Promise
     if (!res.ok) return;
     const json = (await res.json()) as { ok?: boolean; content?: string; title?: string; format?: string };
     if (!json.ok || !json.content) return;
-    addDoc({
-      id: 'doc_execsum_' + Math.random().toString(36).slice(2, 9),
+    upsertDoc({
       type: 'executive-summary',
       title: json.title || 'Executive Summary',
       format: (json.format as 'markdown' | 'html' | 'pdf' | 'pptx') || 'markdown',
       content: json.content,
-      createdAt: Date.now(),
-      tokens: 0,
     });
   } catch { /* silent — background fire */ }
 }
@@ -81,14 +79,11 @@ export function LandingPanel({ initialIdea, initialProposal }: LandingPanelProps
     setHtml('');
       // Persist the landing HTML into the project store as a doc.
       const _landingHtml = '';
-      addDoc({
-        id: 'landing_' + Math.random().toString(36).slice(2, 9),
+      upsertDoc({
         type: 'landing-html',
         title: 'Landing Page',
         format: 'html',
         content: _landingHtml,
-        createdAt: Date.now(),
-        tokens: 0,
       });
       updateProject((p) => { p.landingHtml = _landingHtml; p.idea = idea; p.proposal = proposal; });
       // Background: fire executive-summary generation once so the folder icon lights up.

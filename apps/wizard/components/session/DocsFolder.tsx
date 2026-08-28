@@ -68,7 +68,7 @@ export function DocsFolder(): React.JSX.Element {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto">
             {docs.length === 0 && (
               <div className="p-6 text-center text-sm text-muted-foreground">
                 No documents yet. CAIA will drop your executive summary, business plan, and pitch deck here as you complete the wizard.
@@ -91,6 +91,9 @@ export function DocsFolder(): React.JSX.Element {
               </Link>
             ))}
           </div>
+          <Link href="/wizard/docs" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-center text-xs font-semibold text-primary hover:bg-primary/5 border-t border-border/50">
+            Show all documents →
+          </Link>
         </div>
       )}
     </div>

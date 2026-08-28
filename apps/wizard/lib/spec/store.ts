@@ -109,3 +109,61 @@ export function useSpec(): [ProjectSpec, (fn: (draft: ProjectSpec) => void) => v
 export function advanceStage(stage: Stage): void {
   mutateSpec((s) => { s.currentStage = stage; });
 }
+
+/** List every project spec in localStorage — newest first. */
+export function listSpecs(): Array<{ id: string; name?: string; updatedAt: number; currentStage?: string }> {
+  if (!isBrowser) return [];
+  const out: Array<{ id: string; name?: string; updatedAt: number; currentStage?: string }> = [];
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const k = window.localStorage.key(i);
+    if (!k || !k.startsWith(KEY_PREFIX)) continue;
+    try {
+      const p = JSON.parse(window.localStorage.getItem(k) || '{}') as ProjectSpec;
+      if (p.id) out.push({ id: p.id, name: p.name, updatedAt: p.updatedAt || 0, currentStage: p.currentStage });
+    } catch { /* skip corrupt entries */ }
+  }
+  out.sort((a, b) => b.updatedAt - a.updatedAt);
+  return out;
+}
+
+/** Create a fresh project spec with a new id. */
+export function createSpec(name?: string): ProjectSpec {
+  const id = 'proj_' + Math.random().toString(36).slice(2, 10);
+  setActiveSpecId(id);
+  const s = readSpec(id);
+  if (name) { s.name = name; writeSpec(s); }
+  return s;
+}
+
+/** Delete a project spec (local only). */
+export function deleteSpec(id: string): void {
+  if (!isBrowser) return;
+  window.localStorage.removeItem(KEY_PREFIX + id);
+  if (window.localStorage.getItem(ACTIVE_KEY) === id) window.localStorage.removeItem(ACTIVE_KEY);
+  window.dispatchEvent(new CustomEvent(EVENT));
+}
+
+/**
+ * Upsert a doc into the active project by type — never duplicates.
+ * If a doc of the same type exists, replace its content + bump updatedAt.
+ * If not, push a new one.
+ */
+export function upsertDoc(doc: { type: string; title: string; format: 'markdown' | 'pdf' | 'pptx' | 'html'; content: string; tokens?: number }): void {
+  mutateSpec((p) => {
+    const existing = p.docs.find((d) => d.type === doc.type);
+    if (existing) {
+      existing.title = doc.title;
+      existing.format = doc.format;
+      existing.content = doc.content;
+      existing.tokens = doc.tokens ?? existing.tokens;
+      existing.createdAt = Date.now();
+    } else {
+      p.docs.push({
+        id: 'doc_' + doc.type + '_' + Math.random().toString(36).slice(2, 9),
+        type: doc.type, title: doc.title, format: doc.format, content: doc.content,
+        createdAt: Date.now(), tokens: doc.tokens ?? 0,
+      });
+    }
+  });
+}
+

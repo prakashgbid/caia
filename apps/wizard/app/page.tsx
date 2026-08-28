@@ -1,11 +1,15 @@
-import { redirect } from 'next/navigation';
-
 /**
- * Wizard app entry — sends authenticated customers into the first
- * wizard step. Cloudflare Access (in front of dashboard.chiefaia.com)
- * gates this so unauthenticated visitors never reach here; the
- * middleware then provisions the tenant and forwards.
+ * / — Dashboard root. Shows existing projects + New Project CTA.
+ *
+ * If the visitor has no prior projects (local or remote), we still
+ * DON'T auto-start a project; we let them opt in via the New Project
+ * modal so the first click is intentional.
  */
-export default function Home() {
-  redirect('/wizard/onboarding');
+
+import { ProjectsLanding } from '../components/wizard/ProjectsLanding';
+
+export const dynamic = 'force-dynamic';
+
+export default function Home(): React.JSX.Element {
+  return <ProjectsLanding />;
 }
