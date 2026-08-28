@@ -125,6 +125,25 @@ export const MODEL_LADDER: Record<string, ModelLadder> = {
     notes: 'Fast + cheap for short/templated docs. No reasoning required.',
   },
 
+  // === IDEA REFINEMENT — smart-question interview ===
+  'interview.refiner.next': {
+    primary: 'anthropic/claude-opus-5',
+    fallbacks: ['anthropic/claude-sonnet-4.6', 'openai/gpt-5.6-luna-pro'],
+    maxTokens: 2_000,
+    timeoutMs: 45_000,
+    tier: 'elite',
+    needsWebSearch: false,
+    notes: 'Adaptive next-question generation that narrows a broad idea into a finite one. Reasons about what dimensions are still fuzzy and asks the highest-yield question.',
+  },
+  'interview.refiner.synthesise': {
+    primary: 'anthropic/claude-opus-5',
+    fallbacks: ['anthropic/claude-sonnet-4.6'],
+    maxTokens: 4_000,
+    timeoutMs: 60_000,
+    tier: 'elite',
+    needsWebSearch: false,
+    notes: 'Distills the interview into a finite, defensible startup statement + coverage report + open questions.',
+  },
   // === MVP BREAKDOWN + CODE GENERATION ===
   'mvp.scaffold.v2': {
     primary: 'anthropic/claude-sonnet-4.6',
