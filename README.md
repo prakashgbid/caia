@@ -1,3 +1,7 @@
+> ⚠️ **Project deprioritized on 2026-09-05.** Active development is paused. Before touching anything in this repo — including PR reviews, dependency bumps, or CI changes — read [`docs/HANDOFF.md`](docs/HANDOFF.md) end-to-end. It contains the full state-of-play, kill-switch status, known-broken items, deferred features, and a restart checklist. Do not resume feature work without operator sign-off.
+
+---
+
 # CAIA — Chief AI Agent
 
 The single site/app/IT-system building platform. **Everything generic lives here.** Each site stays in its own repo and consumes `@chiefaia/*` packages from public npm.
